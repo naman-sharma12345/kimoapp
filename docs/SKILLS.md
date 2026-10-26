@@ -29,3 +29,7 @@ All requested source repositories were fetched and their discovered skills insta
 ## Phase 0 use
 
 Read frontend-design, tailwind-design-system, design-system-patterns and vercel-react-best-practices. Applied CSS-first aliases, exact fixed visual values, server-rendered static specimens, and a small client-only replay island. No optional design directions, alternative dependencies or agent delegation from those skills overrides the supplied phase scope.
+
+## Phase 1 use
+
+Read design-system-patterns, vercel-composition-patterns, emil-design-eng, accessibility-compliance and impeccable. Used explicit variants, Radix composition, forwarded refs required by the phase, keyboard testing, exact motion presets, and token ownership. Loaded web-design-guidelines for the final review using the current upstream rules. Impeccable context and its source detector were run once; the mechanical detector reported no findings. The review, fixed findings and retained spec conflicts are recorded in PHASE_01_REVIEW.md and DECISIONS.md. The precise phase brief supplied the existing product and visual context; no new design interview, visual direction or delegation was needed.

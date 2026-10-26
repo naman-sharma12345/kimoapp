@@ -152,3 +152,127 @@ triangle on top at y=3. The mark is used ONLY: top-left of the landing nav (20px
 Wordmark: the word kimo in Geist Sans 500, letter-spacing -0.02em, lowercase, cream-100.
 
 ```
+
+## Phase 1 component specification (verbatim source)
+
+```text
+1.1 General component rules
+Each component: one file, named export, forwardRef where it renders a DOM element,
+className merge via cn() allowed only for layout (margin, width, grid placement). Never
+pass colours through className from outside.
+Variants via a tiny variants() helper you write (no cva dependency). Variants listed below are
+the only ones.
+Every interactive component: :focus-visible → box-shadow: var(--focus-ring); no outline on
+mouse focus.
+Hover changes colour only, in --dur-1--ease-out. Press: background one step darker (ink-3 →
+ink-4, orange → orange-press) and transform: scale(0.98) for --dur-1. No hover lift, no hover
+shadow.
+Disabled: text --cream-16, background unchanged, cursor: not-allowed, no hover change.
+Loading state on buttons: label stays (keeps width), opacity 0, a 14px spinner centered (§1.9).
+1.2 Button
+Variant BackgroundText Border Use
+primary --orange --on-orange none the ONE main action on a screen
+("send", "looks good, render it",
+"download")
+secondary--ink-2 --cream-100 1px var(--
+line-strong)
+normal actions
+ghost transparent --cream-60 (hover --
+cream-100, bg --
+ink-2)
+none toolbar, low emphasis
+danger transparent --error 1px rgb(229
+72 77 / .35)
+delete, discard
+Sizes: xs h24 px8 t-12 r6; sm h28 px10 t-12 r8; md h32 px12 t-13 r8; lg h40 px16 t-15 r8. Gap
+icon↔label 6px; icon 14 (xs, sm), 16 (md, lg). Icon-only buttons are square (24/28/32/40) and require
+aria-label and a T ooltip.
+1.3 Input, Textarea
+Height md 32 (inputs), padding 0 10px, --ink-2 background, 1px var(--line) border, r8, t-13
+cream-100, placeholder cream-38.
+Hover border --line-strong. Focus: border rgb(245 241 231 / .28) + focus ring.
+Error: border --error at 60%, message below t-12 --error, 6px gap, aria-describedby linked.
+T extarea: auto-grow from 1 to N rows (prop maxRows), no resize handle.
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+2
+1.4 Pill / Chip
+Pill (status): h22, px8, r-pill, t-11 uppercase, bg --ink-2, text cream-60. Variant live: 6px
+orange dot left (gap 6), text cream-100; dot pulses (opacity 1 → .35 → 1, 1600ms, ease-in-out,
+infinite) only when prop active.
+AttachmentChip (used in chatbox and agent chat): h40, r12, bg --ink-2, border 1px var(--
+line), padding 4px 10px 4px 4px. Left: 32×32 r8 thumbnail (video: first frame + 10px play
+glyph bottom-left; image: cover; audio: 32px mini-waveform of 12 bars in cream-38; doc: lucide
+FileText 16 cream-60 on ink-3). Middle: name t-12 cream-100 truncated at 160px, under it
+meta t-11 normal-case cream-38 ("0:12 · 24 MB"). Right: 20px ghost icon button X (aria-label
+"remove {name}"). Upload progress: a 2px bar along the chip's bottom inside the radius, fill --
+cream-60, turning --success for 600ms on complete then fading out.
+1.5 Tooltip
+Radix tooltip, delay 400ms open / 0 close, bg --ink-3, text t-12 cream-100, padding 4px 8px, r6, --
+shadow-pop, side offset 6, keyboard shortcut shown at right in mono t-11 cream-38 inside a 16px-high
+kbd box (r4, bg ink-4). Enter: opacity 0→1 + 2px slide from side, --dur-2.
+1.6 Menu, Popover, ContextMenu
+Bg --ink-1, r12, --shadow-pop, padding 4. Items h28, px8, r6, t-13 cream-100, icon 14 cream-60 left
+(gap 8), shortcut right mono t-11 cream-38. Hover/highlight bg --ink-3. Separator 1px --line with
+4px vertical margin. Enter: opacity + scale .97→1 from transform-origin of trigger, --dur-3--ease-
+out. Exit: opacity --dur-2--ease-in.
+1.7 Dialog
+Overlay rgb(8 8 9 / .72) (no blur). Panel width 440 (sm) / 560 (md), bg --ink-1, r12, --shadow-
+pop, padding 24. Title t-20 cream-100, description t-13 cream-60 (8px below), actions row right-
+aligned 24px below, gap 8. Enter: overlay fade --dur-3; panel opacity + translateY(8px→0) +
+scale(.98→1) --dur-4--ease-out.
+1.8 Toast
+Bottom-center, 16px from bottom, max 3 stacked (gap 8, older ones scale .96 and opacity .7). Bg --
+ink-2, --shadow-pop, r12, padding 10px 12px, t-13, max-width 420. Left icon 16: info cream-60,
+success --success, error --error. Optional action ghost button xs. Auto-dismiss 4s (errors 8s), pause
+on hover. Enter: translateY(12px→0)+opacity, spring.soft.
+1.9 Spinner, Progress, Skeleton
+Spinner: 14 or 20px, 1.5px stroke, an arc of 90° in current colour over a full circle at 16%
+opacity, rotating 700ms linear infinite. Reduced motion: static arc.
+Progress bar: h2 (thin) or h4, r-pill, track --ink-3, fill --cream-100 by default, --orange only
+when it represents an agent/render action currently running. Width transitions --dur-2 linear.
+Indeterminate: a 30%-wide fill sliding left→right 1200ms ease-in-out infinite.
+•
+•
+•
+•
+3
+Skeleton: bg --ink-2, r matches the element it replaces, shimmer = a 40%-wide band of
+rgb(245 241 231 / .04) sweeping over 1400ms. No shimmer under reduced motion.
+1.10 Segmented control, Toggle, Slider, Tabs
+Segmented: h28, bg --ink-2, r8, padding 2, items r6 t-12; active item bg --ink-4 cream-100,
+inactive cream-60; the active background slides between items with spring.snappy (shared
+layoutId).
+T oggle switch: 28×16 track r-pill, off --ink-4, on --cream-100; 12px knob, off cream-60 / on
+ink-0; knob moves spring.snappy.
+Slider: track h2 --ink-4, filled part cream-60, thumb 12px circle cream-100 with 0 0 0 4px
+var(--ink-1) ring; on drag show a value bubble above (mono t-11, ink-3 bg, r4). Value text
+field next to every slider in the inspector (Phase 7).
+T abs: text tabs t-13, inactive cream-38, active cream-100 with a 1.5px cream-100 underline
+6px below text that slides between tabs (shared layoutId).
+1.11 Panel, Section, Row, Kbd, ScrollArea
+Panel: bg --ink-1, r12, no border. Header h40, px12, title t-15 cream-100, right slot for icon
+buttons. Body padding 12 (or 0 with flush).
+Section: label t-11 uppercase cream-38, 8px below label → content; 16px between sections;
+collapsible with a 14px chevron rotating 90° --dur-2.
+Row: h32 (or 28 dense), px8, r8, label t-12 cream-60 left, value t-13 cream-100 mono-tabular
+right. Hover bg --ink-2.
+Kbd: h18, min-w18, px4, r4, bg --ink-3, mono t-11 cream-60.
+ScrollArea (Radix): scrollbar 6px, thumb rgb(245 241 231 / .14) r-pill, appears on hover/
+scroll only.
+1.12 Avatar / Agent identity
+The AI is shown as "kimo" with a 20px circle avatar: ink-3 background with the kimo mark at 12px in
+cream-100. When the agent is acting, a 1.5px orange ring rotates around the avatar (a 100° arc,
+1200ms linear). The user is shown as a 20px circle ink-4 with their initial in t-11 cream-100 (or "you").
+
+```
+
+Component-specific tokens introduced by Phase 1 live in `apps/web/src/styles/ui.css`; Phase 0 primitives remain unchanged. The axe-required contrast exceptions are recorded in DECISIONS.md.

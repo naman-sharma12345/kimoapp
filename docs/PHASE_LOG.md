@@ -24,3 +24,16 @@ The brief calls for “4” assets but enumerates five, downloaded from unspecif
 ### Visual review
 
 Reviewed the final desktop and mobile captures: token swatches, type specimens, radii, heights, spacing, motion and focus/elevation examples remain within the viewport and wrap cleanly. Swatch metadata uses bundled Geist Mono, the display specimen uses bundled Instrument Serif italic, and body text uses Geist Sans. The token preview is a diagnostic page; no product landing, warmup, studio, render or delivery UI has been introduced.
+
+## Phase 01 — design system components
+
+Implemented on 27 October 2026. The user requested an immediate push while the production build was still running; this log records that status honestly.
+
+- [x] All §1.2–1.12 component families exist with named exports, typed props, forwarded DOM refs, token styling and a small variants helper. The 21 component tests cover Tab, Enter, Space, Escape, arrows, Home/End, focus trapping/return, errors, notification timing and attachment removal. The full unit/integration suite passes **91 tests**.
+- [x] Axe reports **zero violations**, with no disabled rules, on the gallery and open menu, context menu, popover, small/medium dialog, tooltip and toast states. Mobile gallery audit also passes. Evidence: [accessibility results](phase-01-accessibility.json), [review](PHASE_01_REVIEW.md).
+- [x] Component files contain no hex values; public appearance overrides through className are rejected. Phase 1 additions are named CSS tokens and centralized motion presets. The measured contrast corrections use existing colors and are recorded in DECISIONS.md.
+- [x] Reduced-motion variants and static loop frames are verified, along with touch slider drag/cancellation. Evidence: [reduced-motion capture](screens/phase-01-ui-reduced-1440x900.png). The gallery also provides a pause/resume control.
+- [x] Web-design-guidelines and Impeccable reviews completed. The mechanical detector reported no findings. Fixed findings and retained spec conflicts are documented in [PHASE_01_REVIEW.md](PHASE_01_REVIEW.md).
+- [x] **11 browser checks pass.** Full-page evidence: [desktop](screens/phase-01-ui-1440x900.png), [mobile](screens/phase-01-ui-390x844.png). Component evidence: [buttons](screens/phase-01-ui-buttons-1440x900.png), [fields](screens/phase-01-ui-fields-1440x900.png), [attachments](screens/phase-01-ui-status-1440x900.png), [menu](screens/phase-01-ui-menu-1440x900.png), [dialog](screens/phase-01-ui-dialog-sm-1440x900.png), [feedback](screens/phase-01-ui-feedback-1440x900.png), [controls](screens/phase-01-ui-controls-1440x900.png), [layout and identity](screens/phase-01-ui-layout-1440x900.png).
+- [x] Lint and strict typecheck pass. Component APIs are documented in [UI.md](UI.md). The user's [logo reference](brand/kimo-reference.png) is preserved unchanged.
+- [ ] Production build confirmation: the build was launched and remained running at the user's immediate-push request. No successful build is claimed in this entry; CI repeats the required checks after push.

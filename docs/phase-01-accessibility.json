@@ -1,0 +1,38 @@
+{
+  "engine": "axe-core/playwright",
+  "states": [
+    {
+      "state": "gallery",
+      "violations": 0
+    },
+    {
+      "state": "menu",
+      "violations": 0
+    },
+    {
+      "state": "popover",
+      "violations": 0
+    },
+    {
+      "state": "dialog-sm",
+      "violations": 0
+    },
+    {
+      "state": "dialog-md",
+      "violations": 0
+    },
+    {
+      "state": "context-menu",
+      "violations": 0
+    },
+    {
+      "state": "tooltip",
+      "violations": 0
+    },
+    {
+      "state": "toast",
+      "violations": 0
+    }
+  ],
+  "disabledRules": []
+}

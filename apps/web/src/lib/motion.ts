@@ -17,6 +17,40 @@ export const springs = {
   snappy: { type: 'spring', stiffness: 520, damping: 40, mass: 0.8 },
   soft: { type: 'spring', stiffness: 260, damping: 32 },
 } as const satisfies Record<string, Transition>;
+
+export const uiTiming = {
+  tooltip: 400,
+  toast: 4000,
+  errorToast: 8000,
+} as const;
+export function sharedIndicator(reduced: boolean) {
+  return {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    transition: reduced ? { duration: durations['dur-2'] } : springs.snappy,
+  };
+}
+export function toggleKnob(checked: boolean, reduced: boolean) {
+  return {
+    initial: reduced ? { opacity: 0, x: checked ? 12 : 0 } : (false as const),
+    animate: { x: checked ? 12 : 0, opacity: 1 },
+    transition: reduced
+      ? { duration: 0, opacity: { duration: durations['dur-2'] } }
+      : springs.snappy,
+  };
+}
+export function toastMotion(stacked: boolean, reduced: boolean) {
+  return {
+    initial: { opacity: 0, y: reduced ? 0 : 12 },
+    animate: {
+      opacity: stacked ? 0.7 : 1,
+      y: 0,
+      scale: reduced ? 1 : stacked ? 0.96 : 1,
+    },
+    exit: { opacity: 0 },
+    transition: reduced ? { duration: durations['dur-2'] } : springs.soft,
+  };
+}
 export const motionPresets = {
   enter: {
     initial: { opacity: 0, y: 8 },
