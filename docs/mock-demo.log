@@ -1,0 +1,245 @@
+
+> kimo-web@0.0.0 mock:demo C:\Users\naman\Downloads\kimoweb
+> node --experimental-strip-types packages/mock-server/src/demo.ts
+
+session 7b5912ad-de82-4643-b993-aa6591dade9a
+{"t":"hello","version":0}
+{"t":"warmup.step","step":"upload","pct":0.2}
+{"t":"warmup.step","step":"probe","pct":0.4}
+{"t":"warmup.step","step":"watch","pct":0.6}
+{"t":"warmup.step","step":"plan","pct":0.8}
+{"t":"warmup.step","step":"ready","pct":1}
+{"t":"agent.status","state":"acting","label":"prepare video track"}
+{"t":"agent.action.start","id":"a4712d91-e19f-46cd-ad9b-29691930ea2d","tool":"add_track","title":"prepare video track","args":{}}
+{"t":"project.ops","version":1,"ops":[{"op":"track.add","track":{"id":"video","kind":"video","name":"video","muted":false,"hidden":false,"locked":false,"height":88}}],"actionId":"a4712d91-e19f-46cd-ad9b-29691930ea2d"}
+{"t":"agent.action.progress","id":"a4712d91-e19f-46cd-ad9b-29691930ea2d","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"a4712d91-e19f-46cd-ad9b-29691930ea2d","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"prepare captions track"}
+{"t":"agent.action.start","id":"69d21a39-53bb-4853-8fbc-0769cdcd26da","tool":"add_track","title":"prepare captions track","args":{}}
+{"t":"project.ops","version":2,"ops":[{"op":"track.add","track":{"id":"text","kind":"text","name":"captions","muted":false,"hidden":false,"locked":false,"height":48}}],"actionId":"69d21a39-53bb-4853-8fbc-0769cdcd26da"}
+{"t":"agent.action.progress","id":"69d21a39-53bb-4853-8fbc-0769cdcd26da","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"69d21a39-53bb-4853-8fbc-0769cdcd26da","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"prepare music track"}
+{"t":"agent.action.start","id":"a0d660da-083a-42a1-b5e3-a473f2504a3b","tool":"add_track","title":"prepare music track","args":{}}
+{"t":"project.ops","version":3,"ops":[{"op":"track.add","track":{"id":"audio","kind":"audio","name":"music","muted":false,"hidden":false,"locked":false,"height":64}}],"actionId":"a0d660da-083a-42a1-b5e3-a473f2504a3b"}
+{"t":"agent.action.progress","id":"a0d660da-083a-42a1-b5e3-a473f2504a3b","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"a0d660da-083a-42a1-b5e3-a473f2504a3b","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"prepare images track"}
+{"t":"agent.action.start","id":"f4903758-b60d-4df8-8df8-0147d41e82e4","tool":"add_track","title":"prepare images track","args":{}}
+{"t":"project.ops","version":4,"ops":[{"op":"track.add","track":{"id":"overlay","kind":"overlay","name":"images","muted":false,"hidden":false,"locked":false,"height":64}}],"actionId":"f4903758-b60d-4df8-8df8-0147d41e82e4"}
+{"t":"agent.action.progress","id":"f4903758-b60d-4df8-8df8-0147d41e82e4","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"f4903758-b60d-4df8-8df8-0147d41e82e4","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"import clip 1"}
+{"t":"agent.action.start","id":"76f65942-c9f4-4913-a579-b867198a1a7c","tool":"import_clip","title":"import clip 1","args":{}}
+{"t":"asset.added","asset":{"id":"sample-1","kind":"video","name":"study-1.mp4","url":"http://localhost:8787/fixtures/study-1.mp4","thumbUrl":"http://localhost:8787/fixtures/still.png","durationSec":8,"width":1920,"height":1080,"source":"user"}}
+{"t":"project.ops","version":5,"ops":[{"op":"clip.add","clip":{"id":"clip-1","trackId":"video","assetId":"sample-1","kind":"video","start":0,"duration":8,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"effects":[],"keyframes":[],"speed":1}}],"actionId":"76f65942-c9f4-4913-a579-b867198a1a7c"}
+{"t":"agent.action.progress","id":"76f65942-c9f4-4913-a579-b867198a1a7c","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"76f65942-c9f4-4913-a579-b867198a1a7c","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"import clip 2"}
+{"t":"agent.action.start","id":"1cd7f828-1ff2-4d27-b213-decfe79aca66","tool":"import_clip","title":"import clip 2","args":{}}
+{"t":"asset.added","asset":{"id":"sample-2","kind":"video","name":"study-2.mp4","url":"http://localhost:8787/fixtures/study-2.mp4","thumbUrl":"http://localhost:8787/fixtures/still.png","durationSec":8,"width":1920,"height":1080,"source":"user"}}
+{"t":"project.ops","version":6,"ops":[{"op":"clip.add","clip":{"id":"clip-2","trackId":"video","assetId":"sample-2","kind":"video","start":8,"duration":8,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"effects":[],"keyframes":[],"speed":1}}],"actionId":"1cd7f828-1ff2-4d27-b213-decfe79aca66"}
+{"t":"agent.action.progress","id":"1cd7f828-1ff2-4d27-b213-decfe79aca66","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"1cd7f828-1ff2-4d27-b213-decfe79aca66","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"import clip 3"}
+{"t":"agent.action.start","id":"8bf6f8f2-291d-423b-bb4c-58334e120353","tool":"import_clip","title":"import clip 3","args":{}}
+{"t":"asset.added","asset":{"id":"sample-3","kind":"video","name":"study-3.mp4","url":"http://localhost:8787/fixtures/study-3.mp4","thumbUrl":"http://localhost:8787/fixtures/still.png","durationSec":8,"width":1920,"height":1080,"source":"user"}}
+{"t":"project.ops","version":7,"ops":[{"op":"clip.add","clip":{"id":"clip-3","trackId":"video","assetId":"sample-3","kind":"video","start":16,"duration":8,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"effects":[],"keyframes":[],"speed":1}}],"actionId":"8bf6f8f2-291d-423b-bb4c-58334e120353"}
+{"t":"agent.action.progress","id":"8bf6f8f2-291d-423b-bb4c-58334e120353","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"8bf6f8f2-291d-423b-bb4c-58334e120353","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"trim clip 1"}
+{"t":"agent.action.start","id":"2f23c02d-5a89-4363-87f2-bc390d141823","tool":"trim_clip","title":"trim clip 1","args":{}}
+{"t":"project.ops","version":8,"ops":[{"op":"clip.trim","id":"clip-1","edge":"out","value":7}],"actionId":"2f23c02d-5a89-4363-87f2-bc390d141823"}
+{"t":"agent.action.progress","id":"2f23c02d-5a89-4363-87f2-bc390d141823","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"2f23c02d-5a89-4363-87f2-bc390d141823","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"trim clip 2"}
+{"t":"agent.action.start","id":"e18bb191-44ff-4fa7-8584-c2204f7dc882","tool":"trim_clip","title":"trim clip 2","args":{}}
+{"t":"project.ops","version":9,"ops":[{"op":"clip.trim","id":"clip-2","edge":"out","value":7}],"actionId":"e18bb191-44ff-4fa7-8584-c2204f7dc882"}
+{"t":"agent.action.progress","id":"e18bb191-44ff-4fa7-8584-c2204f7dc882","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"e18bb191-44ff-4fa7-8584-c2204f7dc882","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"trim clip 3"}
+{"t":"agent.action.start","id":"9cdc2dfc-e91b-420f-9288-c835ca12ba8f","tool":"trim_clip","title":"trim clip 3","args":{}}
+{"t":"project.ops","version":10,"ops":[{"op":"clip.trim","id":"clip-3","edge":"out","value":7}],"actionId":"9cdc2dfc-e91b-420f-9288-c835ca12ba8f"}
+{"t":"agent.action.progress","id":"9cdc2dfc-e91b-420f-9288-c835ca12ba8f","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"9cdc2dfc-e91b-420f-9288-c835ca12ba8f","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"bring the second shot forward"}
+{"t":"agent.action.start","id":"784da75a-b512-402a-b56b-c0851b44e359","tool":"reorder_clip","title":"bring the second shot forward","args":{}}
+{"t":"project.ops","version":11,"ops":[{"op":"clip.move","id":"clip-2","trackId":"video","start":0},{"op":"clip.move","id":"clip-1","trackId":"video","start":7},{"op":"clip.move","id":"clip-3","trackId":"video","start":14}],"actionId":"784da75a-b512-402a-b56b-c0851b44e359"}
+{"t":"agent.action.progress","id":"784da75a-b512-402a-b56b-c0851b44e359","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"784da75a-b512-402a-b56b-c0851b44e359","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"write the opening title"}
+{"t":"agent.action.start","id":"70a005e6-e30f-4046-8187-c9fdb90b8e04","tool":"add_title","title":"write the opening title","args":{}}
+{"t":"project.ops","version":12,"ops":[{"op":"clip.add","clip":{"id":"title","trackId":"text","kind":"text","start":0,"duration":3,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"a quieter kind of motion","style":"title"},"effects":[],"keyframes":[],"speed":1}}],"actionId":"70a005e6-e30f-4046-8187-c9fdb90b8e04"}
+{"t":"agent.action.progress","id":"70a005e6-e30f-4046-8187-c9fdb90b8e04","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"70a005e6-e30f-4046-8187-c9fdb90b8e04","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"caption phrase 1"}
+{"t":"agent.action.start","id":"be682f7d-bdac-4488-9cc4-447b687a4a32","tool":"add_captions","title":"caption phrase 1","args":{}}
+{"t":"project.ops","version":13,"ops":[{"op":"clip.add","clip":{"id":"caption-0","trackId":"text","kind":"text","start":0,"duration":3.5,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"find a little room to breathe","style":"caption","words":[{"t":0,"d":0.5,"w":"find"},{"t":0.5,"d":0.5,"w":"a"},{"t":1,"d":0.5,"w":"little"},{"t":1.5,"d":0.5,"w":"room"},{"t":2,"d":0.5,"w":"to"},{"t":2.5,"d":0.5,"w":"breathe"}]},"effects":[],"keyframes":[],"speed":1}}],"actionId":"be682f7d-bdac-4488-9cc4-447b687a4a32"}
+{"t":"agent.action.progress","id":"be682f7d-bdac-4488-9cc4-447b687a4a32","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"be682f7d-bdac-4488-9cc4-447b687a4a32","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"caption phrase 2"}
+{"t":"agent.action.start","id":"d45a8958-820f-4531-a8b9-0c17522aa37f","tool":"add_captions","title":"caption phrase 2","args":{}}
+{"t":"project.ops","version":14,"ops":[{"op":"clip.add","clip":{"id":"caption-1","trackId":"text","kind":"text","start":3.5,"duration":3.5,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"find a little room to breathe","style":"caption","words":[{"t":0,"d":0.5,"w":"find"},{"t":0.5,"d":0.5,"w":"a"},{"t":1,"d":0.5,"w":"little"},{"t":1.5,"d":0.5,"w":"room"},{"t":2,"d":0.5,"w":"to"},{"t":2.5,"d":0.5,"w":"breathe"}]},"effects":[],"keyframes":[],"speed":1}}],"actionId":"d45a8958-820f-4531-a8b9-0c17522aa37f"}
+{"t":"agent.action.progress","id":"d45a8958-820f-4531-a8b9-0c17522aa37f","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"d45a8958-820f-4531-a8b9-0c17522aa37f","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"caption phrase 3"}
+{"t":"agent.action.start","id":"cc6109b3-33a7-4a41-99a4-022131c66cce","tool":"add_captions","title":"caption phrase 3","args":{}}
+{"t":"project.ops","version":15,"ops":[{"op":"clip.add","clip":{"id":"caption-2","trackId":"text","kind":"text","start":7,"duration":3.5,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"find a little room to breathe","style":"caption","words":[{"t":0,"d":0.5,"w":"find"},{"t":0.5,"d":0.5,"w":"a"},{"t":1,"d":0.5,"w":"little"},{"t":1.5,"d":0.5,"w":"room"},{"t":2,"d":0.5,"w":"to"},{"t":2.5,"d":0.5,"w":"breathe"}]},"effects":[],"keyframes":[],"speed":1}}],"actionId":"cc6109b3-33a7-4a41-99a4-022131c66cce"}
+{"t":"agent.action.progress","id":"cc6109b3-33a7-4a41-99a4-022131c66cce","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"cc6109b3-33a7-4a41-99a4-022131c66cce","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"caption phrase 4"}
+{"t":"agent.action.start","id":"88d03201-0f33-4f53-a7df-aba47683de32","tool":"add_captions","title":"caption phrase 4","args":{}}
+{"t":"project.ops","version":16,"ops":[{"op":"clip.add","clip":{"id":"caption-3","trackId":"text","kind":"text","start":10.5,"duration":3.5,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"find a little room to breathe","style":"caption","words":[{"t":0,"d":0.5,"w":"find"},{"t":0.5,"d":0.5,"w":"a"},{"t":1,"d":0.5,"w":"little"},{"t":1.5,"d":0.5,"w":"room"},{"t":2,"d":0.5,"w":"to"},{"t":2.5,"d":0.5,"w":"breathe"}]},"effects":[],"keyframes":[],"speed":1}}],"actionId":"88d03201-0f33-4f53-a7df-aba47683de32"}
+{"t":"agent.action.progress","id":"88d03201-0f33-4f53-a7df-aba47683de32","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"88d03201-0f33-4f53-a7df-aba47683de32","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"caption phrase 5"}
+{"t":"agent.action.start","id":"0d9b3fb8-9ae1-4678-898d-5dc0307d6569","tool":"add_captions","title":"caption phrase 5","args":{}}
+{"t":"project.ops","version":17,"ops":[{"op":"clip.add","clip":{"id":"caption-4","trackId":"text","kind":"text","start":14,"duration":3.5,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"find a little room to breathe","style":"caption","words":[{"t":0,"d":0.5,"w":"find"},{"t":0.5,"d":0.5,"w":"a"},{"t":1,"d":0.5,"w":"little"},{"t":1.5,"d":0.5,"w":"room"},{"t":2,"d":0.5,"w":"to"},{"t":2.5,"d":0.5,"w":"breathe"}]},"effects":[],"keyframes":[],"speed":1}}],"actionId":"0d9b3fb8-9ae1-4678-898d-5dc0307d6569"}
+{"t":"agent.action.progress","id":"0d9b3fb8-9ae1-4678-898d-5dc0307d6569","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"0d9b3fb8-9ae1-4678-898d-5dc0307d6569","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"caption phrase 6"}
+{"t":"agent.action.start","id":"f1fb136a-ef11-4fe5-a429-f1b1df6900ea","tool":"add_captions","title":"caption phrase 6","args":{}}
+{"t":"project.ops","version":18,"ops":[{"op":"clip.add","clip":{"id":"caption-5","trackId":"text","kind":"text","start":17.5,"duration":3.5,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"text":{"content":"find a little room to breathe","style":"caption","words":[{"t":0,"d":0.5,"w":"find"},{"t":0.5,"d":0.5,"w":"a"},{"t":1,"d":0.5,"w":"little"},{"t":1.5,"d":0.5,"w":"room"},{"t":2,"d":0.5,"w":"to"},{"t":2.5,"d":0.5,"w":"breathe"}]},"effects":[],"keyframes":[],"speed":1}}],"actionId":"f1fb136a-ef11-4fe5-a429-f1b1df6900ea"}
+{"t":"agent.action.progress","id":"f1fb136a-ef11-4fe5-a429-f1b1df6900ea","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"f1fb136a-ef11-4fe5-a429-f1b1df6900ea","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"warm the tones in clip 1"}
+{"t":"agent.action.start","id":"6a66ba1c-116d-46fb-9819-66f7c5fcae12","tool":"colour_grade","title":"warm the tones in clip 1","args":{}}
+{"t":"project.ops","version":19,"ops":[{"op":"effect.set","clipId":"clip-1","effect":{"id":"grade","type":"colour_grade","params":{"exposure":0.1,"warmth":0.15,"contrast":0.95}}}],"actionId":"6a66ba1c-116d-46fb-9819-66f7c5fcae12"}
+{"t":"agent.action.progress","id":"6a66ba1c-116d-46fb-9819-66f7c5fcae12","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"6a66ba1c-116d-46fb-9819-66f7c5fcae12","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"warm the tones in clip 2"}
+{"t":"agent.action.start","id":"54c744a0-1f4c-481b-a9db-e6093750fc3b","tool":"colour_grade","title":"warm the tones in clip 2","args":{}}
+{"t":"project.ops","version":20,"ops":[{"op":"effect.set","clipId":"clip-2","effect":{"id":"grade","type":"colour_grade","params":{"exposure":0.1,"warmth":0.15,"contrast":0.95}}}],"actionId":"54c744a0-1f4c-481b-a9db-e6093750fc3b"}
+{"t":"agent.action.progress","id":"54c744a0-1f4c-481b-a9db-e6093750fc3b","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"54c744a0-1f4c-481b-a9db-e6093750fc3b","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"warm the tones in clip 3"}
+{"t":"agent.action.start","id":"38b4fcac-43f7-4270-943f-23a0322e8455","tool":"colour_grade","title":"warm the tones in clip 3","args":{}}
+{"t":"project.ops","version":21,"ops":[{"op":"effect.set","clipId":"clip-3","effect":{"id":"grade","type":"colour_grade","params":{"exposure":0.1,"warmth":0.15,"contrast":0.95}}}],"actionId":"38b4fcac-43f7-4270-943f-23a0322e8455"}
+{"t":"agent.action.progress","id":"38b4fcac-43f7-4270-943f-23a0322e8455","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"38b4fcac-43f7-4270-943f-23a0322e8455","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"isolate the subject in clip 2"}
+{"t":"agent.action.start","id":"2b429dcc-5a61-470b-9e7c-b9133232045f","tool":"segment_subject","title":"isolate the subject in clip 2","args":{}}
+{"t":"sam.mask","clipId":"clip-2","maskAssetId":"sample-mask","previewPolygon":[[0.3,0.1],[0.7,0.1],[0.8,0.9],[0.2,0.9]]}
+{"t":"asset.added","asset":{"id":"sample-mask","kind":"image","name":"mask.png","url":"http://localhost:8787/fixtures/mask.png","width":1920,"height":1080,"source":"user"}}
+{"t":"project.ops","version":22,"ops":[{"op":"clip.update","id":"clip-2","patch":{"mask":{"kind":"sam","maskAssetId":"sample-mask","invert":false,"feather":2}}}],"actionId":"2b429dcc-5a61-470b-9e7c-b9133232045f"}
+{"t":"agent.action.progress","id":"2b429dcc-5a61-470b-9e7c-b9133232045f","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"2b429dcc-5a61-470b-9e7c-b9133232045f","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"find an image for the closing beat"}
+{"t":"agent.action.start","id":"7fb42691-61ae-45b3-b616-13a42aeadae1","tool":"search_images","title":"find an image for the closing beat","args":{}}
+{"t":"asset.added","asset":{"id":"sample-image","kind":"image","name":"still.png","url":"http://localhost:8787/fixtures/still.png","width":1920,"height":1080,"source":"web","attribution":{"site":"kimo fixture library","pageUrl":"https://github.com/naman-sharma12345/kimoapp/tree/main/packages/mock-server/fixtures","license":"CC0-1.0"}}}
+{"t":"project.ops","version":23,"ops":[{"op":"clip.add","clip":{"id":"image","trackId":"overlay","assetId":"sample-image","kind":"image","start":18,"duration":3,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"effects":[],"keyframes":[],"speed":1}}],"actionId":"7fb42691-61ae-45b3-b616-13a42aeadae1"}
+{"t":"agent.action.progress","id":"7fb42691-61ae-45b3-b616-13a42aeadae1","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"7fb42691-61ae-45b3-b616-13a42aeadae1","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"lay in a quiet music bed"}
+{"t":"agent.action.start","id":"0989e47a-0533-465f-b92c-58f43cf5fb02","tool":"add_music","title":"lay in a quiet music bed","args":{}}
+{"t":"asset.added","asset":{"id":"sample-music","kind":"audio","name":"quiet-study.wav","url":"http://localhost:8787/fixtures/quiet-study.wav","durationSec":24,"source":"user"}}
+{"t":"project.ops","version":24,"ops":[{"op":"clip.add","clip":{"id":"music","trackId":"audio","assetId":"sample-music","kind":"audio","start":0,"duration":21,"in":0,"transform":{"x":0,"y":0,"scale":1,"rotation":0,"opacity":1},"effects":[],"keyframes":[],"speed":1,"volume":0.35}}],"actionId":"0989e47a-0533-465f-b92c-58f43cf5fb02"}
+{"t":"agent.action.progress","id":"0989e47a-0533-465f-b92c-58f43cf5fb02","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"0989e47a-0533-465f-b92c-58f43cf5fb02","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"make room for the voice"}
+{"t":"agent.action.start","id":"a98e6b9c-34c8-4250-87b6-b6745193122a","tool":"duck_audio","title":"make room for the voice","args":{}}
+{"t":"project.ops","version":25,"ops":[{"op":"effect.set","clipId":"music","effect":{"id":"ducking","type":"ducking","params":{"gain":0.15,"attack":0.14,"release":0.36}}}],"actionId":"a98e6b9c-34c8-4250-87b6-b6745193122a"}
+{"t":"agent.action.progress","id":"a98e6b9c-34c8-4250-87b6-b6745193122a","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"a98e6b9c-34c8-4250-87b6-b6745193122a","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"soften the cut"}
+{"t":"agent.action.start","id":"d95bf898-054c-4b2b-b38d-73de3219b6e7","tool":"add_transition","title":"soften the cut","args":{}}
+{"t":"project.ops","version":26,"ops":[{"op":"clip.update","id":"clip-1","patch":{"transitionIn":{"type":"dissolve","duration":0.36}}}],"actionId":"d95bf898-054c-4b2b-b38d-73de3219b6e7"}
+{"t":"agent.action.progress","id":"d95bf898-054c-4b2b-b38d-73de3219b6e7","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"d95bf898-054c-4b2b-b38d-73de3219b6e7","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"soften the cut"}
+{"t":"agent.action.start","id":"239e50ea-f79f-4a98-91d9-139de9ab0ac3","tool":"add_transition","title":"soften the cut","args":{}}
+{"t":"project.ops","version":27,"ops":[{"op":"clip.update","id":"clip-3","patch":{"transitionIn":{"type":"dissolve","duration":0.36}}}],"actionId":"239e50ea-f79f-4a98-91d9-139de9ab0ac3"}
+{"t":"agent.action.progress","id":"239e50ea-f79f-4a98-91d9-139de9ab0ac3","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"239e50ea-f79f-4a98-91d9-139de9ab0ac3","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine the framing in clip 1"}
+{"t":"agent.action.start","id":"ed2b3892-c681-47e1-9c6d-bee2a8e9dcc0","tool":"reframe_clip","title":"refine the framing in clip 1","args":{}}
+{"t":"project.ops","version":28,"ops":[{"op":"clip.update","id":"clip-1","patch":{"transform":{"x":0,"y":0,"scale":1.04,"rotation":0,"opacity":1}}}],"actionId":"ed2b3892-c681-47e1-9c6d-bee2a8e9dcc0"}
+{"t":"agent.action.progress","id":"ed2b3892-c681-47e1-9c6d-bee2a8e9dcc0","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"ed2b3892-c681-47e1-9c6d-bee2a8e9dcc0","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine the framing in clip 2"}
+{"t":"agent.action.start","id":"a4a32f69-69ed-4204-beb6-56b71f33a154","tool":"reframe_clip","title":"refine the framing in clip 2","args":{}}
+{"t":"project.ops","version":29,"ops":[{"op":"clip.update","id":"clip-2","patch":{"transform":{"x":0,"y":0,"scale":1.04,"rotation":0,"opacity":1}}}],"actionId":"a4a32f69-69ed-4204-beb6-56b71f33a154"}
+{"t":"agent.action.progress","id":"a4a32f69-69ed-4204-beb6-56b71f33a154","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"a4a32f69-69ed-4204-beb6-56b71f33a154","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine the framing in clip 3"}
+{"t":"agent.action.start","id":"11c30e17-4f5a-4fea-86f5-8cc3dd81be49","tool":"reframe_clip","title":"refine the framing in clip 3","args":{}}
+{"t":"project.ops","version":30,"ops":[{"op":"clip.update","id":"clip-3","patch":{"transform":{"x":0,"y":0,"scale":1.04,"rotation":0,"opacity":1}}}],"actionId":"11c30e17-4f5a-4fea-86f5-8cc3dd81be49"}
+{"t":"agent.action.progress","id":"11c30e17-4f5a-4fea-86f5-8cc3dd81be49","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"11c30e17-4f5a-4fea-86f5-8cc3dd81be49","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"add a measured push to clip 1"}
+{"t":"agent.action.start","id":"d7babb1a-48e6-4221-aa87-a51866fd99f9","tool":"animate_frame","title":"add a measured push to clip 1","args":{}}
+{"t":"project.ops","version":31,"ops":[{"op":"keyframe.set","clipId":"clip-1","keyframe":{"id":"push","property":"scale","time":6,"value":1.08,"easing":"ease-out"}}],"actionId":"d7babb1a-48e6-4221-aa87-a51866fd99f9"}
+{"t":"agent.action.progress","id":"d7babb1a-48e6-4221-aa87-a51866fd99f9","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"d7babb1a-48e6-4221-aa87-a51866fd99f9","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"add a measured push to clip 2"}
+{"t":"agent.action.start","id":"39ba6bde-71de-42b1-9572-80e5b7f1897c","tool":"animate_frame","title":"add a measured push to clip 2","args":{}}
+{"t":"project.ops","version":32,"ops":[{"op":"keyframe.set","clipId":"clip-2","keyframe":{"id":"push","property":"scale","time":6,"value":1.08,"easing":"ease-out"}}],"actionId":"39ba6bde-71de-42b1-9572-80e5b7f1897c"}
+{"t":"agent.action.progress","id":"39ba6bde-71de-42b1-9572-80e5b7f1897c","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"39ba6bde-71de-42b1-9572-80e5b7f1897c","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"add a measured push to clip 3"}
+{"t":"agent.action.start","id":"96e5d385-4b15-4ba5-84ba-5035049828f4","tool":"animate_frame","title":"add a measured push to clip 3","args":{}}
+{"t":"project.ops","version":33,"ops":[{"op":"keyframe.set","clipId":"clip-3","keyframe":{"id":"push","property":"scale","time":6,"value":1.08,"easing":"ease-out"}}],"actionId":"96e5d385-4b15-4ba5-84ba-5035049828f4"}
+{"t":"agent.action.progress","id":"96e5d385-4b15-4ba5-84ba-5035049828f4","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"96e5d385-4b15-4ba5-84ba-5035049828f4","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine caption 1"}
+{"t":"agent.action.start","id":"80f4ee41-11fa-49d9-8298-bd6786f0fdfa","tool":"refine_captions","title":"refine caption 1","args":{}}
+{"t":"project.ops","version":34,"ops":[{"op":"effect.set","clipId":"caption-0","effect":{"id":"caption-placement","type":"caption_placement","params":{"position":"lower","safeArea":0.08}}}],"actionId":"80f4ee41-11fa-49d9-8298-bd6786f0fdfa"}
+{"t":"agent.action.progress","id":"80f4ee41-11fa-49d9-8298-bd6786f0fdfa","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"80f4ee41-11fa-49d9-8298-bd6786f0fdfa","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine caption 2"}
+{"t":"agent.action.start","id":"725114e8-2ec0-4e50-84a0-586deeeb898a","tool":"refine_captions","title":"refine caption 2","args":{}}
+{"t":"project.ops","version":35,"ops":[{"op":"effect.set","clipId":"caption-1","effect":{"id":"caption-placement","type":"caption_placement","params":{"position":"lower","safeArea":0.08}}}],"actionId":"725114e8-2ec0-4e50-84a0-586deeeb898a"}
+{"t":"agent.action.progress","id":"725114e8-2ec0-4e50-84a0-586deeeb898a","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"725114e8-2ec0-4e50-84a0-586deeeb898a","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine caption 3"}
+{"t":"agent.action.start","id":"0153f18a-6daf-439f-b0cb-dcfd6783e3c2","tool":"refine_captions","title":"refine caption 3","args":{}}
+{"t":"project.ops","version":36,"ops":[{"op":"effect.set","clipId":"caption-2","effect":{"id":"caption-placement","type":"caption_placement","params":{"position":"lower","safeArea":0.08}}}],"actionId":"0153f18a-6daf-439f-b0cb-dcfd6783e3c2"}
+{"t":"agent.action.progress","id":"0153f18a-6daf-439f-b0cb-dcfd6783e3c2","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"0153f18a-6daf-439f-b0cb-dcfd6783e3c2","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine caption 4"}
+{"t":"agent.action.start","id":"9f2cbf39-808d-4de0-b1c3-35457919816a","tool":"refine_captions","title":"refine caption 4","args":{}}
+{"t":"project.ops","version":37,"ops":[{"op":"effect.set","clipId":"caption-3","effect":{"id":"caption-placement","type":"caption_placement","params":{"position":"lower","safeArea":0.08}}}],"actionId":"9f2cbf39-808d-4de0-b1c3-35457919816a"}
+{"t":"agent.action.progress","id":"9f2cbf39-808d-4de0-b1c3-35457919816a","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"9f2cbf39-808d-4de0-b1c3-35457919816a","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine caption 5"}
+{"t":"agent.action.start","id":"3d000d3f-52c5-44a5-b6ae-27540f2dc7de","tool":"refine_captions","title":"refine caption 5","args":{}}
+{"t":"project.ops","version":38,"ops":[{"op":"effect.set","clipId":"caption-4","effect":{"id":"caption-placement","type":"caption_placement","params":{"position":"lower","safeArea":0.08}}}],"actionId":"3d000d3f-52c5-44a5-b6ae-27540f2dc7de"}
+{"t":"agent.action.progress","id":"3d000d3f-52c5-44a5-b6ae-27540f2dc7de","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"3d000d3f-52c5-44a5-b6ae-27540f2dc7de","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"refine caption 6"}
+{"t":"agent.action.start","id":"571ec059-ab9f-4d3d-ba82-4c64a951d54f","tool":"refine_captions","title":"refine caption 6","args":{}}
+{"t":"project.ops","version":39,"ops":[{"op":"effect.set","clipId":"caption-5","effect":{"id":"caption-placement","type":"caption_placement","params":{"position":"lower","safeArea":0.08}}}],"actionId":"571ec059-ab9f-4d3d-ba82-4c64a951d54f"}
+{"t":"agent.action.progress","id":"571ec059-ab9f-4d3d-ba82-4c64a951d54f","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"571ec059-ab9f-4d3d-ba82-4c64a951d54f","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"balance the final mix"}
+{"t":"agent.action.start","id":"f510c266-ccf0-41aa-976f-2340b0dd359b","tool":"mix_audio","title":"balance the final mix","args":{}}
+{"t":"project.ops","version":40,"ops":[{"op":"clip.update","id":"music","patch":{"volume":0.28,"transitionOut":{"type":"audio_fade","duration":0.64}}}],"actionId":"f510c266-ccf0-41aa-976f-2340b0dd359b"}
+{"t":"agent.action.progress","id":"f510c266-ccf0-41aa-976f-2340b0dd359b","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"f510c266-ccf0-41aa-976f-2340b0dd359b","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"settle the opening title"}
+{"t":"agent.action.start","id":"3814cae3-b887-464a-af3a-d5945abc305d","tool":"refine_title","title":"settle the opening title","args":{}}
+{"t":"project.ops","version":41,"ops":[{"op":"text.update","clipId":"title","content":"a quieter kind of motion"}],"actionId":"3814cae3-b887-464a-af3a-d5945abc305d"}
+{"t":"agent.action.progress","id":"3814cae3-b887-464a-af3a-d5945abc305d","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"3814cae3-b887-464a-af3a-d5945abc305d","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"mark the opening for review"}
+{"t":"agent.action.start","id":"0139f008-d07c-4713-92c5-4d9f782e80dc","tool":"mark_review","title":"mark the opening for review","args":{}}
+{"t":"project.ops","version":42,"ops":[{"op":"marker.add","marker":{"id":"review-start","time":0,"label":"opening"}}],"actionId":"0139f008-d07c-4713-92c5-4d9f782e80dc"}
+{"t":"agent.action.progress","id":"0139f008-d07c-4713-92c5-4d9f782e80dc","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"0139f008-d07c-4713-92c5-4d9f782e80dc","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"mark the closing beat"}
+{"t":"agent.action.start","id":"b9fedbaf-dfb6-4342-b2a4-eefce2d0f3ca","tool":"mark_review","title":"mark the closing beat","args":{}}
+{"t":"project.ops","version":43,"ops":[{"op":"marker.add","marker":{"id":"review-end","time":18,"label":"closing"}}],"actionId":"b9fedbaf-dfb6-4342-b2a4-eefce2d0f3ca"}
+{"t":"agent.action.progress","id":"b9fedbaf-dfb6-4342-b2a4-eefce2d0f3ca","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"b9fedbaf-dfb6-4342-b2a4-eefce2d0f3ca","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"check the final timeline"}
+{"t":"agent.action.start","id":"a3b5885f-093e-40ba-ae2f-c7ae99f8c91b","tool":"check_timeline","title":"check the final timeline","args":{}}
+{"t":"project.ops","version":44,"ops":[{"op":"track.update","id":"video","patch":{"name":"picture"}}],"actionId":"a3b5885f-093e-40ba-ae2f-c7ae99f8c91b"}
+{"t":"agent.action.progress","id":"a3b5885f-093e-40ba-ae2f-c7ae99f8c91b","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"a3b5885f-093e-40ba-ae2f-c7ae99f8c91b","ok":true,"durationMs":140}
+{"t":"agent.status","state":"acting","label":"check the soundtrack track"}
+{"t":"agent.action.start","id":"140bd38e-3b85-4b2c-81c8-eb283b686037","tool":"check_audio","title":"check the soundtrack track","args":{}}
+{"t":"project.ops","version":45,"ops":[{"op":"track.update","id":"audio","patch":{"name":"soundtrack"}}],"actionId":"140bd38e-3b85-4b2c-81c8-eb283b686037"}
+{"t":"agent.action.progress","id":"140bd38e-3b85-4b2c-81c8-eb283b686037","pct":1,"note":"ready"}
+{"t":"agent.action.end","id":"140bd38e-3b85-4b2c-81c8-eb283b686037","ok":true,"durationMs":140}
+{"t":"agent.status","state":"waiting_user","label":"ready for your review"}
+{"t":"agent.message","id":"53f7f255-c52c-4926-895e-e6de5c798b5f","role":"agent","text":"the edit is ready. play it through and tell me what you think.","kind":"ask_review"}

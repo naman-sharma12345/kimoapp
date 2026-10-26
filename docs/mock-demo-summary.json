@@ -1,0 +1,10 @@
+{
+  "speed": 1,
+  "server": "http://localhost:8787",
+  "warmup_steps": 5,
+  "action_starts": 45,
+  "action_ends": 45,
+  "operation_batches": 45,
+  "last_event": "ask_review",
+  "all_actions_ok": true
+}

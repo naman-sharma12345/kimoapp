@@ -1,0 +1,179 @@
+@import 'tailwindcss';
+@import '../styles/tokens.css';
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    margin: 0;
+    background: var(--ink-0);
+    color: var(--cream-100);
+    font-family: var(--font-geist-sans), var(--font-sans);
+    font-size: var(--t-13);
+    line-height: 1.53846;
+    font-variant-numeric: tabular-nums;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  ::selection {
+    background: var(--ink-4);
+    color: var(--cream-100);
+  }
+  .text-t11 {
+    text-transform: uppercase;
+  }
+}
+
+/* Resolve Next's bundled font-face names ahead of the exact family fallback tokens. */
+code,
+.font-mono {
+  font-family: var(--font-geist-mono), var(--font-mono);
+}
+.font-display {
+  font-family: var(--font-instrument-serif), var(--font-display);
+  font-style: italic;
+}
+
+.token-page {
+  max-width: 1440px;
+  margin: auto;
+  padding: var(--space-48) var(--space-64) var(--space-96);
+}
+.token-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-24);
+  padding-bottom: var(--space-40);
+  border-bottom: 1px solid var(--line);
+}
+.token-section {
+  padding-top: var(--space-40);
+}
+.section-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+  margin-bottom: var(--space-24);
+}
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: var(--space-24) var(--space-16);
+}
+.swatch {
+  width: var(--space-96);
+  height: var(--space-64);
+  border-radius: var(--r-8);
+  box-shadow: var(--shadow-viewer);
+}
+.type-row {
+  padding: var(--space-16) 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.specimen-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-24);
+}
+.specimen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.radius-specimen {
+  width: var(--space-64);
+  height: var(--space-64);
+  background: var(--ink-3);
+  border: 1px solid var(--line-strong);
+}
+.control-specimen {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-16);
+  background: var(--ink-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-8);
+}
+.motion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: var(--space-24);
+}
+.motion-lane {
+  width: var(--space-96);
+  padding: var(--space-8) 0;
+  border-block: 1px solid var(--line);
+}
+.motion-square {
+  width: var(--space-24);
+  height: var(--space-24);
+  background: var(--cream-100);
+  border-radius: var(--r-4);
+}
+.replay {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--control-md);
+  padding: 0 var(--space-12);
+  background: var(--ink-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-8);
+  transition: background var(--dur-1) var(--ease-out);
+}
+.replay:hover {
+  background: var(--ink-3);
+}
+.replay:active {
+  background: var(--ink-4);
+}
+.skip-link {
+  position: absolute;
+  top: var(--space-8);
+  left: var(--space-8);
+  transform: translateY(-200%);
+  background: var(--ink-2);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--r-8);
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+@media (max-width: 640px) {
+  .token-page {
+    padding: var(--space-24) var(--space-20) var(--space-64);
+  }
+  .token-header {
+    flex-direction: column;
+    padding-bottom: var(--space-32);
+  }
+  .swatch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@kimo/mock-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kimo/client": "workspace:*",
+    "ws": "^8.18.3",
+    "zod": "^3.25.76"
+  }
+}
