@@ -78,3 +78,5 @@ Patches are shallow and cannot replace record IDs. Each batch is atomic, increas
 ## Mock demonstration
 
 Run `pnpm mock` and, in another terminal, `pnpm mock:demo`. The demo prints validated events and closes at ask_review. Set `MOCK_SPEED=2` on the mock process to double warmup, script and render speed. `MOCK_FAIL=upload`, `ws`, or `render` exercises failure states. Session data resets when the server restarts; `.mock-data` holds uploaded bytes. The canned delivered video is not a real rendered project.
+
+Phase 2 starts presigned PUTs and then creates the session with the registered asset IDs without waiting for all bytes. The mock permits registered pending IDs; GET asset returns 404 until its PUT succeeds. The real backend must support this order or provide a separate finalization mechanism. Browser upload failure after session creation is surfaced on the handoff screen and the draft stays available in memory for retry.

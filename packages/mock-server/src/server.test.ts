@@ -40,6 +40,37 @@ function stream(url: string) {
   return { socket, events, wait };
 }
 describe('mock backend end-to-end contract', () => {
+  it('accepts registered uploads before their bytes arrive', async () => {
+    const { client, base } = await setup();
+    const { uploads } = await client.uploads({
+      files: [{ name: 'pending.txt', size: 4, mime: 'text/plain' }],
+    });
+    const upload = uploads[0];
+    if (!upload) throw new Error('No upload');
+    const session = await client.createSession({
+      prompt: 'make a film',
+      assetIds: [upload.assetId],
+      aspect: 'auto',
+    });
+    expect(
+      (await client.session(session.sessionId)).assets.some(
+        (asset) => asset.id === upload.assetId,
+      ),
+    ).toBe(true);
+    expect((await fetch(`${base}/assets/${upload.assetId}`)).status).toBe(404);
+    expect(
+      (
+        await fetch(upload.putUrl, {
+          method: 'PUT',
+          headers: upload.headers,
+          body: 'note',
+        })
+      ).status,
+    ).toBe(200);
+    expect(await (await fetch(`${base}/assets/${upload.assetId}`)).text()).toBe(
+      'note',
+    );
+  });
   it('handles uploads, every edit event, conflicts, approval, render, video and range requests', async () => {
     const { client, base } = await setup();
     const prepared = await client.uploads({

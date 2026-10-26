@@ -34,6 +34,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/.next/**',
+      '**/.next-preview/**',
       '**/next-env.d.ts',
       '**/dist/**',
       '.agents/**',

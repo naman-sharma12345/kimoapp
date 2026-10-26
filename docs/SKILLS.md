@@ -33,3 +33,7 @@ Read frontend-design, tailwind-design-system, design-system-patterns and vercel-
 ## Phase 1 use
 
 Read design-system-patterns, vercel-composition-patterns, emil-design-eng, accessibility-compliance and impeccable. Used explicit variants, Radix composition, forwarded refs required by the phase, keyboard testing, exact motion presets, and token ownership. Loaded web-design-guidelines for the final review using the current upstream rules. Impeccable context and its source detector were run once; the mechanical detector reported no findings. The review, fixed findings and retained spec conflicts are recorded in PHASE_01_REVIEW.md and DECISIONS.md. The precise phase brief supplied the existing product and visual context; no new design interview, visual direction or delegation was needed.
+
+## Phase 2 use
+
+Read frontend-design, design-taste-frontend, emil-design-eng, design-motion-principles, kill-ai-slop, accessibility-compliance and vercel-react-view-transitions. The supplied brief governs the visual direction; the optional design-skill house style does not replace its fixed values. Browser interaction and accessibility checks cover the resulting page. The kill-ai-slop scan identified the explicitly requested status pill, retained as documented in DECISIONS.md.

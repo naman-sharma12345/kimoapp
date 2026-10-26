@@ -82,6 +82,7 @@ test('axe finds no violations in the gallery and open overlays', async ({
   await audit('context-menu');
   await screenshot(page, 'context-menu');
   await page.keyboard.press('Escape');
+  await expect(page.locator('.ui-context-menu')).toHaveCount(0);
   await page.getByRole('button', { name: 'play preview', exact: true }).focus();
   await expect(page.getByRole('tooltip')).toBeVisible();
   await audit('tooltip');
@@ -122,6 +123,7 @@ test('real keyboard navigation, editing, removal and autosizing', async ({
   });
   await segmented.getByRole('radio', { name: '16:9' }).focus();
   await page.keyboard.press('ArrowRight');
+  await expect(segmented.getByRole('radio', { name: '9:16' })).toBeFocused();
   await page.keyboard.press('Space');
   await expect(segmented.getByRole('radio', { name: '9:16' })).toHaveAttribute(
     'aria-checked',

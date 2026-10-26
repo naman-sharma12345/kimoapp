@@ -10,10 +10,18 @@ export default defineConfig({
     browserName: 'chromium',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000/dev/tokens',
-    timeout: 120000,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: 'pnpm dev',
+      url: 'http://localhost:3000/dev/tokens',
+      timeout: 120000,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: 'pnpm mock',
+      url: 'http://127.0.0.1:8787/health',
+      timeout: 120000,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });

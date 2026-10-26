@@ -357,12 +357,12 @@ export function createMockServer(options: MockOptions = {}) {
     }
     if (path === '/v1/sessions' && method === 'POST') {
       const input = sessionRequestSchema.parse(await body(request));
-      if (input.assetIds.some((id) => !uploads.get(id)?.ready)) {
+      if (input.assetIds.some((id) => !uploads.has(id))) {
         fail(
           response,
           400,
           'upload_incomplete',
-          'Finish uploading each asset before starting',
+          'Register each asset before starting',
         );
         return;
       }

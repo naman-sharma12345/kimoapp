@@ -152,17 +152,19 @@ export const ToastProvider = forwardRef<
   return (
     <Context.Provider value={{ toast, dismiss }}>
       {children}
-      <ol ref={ref} className="ui-toast-viewport" aria-label="notifications">
-        {items.map((item, index) => (
-          <motion.li
-            key={item.id}
-            layout={!reduced}
-            {...toastMotion(index < items.length - 1, reduced)}
-          >
-            <Toast {...item} onDismiss={() => dismiss(item.id)} />
-          </motion.li>
-        ))}
-      </ol>
+      <section aria-label="notifications">
+        <ol ref={ref} className="ui-toast-viewport" aria-label="notifications">
+          {items.map((item, index) => (
+            <motion.li
+              key={item.id}
+              layout={!reduced}
+              {...toastMotion(index < items.length - 1, reduced)}
+            >
+              <Toast {...item} onDismiss={() => dismiss(item.id)} />
+            </motion.li>
+          ))}
+        </ol>
+      </section>
     </Context.Provider>
   );
 });

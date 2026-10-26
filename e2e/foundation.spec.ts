@@ -4,8 +4,7 @@ test('tokens, utilities, keyboard focus and reduced motion', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await expect(page).toHaveURL('/dev/tokens');
+  await page.goto('/dev/tokens');
   await expect(page.locator('[data-ready="true"]')).toBeVisible();
   const swatch = page.locator('[data-token="ink-0"]');
   await expect(swatch).toHaveCSS('background-color', 'rgb(8, 8, 9)');

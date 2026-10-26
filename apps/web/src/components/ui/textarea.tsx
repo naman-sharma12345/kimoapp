@@ -13,11 +13,13 @@ import { uiClassName } from '../../lib/variants';
 export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   error?: string;
   maxRows?: number;
+  variant?: 'default' | 'composer';
 };
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   function Textarea(
     {
       maxRows = 6,
+      variant = 'default',
       error,
       id,
       className,
@@ -61,6 +63,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           value={value}
           defaultValue={defaultValue}
           className="ui-input ui-textarea"
+          data-variant={variant}
           aria-invalid={error ? true : undefined}
           aria-describedby={cn(describedBy, error && errorId) || undefined}
           onInput={(event) => {

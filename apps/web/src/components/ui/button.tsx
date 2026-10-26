@@ -24,6 +24,7 @@ type Common = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: 'xs' | 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: LucideIcon;
+  shortcut?: string;
 };
 export type ButtonProps = Common &
   (
@@ -43,6 +44,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       icon: Icon,
       iconOnly = false,
       tooltip,
+      shortcut,
       loading = false,
       disabled,
       className,
@@ -74,6 +76,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ) : null}
       </button>
     );
-    return tooltip ? <Tooltip content={tooltip}>{button}</Tooltip> : button;
+    return tooltip ? (
+      <Tooltip content={tooltip} shortcut={shortcut}>
+        {button}
+      </Tooltip>
+    ) : (
+      button
+    );
   },
 );

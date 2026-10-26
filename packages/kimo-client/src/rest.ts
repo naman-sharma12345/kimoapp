@@ -16,7 +16,7 @@ export class KimoClient {
   private readonly fetcher: typeof fetch;
   constructor(
     baseUrl = process.env.NEXT_PUBLIC_KIMO_API ?? 'http://localhost:8787',
-    fetcher: typeof fetch = fetch,
+    fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
   ) {
     this.baseUrl = baseUrl;
     this.fetcher = fetcher;

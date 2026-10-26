@@ -22,6 +22,11 @@ export const uiTiming = {
   tooltip: 400,
   toast: 4000,
   errorToast: 8000,
+  placeholderRotation: 3200,
+  placeholderFade: 220,
+  landingExit: 640,
+  landingReduced: 220,
+  typingIdle: 1600,
 } as const;
 export function sharedIndicator(reduced: boolean) {
   return {
