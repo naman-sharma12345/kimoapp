@@ -191,23 +191,23 @@ test('upload error chips retry successfully and preserve the first message', asy
     buffer: Buffer.from('test'),
   });
   await page.getByRole('button', { name: 'start editing' }).click();
+  await expect(page.getByText('1 file failed ·')).toBeVisible({
+    timeout: 30000,
+  });
   await expect(
-    page.getByRole('heading', { name: 'some files didn’t upload' }),
-  ).toBeVisible({ timeout: 30000 });
-  await expect(
-    page.getByRole('button', { name: 'retry retry.txt' }),
+    page.getByRole('button', { name: 'retry', exact: true }),
   ).toBeVisible();
   await shot(page, 'upload-error');
   failing = false;
-  await page
-    .getByRole('button', { name: 'retry uploads', exact: true })
-    .click();
-  await expect(
-    page.getByRole('heading', { name: 'getting your video ready' }),
-  ).toBeVisible();
-  await expect(page.locator('.ui-attachment[data-status="done"]')).toHaveCount(
-    1,
-  );
+  await page.getByRole('button', { name: 'retry', exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (await cachedMedia(page)).find((item) => item.name === 'retry.txt')
+          ?.done,
+    )
+    .toBe(true);
+  await expect(page).toHaveURL(/\/studio\//, { timeout: 30000 });
   await expect(
     page.getByText('keep this draft', { exact: true }),
   ).toBeVisible();
@@ -217,8 +217,12 @@ test('offline pause and resume keeps the upload recoverable', async ({
   page,
   context,
 }) => {
+  let releaseUpload: () => void = () => undefined;
+  const holdUpload = new Promise<void>((resolve) => {
+    releaseUpload = resolve;
+  });
   await page.route('**/mock-r2/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await holdUpload;
     await route.continue().catch(() => undefined);
   });
   await ready(page);
@@ -237,12 +241,17 @@ test('offline pause and resume keeps the upload recoverable', async ({
   await expect(
     page.getByText('you’re offline. uploads will continue when you’re back.'),
   ).toBeVisible();
+  releaseUpload();
   await context.setOffline(false);
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await expect(page.locator('.ui-attachment[data-status="done"]')).toHaveCount(
-    1,
-    { timeout: 15000 },
-  );
+  await expect
+    .poll(
+      async () =>
+        (await cachedMedia(page)).find((item) => item.name === 'offline.txt')
+          ?.done,
+      { timeout: 15000 },
+    )
+    .toBe(true);
 });
 
 test('unknown sessions have exact copy and warming studio deep links redirect', async ({
@@ -304,6 +313,16 @@ test('cancel on warmup removes the attachment from the saved and server session'
   await page.getByRole('button', { name: 'start editing' }).click();
   await expect(page).toHaveURL(/\/warmup\//);
   const id = page.url().split('/').at(-1);
+  const assetId = await page.evaluate(
+    () =>
+      Object.values(
+        (
+          JSON.parse(sessionStorage.getItem('kimo.session.v1') ?? '{}') as {
+            assetLocalMap: Record<string, string>;
+          }
+        ).assetLocalMap,
+      )[0],
+  );
   await page.getByRole('button', { name: 'remove cancel.txt' }).click();
   await expect(page.getByText('cancel.txt', { exact: true })).toHaveCount(0);
   await expect
@@ -312,8 +331,8 @@ test('cancel on warmup removes the attachment from the saved and server session'
         (
           (await (
             await request.get(`http://127.0.0.1:8787/v1/sessions/${id}`)
-          ).json()) as { assets: unknown[] }
-        ).assets.length,
+          ).json()) as { assets: { id: string }[] }
+        ).assets.filter((asset) => asset.id === assetId).length,
     )
     .toBe(0);
   expect(

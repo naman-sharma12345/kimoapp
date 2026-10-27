@@ -268,6 +268,7 @@ export const sessionSnapshotSchema = z
     assets: z.array(assetSchema),
     renderId: id.optional(),
     videoId: id.optional(),
+    wsUrl: z.string().url().optional(),
   })
   .strict();
 export const messageRequestSchema = z
@@ -385,6 +386,8 @@ export const serverEventSchema = z.discriminatedUnion('t', [
       t: z.literal('warmup.step'),
       step: z.enum(['upload', 'probe', 'watch', 'plan', 'ready']),
       pct: unit,
+      clipIndex: z.number().int().positive().optional(),
+      clipCount: z.number().int().positive().optional(),
     })
     .strict(),
   z.object({ t: z.literal('error'), code: id, message: z.string() }).strict(),

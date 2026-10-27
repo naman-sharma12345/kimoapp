@@ -41,3 +41,7 @@ Read frontend-design, design-taste-frontend, emil-design-eng, design-motion-prin
 ## Phase 3 use
 
 Read vercel-react-best-practices and webapp-testing, plus emil-design-eng for the requested Phase 2 polish. The missing local nextjs-app-router-patterns skill was located and read from its upstream source at `wshobson/agents/plugins/frontend-mobile-development/skills/nextjs-app-router-patterns/SKILL.md`. Apply server-side route loading, a persistent client provider, independent media tasks, and selector-based subscriptions. Use the repository's existing TypeScript Playwright harness rather than introducing a second Python test stack. No skill changes the fixed design or introduces dependencies.
+
+## Phase 4 use
+
+Read emil-design-eng, design-motion-principles, motion-dev-animations and vercel-react-view-transitions. The phase's fixed composition and measurements take precedence. Existing React 19 stable does not expose React's ViewTransition component, so the browser-native View Transitions API is used with a non-native fallback and reduced-motion handling.

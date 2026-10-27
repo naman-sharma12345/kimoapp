@@ -346,9 +346,10 @@ export function createMockServer(options: MockOptions = {}) {
       json(response, 202);
       return;
     }
-    const match = /^\/v1\/sessions\/([^/]+)(?:\/(messages|ops|approve))?$/.exec(
-      path,
-    );
+    const match =
+      /^\/v1\/sessions\/([^/]+)(?:\/(messages|ops|approve|cancel))?$/.exec(
+        path,
+      );
     if (match) {
       const id = match[1] ?? '';
       const session = sessions.get(id);
@@ -364,7 +365,16 @@ export function createMockServer(options: MockOptions = {}) {
           assets: session.assets,
           renderId: session.renderId,
           videoId: session.videoId,
+          wsUrl: `${base.replace('http', 'ws')}/v1/sessions/${id}/ws`,
         });
+        return;
+      }
+      if (operation === 'cancel' && method === 'POST') {
+        session.paused = true;
+        session.status = 'failed';
+        for (const socket of session.sockets)
+          socket.close(1000, 'edit stopped');
+        json(response, 202);
         return;
       }
       if (operation === 'messages' && method === 'POST') {
@@ -492,6 +502,13 @@ export function createMockServer(options: MockOptions = {}) {
       session.sockets.add(ws);
       session.started = true;
       ws.send(JSON.stringify({ t: 'hello', version: session.project.version }));
+      if (session.clock > 0 && session.status === 'warming') {
+        const index = Math.min(3, Math.floor(session.clock / 1200));
+        const step = (['upload', 'probe', 'watch', 'plan'] as const)[index];
+        ws.send(
+          JSON.stringify({ t: 'warmup.step', step, pct: (index + 1) / 5 }),
+        );
+      }
       if (options.fail === 'ws') {
         ws.send(
           JSON.stringify({
@@ -559,8 +576,21 @@ export function createMockServer(options: MockOptions = {}) {
         ['upload', 'probe', 'watch', 'plan', 'ready'] as const
       ).entries()) {
         const threshold = (index + 1) * 1200;
-        if (before < threshold && session.clock >= threshold)
+        if (before < threshold && session.clock >= threshold) {
           emit(session, { t: 'warmup.step', step, pct: (index + 1) / 5 });
+          if (step === 'watch')
+            emit(session, {
+              t: 'agent.status',
+              state: 'thinking',
+              label: 'reading every frame…',
+            });
+          if (step === 'plan')
+            emit(session, {
+              t: 'agent.status',
+              state: 'thinking',
+              label: 'looking for the best moments…',
+            });
+        }
       }
       if (session.clock >= 6000 && session.status === 'warming')
         session.status = 'editing';

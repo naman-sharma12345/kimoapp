@@ -97,10 +97,14 @@ export class UploadManager {
       this.store.setState({ cacheError: true });
     });
   }
-  add(files: File[]) {
+  add(files: File[], selectedIds?: readonly string[]) {
     const current = this.store
       .getState()
-      .items.filter((item) => item.status !== 'canceled');
+      .items.filter(
+        (item) =>
+          item.status !== 'canceled' &&
+          (!selectedIds || selectedIds.includes(item.localId)),
+      );
     const { accepted, rejected } = validateFiles(
       current.map((item) => item.file),
       files,
@@ -114,7 +118,12 @@ export class UploadManager {
       bytesSent: 0,
       meta: {},
     }));
-    this.store.setState({ items: [...current, ...items] });
+    this.store.setState((state) => ({
+      items: [
+        ...state.items.filter((item) => item.status !== 'canceled'),
+        ...items,
+      ],
+    }));
     for (const item of items) {
       const probing = (async () => {
         await this.save(item.localId, { file: item.file, meta: {} });

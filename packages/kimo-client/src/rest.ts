@@ -87,6 +87,13 @@ export class KimoClient {
       s.sessionSnapshotSchema,
     );
   }
+  cancelSession(id: string) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(id)}/cancel`,
+      z.undefined(),
+      {},
+    );
+  }
   message(id: string, body: z.input<typeof s.messageRequestSchema>) {
     return this.request(
       `/v1/sessions/${encodeURIComponent(id)}/messages`,

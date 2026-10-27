@@ -392,3 +392,185 @@ T ests green.
 •
 4
 ```
+
+## Phase 04 source specification
+
+```text
+Phase 4 — The Warm-up Screen
+READ THIS FIRST — rules for this phase (repeated in every
+phase on purpose)
+You are a senior frontend engineer building kimo web, the browser app for kimo, an AI video editor.
+You are NOT the designer. Every visual decision has already been made and is written below or in
+docs/DESIGN.md (created in Phase 0). Your job is to implement it exactly.
+No improvising. If a value (color, size, radius, spacing, duration, easing, copy) is written here,
+use exactly that value. If something is not specified, pick the closest existing token from docs/
+DESIGN.md and write a line in docs/DECISIONS.md saying what you chose and why. Never invent
+a new color, font, font size, radius, shadow or easing curve.
+No extra libraries beyond the ones listed in Phase 0's stack table. If you think you need one,
+write it in docs/DECISIONS.md as a proposal and continue without it.
+Only tokens. Never hard-code a hex value, px font size or duration inside a component. Use
+the CSS variables / T ailwind theme tokens defined in Phase 0 (--ink-0, --cream-100, --
+orange, --dur-2, --ease-out, etc.).
+Copy is exact. Every user-facing string written in quotes in these prompts is final. Use it
+character for character, including lowercase "kimo". Never write "Kimo" with a capital K in UI
+text.
+One orange rule. Orange (--orange #FF5A24) means "the AI is doing this right now" or "the
+one primary action". At most ONE orange element per panel at a time. Never use orange for
+decoration.
+No: gradients (except the two named exceptions in DESIGN.md), glassmorphism, drop
+shadows (except the named --shadow-pop), emoji in UI, stock illustrations, lorem ipsum,
+purple, neon, glow effects, rounded-full buttons except where named, bouncy overshoot
+springs except where named.
+Accessibility is not optional: every interactive element is keyboard reachable, has a visible
+focus ring (--focus-ring), and has an accessible name. Respect prefers-reduced-motion
+(every animation has a reduced variant listed in DESIGN.md §Motion).
+TypeScript strict. No any. No // @ts-ignore. ESLint and Prettier must pass with zero
+warnings.
+Finish the phase completely before stopping. At the end, run pnpm lint && pnpm typecheck
+&& pnpm test && pnpm build. All must pass. Then fill in the "Acceptance checklist" at the end of
+this document in docs/PHASE_LOG.md, ticking each item honestly, with a screenshot path for
+each visual item (docs/screens/phase-XX-*.png, captured with the Playwright script from Phase
+0).
+Do not touch the kimo engine repo or any backend code outside apps/web and packages/*
+listed in Phase 0. The backend is reached only through the typed client in packages/kimo-
+client.
+Skills. The agent skills installed in Phase 0 (listed in docs/SKILLS.md) are for craft, quality and
+review. Use the ones named under "Skills to load" in this phase. If a skill suggests a different
+look (new fonts, colors, bolder layout), this spec wins, always. Skills never override a written
+value.
+If an instruction in this phase seems to conflict with an earlier phase, this phase wins for the
+parts it names; everything else from earlier phases stays.
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+12.
+1
+Goal: build /warmup/[sessionId], the 5–40 seconds between "send" and the Studio. It must feel
+alive, honest and beautiful: small precise animations that show real progress (uploading, reading
+files, watching footage, planning the edit), never a fake spinner. Then a seamless transition into the
+Studio.
+Skills to load:emil kowalski skills, design motion principles, motion.dev animations, react-
+view-transitions.
+4.1 Layout
+Background --ink-0, grain overlay from Phase 2 kept, horizon glow kept but moved to center
+(ellipse 900×420, centered, opacity animates with progress from .5 to 1).
+Everything centered in a 560px column, vertically centered.
+T op-left: kimo mark 16px + kimo t-13 (links nowhere during warm-up). T op-right: ghost xs
+button "cancel" → confirm dialog ("stop this edit?" / "your files stay uploaded for 24
+hours." / danger "stop" / secondary "keep going").
+4.2 The centerpiece: "the reel" (component WarmupReel)
+A 360×120 composition built with SVG + motion:
+Filmstrip: a horizontal strip, 360 wide × 64 tall, r12, bg --ink-1, clipped. Inside: the user's
+actual thumbnails (from Phase 3; for images the image, for audio a waveform tile, for docs a
+ink-2 tile with the doc icon), each 96×54 r6, gap 6, scrolling left at a constant 24px/s in an
+endless loop (duplicate the list to loop). Sprocket holes: 4×3px rounded rects in rgb(245 241
+231 / .08) along the top and bottom edges every 12px, scrolling with the strip.
+Playhead: a 1.5px --orange vertical line centered on the strip, 80px tall (extends 8px above
+and below), with the 7px downward triangle at top (the mark's playhead). It does not move; the
+strip moves under it. Each time a thumbnail's center crosses the playhead, that thumbnail
+brightens (filter brightness 1 → 1.25 → 1 over 400ms) — "being watched".
+Bars: below the strip (16px gap) the four rounded bars of the kimo mark drawn large (bar
+width 10px, gap 8px, max height 40px), cream-100 at 85%. Their heights animate like a calm
+equalizer tied to the current step: during upload they follow the aggregate upload progress (all
+bars rise to the progress height); during watch they animate in a slow staggered wave (each
+bar 900ms ease-in-out alternate, offsets 0/120/240/360ms, heights between 30% and 100%);
+during plan they settle one by one into the exact proportions of the logo (10/16/12/7 ratio)
+with spring.snappy; at ready the whole cluster performs a single 1.06 scale pulse.
+If the user attached no files: strip shows 6 ink-2 placeholder tiles with a subtle shimmer.
+Reduced motion: strip static showing the first 3 thumbnails, bars static in logo proportions, only the
+step text and progress change.
+4.3 Step list (under the reel, 40px gap)
+A vertical list of 4 rows, each h28, gap 6, left-aligned inside a 320px box centered:
+Step id Label while active Label when done
+upload "uploading your files" + live " · 64%" mono "files uploaded"
+•
+•
+•
+•
+•
+•
+•
+2
+Step id Label while active Label when done
+probe / watch "watching your footage" + " · clip 3 of 7" when known "footage watched"
+plan "planning the edit" "plan ready"
+ready "opening the studio" —
+Row anatomy: 16px status icon slot + 10px gap + label t-13. Pending: 6px dot cream-16, label
+cream-38. Active: 14px spinner in --orange (the one orange on screen besides the playhead —
+allowed because both are "now"), label cream-100. Done: 14px Check cream-60, label cream-60; the
+check draws with a stroke-dashoffset animation 260ms. Rows transition color --dur-3.
+4.4 "What kimo noticed" line (live, delightful)
+Under the step list (24px gap): a single line t-13 cream-60 italic-free, max-width 520, centered, that
+types itself letter by letter (18ms per char) from agent.status labels sent during warm-up, e.g.
+"spotted a sunset at 0:42 in clip 2", "found speech in the podcast clip", "the music is 112
+bpm". Each new line replaces the old with a 220ms crossfade. Prefix: a 4px orange dot that blinks
+once on change. If no labels arrive within 4s of the watch step, show rotating honest fallbacks:
+"reading every frame…", "listening to the audio…", "looking for the best moments…".
+4.5 Bottom info
+Bottom-center, 32px from the bottom: t-12 cream-38 "usually ready in under a minute · you can
+leave this tab open". If warm-up exceeds 60s: change to "taking longer than usual, big files
+take a moment" in --warning at 80%.
+4.6 Data flow
+Connect to the WebSocket from POST /v1/sessions response (or GET restore). Map
+warmup.step to the rows. Combine local upload progress (Phase 3 manager) into the upload
+row so it moves even before the server reports.
+On warmup.step: ready (or agent.status with the first agent.action.start), wait until the
+current animation beat ends (max 400ms), then transition.
+Prefetch: as soon as plan starts, router.prefetch('/studio/{id}') and preload the compositor
+chunk and the first 3 asset proxies (<link rel="preload" as="video"> is unreliable; instead
+create hidden video elements with preload="auto" for the first 3 assets and hand them to the
+compositor via a shared cache).
+4.7 Transition into the Studio (the "unfold")
+T otal 900ms, with View Transitions API (fallback: motion layout animation):
+Step list and noticed-line fade out (--dur-3).
+The filmstrip stops scrolling and morphs into the Studio timeline's V1 track area (bottom of
+screen): it stretches to full width and moves down, while thumbnails become the first clips
+(shared element names per asset id).
+The playhead morphs into the timeline playhead.
+The four bars shrink and fly to the top-left to become the 16px mark in the Studio top bar.
+•
+•
+•
+1.
+2.
+3.
+4.
+3
+The Studio panels (viewer, agent panel, inspector) fade + rise 8px with stagger 60ms after step
+2 reaches 60%.
+Reduced motion: crossfade 220ms.
+4.8 Failure states
+WS cannot connect after 3 tries (2s/4s/8s): FullScreenError session variant.
+error message from server: same error screen with server message appended in mono t-12
+cream-38.
+Upload failure: the upload row turns --error label "2 files failed · retry" (retry button
+inline) while the rest continues if possible.
+Acceptance checklist (Phase 4)
+Reel uses the user's real thumbnails; playhead brightening works; bars follow each step's
+behaviour.
+Step rows and noticed-line driven by real WS events from the mock; fallbacks after 4s.
+Prefetch of studio route and first asset videos.
+Unfold transition lands with clips exactly where the Studio timeline will render them (record a
+60fps Playwright video and attach in docs/screens/phase-04-unfold.webm).
+Reduced-motion version verified.
+Cancel dialog, >60s message, failure screens.
+5.
+•
+•
+•
+•
+•
+•
+•
+•
+•
+4
+```

@@ -27,7 +27,40 @@ export const uiTiming = {
   landingExit: 640,
   landingReduced: 220,
   typingIdle: 1600,
+  warmupBeat: 400,
+  warmupNoticeType: 18,
+  warmupNoticeFallback: 4000,
+  warmupLong: 60000,
+  warmupUnfold: 900,
+  warmupBarStagger: 40,
 } as const;
+export function warmupBar(
+  step: 'upload' | 'watch' | 'plan' | 'ready',
+  progress: number,
+  index: number,
+  reduced: boolean,
+) {
+  const proportions = [10 / 16, 1, 12 / 16, 7 / 16];
+  const scaleY =
+    reduced || step === 'plan' || step === 'ready'
+      ? (proportions[index] ?? 1)
+      : step === 'upload'
+        ? Math.max(0.06, progress)
+        : 1;
+  return {
+    initial: false as const,
+    animate: { scaleY },
+    transition: reduced
+      ? { duration: 0 }
+      : step === 'plan' || step === 'ready'
+        ? {
+            ...springs.snappy,
+            delay:
+              step === 'plan' ? (index * uiTiming.warmupBarStagger) / 1000 : 0,
+          }
+        : { duration: durations['dur-2'], ease: easings['ease-out'] },
+  };
+}
 export function composerEntrance(reduced: boolean) {
   return {
     initial: { opacity: 0, scale: reduced ? 1 : 0.98 },

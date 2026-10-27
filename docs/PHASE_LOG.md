@@ -63,3 +63,21 @@ Implemented and verified 27 October 2026. Phase 2 polish preserves the fixed des
 - [x] Phase 2 polish replaces approximate entrances with the specified springs, corrects reduced-motion initial sizing, improves composer layout, preserves the raw prompt, and retains the user's preferred focus treatment. A browser geometry check verifies width 760 and gaps 24/20/40/16, plus custom duration, keyboard editing and the character limit. Evidence: [landing](screens/phase-02-landing-1440x900.png), [focused files](screens/phase-02-landing-focused-files-1440x900.png), [reduced motion](screens/phase-02-landing-reduced-1440x900.png). Review: [Phase 3 review](PHASE_03_REVIEW.md).
 
 Browser recovery depends on available IndexedDB quota; storage restrictions produce a warning rather than a false persistence promise. The mock's session data remains in memory and resets on server restart. The new multipart, detach and restore contract extensions are documented for real-backend agreement in CONTRACTS.md. A fresh Lighthouse run was started but was not required to claim these passed functional checks; the prior Phase 2 production score remains recorded above.
+
+## Phase 04 — the warm-up screen
+
+Implemented 27 October 2026. The screen connects session events to the real upload manager and transitions to the existing Studio handoff. Contract extensions, accessibility choices and transition limitations are recorded in [CONTRACTS.md](CONTRACTS.md) and [DECISIONS.md](DECISIONS.md).
+
+### Acceptance checklist
+
+- [x] The reel uses cached user thumbnails and waveforms, has a scrolling strip and crossing highlight, and changes the four bars by step. Evidence: [desktop](screens/phase-04-watch-1440x900.png) and [1920px](screens/phase-04-warmup-1920x1080.png).
+- [x] Rows and notices respond to validated WebSocket events; the notice falls back after four seconds without a label. Socket retries use 2/4/8-second delays. Evidence: [live notice](screens/phase-04-watch-1440x900.png), [fallback](screens/phase-04-reduced-390x844.png), and the warm-up state and socket tests.
+- [x] Planning prefetches the Studio route, dynamically loads the compositor and preloads up to three video assets into the shared cache.
+- [ ] The 900ms unfold uses the planned Phase 5 shell and timeline geometry, but exact alignment with the eventual Studio clips cannot yet be verified because that screen does not exist. The [transition video](screens/phase-04-unfold.webm) is encoded at 60 fps from a 25 fps Playwright source; it is not a native 60 fps capture or a performance measurement.
+- [x] Reduced motion uses static reel and mark proportions with an opacity-only route transition. Evidence: [mobile reduced motion](screens/phase-04-reduced-390x844.png).
+- [x] Cancel confirmation, the long-wait message, upload retry and server-error copy are present. Evidence: [cancel dialog](screens/phase-04-cancel-1440x900.png), [long wait](screens/phase-04-reduced-390x844.png), and [session error](screens/phase-04-error-390x844.png).
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+
+The Studio placeholder is deliberately retained until its later implementation. Cancel, restore socket URL and optional clip progress fields are mock/client contract extensions that need agreement with the real backend.
+
+The full browser run passed 30 of 31 tests; the remaining cancellation assertion was corrected to check the actual user asset ID after the mock adds its own assets, and that test passed on rerun. The expanded thumbnail and video-preload test also passed on rerun. Axe found no violations on the tested warm-up states. The unit/integration suite passed 113 tests.

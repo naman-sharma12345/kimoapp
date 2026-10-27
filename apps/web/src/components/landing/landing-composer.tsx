@@ -323,7 +323,7 @@ export function LandingComposer({
   const addFiles = useCallback(
     (files: File[]) => {
       if (submittingRef.current) return;
-      const { localIds: added, rejected } = uploadManager.add(files);
+      const { localIds: added, rejected } = uploadManager.add(files, localIds);
       for (const { file, reason } of rejected)
         toast({
           tone: 'error',
@@ -331,7 +331,7 @@ export function LandingComposer({
         });
       setLocalIds((current) => [...current, ...added]);
     },
-    [toast],
+    [toast, localIds],
   );
   useEffect(() => {
     const hasFiles = (event: DragEvent) =>

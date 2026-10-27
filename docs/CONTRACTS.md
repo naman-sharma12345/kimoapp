@@ -86,3 +86,7 @@ Phase 2 starts presigned PUTs and then creates the session with the registered a
 POST `/v1/uploads` returns either `{assetId, putUrl, headers}` or `{assetId, parts:[{partNumber,putUrl}], headers}` per file. Multipart begins above 100 MiB with 16 MiB parts. PUT responses expose ETag. POST `/v1/uploads/:assetId/complete` accepts `{parts:[{partNumber,etag}]}` and returns `{assetId}` only after every part is validated and assembled. Completion is idempotent. POST `/v1/uploads/:assetId/renew` returns `{uploads:[target]}` with the same asset ID.
 
 POST `/v1/sessions/:sessionId/assets/remove` accepts `{assetId}`, detaches the canceled upload and returns 202. Snapshots optionally include `renderId` and `videoId` for restore redirects. The mock's script waits for registered user uploads before progressing past warm-up. Fixture media is already available and does not enter that wait.
+
+## Phase 4 warm-up extensions
+
+POST `/v1/sessions/:sessionId/cancel` returns 202, stops the mock edit and leaves registered uploads in place. GET session may include `wsUrl` for reconnecting after refresh; when absent, the browser derives the session socket URL from the configured API origin. `warmup.step` may additionally include positive integer `clipIndex` and `clipCount`. These are proposed typed extensions that need real-backend agreement. The mock replays its current warm-up stage on reconnection. Socket failures retry after 2, 4 and 8 seconds, and wait for the browser to come online when offline.
