@@ -39,7 +39,9 @@ import {
   Volume2,
   ZoomIn,
   ZoomOut,
+  X,
 } from 'lucide-react';
+import type { CompositorController, PreviewMetrics } from '@kimo/compositor';
 import {
   KimoClient,
   ProjectSync,
@@ -194,7 +196,22 @@ export function StudioShell({
   const [guides, setGuides] = useState(false);
   const [overlays, setOverlays] = useState(true);
   const [loop, setLoop] = useState(false);
+  const [inPoint, setInPoint] = useState<number | null>(null);
+  const [outPoint, setOutPoint] = useState<number | null>(null);
   const [playhead, setPlayhead] = useState(0);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [previewReady, setPreviewReady] = useState(false);
+  const [metrics, setMetrics] = useState<PreviewMetrics | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenControls, setFullscreenControls] = useState(true);
+  const [editAt, setEditAt] = useState<number | null>(null);
+  const [region, setRegion] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
+  const [maskPolygon, setMaskPolygon] = useState<number[][] | null>(null);
   const [volume, setVolume] = useState(100);
   const [speed, setSpeed] = useState('1');
   const [title, setTitle] = useState('untitled video');
@@ -208,6 +225,17 @@ export function StudioShell({
   const [latency, setLatency] = useState<number | null>(null);
   const [version, setVersion] = useState(snapshot?.project.version ?? 0);
   const socket = useRef<WarmupConnection | null>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const preview = useRef<CompositorController | null>(null);
+  const previewPlayingRef = useRef(false);
+  const scrubbingRef = useRef(false);
+  const followFrame = useRef(0);
+  const playheadRef = useRef(0);
+  playheadRef.current = playhead;
+  const overlayTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const lastOpReceived = useRef<number | undefined>(undefined);
   const snapshotRef = useRef(snapshot);
   const composer = useRef<HTMLTextAreaElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
@@ -320,7 +348,19 @@ export function StudioShell({
       replace,
     );
     const event = (message: ServerEvent) => {
+      if (message.t === 'asset.added' && snapshotRef.current) {
+        const existing = snapshotRef.current;
+        replace({
+          ...existing,
+          assets: [
+            ...existing.assets.filter((asset) => asset.id !== message.asset.id),
+            message.asset,
+          ],
+        });
+      }
       if (message.t === 'hello' || message.t === 'project.ops') {
+        if (message.t === 'project.ops')
+          lastOpReceived.current = performance.now();
         void sync.receive(message).catch(() => undefined);
         if (message.t === 'project.ops' && followRef.current) {
           const operation = message.ops.find(
@@ -351,6 +391,44 @@ export function StudioShell({
         if (!agentOpenRef.current) setUnread(true);
         if (followRef.current && message.target?.clipId)
           setSelection(message.target.clipId);
+        if (message.target?.region) {
+          if (overlayTimer.current) clearTimeout(overlayTimer.current);
+          setRegion(message.target.region);
+        }
+        const targetClip = message.target?.clipId
+          ? snapshotRef.current?.project.clips[message.target.clipId]
+          : undefined;
+        if (targetClip && followRef.current && !scrubbingRef.current) {
+          if (previewPlayingRef.current) setEditAt(targetClip.start);
+          else {
+            cancelAnimationFrame(followFrame.current);
+            const from = preview.current?.current ?? 0;
+            const started = performance.now();
+            const tick = (now: number) => {
+              if (previewPlayingRef.current || scrubbingRef.current) return;
+              const progress = Math.min(1, (now - started) / 240);
+              const time =
+                from + (targetClip.start - from) * (1 - (1 - progress) ** 3);
+              preview.current?.seek(time);
+              setPlayhead(time);
+              if (progress < 1)
+                followFrame.current = requestAnimationFrame(tick);
+            };
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              preview.current?.seek(targetClip.start);
+              setPlayhead(targetClip.start);
+            } else followFrame.current = requestAnimationFrame(tick);
+          }
+        }
+      }
+      if (message.t === 'sam.mask')
+        setMaskPolygon(message.previewPolygon ?? null);
+      if (message.t === 'agent.action.end') {
+        if (overlayTimer.current) clearTimeout(overlayTimer.current);
+        overlayTimer.current = setTimeout(() => {
+          setRegion(null);
+          setMaskPolygon(null);
+        }, 600);
       }
       if (message.t === 'agent.message' && message.kind === 'ask_review')
         setAgentState('waiting_user');
@@ -387,8 +465,118 @@ export function StudioShell({
       alive = false;
       connection.dispose();
       socket.current = null;
+      if (overlayTimer.current) clearTimeout(overlayTimer.current);
+      cancelAnimationFrame(followFrame.current);
     };
   }, [sessionId, snapshot]);
+  useEffect(() => {
+    if (!canvas.current || !snapshot) return;
+    let canceled = false;
+    let controller: CompositorController | undefined;
+    const element = canvas.current;
+    void import('@kimo/compositor').then(async ({ CompositorController }) => {
+      if (canceled) return;
+      const initial = snapshotRef.current ?? snapshot;
+      controller = new CompositorController(
+        element,
+        initial.project,
+        initial.assets,
+        (next) => {
+          if (!canceled) {
+            setMetrics(next);
+            setPlayhead(next.time);
+            setPreviewPlaying(next.playing);
+            previewPlayingRef.current = next.playing;
+          }
+        },
+      );
+      preview.current = controller;
+      if (lastOpReceived.current !== undefined) {
+        controller.update(
+          initial.project,
+          initial.assets,
+          lastOpReceived.current,
+        );
+        lastOpReceived.current = undefined;
+      }
+      void Promise.allSettled([
+        new FontFace('Geist', 'url(/preview-fonts/Geist-Regular.ttf)').load(),
+        new FontFace(
+          'Geist Mono',
+          'url(/preview-fonts/GeistMono-Regular.woff2)',
+        ).load(),
+        new FontFace(
+          'Instrument Serif',
+          'url(/preview-fonts/InstrumentSerif-Italic.ttf)',
+          { style: 'italic' },
+        ).load(),
+        new FontFace('Anton', 'url(/preview-fonts/Anton-Regular.ttf)').load(),
+        new FontFace(
+          'DM Serif Display',
+          'url(/preview-fonts/DMSerifDisplay-Regular.ttf)',
+        ).load(),
+      ]).then((fonts) => {
+        for (const font of fonts)
+          if (font.status === 'fulfilled') document.fonts.add(font.value);
+        controller?.invalidate();
+      });
+      try {
+        await controller.mount();
+        if (!canceled) setPreviewReady(true);
+      } catch {
+        if (!canceled) setPreviewReady(false);
+      }
+    });
+    const observer = new ResizeObserver(() => controller?.invalidate());
+    observer.observe(element);
+    return () => {
+      canceled = true;
+      observer.disconnect();
+      controller?.destroy();
+      if (preview.current === controller) preview.current = null;
+    };
+  }, [sessionId, snapshot]);
+  useEffect(() => {
+    if (current && preview.current) {
+      preview.current.update(
+        current.project,
+        current.assets,
+        lastOpReceived.current,
+      );
+      lastOpReceived.current = undefined;
+    }
+  }, [current]);
+  useEffect(() => {
+    preview.current?.setLoop(
+      loop,
+      inPoint !== null && outPoint !== null && outPoint > inPoint
+        ? [inPoint, outPoint]
+        : undefined,
+    );
+  }, [loop, inPoint, outPoint]);
+  useEffect(() => {
+    preview.current?.setSpeed(Number(speed));
+  }, [speed]);
+  useEffect(() => {
+    preview.current?.setVolume(volume / 100);
+  }, [volume]);
+  useEffect(() => {
+    if (!fullscreen) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const reveal = () => {
+      setFullscreenControls(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setFullscreenControls(false), 2000);
+    };
+    reveal();
+    window.addEventListener('pointermove', reveal);
+    window.addEventListener('keydown', reveal);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointermove', reveal);
+      window.removeEventListener('keydown', reveal);
+    };
+  }, [fullscreen]);
   useEffect(() => {
     if (!sessionStart.current) sessionStart.current = Date.now();
     const timer = setInterval(
@@ -437,6 +625,20 @@ export function StudioShell({
   const togglePause = useCallback(() => {
     if (send({ t: paused ? 'resume' : 'pause' })) setPaused(!paused);
   }, [paused, send]);
+  const seekPreview = useCallback(
+    (time: number) => {
+      const next = clamp(time, 0, duration);
+      setPlayhead(next);
+      preview.current?.seek(next);
+    },
+    [duration],
+  );
+  const togglePlayback = useCallback(() => {
+    const controller = preview.current;
+    if (!controller) return;
+    if (previewPlayingRef.current) controller.pause();
+    else void controller.play();
+  }, []);
   const command = useCallback(
     (value: StudioCommand) => {
       if (value === 'focusComposer') {
@@ -445,27 +647,25 @@ export function StudioShell({
         requestAnimationFrame(() => composer.current?.focus());
       } else if (value === 'pauseAgent') togglePause();
       else if (value === 'shortcuts') setShortcutsOpen(true);
-      else if (value === 'start') setPlayhead(0);
-      else if (value === 'end') setPlayhead(duration);
+      else if (value === 'play') togglePlayback();
+      else if (value === 'fullscreen') setFullscreen((old) => !old);
+      else if (value === 'start') seekPreview(0);
+      else if (value === 'end') seekPreview(duration);
       else if (
         value === 'previous' ||
         value === 'next' ||
         value === 'previousSecond' ||
         value === 'nextSecond'
       )
-        setPlayhead((old) =>
-          clamp(
-            old +
-              (value === 'previous'
-                ? -1 / 30
-                : value === 'next'
-                  ? 1 / 30
-                  : value === 'previousSecond'
-                    ? -1
-                    : 1),
-            0,
-            duration,
-          ),
+        seekPreview(
+          playheadRef.current +
+            (value === 'previous'
+              ? -1 / 30
+              : value === 'next'
+                ? 1 / 30
+                : value === 'previousSecond'
+                  ? -1
+                  : 1),
         );
       else if (
         value === 'select' ||
@@ -476,19 +676,25 @@ export function StudioShell({
         setTool(value);
       else if (value === 'snap') setSnap((old) => !old);
       else if (value === 'loop') setLoop((old) => !old);
+      else if (value === 'inPoint') setInPoint(playheadRef.current);
+      else if (value === 'outPoint') setOutPoint(playheadRef.current);
       else if (value === 'fit') setZoom(50);
     },
-    [duration, togglePause],
+    [duration, togglePause, togglePlayback, seekPreview],
   );
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && fullscreen) {
+        setFullscreen(false);
+        return;
+      }
       const action = keyboardCommand(event);
       if (
         !action ||
         shortcutsOpen ||
         leaveOpen ||
         finishOpen ||
-        ['fullscreen', 'undo', 'redo', 'play'].includes(action)
+        ['undo', 'redo'].includes(action)
       )
         return;
       event.preventDefault();
@@ -496,7 +702,7 @@ export function StudioShell({
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, [command, shortcutsOpen, leaveOpen, finishOpen]);
+  }, [command, shortcutsOpen, leaveOpen, finishOpen, fullscreen]);
   if (!current || current.status === 'failed')
     return (
       <FullScreenError
@@ -615,12 +821,31 @@ export function StudioShell({
     </section>
   );
   const viewer = (
-    <section className="studio-panel studio-viewer" aria-label="viewer">
+    <section
+      className="studio-panel studio-viewer"
+      aria-label="viewer"
+      data-fullscreen={fullscreen || undefined}
+      data-controls-visible={fullscreenControls || undefined}
+    >
       <div className="studio-viewer-overlay">
         <span>
           {project?.width ?? 1920} × {project?.height ?? 1080} · 30 fps
         </span>
         <div className="studio-viewer-options">
+          {metrics?.approximate ? (
+            <span className="studio-preview-approx">preview approx.</span>
+          ) : null}
+          {fullscreen ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={X}
+              aria-label="close fullscreen preview"
+              tooltip="close fullscreen preview"
+              onClick={() => setFullscreen(false)}
+            />
+          ) : null}
           <SegmentedControl
             aria-label="viewer zoom"
             value={viewerZoom}
@@ -661,6 +886,11 @@ export function StudioShell({
             aspectRatio: `${project?.width ?? 1920} / ${project?.height ?? 1080}`,
           }}
         >
+          <canvas
+            ref={canvas}
+            className="studio-preview-canvas"
+            aria-label="live video preview"
+          />
           {thumbnail && !hasProject ? (
             <div
               className="studio-thumbnail"
@@ -668,8 +898,90 @@ export function StudioShell({
             />
           ) : null}
           {!hasProject ? <span>kimo is laying out the first cut…</span> : null}
+          {guides ||
+          (overlays && (region || maskPolygon || selected?.kind === 'text')) ? (
+            <svg
+              className="studio-preview-overlays"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              {guides ? (
+                <g className="studio-guide-lines">
+                  <path d="M333 0v1000M667 0v1000M0 333h1000M0 667h1000" />
+                  <rect x="50" y="50" width="900" height="900" />
+                </g>
+              ) : null}
+              {overlays && region ? (
+                <rect
+                  className="studio-ai-region"
+                  x={region.x * 1000}
+                  y={region.y * 1000}
+                  width={region.w * 1000}
+                  height={region.h * 1000}
+                  rx="4"
+                />
+              ) : null}
+              {overlays && maskPolygon ? (
+                <polygon
+                  className="studio-mask-preview"
+                  points={maskPolygon
+                    .map(
+                      (point) =>
+                        `${(point[0] ?? 0) * 1000},${(point[1] ?? 0) * 1000}`,
+                    )
+                    .join(' ')}
+                />
+              ) : null}
+              {overlays && selected?.kind === 'text' ? (
+                <g className="studio-text-handles">
+                  <rect x="150" y="400" width="700" height="200" />
+                  <rect x="147" y="397" width="6" height="6" />
+                  <rect x="847" y="397" width="6" height="6" />
+                  <rect x="147" y="597" width="6" height="6" />
+                  <rect x="847" y="597" width="6" height="6" />
+                  <path d="M500 400v-16" />
+                  <rect x="497" y="381" width="6" height="6" />
+                </g>
+              ) : null}
+            </svg>
+          ) : null}
+          {overlays && maskPolygon ? (
+            <span className="studio-mask-label">sam 3.1 · person</span>
+          ) : null}
+          {editAt !== null ? (
+            <button
+              className="studio-edit-chip"
+              onClick={() => {
+                seekPreview(editAt);
+                setEditAt(null);
+              }}
+            >
+              edit at {timecode(editAt).slice(3, 8)}
+            </button>
+          ) : null}
+          {metrics?.latencyMs !== null &&
+          metrics?.latencyMs !== undefined &&
+          typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('debug') === '1' ? (
+            <span className="studio-debug">
+              op → frame {Math.round(metrics.latencyMs)} ms
+            </span>
+          ) : null}
         </div>
       </div>
+      {fullscreen ? (
+        <input
+          className="studio-fullscreen-scrub"
+          type="range"
+          min="0"
+          max={Math.max(duration, 0.01)}
+          step="0.033333"
+          value={Math.min(playhead, Math.max(duration, 0.01))}
+          aria-label="seek preview"
+          onChange={(event) => seekPreview(Number(event.target.value))}
+        />
+      ) : null}
       <div className="studio-transport">
         <div className="studio-time">
           <span>{timecode(playhead)}</span>
@@ -697,10 +1009,11 @@ export function StudioShell({
           <Button
             size="lg"
             iconOnly
-            icon={Play}
-            aria-label="play"
-            tooltip="preview available in a later phase"
-            disabled
+            icon={previewPlaying ? Pause : Play}
+            aria-label={previewPlaying ? 'pause playback' : 'play'}
+            tooltip={previewPlaying ? 'pause playback' : 'play'}
+            onClick={togglePlayback}
+            disabled={!previewReady || !duration}
           />
           <Button
             variant="ghost"
@@ -849,6 +1162,28 @@ export function StudioShell({
             <span>00:10</span>
             <span>00:20</span>
             <span>00:30</span>
+            <input
+              className="studio-ruler-scrub"
+              type="range"
+              min="0"
+              max={Math.max(duration, 0.01)}
+              step="0.033333"
+              value={Math.min(playhead, Math.max(duration, 0.01))}
+              aria-label="seek timeline"
+              onPointerDown={() => {
+                scrubbingRef.current = true;
+                preview.current?.setScrubbing(true);
+              }}
+              onPointerUp={() => {
+                scrubbingRef.current = false;
+                preview.current?.setScrubbing(false);
+              }}
+              onPointerCancel={() => {
+                scrubbingRef.current = false;
+                preview.current?.setScrubbing(false);
+              }}
+              onChange={(event) => seekPreview(Number(event.target.value))}
+            />
           </div>
           <div className="studio-tracks">
             <div className="studio-track-headers">
@@ -939,6 +1274,11 @@ export function StudioShell({
               </div>
               <svg
                 className="studio-timeline-playhead"
+                style={{
+                  left: duration
+                    ? `${Math.min(100, (playhead / duration) * 100)}%`
+                    : '0%',
+                }}
                 viewBox="0 0 7 80"
                 aria-hidden="true"
               >
@@ -1095,7 +1435,12 @@ export function StudioShell({
             aria-pressed={agentOpen}
             onClick={() => setAgentOpen(!agentOpen)}
           />
-          <Button size="sm" icon={Maximize2} disabled>
+          <Button
+            size="sm"
+            icon={Maximize2}
+            onClick={() => setFullscreen(true)}
+            disabled={!previewReady}
+          >
             preview full
           </Button>
           <Dialog
@@ -1223,7 +1568,15 @@ export function StudioShell({
       ) : null}
       <footer className="studio-statusbar">
         <div>
-          <span>preview — fps</span>
+          <span
+            data-slow={
+              Boolean(
+                metrics?.playing && metrics.fps < 30 && metrics.fps > 0,
+              ) || undefined
+            }
+          >
+            preview {metrics?.fps ? metrics.fps : '—'} fps
+          </span>
           <span>·</span>
           <span>
             proxies ready{' '}

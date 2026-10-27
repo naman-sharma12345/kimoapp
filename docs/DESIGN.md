@@ -827,3 +827,241 @@ Screenshots at 1920×1080, 1440×900, 1280×800, 390×844.
 •
 5
 ```
+
+## Phase 06 source specification
+
+```text
+Phase 6 — The Live Preview Engine (real-
+time, no render step)
+READ THIS FIRST — rules for this phase (repeated in every
+phase on purpose)
+You are a senior frontend engineer building kimo web, the browser app for kimo, an AI video editor.
+You are NOT the designer. Every visual decision has already been made and is written below or in
+docs/DESIGN.md (created in Phase 0). Your job is to implement it exactly.
+No improvising. If a value (color, size, radius, spacing, duration, easing, copy) is written here,
+use exactly that value. If something is not specified, pick the closest existing token from docs/
+DESIGN.md and write a line in docs/DECISIONS.md saying what you chose and why. Never invent
+a new color, font, font size, radius, shadow or easing curve.
+No extra libraries beyond the ones listed in Phase 0's stack table. If you think you need one,
+write it in docs/DECISIONS.md as a proposal and continue without it.
+Only tokens. Never hard-code a hex value, px font size or duration inside a component. Use
+the CSS variables / T ailwind theme tokens defined in Phase 0 (--ink-0, --cream-100, --
+orange, --dur-2, --ease-out, etc.).
+Copy is exact. Every user-facing string written in quotes in these prompts is final. Use it
+character for character, including lowercase "kimo". Never write "Kimo" with a capital K in UI
+text.
+One orange rule. Orange (--orange #FF5A24) means "the AI is doing this right now" or "the
+one primary action". At most ONE orange element per panel at a time. Never use orange for
+decoration.
+No: gradients (except the two named exceptions in DESIGN.md), glassmorphism, drop
+shadows (except the named --shadow-pop), emoji in UI, stock illustrations, lorem ipsum,
+purple, neon, glow effects, rounded-full buttons except where named, bouncy overshoot
+springs except where named.
+Accessibility is not optional: every interactive element is keyboard reachable, has a visible
+focus ring (--focus-ring), and has an accessible name. Respect prefers-reduced-motion
+(every animation has a reduced variant listed in DESIGN.md §Motion).
+TypeScript strict. No any. No // @ts-ignore. ESLint and Prettier must pass with zero
+warnings.
+Finish the phase completely before stopping. At the end, run pnpm lint && pnpm typecheck
+&& pnpm test && pnpm build. All must pass. Then fill in the "Acceptance checklist" at the end of
+this document in docs/PHASE_LOG.md, ticking each item honestly, with a screenshot path for
+each visual item (docs/screens/phase-XX-*.png, captured with the Playwright script from Phase
+0).
+Do not touch the kimo engine repo or any backend code outside apps/web and packages/*
+listed in Phase 0. The backend is reached only through the typed client in packages/kimo-
+client.
+Skills. The agent skills installed in Phase 0 (listed in docs/SKILLS.md) are for craft, quality and
+review. Use the ones named under "Skills to load" in this phase. If a skill suggests a different
+look (new fonts, colors, bolder layout), this spec wins, always. Skills never override a written
+value.
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+1
+If an instruction in this phase seems to conflict with an earlier phase, this phase wins for the
+parts it names; everything else from earlier phases stays.
+Goal: build packages/compositor, the engine that draws the current KimoProject into the viewer in
+real time at 30–60 fps, and redraws the very same frame within one animation frame of any change
+(agent op or user edit). The user must never wait for a render to see an edit. The final 1080p export
+is done by the kimo engine on the server (Phase 9); this engine is a faithful preview of it.
+Skills to load:webgpu skill, react-best-practices. Read the PixiJS v8 docs on video textures,
+render groups and filters before starting.
+6.1 Architecture
+project store (zustand) --subscribe--> CompositorController
+                                         |-- Timeline clock (requestAnimationFrame, audio-
+clock master)
+                                         |-- MediaPool (HTMLVideoElement / ImageBitmap /
+AudioBuffer per asset, proxy URLs)
+                                         |-- SceneBuilder (pure fn: project + time ->
+SceneGraph)
+                                         |-- PixiRenderer (SceneGraph -> Pixi containers,
+diffed)
+                                         |-- AudioEngine (WebAudio graph: clips -> gain ->
+ducking -> master)
+                                         |-- OverlayLayer (DOM/SVG above canvas: AI regions,
+SAM masks, guides, text editing handles)
+SceneBuilder.build(project, t) is pure and unit-tested: returns an ordered list of visible
+layers at time t with resolved transform (after keyframe interpolation), opacity (after
+transitions), crop, effects, text layout and mask refs.
+PixiRenderer keeps a map clipId → DisplayObject, diffs the SceneGraph every frame, and
+only creates/destroys objects when layers appear/disappear.
+Canvas internal resolution: project size scaled to the viewer's device-pixel size, capped at
+1920×1080 (or 1080×1920) and at 1280×720 when navigator.hardwareConcurrency <= 4 or
+measured fps < 40 for 2 seconds (adaptive quality). Status bar reports actual fps.
+6.2 Media pool and proxies
+Each video asset is played from proxyUrl (720p H.264, provided by backend / mock) when
+available, else original. One HTMLVideoElement per clip instance on screen (pool reused; max 6
+active decoders; beyond that, clips not near the playhead release their elements).
+Seeking accuracy: when paused, after a seek or an edit, request
+video.requestVideoFrameCallback and render only when the frame for in + (t - start) *
+speed is presented (±half a frame). While waiting, keep the previous frame (never flash black).
+Pre-roll: 1.5s before a clip becomes visible during playback, create/seek its element so the cut
+is seamless.
+Images: ImageBitmap → texture, cached. Web-found images arrive via asset.added and are
+loaded immediately (show a 120ms fade-in the first time they appear in frame).
+Audio: decode audio-only assets to AudioBuffer; video audio comes from the video elements
+routed through MediaElementAudioSourceNode.
+12.
+•
+•
+•
+•
+•
+•
+•
+•
+2
+6.3 Clock and playback
+Master clock = AudioContext.currentTime while playing (keeps A/V in sync);
+performance.now() when muted/no audio.
+Play: resume AudioContext, start all clips intersecting t at correct offsets. Pause: freeze, keep
+frame.
+Loop region (I/O points from the timeline) when loop is on.
+Scrubbing (dragging the playhead): render at most every animation frame; video elements use
+fastSeek where available during drag and an exact seek on release; audio plays 60ms "scrub
+blips" at the scrub position (toggle in settings, default on).
+Playback speed 0.5×–2× via playbackRate and audio playbackRate.
+6.4 What must render live (the preview feature list)
+Implement each with a Pixi filter or display object. Each must match the server output closely; write
+the formula in packages/compositor/FIDELITY.md so the backend team can match it.
+Feature Live preview implementation
+Cuts, trims,
+reorders, splits,
+speed
+SceneBuilder timing math
+Transform (x, y,
+scale, rotation,
+opacity), crop
+container props + mask rect
+Keyframes linear, ease-in-out (cubic), hold; bezier handles from op
+Transitions cross-dissolve (opacity), dip to black, slide (4 dirs), zoom-in, whip blur (motion blur filter) —
+durations in frames
+Reframe 16:9 →
+9:16
+transform from AI with keyframed x following SAM subject centroid
+Colour exposure, contrast, saturation, temperature, tint, lift/gamma/gain (RGB), LUT (3D LUT as
+2D 512×512 strip texture, custom filter)
+Effects gaussian blur, vignette, film grain, sharpen, black & white, zoom punch-in
+SAM 3.1 masksmask asset = per-frame RLE or a low-res mask video (proxy) from backend; preview uses
+mask video texture as alpha (custom filter) with feather as blur on the mask; invert
+supported. Effects can apply inside or outside the mask (e.g. background blur, subject-only
+colour pop)
+T ext Pixi Text/BitmapText with our text styles (§6.5); word-level caption highlighting from
+words[]
+Shapes rounded rect bars (lower-third backgrounds), lines
+Audio volume, fades, ducking (music gain reduced by −12 dB when voice clips play, 300ms
+attack/release), mute/solo per track
+Anything the server can do that the preview cannot exactly reproduce (e.g. a heavy 3D effect) must
+still show immediately as an approximation, plus a small badge in the viewer top-right: t-11
+"preview approx." on --ink-2 r4. Never block.
+•
+•
+•
+•
+•
+3
+6.5 Text styles (defined here, used by Phase 7 and server)
+Ship 8 styles as data (textStyles.ts), each with a font family. Allowed in-video fonts: Geist, Geist
+Mono, Instrument Serif, plus Anton and DM Serif Display (these two are loaded only for the canvas,
+never used in UI chrome). No other fonts. The 8 styles: caption-clean (Geist 500 56px white, 2px
+black stroke 25%, bottom safe area), caption-pop (Anton 72px uppercase, active word in #FFD84D,
+others white), caption-box (Geist 500 48px on black 70% rounded box), title-serif (Instrument
+Serif italic 120px), title-bold (Anton 140px), lower-third (Geist 500 40px + Geist 400 28px on a
+rounded bar), label-mono (Geist Mono 32px), quote (DM Serif Display 64px). Positions in a
+1920×1080 safe-area grid (title-safe 90%). These are inside-video styles and are the only place
+colours other than tokens are allowed (they are content, not UI).
+6.6 Live updates from ops
+Store applies ops (Phase 0 contract) with immer → controller gets a change set of affected clip
+ids → marks the frame dirty → next rAF redraws. T arget: op received → pixels updated < 50
+ms when paused (measure and show in a dev overlay ?debug=1).
+When an agent.action.start has a target, the controller (if "follow kimo" is on and the user is
+not playing or scrubbing) moves the playhead to the target clip's start (or target.time) with a
+240ms eased scrub so the user sees the change happen in frame.
+When the user is playing, never move the playhead; instead show a small "edit at 00:21" chip
+in the viewer bottom-left that seeks there when clicked.
+6.7 OverlayLayer (DOM above canvas, pointer-events only
+where interactive)
+AI region outline: when an action has target.region, draw a 1px --orange rounded rect (r4)
+with a 10px corner bracket style (only corners drawn, 12px long) that fades in 120ms and fades
+out 600ms after agent.action.end.
+SAM mask preview: while a sam action runs, draw the previewPolygon filled --orange-24
+with a 1px --orange edge and a label chip at its top-left: t-11 "sam 3.1 · person" on --ink-1
+r4. When the real mask asset arrives, crossfade polygon → actual mask edge (rendered via an
+edge-detect pass) over 300ms, then hide (keep it visible when the clip's Mask section is open in
+the inspector).
+Text edit handles: for selected text clips, a 1px cream-60 bounding box with 6px square
+handles (r1, cream-100) for move/scale/rotate (rotate handle 16px above the top center).
+Double-click enters inline text editing (Phase 7).
+Guides: thirds grid and title-safe rect in rgb(245 241 231 / .16) when the grid toggle is on;
+snapping guides in --cream-60 dashed when dragging.
+6.8 Fullscreen preview
+F or "preview full": a fullscreen black overlay with the canvas centered, minimal controls auto-hiding
+after 2s (scrub bar 4px → 8px on hover, timecode, play, close). The agent can keep editing; changes
+appear live even here.
+•
+•
+•
+•
+•
+•
+•
+4
+6.9 Thumbnails and filmstrips for the timeline
+Expose compositor.getFilmstrip(clipId, widthPx) using the cached frames from Phase 3 and, for
+agent-generated clips, extracting frames from proxies with an OffscreenCanvas in a worker.
+Waveforms from IndexedDB or computed from proxy audio.
+6.10 Tests & benchmarks
+Unit tests for SceneBuilder (timing, transitions, keyframes, speed, splits).
+Visual regression: render 12 golden frames from a fixture project with Playwright +
+toHaveScreenshot (tolerance 1%).
+Benchmark page /dev/compositor with a 20-clip, 5-track fixture: must sustain ≥ 55 fps on an
+M1/RTX laptop at 1080p canvas, ≥ 30 fps at 720p on a 4-core laptop. Log results in docs/
+PHASE_LOG.md.
+Acceptance checklist (Phase 6)
+Live preview of every feature in §6.4 against the mock's scripted session.
+Op → pixel latency < 50 ms paused, shown in debug overlay.
+Seamless cuts during playback (no black frames) on the fixture; A/V sync within 1 frame.
+SAM polygon → mask crossfade; AI region brackets; text handles; guides.
+Follow-kimo playhead behaviour and "edit at" chip while playing.
+Adaptive quality and fps reporting.
+FIDELITY.md written; golden-frame tests green; benchmark numbers logged.
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+5
+```

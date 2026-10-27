@@ -37,7 +37,9 @@ export type StudioCommand =
   | 'fullscreen'
   | 'loop'
   | 'undo'
-  | 'redo';
+  | 'redo'
+  | 'inPoint'
+  | 'outPoint';
 
 export function isTypingTarget(target: EventTarget | null): boolean {
   return (
@@ -74,6 +76,8 @@ export function keyboardCommand(
     s: 'snap',
     f: 'fullscreen',
     l: 'loop',
+    i: 'inPoint',
+    o: 'outPoint',
   };
   return mapping[key];
 }

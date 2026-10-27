@@ -102,3 +102,21 @@ The optional restore fields, local title persistence, contrast adjustments and t
 The user subsequently supplied the final logo SVG, which replaces the provisional mark in product branding, the agent avatar, the favicon and the social image. They also requested that the Studio composer show neither a focus highlight nor the browser resize handle; both have been removed.
 
 The broad browser run passed 35 of 36 checks. The remaining warm-up removal test exposed a moving target; repeated reel tiles now offer pointer removal and the original control remains keyboard accessible. The corrected cancellation test passed on rerun. Eleven focused Studio, warm-up and landing checks then passed, including the updated logo, composer treatment, review pulse, mobile layouts and social image.
+
+## Phase 06 — Live preview
+
+The Studio now uses a Pixi canvas, a scene builder, per-clip media pooling, Web Audio, live project updates and transport controls. See [preview fidelity](../packages/compositor/FIDELITY.md) for formulas and known gaps.
+
+### Acceptance checklist
+
+- [ ] Every feature in §6.4: common transforms, transitions, effects, text and image/video masks render, but LUTs, RLE masks, effect scopes and several grading controls remain approximate or unsupported.
+- [ ] Paused op-to-pixel latency under 50 ms: the debug overlay reports receipt-to-render-submission timing; one browser test measured 26 ms, but display presentation latency is not verified.
+- [ ] Seamless cuts and A/V sync within one frame: the renderer waits for decoded frames and pre-rolls media, but one-frame sync has not been established.
+- [ ] SAM polygon-to-mask edge crossfade, corner brackets and interactive text handles are incomplete; guides and basic region and polygon overlays are present. Preview evidence: [Studio](screens/phase-06-preview-1440x900.png) and [overlays](screens/phase-06-overlays-1440x900.png).
+- [ ] Follow-kimo and the edit-at chip are implemented but their complete interaction sequence has not been independently verified.
+- [x] Adaptive resolution and frame-rate reporting are implemented. In the headless Playwright run on Chromium SwiftShader (16 logical cores, 720p), five one-second samples averaged 6.6 fps; this does not meet the 30 fps target. An RTX 4050 laptop using Direct3D 11 averaged 56.3 fps over six one-second samples at 1080p. At 720p with the browser reporting four cores it averaged 59.3 fps, but overriding the reported core count does not simulate a four-core CPU, so that hardware target remains unverified.
+- [ ] Fidelity notes and twelve visual regression frames are present and the golden-frame test passes at 1% tolerance; the full hardware benchmark requirements remain unverified.
+
+The existing logo and the requested Studio composer styling are preserved.
+
+The required lint, typecheck, 119 unit/integration tests and production build passed. Browser checks cover mock video playback, fullscreen, paused updates, a grayscale mask, overlays and twelve golden frames.

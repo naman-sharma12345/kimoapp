@@ -94,3 +94,7 @@ POST `/v1/sessions/:sessionId/cancel` returns 202, stops the mock edit and leave
 ## Phase 5 Studio restore extensions
 
 GET session may include `actionCount`, `paused`, `agentState`, and `createdAt` (Unix milliseconds). The mock supplies these so an opened or restored Studio can display accurate agent status and elapsed session time. They are optional typed extensions for real-backend agreement. Agent pause and resume use the existing WebSocket messages; incoming project operations remain synchronized through `ProjectSync`.
+
+## Phase 06 preview extensions
+
+Keyframes additionally accept hold and bezier easing and optional two-number in/out control handles. These optional fields preserve existing project compatibility; the real engine must agree on their timing and coordinate conventions. Transition duration remains seconds under the existing schema. Mask RLE, effect scope, LUT representation and audio solo need agreed contracts before full preview parity.

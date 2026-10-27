@@ -16,8 +16,10 @@ export const keyframeSchema = z
     time: seconds,
     value: z.number().finite(),
     easing: z
-      .enum(['linear', 'ease-out', 'ease-in-out', 'ease-in'])
+      .enum(['linear', 'ease-out', 'ease-in-out', 'ease-in', 'hold', 'bezier'])
       .default('linear'),
+    out: z.tuple([z.number().finite(), z.number().finite()]).optional(),
+    in: z.tuple([z.number().finite(), z.number().finite()]).optional(),
   })
   .strict();
 export const markerSchema = z
