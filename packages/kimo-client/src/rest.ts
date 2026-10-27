@@ -57,6 +57,30 @@ export class KimoClient {
       s.sessionRequestSchema.parse(body),
     );
   }
+  renewUpload(assetId: string) {
+    return this.request(
+      `/v1/uploads/${encodeURIComponent(assetId)}/renew`,
+      s.uploadResponseSchema,
+      {},
+    );
+  }
+  completeUpload(
+    assetId: string,
+    body: z.input<typeof s.uploadCompletionSchema>,
+  ) {
+    return this.request(
+      `/v1/uploads/${encodeURIComponent(assetId)}/complete`,
+      s.uploadCompletedSchema,
+      s.uploadCompletionSchema.parse(body),
+    );
+  }
+  detachAsset(sessionId: string, assetId: string) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(sessionId)}/assets/remove`,
+      z.undefined(),
+      { assetId },
+    );
+  }
   session(id: string) {
     return this.request(
       `/v1/sessions/${encodeURIComponent(id)}`,
@@ -106,6 +130,18 @@ export function putUpload(
   onProgress: (fraction: number) => void,
   signal?: AbortSignal,
 ): Promise<void> {
+  return putUploadPart(url, file, headers, onProgress, signal).then(
+    () => undefined,
+  );
+}
+
+export function putUploadPart(
+  url: string,
+  file: Blob,
+  headers: Record<string, string>,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const abort = () => xhr.abort();
@@ -122,7 +158,7 @@ export function putUpload(
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         onProgress(1);
-        resolve();
+        resolve(xhr.getResponseHeader('ETag') ?? 'uploaded');
       } else
         reject(new KimoApiError(xhr.status, 'upload_failed', 'Upload failed'));
     };

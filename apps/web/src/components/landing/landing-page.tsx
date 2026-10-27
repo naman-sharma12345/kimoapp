@@ -6,7 +6,6 @@ import { ArrowUpRight } from 'lucide-react';
 import { Pill } from '@/components/ui/pill';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
-import { ToastProvider } from '@/components/ui/toast';
 import { LandingComposer } from './landing-composer';
 import { Ready } from '@/app/dev/tokens/ready';
 
@@ -28,7 +27,7 @@ export function LandingPage() {
   const [exiting, setExiting] = useState(false);
   const [recovering, setRecovering] = useState(false);
   return (
-    <ToastProvider>
+    <>
       <main
         id="main"
         className="landing-page"
@@ -143,6 +142,6 @@ export function LandingPage() {
           </div>
         </footer>
       </main>
-    </ToastProvider>
+    </>
   );
 }

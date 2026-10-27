@@ -24,7 +24,7 @@ import {
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
-import { Toast, ToastProvider, useToast } from '@/components/ui/toast';
+import { Toast, useToast } from '@/components/ui/toast';
 import { Spinner } from '@/components/ui/spinner';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -633,7 +633,7 @@ function GalleryContent() {
 export function UiGallery() {
   const [paused, setPaused] = useState(false);
   return (
-    <ToastProvider>
+    <>
       <div data-motion-paused={paused || undefined}>
         <Button
           className="mt-6"
@@ -646,6 +646,6 @@ export function UiGallery() {
         </Button>
         <GalleryContent />
       </div>
-    </ToastProvider>
+    </>
   );
 }

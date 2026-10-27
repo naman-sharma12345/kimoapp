@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import localFont from 'next/font/local';
 import './globals.css';
+import { UploadsProvider } from '@/components/uploads/uploads-provider';
 
 const instrument = localFont({
   src: '../assets/fonts/InstrumentSerif-Italic.ttf',
@@ -12,8 +13,10 @@ const instrument = localFont({
   display: 'swap',
 });
 export const metadata: Metadata = {
-  title: 'kimo · foundation',
-  description: 'The design foundation for kimo web.',
+  metadataBase: new URL('https://app.getkimo.tech'),
+  title: 'kimo · tell it the video',
+  description:
+    'describe your video. kimo cuts, captions, grades and scores it while you watch.',
   icons: { icon: '/brand/kimo-mark.svg' },
 };
 export default function RootLayout({
@@ -28,7 +31,7 @@ export default function RootLayout({
         <a className="skip-link" href="#main">
           skip to content
         </a>
-        {children}
+        <UploadsProvider>{children}</UploadsProvider>
       </body>
     </html>
   );

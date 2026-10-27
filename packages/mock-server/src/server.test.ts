@@ -3,7 +3,13 @@ import { WebSocket } from 'ws';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { KimoClient, serverEventSchema, type ServerEvent } from '@kimo/client';
+import {
+  KimoClient,
+  MULTIPART_THRESHOLD,
+  UPLOAD_PART_BYTES,
+  serverEventSchema,
+  type ServerEvent,
+} from '@kimo/client';
 import { createMockServer } from './server';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -40,13 +46,63 @@ function stream(url: string) {
   return { socket, events, wait };
 }
 describe('mock backend end-to-end contract', () => {
+  it('assembles multipart uploads, validates completion and serves byte ranges', async () => {
+    const { client, base } = await setup();
+    const size = MULTIPART_THRESHOLD + 1;
+    const prepared = await client.uploads({
+      files: [{ name: 'large.bin', size, mime: 'application/octet-stream' }],
+    });
+    const target = prepared.uploads[0];
+    if (!target || !('parts' in target)) throw new Error('Expected multipart');
+    expect(target.parts).toHaveLength(7);
+    const session = await client.createSession({
+      prompt: 'make a film',
+      assetIds: [target.assetId],
+      aspect: 'auto',
+    });
+    expect((await client.session(session.sessionId)).status).toBe('warming');
+    await expect(
+      client.completeUpload(target.assetId, {
+        parts: [{ partNumber: 1, etag: 'missing' }],
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    const parts: { partNumber: number; etag: string }[] = [];
+    for (const part of target.parts) {
+      const bytes = Buffer.alloc(
+        Math.min(
+          UPLOAD_PART_BYTES,
+          size - (part.partNumber - 1) * UPLOAD_PART_BYTES,
+        ),
+        part.partNumber,
+      );
+      const response = await fetch(part.putUrl, {
+        method: 'PUT',
+        headers: target.headers,
+        body: bytes,
+      });
+      expect(response.status).toBe(200);
+      parts.push({
+        partNumber: part.partNumber,
+        etag: response.headers.get('ETag') ?? '',
+      });
+    }
+    await client.completeUpload(target.assetId, { parts });
+    const response = await fetch(`${base}/assets/${target.assetId}`, {
+      headers: { Range: `bytes=${size - 1}-${size - 1}` },
+    });
+    expect(response.status).toBe(206);
+    expect(new Uint8Array(await response.arrayBuffer())[0]).toBe(7);
+    expect((await client.renewUpload(target.assetId)).uploads[0]?.assetId).toBe(
+      target.assetId,
+    );
+  });
   it('accepts registered uploads before their bytes arrive', async () => {
     const { client, base } = await setup();
     const { uploads } = await client.uploads({
       files: [{ name: 'pending.txt', size: 4, mime: 'text/plain' }],
     });
     const upload = uploads[0];
-    if (!upload) throw new Error('No upload');
+    if (!upload || !('putUrl' in upload)) throw new Error('No single upload');
     const session = await client.createSession({
       prompt: 'make a film',
       assetIds: [upload.assetId],
@@ -77,7 +133,7 @@ describe('mock backend end-to-end contract', () => {
       files: [{ name: 'note.txt', size: 4, mime: 'text/plain' }],
     });
     const upload = prepared.uploads[0];
-    if (!upload) throw new Error('No upload');
+    if (!upload || !('putUrl' in upload)) throw new Error('No single upload');
     expect(
       (
         await fetch(upload.putUrl, {
@@ -283,7 +339,8 @@ describe('mock backend end-to-end contract', () => {
           files: [{ name: 'a', mime: 'text/plain', size: 1 }],
         });
         const upload = uploads.uploads[0];
-        if (!upload) throw new Error('No upload');
+        if (!upload || !('putUrl' in upload))
+          throw new Error('No single upload');
         expect(
           (await fetch(upload.putUrl, { method: 'PUT', body: 'a' })).status,
         ).toBe(503);

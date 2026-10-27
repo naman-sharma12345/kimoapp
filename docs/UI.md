@@ -60,3 +60,9 @@ Use one primary orange action per product panel. The gallery separates button sp
 ## Brand reference
 
 The user supplied [this logo reference](brand/kimo-reference.png) during Phase 1. The original 50×51 image is retained without upscaling or treating it as a production vector. Phase 1's compact agent avatar uses the existing shared SVG mark; its new permission to appear in agent identity is an explicit extension of Phase 0's placement list. The reference remains available for later branded screens.
+
+## Phase 3 upload states
+
+AttachmentChip additionally accepts `status`, `waveform` and `onRetry`. UploadChip derives the exact state metadata from the shared manager; UploadList owns entry/cancellation motion and releases canceled file references after exit. The root UploadsProvider supplies notifications for all product routes, including the warning toast used for offline recovery. Developer component galleries use that same provider.
+
+`/dev/uploads` reviews queued, probing, uploading, done, error and unsupported-codec states, with a completion replay and the shared session error screen. FullScreenError provides the exact Phase 3 upload/session recovery variants. These are built with existing tokens; the documented readable-metadata contrast exception remains.

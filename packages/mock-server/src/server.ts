@@ -3,7 +3,9 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -13,7 +15,6 @@ import {
   applyOps,
   clientEventSchema,
   serverEventSchema,
-  uploadRequestSchema,
   sessionRequestSchema,
   messageRequestSchema,
   opsRequestSchema,
@@ -27,8 +28,10 @@ import {
   fixtureAssets,
   type ScriptAction,
 } from './fixtures.ts';
+import { createUploads } from './uploads.ts';
 
 interface Session extends SessionSnapshot {
+  createdAt: number;
   started: boolean;
   sockets: Set<WebSocket>;
   clock: number;
@@ -53,19 +56,11 @@ export function createMockServer(options: MockOptions = {}) {
   if (!Number.isFinite(speed) || speed <= 0)
     throw new Error('MOCK_SPEED must be positive');
   const sessions = new Map<string, Session>();
-  const uploads = new Map<
-    string,
-    {
-      name: string;
-      mime: string;
-      size: number;
-      expires: number;
-      ready: boolean;
-    }
-  >();
   const renders = new Map<string, RenderJob>();
   const videos = new Map<string, { sessionId: string }>();
   const dataDir = resolve(options.dataDir ?? '.mock-data');
+  const uploadService = createUploads(dataDir, options.fail);
+  const uploads = uploadService.entries;
   const fixtures = fileURLToPath(new URL('../fixtures/', import.meta.url));
   let base = '';
   const emit = (session: Session, event: ServerEvent) => {
@@ -159,37 +154,37 @@ export function createMockServer(options: MockOptions = {}) {
     path: string,
     mime: string,
   ) => {
-    const data = await readFile(path);
+    const info = await stat(path);
     const range = request.headers.range;
     response.setHeader('Accept-Ranges', 'bytes');
     if (range) {
       const match = /^bytes=(\d+)-(\d*)$/.exec(range);
       if (!match) {
-        response.writeHead(416, { 'Content-Range': `bytes */${data.length}` });
+        response.writeHead(416, { 'Content-Range': `bytes */${info.size}` });
         response.end();
         return;
       }
       const start = Number(match[1]);
       const end = match[2]
-        ? Math.min(Number(match[2]), data.length - 1)
-        : data.length - 1;
-      if (start > end || start >= data.length) {
-        response.writeHead(416, { 'Content-Range': `bytes */${data.length}` });
+        ? Math.min(Number(match[2]), info.size - 1)
+        : info.size - 1;
+      if (start > end || start >= info.size) {
+        response.writeHead(416, { 'Content-Range': `bytes */${info.size}` });
         response.end();
         return;
       }
       response.writeHead(206, {
         'Content-Type': mime,
-        'Content-Range': `bytes ${start}-${end}/${data.length}`,
+        'Content-Range': `bytes ${start}-${end}/${info.size}`,
         'Content-Length': end - start + 1,
       });
-      response.end(data.subarray(start, end + 1));
+      await pipeline(createReadStream(path, { start, end }), response);
     } else {
       response.writeHead(200, {
         'Content-Type': mime,
-        'Content-Length': data.length,
+        'Content-Length': info.size,
       });
-      response.end(data);
+      await pipeline(createReadStream(path), response);
     }
   };
   const server = createServer((request, response) => {
@@ -201,7 +196,7 @@ export function createMockServer(options: MockOptions = {}) {
     response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
     response.setHeader(
       'Access-Control-Expose-Headers',
-      'Content-Range, Content-Length',
+      'Content-Range, Content-Length, ETag',
     );
     if (request.method === 'OPTIONS') {
       response.writeHead(204);
@@ -270,81 +265,12 @@ export function createMockServer(options: MockOptions = {}) {
       );
       return;
     }
-    if (path === '/v1/uploads' && method === 'POST') {
-      const input = uploadRequestSchema.parse(await body(request));
-      json(response, 200, {
-        uploads: input.files.map((file) => {
-          const assetId = randomUUID();
-          uploads.set(assetId, {
-            ...file,
-            ready: false,
-            expires: Date.now() + 900_000,
-          });
-          return {
-            assetId,
-            putUrl: `${base}/mock-r2/${assetId}`,
-            headers: { 'Content-Type': file.mime },
-          };
-        }),
-      });
+    if (
+      await uploadService.handle(request, response, path, base, () =>
+        body(request),
+      )
+    )
       return;
-    }
-    if (path.startsWith('/mock-r2/') && method === 'PUT') {
-      const assetId = path.slice('/mock-r2/'.length);
-      const upload = uploads.get(assetId);
-      if (!upload || upload.expires < Date.now()) {
-        request.resume();
-        fail(response, 403, 'upload_expired', 'Upload URL expired');
-        return;
-      }
-      if (options.fail === 'upload') {
-        request.resume();
-        fail(response, 503, 'upload_failed', 'Simulated upload failure');
-        return;
-      }
-      if (upload.size > 100 * 2 ** 20) {
-        request.resume();
-        fail(
-          response,
-          413,
-          'upload_too_large',
-          'Mock uploads are limited to 100 MiB',
-        );
-        return;
-      }
-      const chunks: Buffer[] = [];
-      let length = 0;
-      for await (const raw of request) {
-        const chunk = Buffer.isBuffer(raw) ? raw : Buffer.from(String(raw));
-        length += chunk.length;
-        if (length > upload.size) {
-          request.resume();
-          fail(
-            response,
-            400,
-            'size_mismatch',
-            'Upload size differs from declared size',
-          );
-          return;
-        }
-        chunks.push(chunk);
-      }
-      if (length !== upload.size) {
-        fail(
-          response,
-          400,
-          'size_mismatch',
-          'Upload size differs from declared size',
-        );
-        return;
-      }
-      await mkdir(dataDir, { recursive: true });
-      await writeFile(resolve(dataDir, assetId), Buffer.concat(chunks));
-      upload.ready = true;
-      response.writeHead(200);
-      response.end();
-      return;
-    }
     if (path.startsWith('/assets/') && method === 'GET') {
       const assetId = path.slice('/assets/'.length);
       const upload = uploads.get(assetId);
@@ -385,6 +311,7 @@ export function createMockServer(options: MockOptions = {}) {
         };
       });
       sessions.set(id, {
+        createdAt: Date.now(),
         status: 'warming',
         project: emptyProject(id, input.aspect),
         assets,
@@ -402,6 +329,23 @@ export function createMockServer(options: MockOptions = {}) {
       });
       return;
     }
+    const detach = /^\/v1\/sessions\/([^/]+)\/assets\/remove$/.exec(path);
+    if (detach && method === 'POST') {
+      const session = sessions.get(detach[1] ?? '');
+      if (!session) {
+        fail(response, 404, 'not_found', 'Unknown session');
+        return;
+      }
+      const input = z
+        .object({ assetId: z.string().min(1) })
+        .strict()
+        .parse(await body(request));
+      session.assets = session.assets.filter(
+        (asset) => asset.id !== input.assetId,
+      );
+      json(response, 202);
+      return;
+    }
     const match = /^\/v1\/sessions\/([^/]+)(?:\/(messages|ops|approve))?$/.exec(
       path,
     );
@@ -409,7 +353,7 @@ export function createMockServer(options: MockOptions = {}) {
       const id = match[1] ?? '';
       const session = sessions.get(id);
       const operation = match[2];
-      if (!session) {
+      if (!session || Date.now() - session.createdAt > 24 * 60 * 60 * 1000) {
         fail(response, 404, 'not_found', 'Unknown session');
         return;
       }
@@ -418,6 +362,8 @@ export function createMockServer(options: MockOptions = {}) {
           status: session.status,
           project: session.project,
           assets: session.assets,
+          renderId: session.renderId,
+          videoId: session.videoId,
         });
         return;
       }
@@ -461,6 +407,7 @@ export function createMockServer(options: MockOptions = {}) {
         const renderId = randomUUID();
         renders.set(renderId, { sessionId: id, started: Date.now() });
         session.status = 'rendering';
+        session.renderId = renderId;
         json(response, 200, { renderId });
         return;
       }
@@ -491,7 +438,10 @@ export function createMockServer(options: MockOptions = {}) {
       if (progress === 1 && !job.videoId) {
         job.videoId = randomUUID();
         videos.set(job.videoId, { sessionId: job.sessionId });
-        if (session) session.status = 'done';
+        if (session) {
+          session.status = 'done';
+          session.videoId = job.videoId;
+        }
       }
       json(response, 200, {
         status: progress === 1 ? 'done' : 'rendering',
@@ -591,6 +541,19 @@ export function createMockServer(options: MockOptions = {}) {
       )
         continue;
       const before = session.clock;
+      const pending = session.assets.filter(
+        (asset) => uploads.has(asset.id) && !uploads.get(asset.id)?.ready,
+      );
+      if (pending.length) {
+        emit(session, {
+          t: 'warmup.step',
+          step: 'upload',
+          pct:
+            (session.assets.length - pending.length) /
+            Math.max(1, session.assets.length),
+        });
+        continue;
+      }
       session.clock += delta;
       for (const [index, step] of (
         ['upload', 'probe', 'watch', 'plan', 'ready'] as const
@@ -709,7 +672,7 @@ export function createMockServer(options: MockOptions = {}) {
       const address = server.address();
       if (!address || typeof address === 'string')
         throw new Error('No server address');
-      base = `http://localhost:${address.port}`;
+      base = `http://127.0.0.1:${address.port}`;
       return base;
     },
     async close() {

@@ -1,15 +1,15 @@
-import Link from 'next/link';
+import { StartNewVideo } from '@/components/errors/start-new-video';
 
 export default function NotFound() {
   return (
-    <main id="main" className="token-page" data-ready="true">
-      <h1 className="text-t28">page not found</h1>
-      <p className="mt-4 text-cream-60">
-        this part of kimo is still taking shape.
-      </p>
-      <Link className="replay mt-6" href="/dev/tokens">
-        back to the foundation
-      </Link>
+    <main id="main" className="fullscreen-error" data-ready="true">
+      <div className="fullscreen-error-content">
+        <h1>this session doesn’t exist</h1>
+        <p>it may have expired. sessions are kept for 24 hours.</p>
+        <div className="fullscreen-error-actions">
+          <StartNewVideo />
+        </div>
+      </div>
     </main>
   );
 }

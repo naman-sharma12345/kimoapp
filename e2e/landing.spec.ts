@@ -4,6 +4,61 @@ import { readFile } from 'node:fs/promises';
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
+test('landing geometry, keyboard editing and custom duration match the brief', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await expect(page.locator('[data-ready="true"]')).toBeVisible();
+  const geometry = await page.evaluate(() => {
+    const box = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(selector);
+      return element.getBoundingClientRect();
+    };
+    const pill = box('.landing-eyebrow');
+    const heading = box('.landing-headline');
+    const copy = box('.landing-subtext');
+    const composer = box('.landing-composer');
+    const examples = box('.landing-examples');
+    return {
+      width: composer.width,
+      pillGap: heading.top - pill.bottom,
+      copyGap: copy.top - heading.bottom,
+      composerGap: composer.top - copy.bottom,
+      exampleGap: examples.top - composer.bottom,
+    };
+  });
+  expect(geometry).toEqual({
+    width: 760,
+    pillGap: 24,
+    copyGap: 20,
+    composerGap: 40,
+    exampleGap: 16,
+  });
+  const textarea = page.getByRole('textbox', { name: 'describe your video' });
+  await textarea.fill('one');
+  await textarea.press('Shift+Enter');
+  await textarea.press('x');
+  await expect(textarea).toHaveValue('one\nx');
+  await textarea.press('Escape');
+  await expect(textarea).not.toBeFocused();
+  await page.getByRole('button', { name: 'video length: any length' }).click();
+  await page.getByRole('menuitem', { name: 'custom…' }).click();
+  await page.getByRole('spinbutton', { name: 'seconds' }).fill('45');
+  await page.getByRole('button', { name: 'apply', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'video length: 45s' }),
+  ).toBeVisible();
+  await textarea.fill('x'.repeat(4000));
+  await expect(page.getByText('4000 / 4000')).toBeVisible();
+  await expect(textarea).toHaveCSS('box-shadow', 'none');
+  await page.screenshot({
+    path: 'docs/screens/phase-02-landing-reduced-1440x900.png',
+    animations: 'disabled',
+  });
+});
+
 test('landing composer supports prompts, settings, attachments, and handoff', async ({
   page,
 }) => {

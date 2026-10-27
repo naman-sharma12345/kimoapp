@@ -1,4 +1,5 @@
-import { WarmupHandoff } from '@/components/landing/warmup-handoff';
+import { SessionHandoff } from '@/components/uploads/session-handoff';
+import { loadSession } from '@/lib/load-session';
 
 export default async function WarmupPage({
   params,
@@ -6,5 +7,8 @@ export default async function WarmupPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = await params;
-  return <WarmupHandoff sessionId={sessionId} />;
+  const snapshot = await loadSession(sessionId, 'warmup');
+  return (
+    <SessionHandoff sessionId={sessionId} snapshot={snapshot} mode="warmup" />
+  );
 }

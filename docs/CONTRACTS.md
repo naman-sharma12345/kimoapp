@@ -80,3 +80,9 @@ Patches are shallow and cannot replace record IDs. Each batch is atomic, increas
 Run `pnpm mock` and, in another terminal, `pnpm mock:demo`. The demo prints validated events and closes at ask_review. Set `MOCK_SPEED=2` on the mock process to double warmup, script and render speed. `MOCK_FAIL=upload`, `ws`, or `render` exercises failure states. Session data resets when the server restarts; `.mock-data` holds uploaded bytes. The canned delivered video is not a real rendered project.
 
 Phase 2 starts presigned PUTs and then creates the session with the registered asset IDs without waiting for all bytes. The mock permits registered pending IDs; GET asset returns 404 until its PUT succeeds. The real backend must support this order or provide a separate finalization mechanism. Browser upload failure after session creation is surfaced on the handoff screen and the draft stays available in memory for retry.
+
+## Phase 3 upload extensions
+
+POST `/v1/uploads` returns either `{assetId, putUrl, headers}` or `{assetId, parts:[{partNumber,putUrl}], headers}` per file. Multipart begins above 100 MiB with 16 MiB parts. PUT responses expose ETag. POST `/v1/uploads/:assetId/complete` accepts `{parts:[{partNumber,etag}]}` and returns `{assetId}` only after every part is validated and assembled. Completion is idempotent. POST `/v1/uploads/:assetId/renew` returns `{uploads:[target]}` with the same asset ID.
+
+POST `/v1/sessions/:sessionId/assets/remove` accepts `{assetId}`, detaches the canceled upload and returns 202. Snapshots optionally include `renderId` and `videoId` for restore redirects. The mock's script waits for registered user uploads before progressing past warm-up. Fixture media is already available and does not enter that wait.

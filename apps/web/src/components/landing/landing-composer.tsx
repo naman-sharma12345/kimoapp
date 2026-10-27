@@ -17,37 +17,24 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react';
-import { KimoClient, putUpload } from '@kimo/client';
+import { KimoClient } from '@kimo/client';
+import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Menu, MenuItem } from '@/components/ui/menu';
 import { Popover } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
-import { AttachmentChip } from '@/components/ui/attachment-chip';
+import { UploadList } from '@/components/uploads/upload-list';
+import { uploadManager, useUploads } from '@/lib/uploads/manager';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
-import { uiTiming } from '@/lib/motion';
+import { composerEntrance, uiTiming } from '@/lib/motion';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
-import {
-  FILE_ACCEPT,
-  fileKind,
-  fileMeta,
-  prompts,
-  uploadMime,
-  validateFiles,
-  videoPoster,
-} from '@/lib/landing-files';
+import { FILE_ACCEPT, prompts } from '@/lib/landing-files';
 import { navigateToWarmup } from '@/lib/landing-navigation';
 import { useSessionStore } from '@/stores/session';
 
 type Aspect = 'auto' | '16:9' | '9:16' | '1:1';
-type Attachment = {
-  id: string;
-  file: File;
-  thumbnail?: string;
-  duration?: number;
-  progress?: number;
-};
 const aspects: Aspect[] = ['auto', '16:9', '9:16', '1:1'];
 const lengths = [
   { label: 'any length', seconds: undefined },
@@ -278,11 +265,10 @@ export function LandingComposer({
   const [duration, setDuration] = useState<number | undefined>(
     draft?.durationHint,
   );
-  const [attachments, setAttachments] = useState<Attachment[]>(() =>
-    (draft?.files ?? []).map((file, index) => ({
-      id: `restored-${index}`,
-      file,
-    })),
+  const [localIds, setLocalIds] = useState<string[]>(draft?.localIds ?? []);
+  const uploadItems = useUploads((state) => state.items);
+  const attachments = uploadItems.filter(
+    (item) => localIds.includes(item.localId) && item.status !== 'canceled',
   );
   const [focused, setFocused] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -295,23 +281,24 @@ export function LandingComposer({
   const textarea = useRef<HTMLTextAreaElement>(null);
   const composer = useRef<HTMLDivElement>(null);
   const dragDepth = useRef(0);
-  const active = useRef(true);
   const submittingRef = useRef(false);
-  const urls = useRef(new Set<string>());
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const attachmentsRef = useRef(attachments);
+  const restoredDraft = useRef(Boolean(draft));
   useEffect(() => {
-    attachmentsRef.current = attachments;
-  }, [attachments]);
+    if (restoredDraft.current || !draft) return;
+    restoredDraft.current = true;
+    if (draft.localIds?.length && !localIds.length && !prompt) {
+      setPrompt(draft.prompt);
+      setLocalIds(draft.localIds);
+      setAspect(draft.aspect);
+      setDuration(draft.durationHint);
+    }
+  }, [draft, localIds.length, prompt]);
 
   useEffect(() => {
-    active.current = true;
-    const objectUrls = urls.current;
     if (window.matchMedia('(hover: hover) and (pointer: fine)').matches)
       textarea.current?.focus({ preventScroll: true });
     return () => {
-      active.current = false;
-      for (const url of objectUrls) URL.revokeObjectURL(url);
       if (typingTimer.current) clearTimeout(typingTimer.current);
     };
   }, []);
@@ -336,37 +323,13 @@ export function LandingComposer({
   const addFiles = useCallback(
     (files: File[]) => {
       if (submittingRef.current) return;
-      const { accepted, rejected } = validateFiles(
-        attachmentsRef.current.map((item) => item.file),
-        files,
-      );
+      const { localIds: added, rejected } = uploadManager.add(files);
       for (const { file, reason } of rejected)
         toast({
           tone: 'error',
           message: `${file.name} can’t be used: ${reason}`,
         });
-      const added = accepted.map((file) => {
-        const id = crypto.randomUUID();
-        const kind = fileKind(file);
-        let thumbnail: string | undefined;
-        if (kind === 'image') {
-          thumbnail = URL.createObjectURL(file);
-          urls.current.add(thumbnail);
-        }
-        if (kind === 'video')
-          void videoPoster(file).then((result) => {
-            if (active.current)
-              setAttachments((items) =>
-                items.map((item) =>
-                  item.id === id ? { ...item, ...result } : item,
-                ),
-              );
-          });
-        return { id, file, thumbnail };
-      });
-      const next = [...attachmentsRef.current, ...added];
-      attachmentsRef.current = next;
-      setAttachments(next);
+      setLocalIds((current) => [...current, ...added]);
     },
     [toast],
   );
@@ -420,17 +383,6 @@ export function LandingComposer({
       window.removeEventListener('keydown', key);
     };
   }, [addFiles]);
-  const remove = (id: string) =>
-    setAttachments((items) =>
-      items.filter((item) => {
-        if (item.id !== id) return true;
-        if (item.thumbnail?.startsWith('blob:')) {
-          URL.revokeObjectURL(item.thumbnail);
-          urls.current.delete(item.thumbnail);
-        }
-        return false;
-      }),
-    );
   const chooseExample = (text: string) => {
     setPrompt(text);
     requestAnimationFrame(() => {
@@ -453,10 +405,16 @@ export function LandingComposer({
     submittingRef.current = true;
     setSubmitting(true);
     const fileList = attachments.map((item) => item.file);
-    const finalPrompt = prompt.trim() || 'make a great video from these';
-    useSessionStore
-      .getState()
-      .setDraft({ prompt, files: fileList, aspect, durationHint: duration });
+    const finalPrompt = prompt.trim()
+      ? prompt
+      : 'make a great video from these';
+    useSessionStore.getState().setDraft({
+      prompt,
+      files: fileList,
+      localIds,
+      aspect,
+      durationHint: duration,
+    });
     const rect = composer.current?.getBoundingClientRect();
     if (rect)
       setExitStyle({
@@ -465,66 +423,32 @@ export function LandingComposer({
       } as CSSProperties);
     onExit(true);
     const startedAt = Date.now();
-    const abort = new AbortController();
     try {
       const client = new KimoClient();
-      let assetIds: string[] = [];
-      let uploads: Promise<void> = Promise.resolve();
-      if (fileList.length) {
-        const registered = await client.uploads({
-          files: fileList.map((file) => ({
-            name: file.name,
-            size: file.size,
-            mime: uploadMime(file),
-          })),
-        });
-        if (registered.uploads.length !== fileList.length)
-          throw new Error('Upload registration count mismatch');
-        assetIds = registered.uploads.map((item) => item.assetId);
-        useSessionStore.getState().setUploadStatus('uploading');
-        uploads = Promise.all(
-          registered.uploads.map((item, index) => {
-            const file = fileList[index];
-            const attachment = attachments[index];
-            if (!file || !attachment) throw new Error('Missing upload');
-            return putUpload(
-              item.putUrl,
-              file,
-              item.headers,
-              (progress) => {
-                if (active.current)
-                  setAttachments((current) =>
-                    current.map((entry) =>
-                      entry.id === attachment.id
-                        ? { ...entry, progress }
-                        : entry,
-                    ),
-                  );
-              },
-              abort.signal,
-            );
-          }),
-        )
-          .then(() => {
-            useSessionStore.getState().setUploadStatus('complete');
-          })
-          .catch((error: unknown) => {
-            useSessionStore.getState().setUploadStatus('failed');
-            throw error;
-          });
-        void uploads.catch(() => undefined);
-      } else useSessionStore.getState().setUploadStatus('complete');
-      const sessionRequest = client.createSession({
+      const assetLocalMap = await uploadManager.start(
+        attachments.map((item) => item.localId),
+      );
+      const session = await client.createSession({
         prompt: finalPrompt,
-        assetIds,
+        assetIds: Object.values(assetLocalMap),
         aspect,
         durationHint: duration,
       });
-      const uploadFailure = uploads.then(
-        () => new Promise<never>(() => undefined),
-      );
-      const session = await Promise.race([sessionRequest, uploadFailure]);
-      useSessionStore.getState().setSession(session.sessionId, 'warming');
+      useSessionStore.getState().startSession({
+        sessionId: session.sessionId,
+        prompt,
+        assetLocalMap,
+        aspect,
+        durationHint: duration,
+        attachments: attachments
+          .filter((item) => assetLocalMap[item.localId])
+          .map((item) => ({
+            localId: item.localId,
+            name: item.file.name,
+            size: item.file.size,
+            mime: item.file.type,
+          })),
+      });
       useSessionStore.getState().setWsUrl(session.wsUrl);
       const delay = Math.max(
         0,
@@ -536,13 +460,9 @@ export function LandingComposer({
     } catch (error) {
       if (process.env.NODE_ENV !== 'production')
         console.error('Could not start session:', error);
-      abort.abort();
       onExit(false);
       setSubmitting(false);
       submittingRef.current = false;
-      setAttachments((items) =>
-        items.map((item) => ({ ...item, progress: undefined })),
-      );
       toast({
         tone: 'error',
         message:
@@ -577,33 +497,23 @@ export function LandingComposer({
         data-exiting={exiting || undefined}
       >
         <div className="landing-horizon" aria-hidden="true" />
-        <div
+        <motion.div
+          {...composerEntrance(reduced)}
           ref={composer}
           className="landing-composer"
           style={exitStyle}
           data-exiting={exiting || undefined}
         >
           <div className="landing-composer-content">
-            {attachments.length ? (
+            {
               <div
                 className="landing-attachments"
                 data-many={attachments.length > 1 || undefined}
                 aria-label="attached files"
               >
-                {attachments.map((entry) => (
-                  <div className="landing-attachment-enter" key={entry.id}>
-                    <AttachmentChip
-                      kind={fileKind(entry.file) ?? 'doc'}
-                      name={entry.file.name}
-                      meta={fileMeta(entry.file, entry.duration)}
-                      thumbnail={entry.thumbnail}
-                      progress={entry.progress}
-                      onRemove={submitting ? undefined : () => remove(entry.id)}
-                    />
-                  </div>
-                ))}
+                <UploadList items={attachments} />
               </div>
-            ) : null}
+            }
             <div className="landing-text-wrap">
               <Textarea
                 ref={textarea}
@@ -715,7 +625,7 @@ export function LandingComposer({
               </span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
       <div className="landing-examples" aria-label="example prompts">
         {examples.map(({ label, icon: Icon, prompt: example }, index) => (

@@ -276,3 +276,119 @@ cream-100. When the agent is acting, a 1.5px orange ring rotates around the avat
 ```
 
 Component-specific tokens introduced by Phase 1 live in `apps/web/src/styles/ui.css`; Phase 0 primitives remain unchanged. The axe-required contrast exceptions are recorded in DECISIONS.md.
+
+## Phase 3 upload specification (verbatim source)
+
+```text
+3.1 Upload manager (src/lib/uploads/manager.ts)
+A singleton store (zustand) useUploads with items { localId, file, kind, status:
+"queued"|"probing"|"uploading"|"done"|"error"|"canceled", progress 0..1, bytesSent,
+assetId?, error?, meta: { durationSec?, width?, height?, thumbBlobUrl?, waveform?:
+Float32Array(64) } }.
+Concurrency: 3 parallel uploads. Order: smallest files first so chips complete visibly early.
+Flow per file: (1) probe locally (§3.2) → (2) request presigned URLs in one batched POST /v1/
+uploads for all queued files → (3) XMLHttpRequest PUT with upload.onprogress → (4) mark
+done.
+Files > 100 MB: use multipart (POST /v1/uploads returns parts: [{ partNumber, putUrl }]
+with 16 MB parts when size > 100MB; add this to the contract and the mock). 4 parts in
+parallel, retry each part up to 3 times with backoff 1s/3s/9s.
+Network loss: pause all, show the warning toast "you’re offline. uploads will continue when
+you’re back." and resume automatically on online event.
+Cancel: removing a chip aborts its XHR and deletes it from the session list.
+Uploads continue in the background across the route change to /warmup and /studio
+(manager lives above the routes in the root layout provider).
+beforeunload warning while any upload is in progress.
+3.2 Local probe (no server needed, runs in a Web Worker where
+possible)
+Video: create a hidden <video muted preload="metadata"> from URL.createObjectURL, read
+duration, videoWidth, videoHeight. Seek to min(1, duration*0.1) and draw to a 160×90 (or
+90×160) OffscreenCanvas → JPEG blob → thumbBlobUrl. Also extract 8 filmstrip frames
+evenly spaced at 80px height for the timeline (store as blob URLs), lazily after upload starts.
+Audio (and video audio tracks ≤ 10 min): decode with OfflineAudioContext at 8 kHz
+mono, compute 64-bin peak waveform for chips and a 1 value per 10ms peak array for the
+timeline (store in IndexedDB keyed by localId, since it can be large).
+Image:createImageBitmap, read size, make a 160px thumbnail.
+Docs: no probe; just name/size.
+Unsupported codecs (e.g. HEVC in Firefox): still upload; chip shows thumbnail placeholder
+(ink-3 with lucide Film 16 cream-38) and meta "preview after upload".
+12.
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+2
+3.3 Chip states (exact)
+State Visual
+queued thumbnail at 50% opacity, meta "waiting…" cream-38
+probing thumbnail skeleton shimmer, meta "reading…"
+uploadingthumbnail full, meta "{pct}% · {sent} of {total}" mono-tabular, 2px cream-60 progress bar at
+the bottom
+done meta returns to "0:12 · 24 MB"; bar turns --success for 600ms then fades out over --dur-3; a
+12px Check icon in --success appears right of the name for 1.2s then fades
+error border rgb(229 72 77 / .5), meta "failed · retry" where "retry" is an underlined button in
+cream-100; clicking retries
+canceledchip collapses width to 0 and fades, spring.snappy
+3.4 Session start
+POST /v1/sessions is sent as soon as all presigned URLs are obtained (we know assetIds)
+— do not wait for bytes to finish. The backend waits for assets itself and reports progress via
+warmup.step.
+Persist { sessionId, prompt, assetLocalMap } in sessionStorage so a refresh on /warmup or /
+studio restores state.
+Store the prompt and attachments so the Studio's agent chat shows them as the first user
+message (exactly as the user wrote it, with chips).
+3.5 Session restore and deep links
+Visiting /studio/{id} directly: call GET /v1/sessions/:id; if status warming redirect to /
+warmup/{id}; if rendering redirect to /render/{id}; if done redirect to /v/{videoId}; if failed
+show the error screen (§3.6).
+Unknown id → not-found.tsx with copy: title t-20 "this session doesn’t exist", body t-13
+cream-60 "it may have expired. sessions are kept for 24 hours.", primary button "start a
+new video" → /.
+3.6 Error screen (shared component FullScreenError)
+Centered, max-width 440: lucide CircleAlert 20 --error, 16px gap, title t-20 cream-100, 8px, body
+t-13 cream-60, 24px, buttons row: primary + secondary. Copy variants:
+upload: "some files didn’t upload" / "check your connection and try again. nothing you
+made is lost." / "retry uploads" / "back"
+session: "kimo couldn’t start this edit" / "the editor hit a problem before it began. your
+files are saved for 24 hours." / "try again" / "start over"
+3.7 Tests
+Unit: manager concurrency, retry/backoff, multipart splitting (use fake XHR), cancel, offline/
+online.
+•
+•
+•
+•
+•
+•
+•
+•
+3
+E2E (mock server): attach 5 files including one 150 MB generated file → multipart path; verify
+progress UI, completion ticks, session created before uploads finish, redirect to warm-up.
+MOCK_FAIL=upload shows error chip and retry works.
+Acceptance checklist (Phase 3)
+3-parallel uploads, multipart > 100 MB, retries, offline resume, cancel, background continuation
+across routes.
+Thumbnails, filmstrips and waveforms generated locally; cached in IndexedDB.
+All chip states pixel-match §3.3.
+Session restore/redirect rules in §3.5 work on refresh.
+Error and not-found screens with exact copy.
+T ests green.
+•
+•
+•
+•
+•
+•
+•
+•
+4
+```

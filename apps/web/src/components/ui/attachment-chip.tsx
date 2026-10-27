@@ -1,7 +1,7 @@
 'use client';
 import { forwardRef, type HTMLAttributes } from 'react';
 import Image from 'next/image';
-import { FileText, Play, X } from 'lucide-react';
+import { Check, FileText, Film, Play, X } from 'lucide-react';
 import { uiClassName } from '../../lib/variants';
 import { Tooltip } from './tooltip';
 
@@ -12,11 +12,26 @@ export type AttachmentChipProps = HTMLAttributes<HTMLDivElement> & {
   thumbnail?: string;
   progress?: number;
   onRemove?: () => void;
+  status?: 'queued' | 'probing' | 'uploading' | 'done' | 'error' | 'canceled';
+  waveform?: Float32Array;
+  onRetry?: () => void;
 };
 const bars = [4, 8, 12, 6, 16, 20, 12, 24, 16, 8, 12, 4];
 export const AttachmentChip = forwardRef<HTMLDivElement, AttachmentChipProps>(
   function AttachmentChip(
-    { name, meta, kind, thumbnail, progress, onRemove, className, ...props },
+    {
+      name,
+      meta,
+      kind,
+      thumbnail,
+      progress,
+      onRemove,
+      status,
+      waveform,
+      onRetry,
+      className,
+      ...props
+    },
     ref,
   ) {
     const pct =
@@ -25,6 +40,8 @@ export const AttachmentChip = forwardRef<HTMLDivElement, AttachmentChipProps>(
       <div
         ref={ref}
         className={uiClassName('ui-attachment', className)}
+        data-status={status}
+        data-kind={kind}
         {...props}
       >
         <span className="ui-attachment-thumb" aria-hidden="true">
@@ -35,10 +52,16 @@ export const AttachmentChip = forwardRef<HTMLDivElement, AttachmentChipProps>(
               {bars.map((height, index) => (
                 <span
                   key={index}
-                  style={{ height: `var(--space-${height})` }}
+                  style={{
+                    height: waveform
+                      ? `${Math.max(2, Math.round((waveform[Math.floor((index * 64) / bars.length)] ?? 0) * 24))}px`
+                      : `var(--space-${height})`,
+                  }}
                 />
               ))}
             </span>
+          ) : kind === 'video' ? (
+            <Film size={16} strokeWidth={1.5} />
           ) : (
             <FileText size={16} strokeWidth={1.5} />
           )}
@@ -47,10 +70,36 @@ export const AttachmentChip = forwardRef<HTMLDivElement, AttachmentChipProps>(
           ) : null}
         </span>
         <span className="ui-attachment-copy">
-          <span className="ui-attachment-name" title={name}>
-            {name}
+          <span className="ui-attachment-name-row">
+            <span className="ui-attachment-name" title={name}>
+              {name}
+            </span>
+            {status === 'done' ? (
+              <Check
+                className="ui-attachment-check"
+                size={12}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            ) : null}
           </span>
-          <span className="ui-attachment-meta">{meta}</span>
+          <span className="ui-attachment-meta">
+            {status === 'error' ? (
+              <>
+                failed ·{' '}
+                <button
+                  type="button"
+                  className="ui-attachment-retry"
+                  onClick={onRetry}
+                  aria-label={`retry ${name}`}
+                >
+                  retry
+                </button>
+              </>
+            ) : (
+              meta
+            )}
+          </span>
         </span>
         {onRemove ? (
           <Tooltip content={`remove ${name}`}>

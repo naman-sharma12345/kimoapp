@@ -1,0 +1,180 @@
+@theme static {
+  --upload-error-line: rgb(229 72 77 / 0.5);
+  --upload-check-hold: 1200ms;
+  --upload-content-max: 760px;
+}
+.upload-state-gallery {
+  max-width: var(--landing-max);
+  margin-inline: auto;
+  padding: var(--space-64) var(--space-24);
+}
+.upload-state-gallery h1 {
+  font-size: var(--t-28);
+  font-weight: 500;
+  margin-bottom: var(--space-32);
+}
+.upload-state-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-32);
+  margin-bottom: var(--space-32);
+}
+.upload-state-grid section {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .upload-state-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.upload-state-grid h2 {
+  font-size: var(--t-13);
+  color: var(--cream-60);
+  margin-bottom: var(--space-12);
+}
+.ui-attachment[data-status='queued'] .ui-attachment-thumb {
+  opacity: 0.5;
+}
+.ui-attachment[data-kind='video']
+  .ui-attachment-thumb
+  > svg:not(.ui-attachment-play) {
+  color: var(--cream-38);
+}
+.ui-toast[data-tone='warning'] .ui-toast-icon {
+  color: var(--warning);
+}
+.ui-attachment[data-status='probing'] .ui-attachment-thumb > * {
+  visibility: hidden;
+}
+.ui-attachment[data-status='probing'] .ui-attachment-thumb {
+  background: var(--ink-2);
+}
+.ui-attachment[data-status='probing'] .ui-attachment-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--skeleton-band);
+  animation: ui-shimmer var(--dur-shimmer) var(--ease-in-out) infinite;
+}
+.ui-attachment[data-status='uploading'] .ui-attachment-meta {
+  font-family: var(--font-geist-mono), var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ui-attachment[data-status='error'] {
+  border-color: var(--upload-error-line);
+}
+.ui-attachment-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.ui-attachment-check {
+  color: var(--success);
+  flex-shrink: 0;
+  animation: ui-complete var(--dur-3) var(--ease-out) var(--upload-check-hold)
+    forwards;
+}
+.ui-attachment-retry {
+  color: var(--cream-100);
+  text-decoration: underline;
+  border-radius: var(--r-4);
+}
+.ui-attachment[data-status='done'] .ui-attachment-progress > span {
+  animation-duration: var(--dur-3);
+}
+.fullscreen-error {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-24);
+  background: var(--ink-0);
+}
+.fullscreen-error-content {
+  max-width: var(--dialog-sm);
+  text-align: center;
+}
+.fullscreen-error-icon {
+  display: block;
+  margin-inline: auto;
+  color: var(--error);
+  margin-bottom: var(--space-16);
+}
+.fullscreen-error h1 {
+  font-size: var(--t-20);
+  line-height: var(--text-t20--line-height);
+  font-weight: 500;
+}
+.fullscreen-error p {
+  margin-top: var(--space-8);
+  color: var(--cream-60);
+  font-size: var(--t-13);
+}
+.fullscreen-error-actions {
+  margin-top: var(--space-24);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+.upload-handoff {
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-32) var(--space-16);
+  gap: var(--space-24);
+}
+.upload-handoff h1 {
+  font-size: var(--t-20);
+  line-height: var(--text-t20--line-height);
+  font-weight: 500;
+}
+.upload-handoff-copy {
+  color: var(--cream-60);
+  text-align: center;
+}
+.upload-state-actions {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+.upload-handoff-files {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-8);
+  width: 100%;
+  max-width: var(--upload-content-max);
+}
+.upload-first-message {
+  width: 100%;
+  max-width: var(--upload-content-max);
+  padding: var(--space-16);
+  border-radius: var(--r-12);
+  background: var(--ink-1);
+}
+.upload-first-message > p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--cream-100);
+  margin-bottom: var(--space-12);
+}
+.upload-timeline-previews {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 100%;
+  overflow-x: auto;
+}
+.upload-timeline-previews img {
+  height: var(--space-80);
+  width: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-attachment[data-status='probing'] .ui-attachment-thumb::after {
+    animation: none;
+  }
+}

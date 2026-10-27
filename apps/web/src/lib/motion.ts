@@ -28,6 +28,27 @@ export const uiTiming = {
   landingReduced: 220,
   typingIdle: 1600,
 } as const;
+export function composerEntrance(reduced: boolean) {
+  return {
+    initial: { opacity: 0, scale: reduced ? 1 : 0.98 },
+    animate: { opacity: 1, scale: 1 },
+    transition: reduced
+      ? { duration: durations['dur-2'] }
+      : { ...springs.soft, delay: 0.52 },
+  };
+}
+export function attachmentMotion(reduced: boolean, index = 0) {
+  return {
+    initial: { opacity: 0, scale: reduced ? 1 : 0.9 },
+    animate: { opacity: 1, scale: 1 },
+    exit: reduced
+      ? { opacity: 0, transition: { duration: durations['dur-2'] } }
+      : { opacity: 0, width: 0, scale: 0.9, transition: springs.snappy },
+    transition: reduced
+      ? { duration: durations['dur-2'] }
+      : { ...springs.snappy, delay: index * 0.04 },
+  };
+}
 export function sharedIndicator(reduced: boolean) {
   return {
     initial: { opacity: 0 },

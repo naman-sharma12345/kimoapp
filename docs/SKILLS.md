@@ -37,3 +37,7 @@ Read design-system-patterns, vercel-composition-patterns, emil-design-eng, acces
 ## Phase 2 use
 
 Read frontend-design, design-taste-frontend, emil-design-eng, design-motion-principles, kill-ai-slop, accessibility-compliance and vercel-react-view-transitions. The supplied brief governs the visual direction; the optional design-skill house style does not replace its fixed values. Browser interaction and accessibility checks cover the resulting page. The kill-ai-slop scan identified the explicitly requested status pill, retained as documented in DECISIONS.md.
+
+## Phase 3 use
+
+Read vercel-react-best-practices and webapp-testing, plus emil-design-eng for the requested Phase 2 polish. The missing local nextjs-app-router-patterns skill was located and read from its upstream source at `wshobson/agents/plugins/frontend-mobile-development/skills/nextjs-app-router-patterns/SKILL.md`. Apply server-side route loading, a persistent client provider, independent media tasks, and selector-based subscriptions. Use the repository's existing TypeScript Playwright harness rather than introducing a second Python test stack. No skill changes the fixed design or introduces dependencies.

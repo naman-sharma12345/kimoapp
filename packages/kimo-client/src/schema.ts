@@ -207,16 +207,49 @@ export const uploadRequestSchema = z
 export const uploadResponseSchema = z
   .object({
     uploads: z.array(
-      z
-        .object({
-          assetId: id,
-          putUrl: z.string().url(),
-          headers: z.record(z.string()),
-        })
-        .strict(),
+      z.union([
+        z
+          .object({
+            assetId: id,
+            putUrl: z.string().url(),
+            headers: z.record(z.string()),
+          })
+          .strict(),
+        z
+          .object({
+            assetId: id,
+            parts: z
+              .array(
+                z
+                  .object({
+                    partNumber: z.number().int().positive(),
+                    putUrl: z.string().url(),
+                  })
+                  .strict(),
+              )
+              .min(1),
+            headers: z.record(z.string()),
+          })
+          .strict(),
+      ]),
     ),
   })
   .strict();
+export type UploadTarget = z.infer<
+  typeof uploadResponseSchema
+>['uploads'][number];
+export const uploadCompletionSchema = z
+  .object({
+    parts: z
+      .array(
+        z
+          .object({ partNumber: z.number().int().positive(), etag: id })
+          .strict(),
+      )
+      .min(1),
+  })
+  .strict();
+export const uploadCompletedSchema = z.object({ assetId: id }).strict();
 export const sessionRequestSchema = z
   .object({
     prompt: id,
@@ -233,6 +266,8 @@ export const sessionSnapshotSchema = z
     status: sessionStatusSchema,
     project: projectSchema,
     assets: z.array(assetSchema),
+    renderId: id.optional(),
+    videoId: id.optional(),
   })
   .strict();
 export const messageRequestSchema = z

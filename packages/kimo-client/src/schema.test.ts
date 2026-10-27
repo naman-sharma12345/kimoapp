@@ -32,6 +32,31 @@ export const sampleOps: s.Op[] = [
   { op: 'marker.add', marker },
 ];
 const contracts: [string, z.ZodType, unknown][] = [
+  [
+    'multipart uploads response',
+    s.uploadResponseSchema,
+    {
+      uploads: [
+        {
+          assetId: 'asset',
+          headers: { 'Content-Type': 'video/mp4' },
+          parts: [
+            { partNumber: 1, putUrl: 'http://localhost:8787/mock-r2/asset/1' },
+          ],
+        },
+      ],
+    },
+  ],
+  [
+    'multipart completion request',
+    s.uploadCompletionSchema,
+    { parts: [{ partNumber: 1, etag: 'etag' }] },
+  ],
+  [
+    'multipart completion response',
+    s.uploadCompletedSchema,
+    { assetId: 'asset' },
+  ],
   ['asset', s.assetSchema, asset],
   ['clip', s.clipSchema, clip],
   ['track', s.trackSchema, track],

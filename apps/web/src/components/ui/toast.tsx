@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from 'react';
 import { motion } from 'motion/react';
-import { Check, Info, X, XCircle } from 'lucide-react';
+import { Check, Info, TriangleAlert, X, XCircle } from 'lucide-react';
 import { uiClassName } from '../../lib/variants';
 import { toastMotion, uiTiming } from '../../lib/motion';
 import { useReducedMotion } from '../../lib/use-reduced-motion';
@@ -21,7 +21,7 @@ import { Button } from './button';
 
 export interface ToastOptions {
   message: string;
-  tone?: 'info' | 'success' | 'error';
+  tone?: 'info' | 'success' | 'error' | 'warning';
   action?: { label: string; onClick: () => void };
 }
 type ToastProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> &
@@ -80,7 +80,14 @@ export const Toast = forwardRef<HTMLDivElement, ToastProps>(function Toast(
       remaining.current = Math.max(0, remaining.current - (Date.now() - start));
     };
   }, [paused, hidden, onDismiss]);
-  const Icon = tone === 'success' ? Check : tone === 'error' ? XCircle : Info;
+  const Icon =
+    tone === 'success'
+      ? Check
+      : tone === 'error'
+        ? XCircle
+        : tone === 'warning'
+          ? TriangleAlert
+          : Info;
   return (
     <div
       ref={node}
