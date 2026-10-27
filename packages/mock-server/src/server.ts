@@ -64,6 +64,7 @@ export function createMockServer(options: MockOptions = {}) {
   const fixtures = fileURLToPath(new URL('../fixtures/', import.meta.url));
   let base = '';
   const emit = (session: Session, event: ServerEvent) => {
+    if (event.t === 'agent.status') session.agentState = event.state;
     const data = JSON.stringify(serverEventSchema.parse(event));
     for (const socket of session.sockets)
       if (socket.readyState === WebSocket.OPEN) socket.send(data);
@@ -366,6 +367,10 @@ export function createMockServer(options: MockOptions = {}) {
           renderId: session.renderId,
           videoId: session.videoId,
           wsUrl: `${base.replace('http', 'ws')}/v1/sessions/${id}/ws`,
+          actionCount: session.next,
+          paused: session.paused,
+          agentState: session.agentState,
+          createdAt: session.createdAt,
         });
         return;
       }

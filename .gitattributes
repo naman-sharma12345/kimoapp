@@ -3,3 +3,4 @@
 *.mp4 -text
 *.wav -text
 *.ttf -text
+apps/web/public/brand/kimo-mark.svg -text whitespace=cr-at-eol

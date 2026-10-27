@@ -90,3 +90,7 @@ POST `/v1/sessions/:sessionId/assets/remove` accepts `{assetId}`, detaches the c
 ## Phase 4 warm-up extensions
 
 POST `/v1/sessions/:sessionId/cancel` returns 202, stops the mock edit and leaves registered uploads in place. GET session may include `wsUrl` for reconnecting after refresh; when absent, the browser derives the session socket URL from the configured API origin. `warmup.step` may additionally include positive integer `clipIndex` and `clipCount`. These are proposed typed extensions that need real-backend agreement. The mock replays its current warm-up stage on reconnection. Socket failures retry after 2, 4 and 8 seconds, and wait for the browser to come online when offline.
+
+## Phase 5 Studio restore extensions
+
+GET session may include `actionCount`, `paused`, `agentState`, and `createdAt` (Unix milliseconds). The mock supplies these so an opened or restored Studio can display accurate agent status and elapsed session time. They are optional typed extensions for real-backend agreement. Agent pause and resume use the existing WebSocket messages; incoming project operations remain synchronized through `ProjectSync`.

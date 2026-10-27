@@ -323,7 +323,8 @@ test('cancel on warmup removes the attachment from the saved and server session'
         ).assetLocalMap,
       )[0],
   );
-  await page.getByRole('button', { name: 'remove cancel.txt' }).click();
+  await page.getByRole('button', { name: 'remove cancel.txt' }).focus();
+  await page.getByRole('button', { name: 'remove cancel.txt' }).press('Enter');
   await expect(page.getByText('cancel.txt', { exact: true })).toHaveCount(0);
   await expect
     .poll(

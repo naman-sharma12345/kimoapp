@@ -66,11 +66,13 @@ function Tile({
       ) : (
         <FileText size={16} aria-hidden="true" />
       )}
-      {original && item?.localId && onRemove ? (
+      {item?.localId && onRemove ? (
         <Tooltip content={`remove ${item.name}`}>
           <button
             className="warmup-tile-remove"
             aria-label={`remove ${item.name}`}
+            aria-hidden={!original || undefined}
+            tabIndex={original ? 0 : -1}
             onClick={() => onRemove(item.localId ?? '')}
           >
             <X size={14} aria-hidden="true" />
@@ -200,7 +202,7 @@ export function WarmupReel({
         data-step={step}
         aria-hidden="true"
       >
-        {Array.from({ length: 4 }, (_, index) => (
+        {Array.from({ length: 9 }, (_, index) => (
           <motion.span
             key={index}
             className="warmup-bar"
@@ -208,6 +210,13 @@ export function WarmupReel({
             {...warmupBar(step, progress, index, reduced)}
           />
         ))}
+        <svg
+          className="warmup-logo-playhead"
+          viewBox="0 0 64 794"
+          aria-hidden="true"
+        >
+          <path d="M26 0h12v794H26zM0 0h64v8L32 44 0 8z" fill="currentColor" />
+        </svg>
       </div>
     </div>
   );

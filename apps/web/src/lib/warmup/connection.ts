@@ -1,4 +1,9 @@
-import { serverEventSchema, type ServerEvent } from '@kimo/client';
+import {
+  clientEventSchema,
+  serverEventSchema,
+  type ClientEvent,
+  type ServerEvent,
+} from '@kimo/client';
 
 export const RECONNECT_DELAYS = [2000, 4000, 8000] as const;
 export class WarmupConnection {
@@ -11,6 +16,8 @@ export class WarmupConnection {
     private readonly url: string,
     private readonly onEvent: (event: ServerEvent) => void,
     private readonly onFailure: () => void,
+    private readonly onConnection?: (connected: boolean) => void,
+    private readonly retryForever = false,
   ) {}
   start() {
     window.addEventListener('online', this.online);
@@ -31,6 +38,7 @@ export class WarmupConnection {
     try {
       const socket = new WebSocket(this.url);
       this.socket = socket;
+      socket.onopen = () => this.onConnection?.(true);
       socket.onmessage = (message: MessageEvent<unknown>) => {
         try {
           if (typeof message.data !== 'string')
@@ -44,6 +52,7 @@ export class WarmupConnection {
         }
       };
       socket.onclose = () => {
+        this.onConnection?.(false);
         if (!this.stopped) this.reconnect();
       };
       socket.onerror = () => {
@@ -53,6 +62,11 @@ export class WarmupConnection {
       this.reconnect();
     }
   }
+  send(event: ClientEvent) {
+    if (this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify(clientEventSchema.parse(event)));
+    return true;
+  }
   private reconnect() {
     if (this.stopped) return;
     if (!navigator.onLine) {
@@ -61,6 +75,14 @@ export class WarmupConnection {
     }
     const delay = RECONNECT_DELAYS[this.retries++];
     if (delay === undefined) {
+      if (this.retryForever) {
+        this.retries = RECONNECT_DELAYS.length;
+        this.timer = setTimeout(
+          () => this.open(),
+          RECONNECT_DELAYS[RECONNECT_DELAYS.length - 1],
+        );
+        return;
+      }
       this.dispose();
       this.onFailure();
       return;

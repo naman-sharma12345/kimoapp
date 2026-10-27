@@ -269,6 +269,12 @@ export const sessionSnapshotSchema = z
     renderId: id.optional(),
     videoId: id.optional(),
     wsUrl: z.string().url().optional(),
+    actionCount: z.number().int().nonnegative().optional(),
+    paused: z.boolean().optional(),
+    agentState: z
+      .enum(['thinking', 'acting', 'waiting_user', 'idle'])
+      .optional(),
+    createdAt: z.number().int().nonnegative().optional(),
   })
   .strict();
 export const messageRequestSchema = z

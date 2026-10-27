@@ -914,8 +914,7 @@
 .ui-avatar-mark {
   width: var(--space-12);
   height: var(--space-12);
-  mask: url('/brand/kimo-mark.svg') center / contain no-repeat;
-  background: var(--cream-100);
+  background: url('/brand/kimo-mark.svg') center / contain no-repeat;
 }
 .ui-avatar-ring {
   position: absolute;

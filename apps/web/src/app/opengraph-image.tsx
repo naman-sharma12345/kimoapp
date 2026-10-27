@@ -7,9 +7,10 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export default async function OpenGraphImage() {
   const fontDir = path.join(process.cwd(), 'src/assets/fonts');
-  const [geist, instrument] = await Promise.all([
+  const [geist, instrument, mark] = await Promise.all([
     readFile(path.join(fontDir, 'Geist-Regular.ttf')),
     readFile(path.join(fontDir, 'InstrumentSerif-Italic.ttf')),
+    readFile(path.join(process.cwd(), 'public/brand/kimo-mark.svg')),
   ]);
   return new ImageResponse(
     <div
@@ -60,19 +61,14 @@ export default async function OpenGraphImage() {
           fontWeight: 500,
         }}
       >
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-          <rect x="2.5" y="9" width="3" height="10" rx="1.5" />
-          <rect x="8" y="3" width="3" height="16" rx="1.5" />
-          <rect x="13.5" y="7" width="3" height="12" rx="1.5" />
-          <rect x="19" y="12" width="3" height="7" rx="1.5" />
-          <path
-            d="M15 5v16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          <path d="m13 3 2 4 2-4z" />
-        </svg>
+        {/* ImageResponse consumes the exact supplied SVG as a data URL. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`data:image/svg+xml;base64,${mark.toString('base64')}`}
+          alt=""
+          width="24"
+          height="24"
+        />
         <span>kimo</span>
       </div>
     </div>,

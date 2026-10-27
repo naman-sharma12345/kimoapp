@@ -1,6 +1,5 @@
-import { SessionHandoff } from '@/components/uploads/session-handoff';
+import { StudioShell } from '@/components/studio/studio-shell';
 import { loadSession } from '@/lib/load-session';
-import { StudioTransitionTarget } from '@/components/warmup/studio-transition-target';
 
 export default async function StudioPage({
   params,
@@ -9,10 +8,5 @@ export default async function StudioPage({
 }) {
   const { sessionId } = await params;
   const snapshot = await loadSession(sessionId, 'studio');
-  return (
-    <>
-      <StudioTransitionTarget sessionId={sessionId} snapshot={snapshot} />
-      <SessionHandoff sessionId={sessionId} snapshot={snapshot} mode="studio" />
-    </>
-  );
+  return <StudioShell sessionId={sessionId} snapshot={snapshot} />;
 }

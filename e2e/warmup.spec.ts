@@ -15,6 +15,10 @@ test('real thumbnails, progress, notices and cancellation', async ({
   });
   await page.goto('/');
   await expect(page.locator('[data-ready="true"]')).toBeVisible();
+  await expect(page.locator('.landing-brand-mark')).toHaveCSS(
+    'background-image',
+    /kimo-mark\.svg/,
+  );
   await page
     .getByRole('textbox', { name: 'describe your video' })
     .fill('a quiet travel film');
@@ -28,6 +32,12 @@ test('real thumbnails, progress, notices and cancellation', async ({
   await expect(page).toHaveURL(/\/warmup\//);
   await expect.poll(() => Boolean(socket)).toBe(true);
   await expect(page.locator('.warmup-tile img').first()).toBeVisible();
+  await expect(page.locator('.warmup-brand-mark')).toHaveCSS(
+    'background-image',
+    /kimo-mark\.svg/,
+  );
+  await expect(page.locator('.warmup-bar')).toHaveCount(9);
+  await expect(page.locator('.warmup-logo-playhead')).toBeVisible();
   socket?.send(
     JSON.stringify({
       t: 'warmup.step',
@@ -144,9 +154,9 @@ test('real mock events open the studio route', async ({ page }) => {
   await page.getByRole('button', { name: 'start editing' }).click();
   await expect(page).toHaveURL(/\/warmup\//);
   await expect(page).toHaveURL(/\/studio\//, { timeout: 30000 });
-  await expect(
-    page.getByRole('heading', { name: 'your session is ready' }),
-  ).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('region', { name: 'viewer' })).toBeVisible({
+    timeout: 10000,
+  });
 });
 
 test('records the 1920px transition', async ({ browser }) => {
@@ -170,9 +180,7 @@ test('records the 1920px transition', async ({ browser }) => {
   await expect(page).toHaveURL(/\/warmup\//);
   await page.screenshot({ path: 'docs/screens/phase-04-warmup-1920x1080.png' });
   await expect(page).toHaveURL(/\/studio\//, { timeout: 30000 });
-  await expect(
-    page.getByRole('heading', { name: 'your session is ready' }),
-  ).toBeVisible();
+  await expect(page.getByRole('region', { name: 'viewer' })).toBeVisible();
   await page.waitForTimeout(1500);
   const video = page.video();
   await context.close();

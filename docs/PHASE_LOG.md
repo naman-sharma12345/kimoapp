@@ -81,3 +81,24 @@ Implemented 27 October 2026. The screen connects session events to the real uplo
 The Studio placeholder is deliberately retained until its later implementation. Cancel, restore socket URL and optional clip progress fields are mock/client contract extensions that need agreement with the real backend.
 
 The full browser run passed 30 of 31 tests; the remaining cancellation assertion was corrected to check the actual user asset ID after the mock adds its own assets, and that test passed on rerun. The expanded thumbnail and video-preload test also passed on rerun. Axe found no violations on the tested warm-up states. The unit/integration suite passed 113 tests.
+
+## Phase 05 — Studio shell
+
+Implemented 27 October 2026. The shell uses the specified panel structure and follows the live session and project through the typed WebSocket client. Preview compositing, timeline editing, agent messaging and the review flow remain later phases, as specified in the brief.
+
+### Acceptance checklist
+
+- [x] Desktop panel positions and dimensions are checked against §5.1 in Chromium at 1920×1080. Evidence: [1920×1080](screens/phase-05-studio-1920x1080.png).
+- [x] Pointer and keyboard resizers, size persistence, reset and panel collapse are implemented. The browser checks exercise persistence, reset and collapse; dimensions are saved locally per browser.
+- [x] The status pill and pause/resume use mock WebSocket events. A controlled browser test verifies the finish button's disabled-to-enabled transition and the three-pulse waiting state.
+- [x] Viewer transport, timeline tools and inspector selection have shell-level controls and stub state. Playback, editing, and agent messaging remain disabled until their later phases. Evidence: [desktop](screens/phase-05-studio-1920x1080.png).
+- [x] Responsive desktop and watch mode are implemented, including the intermediate inspector overlay. Evidence: [1440×900](screens/phase-05-studio-1440x900.png), [1280×800](screens/phase-05-studio-1280x800.png), [390×844](screens/phase-05-studio-390x844.png).
+- [ ] The central keyboard registry and shortcuts dialog are present; shell controls and input guards are tested. Shortcuts for the future playback and editing operations are listed but not yet wired to those operations.
+- [x] Screenshot evidence is captured at all four requested sizes using Playwright. Axe reports no violations in the tested desktop state.
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass; the unit and integration suite contains 114 passing tests.
+
+The optional restore fields, local title persistence, contrast adjustments and the overlapping L shortcuts are documented in [CONTRACTS.md](CONTRACTS.md) and [DECISIONS.md](DECISIONS.md). The live compositor is not yet available, so the FPS indicator does not fabricate a value.
+
+The user subsequently supplied the final logo SVG, which replaces the provisional mark in product branding, the agent avatar, the favicon and the social image. They also requested that the Studio composer show neither a focus highlight nor the browser resize handle; both have been removed.
+
+The broad browser run passed 35 of 36 checks. The remaining warm-up removal test exposed a moving target; repeated reel tiles now offer pointer removal and the original control remains keyboard accessible. The corrected cancellation test passed on rerun. Eleven focused Studio, warm-up and landing checks then passed, including the updated logo, composer treatment, review pulse, mobile layouts and social image.

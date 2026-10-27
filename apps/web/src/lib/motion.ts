@@ -40,7 +40,17 @@ export function warmupBar(
   index: number,
   reduced: boolean,
 ) {
-  const proportions = [10 / 16, 1, 12 / 16, 7 / 16];
+  const proportions = [
+    1,
+    1,
+    524 / 624,
+    424 / 624,
+    324 / 624,
+    424 / 624,
+    524 / 624,
+    1,
+    1,
+  ];
   const scaleY =
     reduced || step === 'plan' || step === 'ready'
       ? (proportions[index] ?? 1)

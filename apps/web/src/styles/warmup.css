@@ -8,11 +8,11 @@
   --warmup-rows-width: 320px;
   --warmup-horizon-width: 900px;
   --warmup-horizon-height: 420px;
-  --warmup-bar-width: 10px;
-  --warmup-bar-gap: 8px;
+  --warmup-bar-width: 6px;
+  --warmup-bar-gap: 3px;
   --warmup-bar-height: 40px;
   --warmup-hole: rgb(245 241 231 / 0.08);
-  --warmup-bar-color: rgb(245 241 231 / 0.85);
+  --warmup-bar-color: rgb(244 240 232 / 0.85);
   --warmup-warning: rgb(245 177 76 / 0.8);
   --warmup-wave: 900ms;
   --warmup-wave-stagger: 120ms;
@@ -64,8 +64,7 @@
 .studio-unfold-mark {
   width: var(--space-16);
   height: var(--space-16);
-  background: var(--cream-100);
-  mask: url('/brand/kimo-mark.svg') center / contain no-repeat;
+  background: url('/brand/kimo-mark.svg') center / contain no-repeat;
 }
 .warmup-horizon {
   position: absolute;
@@ -213,6 +212,16 @@
   border-radius: var(--r-pill);
   background: var(--warmup-bar-color);
   transform-origin: bottom;
+}
+.warmup-logo-playhead {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 5px;
+  height: 51px;
+  transform: translateX(-50%);
+  color: var(--brand-logo-orange);
+  pointer-events: none;
 }
 .warmup-bars[data-step='watch'] .warmup-bar {
   animation: warmup-wave var(--warmup-wave) var(--ease-in-out)
@@ -556,17 +565,5 @@ html[data-warmup-unfold='fallback'] .warmup-notice {
   }
   .warmup-segment > .warmup-tile:nth-of-type(n + 4) {
     visibility: hidden;
-  }
-  .warmup-bar:nth-child(1) {
-    transform: scaleY(0.625) !important;
-  }
-  .warmup-bar:nth-child(2) {
-    transform: scaleY(1) !important;
-  }
-  .warmup-bar:nth-child(3) {
-    transform: scaleY(0.75) !important;
-  }
-  .warmup-bar:nth-child(4) {
-    transform: scaleY(0.4375) !important;
   }
 }

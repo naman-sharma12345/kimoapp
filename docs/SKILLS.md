@@ -45,3 +45,7 @@ Read vercel-react-best-practices and webapp-testing, plus emil-design-eng for th
 ## Phase 4 use
 
 Read emil-design-eng, design-motion-principles, motion-dev-animations and vercel-react-view-transitions. The phase's fixed composition and measurements take precedence. Existing React 19 stable does not expose React's ViewTransition component, so the browser-native View Transitions API is used with a non-native fallback and reduced-motion handling.
+
+## Phase 5 use
+
+Read design-system-patterns, impeccable, design-taste-frontend and vercel-react-best-practices. The exact existing design bible and the supplied Studio layout take precedence over optional invention workflows. The Impeccable context and detector were run against the existing web app; the detector reported no findings.

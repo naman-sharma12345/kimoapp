@@ -4,6 +4,7 @@
 @import '../styles/landing.css';
 @import '../styles/uploads.css';
 @import '../styles/warmup.css';
+@import '../styles/studio.css';
 
 @layer base {
   :root {
