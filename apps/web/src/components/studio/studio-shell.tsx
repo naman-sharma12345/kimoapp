@@ -1508,7 +1508,13 @@ export function StudioShell({
           rememberPrompt(text);
           track('interrupt_sent');
           if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
-        } else
+        } else {
+          await perceiveClips(
+            sessionId,
+            snapshotRef.current?.assets ?? [],
+            userAiRef.current,
+            () => feed.system(PERCEIVE_NOTE),
+          );
           await new KimoClient()
             .message(
               sessionId,
@@ -1522,6 +1528,7 @@ export function StudioShell({
               setAgentState('idle');
               throw noteError(error);
             });
+        }
       }}
       onControl={(event) => {
         if (viewedRef.current) return;
