@@ -41,6 +41,13 @@ function setup(options: { aiKey?: string; ai?: AiReply[] } = {}) {
   const replies = [...(options.ai ?? [])];
   const fetcher: typeof fetch = async (input, init) => {
     const url = String(input);
+    // The edit-script call answers a canned script and is not counted.
+    if (String(init?.body ?? '').includes('you write the edit script'))
+      return Response.json({
+        choices: [
+          { message: { content: '{"script":"0-2s: hook on the best line"}' } },
+        ],
+      });
     aiCalls.push({
       url,
       body: String(init?.body ?? ''),
@@ -422,7 +429,11 @@ describe('AI editing', () => {
     expect(after.project.clips[clip.id]?.duration).toBe(4);
     expect(after.project.version).toBe(2);
     const flat = ctx.events.flatMap((item) => item.events.map((e) => e.t));
+    // Script first, then each op live, then the summary.
     expect(flat).toEqual([
+      'agent.status',
+      'agent.status',
+      'agent.message',
       'agent.status',
       'agent.action.start',
       'project.ops',
@@ -628,7 +639,8 @@ describe('robust AI edits', () => {
     ]);
     const said = ctx.events
       .flatMap((item) => item.events)
-      .find((event) => event.t === 'agent.message');
+      .filter((event) => event.t === 'agent.message')
+      .at(-1);
     expect(said && 'text' in said ? said.text : '').toContain('skipped 1 step');
     const last = ctx.events.at(-1)?.events.at(-1);
     expect(last).toEqual({ t: 'agent.status', state: 'idle', label: 'ready' });

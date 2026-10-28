@@ -258,6 +258,20 @@ export class KimoClient {
       120_000,
     );
   }
+  /** One render check of the current cut: frames go to the model, fixes apply live. */
+  review(
+    id: string,
+    body: z.input<typeof s.reviewRequestSchema>,
+    ai?: s.AiCredentials | null,
+  ) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(id)}/review`,
+      s.reviewResponseSchema,
+      s.reviewRequestSchema.parse(body),
+      ai ? aiHeaders(ai) : undefined,
+      180_000,
+    );
+  }
   /** Counts a finished in-browser export toward today's usage. */
   recordExport(id: string, body: z.input<typeof s.exportRecordSchema>) {
     return this.send(
@@ -285,8 +299,8 @@ export class KimoClient {
       z.undefined(),
       s.messageRequestSchema.parse(body),
       ai ? aiHeaders(ai) : undefined,
-      // An edit can take two model calls (one retry with feedback).
-      150_000,
+      // Script, build and one retry with feedback, each a model call.
+      330_000,
     );
   }
   ops(id: string, body: z.input<typeof s.opsRequestSchema>) {

@@ -4,6 +4,7 @@ import {
   DAILY_AI_EDIT_LIMIT,
   analysisRequestSchema,
   perceiveRequestSchema,
+  reviewRequestSchema,
   applyOps,
   assetAnalysisSchema,
   assetSchema,
@@ -29,6 +30,9 @@ import {
   aiConfig,
   requestAiEdit,
   requestPerception,
+  requestScript,
+  requestReview,
+  describeOp,
   DEFAULT_PERCEIVE_MODEL,
   validateAiOps,
   type AiConfig,
@@ -240,6 +244,8 @@ export function meteredConfig(env: Env, config: AiConfig): AiConfig {
     meter: (model, body) => recordUsage(env, model, usageOf(body)),
   };
 }
+
+const LIVE_STEP_MS = 350;
 
 export function createEditing(deps: EditingDeps) {
   const { now } = deps;
@@ -575,6 +581,96 @@ export function createEditing(deps: EditingDeps) {
   }
 
   /**
+   * Applies validated ops one at a time: each is saved, then broadcast with
+   * a readable line so the timeline and preview change live, step by step.
+   */
+  async function applyLive(
+    env: Env,
+    userId: string,
+    start: SessionRow,
+    assets: Asset[],
+    raw: unknown,
+    actionId: string,
+    strict = false,
+  ) {
+    let row = start;
+    let project = parseProject(row.project_json);
+    let validated: { ops: Op[]; skipped: string[] };
+    try {
+      validated = validateAiOps(project, assets, raw);
+    } catch (error) {
+      if (strict) throw error;
+      if (error instanceof AiEditError)
+        return {
+          row,
+          applied: 0,
+          ops: [] as Op[],
+          skipped: error.details.skipped ?? [],
+        };
+      throw error;
+    }
+    const applied: Op[] = [];
+    let index = 0;
+    for (const op of validated.ops) {
+      index += 1;
+      let next: KimoProject;
+      try {
+        next = applyOps(project, [op]);
+        checkProjectLimits(next);
+      } catch {
+        validated.skipped.push(`${op.op} could not be applied`);
+        continue;
+      }
+      if (!(await save(env, row, next))) {
+        // Someone else edited meanwhile: start again from their version.
+        row = await loadSession(env, userId, row.id);
+        project = parseProject(row.project_json);
+        validated.skipped.push(`${op.op} skipped because the timeline changed`);
+        continue;
+      }
+      const stepId = `${actionId}-${index}`;
+      const label = describeOp(op, project).slice(0, 90);
+      const started = now().getTime();
+      await deps.broadcast(env, row.id, next.version, [
+        {
+          t: 'agent.action.start',
+          id: stepId,
+          tool: 'apply_edit',
+          title: label,
+          args: { step: index, of: validated.ops.length },
+        },
+        {
+          t: 'project.ops',
+          version: next.version,
+          ops: [op],
+          actionId: stepId,
+        },
+        {
+          t: 'agent.action.end',
+          id: stepId,
+          ok: true,
+          durationMs: Math.max(0, now().getTime() - started),
+        },
+      ]);
+      row = {
+        ...row,
+        version: next.version,
+        project_json: JSON.stringify(next),
+      };
+      project = next;
+      applied.push(op);
+      // A beat between steps so each change is visible as it lands.
+      await new Promise((resolve) => setTimeout(resolve, LIVE_STEP_MS));
+    }
+    return {
+      row,
+      applied: applied.length,
+      ops: applied,
+      skipped: validated.skipped,
+    };
+  }
+
+  /**
    * One AI edit: quota, model call, strict validation, atomic save, then the
    * realtime events. Throws HttpError for the caller to answer with.
    * With the user's own key (`userAi`) the edit goes to their provider and
@@ -593,7 +689,7 @@ export function createEditing(deps: EditingDeps) {
     if (text.length > AI_PROMPT_MAX)
       throw new HttpError(413, 'too_large', 'That note is too long');
     // Ownership first, so another account only ever sees a 404.
-    let row = await loadSession(env, userId, sessionId);
+    const row = await loadSession(env, userId, sessionId);
     const base = userAi ?? aiConfig(env);
     const config = base?.source === 'kimo' ? meteredConfig(env, base) : base;
     if (!config)
@@ -615,7 +711,6 @@ export function createEditing(deps: EditingDeps) {
       )
         .bind(sessionId, userId)
         .run();
-    const started = now().getTime();
     const actionId = `ai-${crypto.randomUUID().slice(0, 12)}`;
     await deps.broadcast(env, sessionId, row.version, [
       { t: 'agent.status', state: 'thinking', label: 'reading your note' },
@@ -634,61 +729,71 @@ export function createEditing(deps: EditingDeps) {
         analyses: await analysesFor(env, userId, ids),
         prompt: text,
       };
-      const answer = await bestAiAnswer(config, input);
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const project = parseProject(row.project_json);
-        const { ops, next, skipped } = validateAiOps(
-          project,
-          assets,
-          answer.ops,
-        );
-        const base =
-          answer.message ||
-          (ops.length ? 'done. take a look.' : 'i left the timeline as is.');
-        const message: ServerEvent = {
+      // 1. the edit script, posted before anything changes.
+      await deps.broadcast(env, sessionId, row.version, [
+        {
+          t: 'agent.status',
+          state: 'thinking',
+          label: 'writing the edit script',
+        },
+      ]);
+      let script = '';
+      try {
+        script = await requestScript(config, deps.fetcher, input);
+      } catch (error) {
+        if (error instanceof AiEditError && error.code === 'ai_key_rejected')
+          throw error;
+      }
+      if (script)
+        await deps.broadcast(env, sessionId, row.version, [
+          {
+            t: 'agent.message',
+            id: `${actionId}-script`,
+            role: 'agent',
+            kind: 'say',
+            text: `edit script\n${script}`,
+          },
+        ]);
+      // 2. build it straight away, every op applied and shown live.
+      await deps.broadcast(env, sessionId, row.version, [
+        { t: 'agent.status', state: 'acting', label: 'building the edit' },
+      ]);
+      const answer = await bestAiAnswer(config, {
+        ...input,
+        prompt: script
+          ? `${text}\n\nyour edit script, build exactly this:\n${script}`
+          : text,
+      });
+      const built = await applyLive(
+        env,
+        userId,
+        row,
+        assets,
+        answer.ops,
+        actionId,
+        true,
+      );
+      const base =
+        answer.message ||
+        (built.applied ? 'done. take a look.' : 'i left the timeline as is.');
+      await deps.broadcast(env, sessionId, built.row.version, [
+        {
           t: 'agent.message',
           id: `${actionId}-say`,
           role: 'agent',
           kind: 'say',
-          text: skipped.length
-            ? `${base} (skipped ${skipped.length} step${skipped.length === 1 ? '' : 's'} that couldn’t be applied safely: ${skipped
+          text: built.skipped.length
+            ? `${base} (skipped ${built.skipped.length} step${built.skipped.length === 1 ? '' : 's'} that couldn’t be applied safely: ${built.skipped
                 .slice(0, 3)
-                .join('; ')}${skipped.length > 3 ? '; …' : ''})`.slice(0, 900)
+                .join('; ')}${built.skipped.length > 3 ? '; …' : ''})`.slice(
+                0,
+                900,
+              )
             : base,
-        };
-        if (!ops.length) {
-          await deps.broadcast(env, sessionId, row.version, [message, idle]);
-          return { version: row.version, ops };
-        }
-        if (await save(env, row, next)) {
-          await deps.broadcast(env, sessionId, next.version, [
-            {
-              t: 'agent.action.start',
-              id: actionId,
-              tool: 'apply_edit',
-              title: 'apply your note',
-              args: { ops: ops.length },
-            },
-            {
-              t: 'project.ops',
-              version: next.version,
-              ops,
-              actionId,
-            },
-            {
-              t: 'agent.action.end',
-              id: actionId,
-              ok: true,
-              durationMs: Math.max(0, now().getTime() - started),
-            },
-            message,
-            idle,
-          ]);
-          return { version: next.version, ops };
-        }
-        row = await loadSession(env, userId, sessionId);
-      }
-      throw new HttpError(409, 'version_conflict', 'The timeline changed');
+        },
+        idle,
+      ]);
+      return { version: built.row.version, ops: built.ops };
     } catch (error) {
       await deps.broadcast(env, sessionId, row.version, [idle]);
       if (error instanceof AiEditError)
@@ -970,6 +1075,110 @@ export function createEditing(deps: EditingDeps) {
         )
         .run();
       return json({ analysis });
+    }
+
+    if (action === 'review') {
+      const body = reviewRequestSchema.parse(
+        await readJson(request, 8_000_000),
+      );
+      let row = await loadSession(env, userId, sessionId);
+      const userAi = userAiConfig(request.headers);
+      const base = userAi ?? aiConfig(env);
+      const config = base?.source === 'kimo' ? meteredConfig(env, base) : base;
+      if (!config)
+        throw new HttpError(
+          503,
+          'ai_unavailable',
+          "AI editing isn't switched on yet",
+        );
+      if (config.source === 'kimo') await assertBudget(env);
+      const actionId = `check-${crypto.randomUUID().slice(0, 8)}`;
+      const idle: ServerEvent = {
+        t: 'agent.status',
+        state: 'idle',
+        label: 'ready',
+      };
+      await deps.broadcast(env, sessionId, row.version, [
+        {
+          t: 'agent.status',
+          state: 'thinking',
+          label: `checking ${body.frames.length} rendered frames (pass ${body.pass})`,
+        },
+      ]);
+      try {
+        const ids = parseIds(row.asset_ids);
+        const assets = await assetsFor(env, userId, ids);
+        const input = {
+          project: parseProject(row.project_json),
+          assets,
+          analyses: await analysesFor(env, userId, ids),
+          prompt: body.note,
+        };
+        const review = await requestReview(
+          config,
+          deps.fetcher,
+          input,
+          body.frames,
+          body.pass,
+        );
+        const verdict = review.clean
+          ? `check ${body.pass}: clean. ${review.message}`.trim()
+          : `check ${body.pass}: found ${review.faults.length || 'some'} fault${review.faults.length === 1 ? '' : 's'}\n${review.faults.map((fault) => `· ${fault}`).join('\n')}`;
+        await deps.broadcast(env, sessionId, row.version, [
+          {
+            t: 'agent.message',
+            id: `${actionId}-verdict`,
+            role: 'agent',
+            kind: 'say',
+            text: verdict.slice(0, 1500),
+          },
+          ...(review.clean
+            ? []
+            : [
+                {
+                  t: 'agent.status',
+                  state: 'acting',
+                  label: 'fixing what the check found',
+                } as ServerEvent,
+              ]),
+        ]);
+        let applied = 0;
+        if (!review.clean) {
+          const fixed = await applyLive(
+            env,
+            userId,
+            row,
+            assets,
+            review.ops,
+            actionId,
+          );
+          row = fixed.row;
+          applied = fixed.applied;
+          await deps.broadcast(env, sessionId, row.version, [
+            {
+              t: 'agent.message',
+              id: `${actionId}-fixed`,
+              role: 'agent',
+              kind: 'say',
+              text: applied
+                ? `fixed ${applied} step${applied === 1 ? '' : 's'}. ${review.message}`.trim()
+                : 'could not fix those safely; leaving the cut as is.',
+            },
+          ]);
+        }
+        await deps.broadcast(env, sessionId, row.version, [idle]);
+        return json({ clean: review.clean, applied, version: row.version });
+      } catch (error) {
+        await deps.broadcast(env, sessionId, row.version, [idle]);
+        if (error instanceof AiEditError && error.code === 'ai_key_rejected')
+          throw new HttpError(
+            400,
+            'ai_key_rejected',
+            'The provider refused that key',
+          );
+        if (error instanceof HttpError) throw error;
+        throw new HttpError(502, 'ai_upstream', 'The AI editor did not answer');
+      }
     }
 
     if (action === 'messages') {

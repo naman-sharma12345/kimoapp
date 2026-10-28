@@ -12,3 +12,4 @@ export interface Compositor {
   dispose(): void;
 }
 export * from './export.ts';
+export * from './sample.ts';

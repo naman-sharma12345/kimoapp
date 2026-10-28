@@ -676,6 +676,33 @@ export const perceiveRequestSchema = z
       .max(16),
   })
   .strict();
+/** One render check: frames rendered in the browser from the current cut. */
+export const reviewRequestSchema = z
+  .object({
+    pass: z.number().int().min(1).max(5),
+    note: z.string().max(AI_PROMPT_MAX),
+    frames: z
+      .array(
+        z
+          .object({
+            t: seconds,
+            luma: z.number().min(0).max(255),
+            image: z
+              .string()
+              .max(400_000)
+              .regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(16),
+  })
+  .strict();
+export const reviewResponseSchema = z.object({
+  clean: z.boolean(),
+  applied: z.number().int().nonnegative(),
+  version: z.number().int().nonnegative(),
+});
 export const perceiveResponseSchema = z.object({
   analysis: assetAnalysisSchema,
 });

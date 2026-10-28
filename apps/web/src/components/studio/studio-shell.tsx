@@ -107,6 +107,7 @@ import {
 import { analyzeBytes } from '@/lib/media-analysis';
 import { videoPoster } from '@/lib/landing-files';
 import { PERCEIVE_NOTE, perceiveClips } from '@/lib/perceive';
+import { checkCut } from '@/lib/render-check';
 import {
   CLIPS_WAIT_NOTE,
   firstPromptGate,
@@ -494,6 +495,19 @@ export function StudioShell({
       if (!alive) return;
       await new KimoClient()
         .message(sessionId, { text: prompt }, userAiRef.current)
+        .then(() =>
+          checkCut({
+            sessionId,
+            note: prompt,
+            snapshot: () => snapshotRef.current,
+            ai: userAiRef.current,
+            say: (line) => feed.system(line),
+          }).catch(() =>
+            feed.error(
+              'the render check could not finish · the cut is ready to review',
+            ),
+          ),
+        )
         .catch((error: unknown) => {
           setAgentState('idle');
           const friendly = noteError(error);
@@ -1067,6 +1081,19 @@ export function StudioShell({
         .then(() =>
           new KimoClient().message(sessionId, { text }, userAiRef.current),
         )
+        .then(() => {
+          void checkCut({
+            sessionId,
+            note: text,
+            snapshot: () => snapshotRef.current,
+            ai: userAiRef.current,
+            say: (line) => feed.system(line),
+          }).catch(() =>
+            feed.error(
+              'the render check could not finish · the cut is ready to review',
+            ),
+          );
+        })
         .then(() => setSystemLines((lines) => [...lines, text]))
         .catch(() => setEditError('could not send message · try again'));
     },
@@ -1528,6 +1555,17 @@ export function StudioShell({
               setAgentState('idle');
               throw noteError(error);
             });
+          void checkCut({
+            sessionId,
+            note: text,
+            snapshot: () => snapshotRef.current,
+            ai: userAiRef.current,
+            say: (line) => feed.system(line),
+          }).catch(() =>
+            feed.error(
+              'the render check could not finish · the cut is ready to review',
+            ),
+          );
         }
       }}
       onControl={(event) => {
