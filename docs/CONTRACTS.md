@@ -108,3 +108,13 @@ Clips optionally carry cropAspectLock, keepPitch, fadeIn, fadeOut, duckUnderVoic
 POST `/v1/sessions/:id/assets/add` accepts `{assetIds: string[]}` only after upload completion, returns `{assets: Asset[]}`, and emits `asset.added`. Repeated attachment of the same ID is safe.
 
 `ProjectSync` queues operations only for the soft-locked clip, advances the authoritative version for unrelated operations, and applies deferred operations on release. Removal bypasses a soft lock and exposes recovery. The mock filters agent operations on explicitly locked clips and tracks. Caption text edits preserve timing for matching word counts and redistribute the existing segment interval otherwise.
+
+## Phase 08 — agent feed and interrupts
+
+`agent.message` optionally includes `stream: boolean` and up to four `choices`. Repeated messages with the same ID replace the accumulated text in one entry. `asset.added` optionally includes `actionId`, allowing found images to remain grouped with their originating search after that action completes. These are backwards-compatible schema extensions requiring production-backend agreement.
+
+The existing WebSocket `{t:"interrupt",text}` is acknowledged by `{t:"agent.status",state:"thinking",label:"reading your note"}`. Chat stores the send-to-ack interval, marks pending user messages read, stops the preceding group and prefixes the response group with the return arrow. Attachments are uploaded and attached through Phase 3 before sending; ordinary REST messages include their asset IDs. Pause is a hard stop, and resume continues the mock script. `{t:"retry",actionId}` is a new typed WebSocket command: the mock records and replays the failed tool with a new action ID. Production support needs the same retry semantics.
+
+The mock now keeps successful tool calls open for 140ms, emits progress, then closes them. Only one call is active at once. Pause closes an active call immediately with `ok:false,error:"stopped"` and freezes further script operations. `MOCK_FAIL=action` fails the first action without applying its project operations, allowing repeatable retry tests. It is a mock fault mode, not a production API.
+
+Agent action reversals use the inverse of each applied project batch, in reverse action order, submitted through the existing versioned operations endpoint. They create a user history entry and a system line; they do not add agent changes to ordinary user undo. The feed and audit history live for the mounted Studio session; historical chat restoration is not available in the current snapshot contract.

@@ -440,10 +440,17 @@ export const serverEventSchema = z.discriminatedUnion('t', [
       role: z.literal('agent'),
       text: z.string(),
       kind: z.enum(['say', 'ask_review', 'ask_choice']),
-      choices: z.array(z.string()).optional(),
+      choices: z.array(z.string()).max(4).optional(),
+      stream: z.boolean().optional(),
     })
     .strict(),
-  z.object({ t: z.literal('asset.added'), asset: assetSchema }).strict(),
+  z
+    .object({
+      t: z.literal('asset.added'),
+      asset: assetSchema,
+      actionId: id.optional(),
+    })
+    .strict(),
   z
     .object({
       t: z.literal('sam.mask'),
@@ -464,6 +471,7 @@ export const serverEventSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('error'), code: id, message: z.string() }).strict(),
 ]);
 export const clientEventSchema = z.discriminatedUnion('t', [
+  z.object({ t: z.literal('retry'), actionId: id }).strict(),
   z.object({ t: z.literal('interrupt'), text: id }).strict(),
   z.object({ t: z.literal('pause') }).strict(),
   z.object({ t: z.literal('resume') }).strict(),

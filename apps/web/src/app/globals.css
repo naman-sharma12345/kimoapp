@@ -5,6 +5,7 @@
 @import '../styles/uploads.css';
 @import '../styles/warmup.css';
 @import '../styles/studio.css';
+@import '../styles/agent.css';
 
 @layer base {
   :root {

@@ -1281,3 +1281,168 @@ E2E: while the mock agent edits, the user renames the title, trims a clip, locks
 respects it; undo only reverts user ops.
 5
 ```
+
+## Phase 08 source specification
+
+```text
+Phase 8 — The Agent Panel: Live Actions,
+Chat and Interrupts
+READ THIS FIRST — rules for this phase (repeated in every
+phase on purpose)
+You are a senior frontend engineer building kimo web, the browser app for kimo, an AI video editor.
+You are NOT the designer. Every visual decision has already been made and is written below or in
+docs/DESIGN.md (created in Phase 0). Your job is to implement it exactly.
+1. No improvising. If a value (color, size, radius, spacing, duration, easing, copy) is written here,
+use exactly that value. If something is not specified, pick the closest existing token from docs/
+DESIGN.md and write a line in docs/DECISIONS.md saying what you chose and why. Never invent
+a new color, font, font size, radius, shadow or easing curve.
+2. No extra libraries beyond the ones listed in Phase 0's stack table. If you think you need one,
+write it in docs/DECISIONS.md as a proposal and continue without it.
+3. Only tokens. Never hard-code a hex value, px font size or duration inside a component. Use
+the CSS variables / Tailwind theme tokens defined in Phase 0 (--ink-0, --cream-100, --
+orange, --dur-2, --ease-out, etc.).
+4. Copy is exact. Every user-facing string written in quotes in these prompts is final. Use it
+character for character, including lowercase "kimo". Never write "Kimo" with a capital K in UI
+text.
+5. One orange rule. Orange (--orange #FF5A24) means "the AI is doing this right now" or "the
+one primary action". At most ONE orange element per panel at a time. Never use orange for
+decoration.
+6. No: gradients (except the two named exceptions in DESIGN.md), glassmorphism, drop
+shadows (except the named --shadow-pop), emoji in UI, stock illustrations, lorem ipsum,
+purple, neon, glow effects, rounded-full buttons except where named, bouncy overshoot
+springs except where named.
+7. Accessibility is not optional: every interactive element is keyboard reachable, has a visible
+focus ring (--focus-ring), and has an accessible name. Respect prefers-reduced-motion
+(every animation has a reduced variant listed in DESIGN.md §Motion).
+8. TypeScript strict. No any. No // @ts-ignore. ESLint and Prettier must pass with zero
+warnings.
+9. Finish the phase completely before stopping. At the end, run pnpm lint && pnpm typecheck
+&& pnpm test && pnpm build. All must pass. Then fill in the "Acceptance checklist" at the end of
+this document in docs/PHASE_LOG.md, ticking each item honestly, with a screenshot path for
+each visual item (docs/screens/phase-XX-*.png, captured with the Playwright script from Phase
+0).
+10. Do not touch the kimo engine repo or any backend code outside apps/web and packages/*
+listed in Phase 0. The backend is reached only through the typed client in packages/kimo-
+client.
+11. Skills. The agent skills installed in Phase 0 (listed in docs/SKILLS.md) are for craft, quality and
+review. Use the ones named under "Skills to load" in this phase. If a skill suggests a different
+look (new fonts, colors, bolder layout), this spec wins, always. Skills never override a written
+value.
+1
+
+12. If an instruction in this phase seems to conflict with an earlier phase, this phase wins for the
+parts it names; everything else from earlier phases stays.
+Goal: make the AI's work fully visible and steerable. Every tool call appears as it happens; the user
+can talk to kimo at any moment, interrupt it, answer its questions, see what SAM 3.1 selected, see
+images it found on the web, and revert any step.
+Skills to load: emil kowalski skills, design motion principles, accessibility-compliance,
+taste-skill.
+8.1 Chat tab — message types and exact styling
+The chat is a single vertical stream, newest at the bottom, auto-scrolling only if the user is within
+80px of the bottom (otherwise show a floating "new activity ↓" pill, h28, ink-3, t-12, bottom-center
+of the panel, which scrolls down on click).
+1. User message: right-aligned bubble, max-width 85%, bg --ink-3, r12 (r4 on the bottom-right
+corner), padding 10px 12px, t-13 cream-100. Attachments as AttachmentChips above the text.
+Timestamp t-11 cream-38 below on hover ("23:41").
+2. kimo message (agent.message say): left-aligned, no bubble, avatar 20 at left top, 10px gap,
+text t-13 cream-100, line-height 20, max-width 100%. Supports bold and inline code, links
+(cream-100 underlined 1px cream-38). Streams in word by word (40ms/word) when it arrives as
+a stream; otherwise fades in.
+3. Action group (consecutive tool calls between two messages are grouped): a card bg --ink-2,
+r12, padding 10px 12px. Header row: 14px icon + summary t-13 cream-100 (e.g. "cut the
+intro to the best 4 seconds"), right side duration mono t-11 cream-38 and a 16px chevron to
+expand. Collapsed shows up to 3 latest step lines; expanded shows all. Each step line: 16px
+status icon (spinner orange running, Check cream-60 done, X --error failed) + tool title t-12
+cream-60 ("trim beach_02 to 0:02–0:06") + on hover a ghost xs "show" (seeks and selects
+the target) and for done steps "revert" (only on the group header: "revert this step").
+◦ The running group: 2px --orange left rule (inside the card's radius), --orange-12 wash
+on the running line only, elapsed timer mono t-11 (0.8s) counting.
+◦ Max one orange-ruled group at a time (one-orange rule).
+4. System line (user edits, pauses, reconnects): centered t-12 cream-38 with 1px --line rules
+on both sides, e.g. "you changed the title text", "you paused kimo", "reconnected".
+5. Review request (ask_review): a card bg --ink-2, r12, padding 16, border 1px var(--line-
+strong). Avatar + t-13 cream-100 message (e.g. "first cut’s ready, 42 seconds. play it
+through and tell me what to change."). Buttons row (gap 8): secondary sm
+"play from start" (seeks 0 and plays), secondary sm "ask for changes" (focuses composer),
+primary sm "looks good, render it" (Phase 9 flow). This is the one orange button allowed in
+the agent panel.
+6. Choice request (ask_choice): message + up to 4 choice buttons (secondary sm, full width
+stacked, gap 6); clicking sends the choice text as a user message. Also a hint t-11 cream-38
+"or type your own answer".
+7. Web images found (from asset.added with source web, grouped per action): a horizontal
+strip of 72×72 r8 tiles with a 12px Globe badge, under it t-11 cream-38 "from unsplash.com,
+pexels.com"; click a tile → popover with bigger preview (240px), source link, licence, and "use
+this" / "not this one" (sends feedback to the agent).
+2
+
+8. SAM result card: 96×54 thumbnail of the mask on checkerboard + t-12 "selected the person
+in beach_02 with sam 3.1" + ghost xs "view mask" (selects clip and opens Mask section).
+9. Error: --error 2px left rule card with t-13 message and secondary xs "retry step".
+8.2 Actions tab (the audit log)
+A dense table-like list, one row per tool call (h28): time mono t-11 cream-38 (23:41:07), status icon,
+tool name mono t-12 cream-100 exactly as kimo's snake_case tool name (color_grade, sam_segment,
+trim_clip, web_image_search), target t-12 cream-60, duration right-aligned mono t-11 cream-38.
+Click a row → expands to show args as pretty JSON (mono t-11, bg --ink-2, r8, max-height 240
+scroll) and result summary. Filter bar on top: search input sm + segmented "all", "edits", "ai
+models" (sam/muse calls), "failed". Running row has the orange left rule.
+8.3 Composer and interrupts
+• Composer from Phase 5 §5.4. Supports attachments (Phase 3 manager → asset.added), @
+mentions of clips (popover list of clip names with thumbnails; inserting a mention creates a
+token chip inside the textarea, ink-4 r4, t-12) and / commands: /pause, /resume, /undo-
+last, /render.
+• Sending while the agent is acting = interrupt: 1. Message appears immediately as a user
+bubble with a small t-11 cream-38 label under it "kimo will read this after the current
+step". 2. Client sends {t:"interrupt", text}. 3. When the server acknowledges with
+agent.status thinking label:"reading your note", the label changes to "read" with a
+cream-60 check, and the running action group header shows "stopped here, adjusting". 4.
+New actions follow as a new group whose header starts with "↪ " (the return arrow glyph) to
+show it's a response to the note.
+• Hard stop: a ghost xs button "stop now" appears to the right of the agent status in the panel
+header while acting; it sends pause immediately (agent finishes nothing more), shows system
+line "you stopped kimo", and the composer placeholder becomes "tell kimo what to do
+next…".
+• ⌘K focuses the composer from anywhere; Esc returns focus to the timeline.
+8.4 Agent presence in the rest of the UI
+• Agent status pill in the top bar (Phase 5) mirrors agent.status.
+• Avatar ring rotates while acting.
+• Viewer: region brackets and SAM polygons (Phase 6).
+• Timeline: orange border on touched clips (Phase 7).
+• Inspector: orange values (Phase 7).
+• These 5 places must always agree: one running action → all show the same target
+simultaneously. Write an integration test that asserts this from a single agent.action.start
+event.
+8.5 "What is kimo doing" labels
+Map common kimo tool names to friendly present-tense titles in src/lib/agentLabels.ts (fallback:
+tool name with underscores to spaces). At least: import_media "adding {name}", trim_clip
+"trimming {clip}", split_clip "splitting {clip}", move_clip "moving {clip}", add_text "writing a
+3
+
+title", add_captions "writing captions", color_grade "grading colour on {clip}", sam_segment "finding
+the {label} with sam 3.1", reframe "reframing for {aspect}", web_image_search "searching the web
+for “{query}”", add_music "adding music", duck_audio "balancing music under voice",
+add_transition "adding a {type}", muse_watch "watching {clip}", transcribe "transcribing speech",
+remove_silence "removing pauses", apply_effect "adding {effect}". Titles are lowercase.
+8.6 Notifications when the tab is hidden
+If the document is hidden and the agent sends ask_review or ask_choice, update the tab title to
+"(1) kimo needs you" and, if permitted, show a browser Notification "kimo · your first cut is
+ready". Ask for notification permission only after the user's first send, via a small inline card in chat:
+"want a ping when kimo needs you?" with "yes" / "no thanks".
+Acceptance checklist (Phase 8)
+•
+All 9 message types render exactly as specified from mock events.
+•
+Actions tab with filters and JSON expand.
+•
+Interrupt flow end-to-end with the mock (≤ 400ms ack shown), hard stop, mentions, slash
+commands.
+•
+5-places-agree integration test.
+•
+Revert step works and appears as a system line.
+•
+Hidden-tab title + notification.
+•
+Screen reader: new agent messages announced via a polite live region; action groups
+announced as "kimo is trimming beach_02" (throttled to one announcement per 3s).
+4
+```

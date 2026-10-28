@@ -330,6 +330,71 @@ describe('mock backend end-to-end contract', () => {
     );
     ws.socket.close();
   });
+  it('retries a failed action and hard stop cancels active work without advancing the project', async () => {
+    const { client } = await setup('action', 20);
+    const session = await client.createSession({
+      prompt: 'edit',
+      assetIds: [],
+      aspect: 'auto',
+    });
+    const ws = stream(session.wsUrl);
+    await ws.wait((events) =>
+      events.some((event) => event.t === 'agent.action.end' && !event.ok),
+    );
+    const failed = ws.events.find(
+      (event) => event.t === 'agent.action.end' && !event.ok,
+    );
+    if (failed?.t !== 'agent.action.end')
+      throw new Error('Missing failed action');
+    ws.socket.send(JSON.stringify({ t: 'pause' }));
+    await ws.wait((events) =>
+      events.some(
+        (event) => event.t === 'agent.status' && event.label === 'paused',
+      ),
+    );
+    ws.socket.send(JSON.stringify({ t: 'retry', actionId: failed.id }));
+    await ws.wait(
+      (events) =>
+        events.filter((event) => event.t === 'agent.action.start').length === 2,
+    );
+    const retried = ws.events
+      .filter((event) => event.t === 'agent.action.start')
+      .at(-1);
+    if (retried?.t !== 'agent.action.start') throw new Error('Missing retry');
+    await ws.wait((events) =>
+      events.some(
+        (event) =>
+          event.t === 'agent.action.end' && event.id === retried.id && event.ok,
+      ),
+    );
+    expect(
+      (await client.session(session.sessionId)).project.tracks.length,
+    ).toBeGreaterThan(0);
+    ws.socket.send(JSON.stringify({ t: 'resume' }));
+    await ws.wait(
+      (events) =>
+        events.filter((event) => event.t === 'agent.action.start').length >= 3,
+    );
+    const active = ws.events
+      .filter((event) => event.t === 'agent.action.start')
+      .at(-1);
+    ws.socket.send(JSON.stringify({ t: 'pause' }));
+    await ws.wait((events) =>
+      events.some(
+        (event) =>
+          event.t === 'agent.action.end' &&
+          event.id === active?.id &&
+          event.error === 'stopped',
+      ),
+    );
+    const stopped = await client.session(session.sessionId);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect((await client.session(session.sessionId)).project.version).toBe(
+      stopped.project.version,
+    );
+    expect(stopped.paused).toBe(true);
+    ws.socket.close();
+  });
   it.each(['upload', 'ws', 'render'])(
     'simulates MOCK_FAIL=%s',
     async (failure) => {

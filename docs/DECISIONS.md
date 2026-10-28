@@ -84,3 +84,13 @@ The named content-colour swatches live with compositor text styles. SAM checkerb
 Performance is measured on the production build with trace capture disabled. Development React checks and browser trace recording materially reduce throughput and are recorded separately, rather than treated as production frame-rate measurements.
 
 The Phase 7 accessibility audit found cream-38 ruler/system/caption labels below 4.5:1. They use cream-60 under the established small-text readability decision; non-text track icons retain cream-38.
+
+## Phase 08
+
+The existing Studio composition, brand SVG and tokens remain authoritative. Phase 8's 10px card padding, 20px avatar, 28px audit/pill height, 72px image tiles and 40ms word interval are named in agent.css/agentLabels.ts. Unspecified spacing uses space-4/6/8/12/16; the audit columns use existing 56/16/32px geometry. The 80px scroll threshold and 3s announcement limit are shared behavior constants. Reduced motion reveals complete text immediately and freezes the spinner/avatar loops.
+
+Small metadata, timestamps, system lines, hints and table text use existing cream-60 under the earlier measured contrast decision. The explicitly requested orange running group/running line/spinner and header avatar are treated as the one current action signal; the composer is neutral while that action runs. Only the latest actionable review gets the primary render button. All other controls use existing secondary/ghost variants.
+
+The composer uses a contenteditable textbox so mention chips can be real noneditable tokens inside the text. Its text is serialized as readable clip names, while chip DOM stores clip IDs. The user's earlier removal of the composer highlight and native resize triangle remains in force. Menus, buttons and search inputs retain their visible keyboard focus ring. Attachments reuse the existing upload manager and chips. No library was added.
+
+One persistent AgentFeed store drives chat groups, the audit log and notifications; presence announcements remain mounted when the panel is collapsed. Streaming DOM changes follow the bottom only while the user remains within 80px; older reading position is preserved. Rich text accepts bold, inline code and HTTP(S) links and never injects HTML. Notification permission is requested only from the inline card's yes button after a send. Hidden review/choice requests use the exact '(1) kimo needs you' title and clear it when visible again.

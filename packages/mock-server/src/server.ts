@@ -40,6 +40,9 @@ interface Session extends SessionSnapshot {
   paused: boolean;
   actions: ScriptAction[];
   interrupts: { due: number; text: string }[];
+  records?: Map<string, ScriptAction>;
+  active?: { id: string; finish: (stopped?: boolean) => void };
+  failInjected?: boolean;
 }
 interface RenderJob {
   sessionId: string;
@@ -86,14 +89,31 @@ export function createMockServer(options: MockOptions = {}) {
     });
   };
   const action = (session: Session, item: ScriptAction) => {
+    session.active?.finish();
     const id = randomUUID();
+    session.records ??= new Map();
+    session.records.set(id, item);
+    const first = item.ops[0];
+    const clipId = first
+      ? 'clipId' in first
+        ? first.clipId
+        : 'id' in first && first.op.startsWith('clip.')
+          ? first.id
+          : first.op === 'clip.add'
+            ? first.clip.id
+            : undefined
+      : undefined;
+    const target = clipId
+      ? { clipId, region: { x: 0, y: 0, w: 1, h: 1 } }
+      : undefined;
     emit(session, { t: 'agent.status', state: 'acting', label: item.title });
     emit(session, {
       t: 'agent.action.start',
       id,
       tool: item.tool,
       title: item.title,
-      args: {},
+      args: { operationCount: item.ops.length },
+      target,
     });
     for (const event of item.events ?? []) {
       if (
@@ -101,9 +121,16 @@ export function createMockServer(options: MockOptions = {}) {
         !session.assets.some((asset) => asset.id === event.asset.id)
       )
         session.assets.push(event.asset);
-      emit(session, event);
+      emit(
+        session,
+        event.t === 'asset.added' ? { ...event, actionId: id } : event,
+      );
     }
     try {
+      if (options.fail === 'action' && !session.failInjected) {
+        session.failInjected = true;
+        throw new Error('this step could not be completed');
+      }
       batch(session, item.ops, id);
     } catch (error) {
       emit(session, {
@@ -119,7 +146,26 @@ export function createMockServer(options: MockOptions = {}) {
       return;
     }
     emit(session, { t: 'agent.action.progress', id, pct: 1, note: 'ready' });
-    emit(session, { t: 'agent.action.end', id, ok: true, durationMs: 140 });
+    let finished = false;
+    const started = Date.now();
+    const finish = (stopped = false) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      emit(session, {
+        t: 'agent.action.end',
+        id,
+        ok: !stopped,
+        durationMs: Math.max(0, Date.now() - started),
+        ...(stopped ? { error: 'stopped' } : {}),
+      });
+      if (session.active?.id === id) session.active = undefined;
+      if (session.paused)
+        emit(session, { t: 'agent.status', state: 'idle', label: 'paused' });
+    };
+    const timer = setTimeout(() => finish(), 140);
+    timer.unref();
+    session.active = { id, finish };
   };
   const interrupt = (session: Session, text: string) => {
     // Immediate acknowledgement stays inside 400ms even while paused.
@@ -577,8 +623,33 @@ export function createMockServer(options: MockOptions = {}) {
         try {
           const event = clientEventSchema.parse(JSON.parse(data.toString()));
           if (event.t === 'interrupt') interrupt(session, event.text);
-          if (event.t === 'pause') session.paused = true;
-          if (event.t === 'resume') session.paused = false;
+          if (event.t === 'pause') {
+            session.paused = true;
+            session.active?.finish(true);
+            emit(session, {
+              t: 'agent.status',
+              state: 'idle',
+              label: 'paused',
+            });
+          }
+          if (event.t === 'resume') {
+            session.paused = false;
+            emit(session, {
+              t: 'agent.status',
+              state: 'thinking',
+              label: 'continuing',
+            });
+          }
+          if (event.t === 'retry') {
+            const item = session.records?.get(event.actionId);
+            if (item) action(session, item);
+            else
+              emit(session, {
+                t: 'error',
+                code: 'unknown_action',
+                message: 'this step is no longer available',
+              });
+          }
           if (event.t === 'ping')
             ws.send(
               JSON.stringify({ t: 'hello', version: session.project.version }),

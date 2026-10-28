@@ -11,17 +11,14 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowUp,
   Grid3X3,
   FolderOpen,
-  History,
   Link2,
   Magnet,
   Maximize2,
   MousePointer2,
   MoveHorizontal,
   PanelLeft,
-  PanelLeftClose,
   PanelLeftOpen,
   PanelRight,
   Pause,
@@ -71,6 +68,9 @@ import { assetTransitionName } from '@/components/warmup/warmup-reel';
 import { EditingTimeline } from './editing-timeline';
 import { EditingInspector } from './editing-inspector';
 import { inverseOps } from './edit-history';
+import { AgentFeed } from '@/lib/agent-feed';
+import { AgentPresence } from './agent-presence';
+import { AgentPanel } from './agent-panel';
 import { ViewerTextEditor } from './viewer-text-editor';
 import { isTypingTarget } from '@/lib/keyboard';
 
@@ -179,7 +179,7 @@ export function StudioShell({
   );
   const [paused, setPaused] = useState(snapshot?.paused ?? false);
   const [actionCount, setActionCount] = useState(snapshot?.actionCount ?? 0);
-  const [actions, setActions] = useState<string[]>([]);
+  const [feed] = useState(() => new AgentFeed());
   const [sizes, setSizes] = useState<Sizes>({
     agent: 360,
     inspector: 320,
@@ -272,7 +272,7 @@ export function StudioShell({
   const redoStack = useRef<{ undo: Op[]; redo: Op[] }[]>([]);
   const [historyCount, setHistoryCount] = useState(0);
   const [editError, setEditError] = useState('');
-  const composer = useRef<HTMLTextAreaElement>(null);
+  const composer = useRef<HTMLDivElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const sessionStart = useRef(snapshot?.createdAt ?? 0);
   const followRef = useRef(follow);
@@ -302,8 +302,6 @@ export function StudioShell({
   const duration = project?.duration ?? 0;
   const hasProject = Boolean(project && project.version > 0);
   const actionEnabled = actionCount > 0 || hasProject;
-  const active =
-    !paused && (agentState === 'acting' || agentState === 'thinking');
   const status = paused
     ? 'paused'
     : agentState === 'waiting_user'
@@ -362,6 +360,7 @@ export function StudioShell({
   useEffect(() => {
     if (!snapshot) return;
     let alive = true;
+    let receivedAgentState = false;
     const replace = (next: SessionSnapshot, force = false) => {
       if (!alive) return;
       if (
@@ -402,6 +401,7 @@ export function StudioShell({
       }
     };
     const event = (message: ServerEvent) => {
+      feed.receive(message);
       if (message.t === 'asset.added' && snapshotRef.current) {
         const existing = snapshotRef.current;
         replace({
@@ -453,19 +453,25 @@ export function StudioShell({
           }
         }
       }
-      if (message.t === 'agent.status') setAgentState(message.state);
+      if (message.t === 'agent.status') {
+        receivedAgentState = true;
+        setAgentState(message.state);
+        if (message.label === 'paused') setPaused(true);
+        if (message.label === 'continuing') setPaused(false);
+      }
       if (message.t === 'agent.action.start' && !seen.current.has(message.id)) {
+        receivedAgentState = true;
         seen.current.add(message.id);
         setActionCount((count) => count + 1);
         setAgentState('acting');
-        setActions((items) => [...items, message.title]);
+        setPaused(false);
+        setAiClips(message.target?.clipId ? [message.target.clipId] : []);
         if (!agentOpenRef.current) setUnread(true);
         if (followRef.current && message.target?.clipId)
           setSelection(message.target.clipId);
-        if (message.target?.region) {
-          if (overlayTimer.current) clearTimeout(overlayTimer.current);
-          setRegion(message.target.region);
-        }
+        if (overlayTimer.current) clearTimeout(overlayTimer.current);
+        setRegion(message.target?.region ?? null);
+        setMaskPolygon(null);
         const targetClip = message.target?.clipId
           ? snapshotRef.current?.project.clips[message.target.clipId]
           : undefined;
@@ -496,7 +502,7 @@ export function StudioShell({
         setMaskPolygon(message.previewPolygon ?? null);
       if (message.t === 'agent.action.end') {
         setTimeout(() => {
-          if (alive) setAiClips([]);
+          if (alive && !feed.getSnapshot().runningId) setAiClips([]);
         }, 600);
         if (overlayTimer.current) clearTimeout(overlayTimer.current);
         overlayTimer.current = setTimeout(() => {
@@ -504,9 +510,12 @@ export function StudioShell({
           setMaskPolygon(null);
         }, 600);
       }
-      if (message.t === 'agent.message' && message.kind === 'ask_review')
+      if (message.t === 'agent.message' && message.kind === 'ask_review') {
+        receivedAgentState = true;
         setAgentState('waiting_user');
+      }
     };
+    let wasConnected = false;
     const connection = new WarmupConnection(
       sessionSocketUrl(sessionId, snapshot.wsUrl),
       event,
@@ -514,6 +523,8 @@ export function StudioShell({
       (connected) => {
         setConnection(connected);
         if (connected) {
+          if (wasConnected) feed.system('reconnected');
+          wasConnected = true;
           pingAt.current = Date.now();
           socket.current?.send({ t: 'ping' });
         }
@@ -530,8 +541,10 @@ export function StudioShell({
         if (next.createdAt) sessionStart.current = next.createdAt;
         if (next.actionCount !== undefined)
           setActionCount((count) => Math.max(count, next.actionCount ?? 0));
-        if (next.paused !== undefined) setPaused(next.paused);
-        if (next.agentState) setAgentState(next.agentState);
+        if (!receivedAgentState) {
+          if (next.paused !== undefined) setPaused(next.paused);
+          if (next.agentState) setAgentState(next.agentState);
+        }
         if (next.status === 'awaiting_review') setAgentState('waiting_user');
       })
       .catch(() => undefined);
@@ -543,7 +556,7 @@ export function StudioShell({
       if (overlayTimer.current) clearTimeout(overlayTimer.current);
       cancelAnimationFrame(followFrame.current);
     };
-  }, [sessionId, snapshot]);
+  }, [sessionId, snapshot, feed]);
   useEffect(() => {
     if (!canvas.current || !snapshot) return;
     let canceled = false;
@@ -697,7 +710,7 @@ export function StudioShell({
     (message: ClientEvent) => socket.current?.send(message) ?? false,
     [],
   );
-  const edit = useCallback((ops: Op[], record = true) => {
+  const edit = useCallback((ops: Op[], record = true, onSaved?: () => void) => {
     const sync = syncRef.current;
     if (!sync || !ops.length) return;
     let undo: Op[] = [];
@@ -717,6 +730,7 @@ export function StudioShell({
             ? 'you changed the title text'
             : 'you changed the edit',
         ]);
+        onSaved?.();
       })
       .catch(() => setEditError('could not save edit · try again'));
   }, []);
@@ -836,8 +850,11 @@ export function StudioShell({
     );
   }, []);
   const togglePause = useCallback(() => {
-    if (send({ t: paused ? 'resume' : 'pause' })) setPaused(!paused);
-  }, [paused, send]);
+    if (send({ t: paused ? 'resume' : 'pause' })) {
+      setPaused(!paused);
+      feed.system(paused ? 'you resumed kimo' : 'you paused kimo');
+    }
+  }, [paused, send, feed]);
   const seekPreview = useCallback(
     (time: number) => {
       const next = clamp(time, 0, duration);
@@ -1062,6 +1079,19 @@ export function StudioShell({
     project,
     edit,
   ]);
+  const emittedLines = useRef(0);
+  useEffect(() => {
+    for (const line of systemLines.slice(emittedLines.current))
+      feed.system(line);
+    emittedLines.current = systemLines.length;
+  }, [systemLines, feed]);
+  const promptSent = useRef(false);
+  useEffect(() => {
+    if (!promptSent.current && saved?.sessionId === sessionId && saved.prompt) {
+      promptSent.current = true;
+      feed.user(saved.prompt, [], false);
+    }
+  }, [saved, sessionId, feed]);
   if (!current || current.status === 'failed')
     return (
       <FullScreenError
@@ -1080,109 +1110,103 @@ export function StudioShell({
     '--studio-timeline-size': `${timelineOpen ? clamp(sizes.timeline, 200, height * 0.6) : 36}px`,
   } as CSSProperties;
 
-  const agentPanel = (
-    <section className="studio-panel studio-agent" aria-label="agent panel">
-      <header className="studio-panel-header">
-        <Avatar identity="agent" />
-        <span className="studio-heading">kimo</span>
-        <span className="studio-spacer" />
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={History}
-          aria-label="action history"
-          tooltip="action history"
-          onClick={() => setAgentTab('actions')}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={PanelLeftClose}
-          aria-label="collapse agent panel"
-          tooltip="collapse agent panel"
-          onClick={() => setAgentOpen(false)}
-        />
-      </header>
-      <Tabs value={agentTab} onValueChange={setAgentTab} data-studio-agent-tabs>
-        <TabsList aria-label="agent panel views">
-          <TabsTrigger value="chat">chat</TabsTrigger>
-          <TabsTrigger value="actions">actions</TabsTrigger>
-        </TabsList>
-        <TabsContent value="chat" data-studio-agent-content>
-          {systemLines.map((line, index) => (
-            <p className="editor-system-line" key={index}>
-              {line}
-            </p>
-          ))}
-          {saved?.sessionId === sessionId && saved.prompt ? (
-            <p className="studio-first-message">{saved.prompt}</p>
-          ) : null}
-        </TabsContent>
-        <TabsContent value="actions" data-studio-agent-content>
-          {agentSteps.map((step, index) => (
-            <div key={`${step.id}-${index}`} className="editor-history-step">
-              <span>step {index + 1}</span>
-              <button
-                onClick={() => {
-                  edit(step.undo);
-                  setAgentSteps((steps) =>
-                    steps.filter((item) => item !== step),
-                  );
-                }}
-              >
-                revert this step
-              </button>
-            </div>
-          ))}
-          <ol className="studio-action-list">
-            {actions.map((action, index) => (
-              <li key={`${index}-${action}`}>{action}</li>
-            ))}
-          </ol>
-        </TabsContent>
-      </Tabs>
-      <div className="studio-agent-footer">
-        {active ? (
-          <p>kimo will stop after the current step and read your note</p>
-        ) : null}
-        <div className="studio-composer">
-          <textarea
-            ref={composer}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder={
-              active ? 'type to interrupt kimo…' : 'tell kimo what to change…'
-            }
-            aria-label="tell kimo what to change"
-          />
-          <div className="studio-composer-actions">
-            <Button
-              variant="ghost"
-              size="sm"
-              iconOnly
-              icon={Link2}
-              aria-label="attach files"
-              tooltip="attachments available in a later phase"
-              disabled
-            />
-            <Button
-              variant={note.trim() ? 'primary' : 'secondary'}
-              size="sm"
-              iconOnly
-              icon={ArrowUp}
-              aria-label="send note"
-              tooltip="agent chat available in a later phase"
-              disabled
-            />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  const approve = () => {
+    void new KimoClient()
+      .approve(sessionId)
+      .then((result) => router.push(`/render/${result.renderId}`))
+      .catch(() => feed.error('could not start the render · try again'));
+  };
+  const agentPanel = project ? (
+    <AgentPanel
+      feed={feed}
+      project={project}
+      assets={current.assets}
+      acting={agentState === 'acting'}
+      paused={paused}
+      connected={connection}
+      tab={agentTab}
+      onTab={setAgentTab}
+      onCollapse={() => setAgentOpen(false)}
+      composerRef={composer}
+      note={note}
+      onNote={setNote}
+      onSend={async (text, attachments, interrupt) => {
+        if (interrupt) {
+          if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
+        } else
+          await new KimoClient().message(sessionId, {
+            text,
+            attachments: attachments.map((asset) => asset.id),
+          });
+      }}
+      onControl={(event) => {
+        if (send(event)) {
+          if (event.t === 'pause') {
+            setPaused(true);
+            setAgentState('idle');
+          }
+          if (event.t === 'resume') setPaused(false);
+        } else feed.error('connection lost · try again');
+      }}
+      onUndo={() => history(false)}
+      onRender={approve}
+      onShow={(id, mask) => {
+        const clip = id ? project.clips[id] : undefined;
+        if (!clip) return;
+        setSelection(clip.id);
+        seekPreview(clip.start);
+        setInspectorOpen(true);
+        if (mask)
+          requestAnimationFrame(() => {
+            for (const section of document.querySelectorAll<HTMLDetailsElement>(
+              '.studio-inspector details',
+            ))
+              if (
+                section.querySelector('summary')?.textContent?.includes('mask')
+              )
+                section.open = true;
+          });
+      }}
+      onRevert={(ids) => {
+        const groups = ids.toReversed().flatMap((id) =>
+          agentSteps
+            .filter((step) => step.id === id)
+            .toReversed()
+            .flatMap((step) => step.undo),
+        );
+        if (groups.length) {
+          edit(groups, true, () => {
+            setAgentSteps((steps) =>
+              steps.filter((step) => !ids.includes(step.id)),
+            );
+            feed.system('you reverted a step');
+          });
+        } else feed.error('this step has no project changes to revert');
+      }}
+      onUpload={async (files) => {
+        const before = new Set(
+          snapshotRef.current?.assets.map((asset) => asset.id) ?? [],
+        );
+        await uploadFiles(files);
+        const added =
+          snapshotRef.current?.assets.filter(
+            (asset) => !before.has(asset.id),
+          ) ?? [];
+        if (!added.length) throw new Error('No attachments uploaded');
+        return added;
+      }}
+      onPlay={() => {
+        seekPreview(0);
+        void preview.current?.play();
+      }}
+    />
+  ) : null;
   const inspector = (
-    <section className="studio-panel studio-inspector" aria-label="inspector">
+    <section
+      className="studio-panel studio-inspector"
+      aria-label="inspector"
+      data-active-target={aiClips[0]}
+    >
       <header className="studio-panel-header">
         <span className="studio-heading studio-inspector-title">
           {inspectorTitle}
@@ -1245,6 +1269,7 @@ export function StudioShell({
   const viewer = (
     <section
       className="studio-panel studio-viewer"
+      data-active-target={aiClips[0]}
       aria-label="viewer"
       data-fullscreen={fullscreen || undefined}
       data-controls-visible={fullscreenControls || undefined}
@@ -1345,13 +1370,16 @@ export function StudioShell({
                 </g>
               ) : null}
               {overlays && region ? (
-                <rect
+                <path
                   className="studio-ai-region"
-                  x={region.x * 1000}
-                  y={region.y * 1000}
-                  width={region.w * 1000}
-                  height={region.h * 1000}
-                  rx="4"
+                  d={(() => {
+                    const x = region.x * 1000,
+                      y = region.y * 1000,
+                      w = region.w * 1000,
+                      h = region.h * 1000,
+                      l = 12;
+                    return `M${x + l} ${y}H${x}V${y + l}M${x + w - l} ${y}H${x + w}V${y + l}M${x} ${y + h - l}V${y + h}H${x + l}M${x + w - l} ${y + h}H${x + w}V${y + h - l}`;
+                  })()}
                 />
               ) : null}
               {overlays && maskPolygon ? (
@@ -1518,7 +1546,11 @@ export function StudioShell({
     </section>
   );
   const timeline = (
-    <section className="studio-panel studio-timeline" aria-label="timeline">
+    <section
+      className="studio-panel studio-timeline"
+      aria-label="timeline"
+      data-active-target={aiClips[0]}
+    >
       <div className="studio-timeline-toolbar">
         <div className="studio-tools" role="group" aria-label="timeline tools">
           {(
@@ -1808,6 +1840,9 @@ export function StudioShell({
     >
       <Ready />
       <h1 className="landing-sr-only">{title}</h1>
+      {project ? (
+        <AgentPresence feed={feed} project={project} assets={current.assets} />
+      ) : null}
       <header className="studio-topbar">
         <div className="studio-top-left">
           <Dialog
@@ -1876,6 +1911,7 @@ export function StudioShell({
         <div className="studio-top-center">
           <button
             className="studio-status-pill"
+            data-active-target={aiClips[0]}
             data-state={paused ? 'paused' : agentState}
             onClick={() => setAgentOpen(true)}
           >
@@ -1962,11 +1998,20 @@ export function StudioShell({
           >
             <DialogContent
               title="finish"
-              description="review will be available in a later phase."
+              description="play it through and tell kimo what to change."
               actions={
-                <DialogClose asChild>
-                  <Button>close</Button>
-                </DialogClose>
+                <div className="agent-button-row">
+                  <DialogClose asChild>
+                    <Button>close</Button>
+                  </DialogClose>
+                  <Button
+                    variant="primary"
+                    disabled={agentState !== 'waiting_user'}
+                    onClick={approve}
+                  >
+                    looks good, render it
+                  </Button>
+                </div>
               }
             />
           </Dialog>
@@ -1983,7 +2028,9 @@ export function StudioShell({
       <div className="studio-workspace">
         <div className="studio-upper">
           {agentOpen ? (
-            agentPanel
+            width >= 1024 ? (
+              agentPanel
+            ) : null
           ) : (
             <aside
               className="studio-panel studio-agent-rail"
