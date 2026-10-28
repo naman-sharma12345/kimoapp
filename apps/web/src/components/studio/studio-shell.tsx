@@ -2186,9 +2186,6 @@ export function StudioShell({
               {editError}
             </button>
           ) : null}
-          <div className="studio-timeline-footer">
-            <span />
-          </div>
         </>
       ) : null}
     </section>

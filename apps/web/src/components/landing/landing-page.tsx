@@ -1,21 +1,24 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 
 import { ComposerIsland, SignInGate } from './composer-gate';
 import { Ready } from '@/app/dev/tokens/ready';
+import { SayItArt, SteerItArt, WatchItArt } from './how-illustrations';
 
 const how = [
   {
     title: 'say it',
+    Art: SayItArt,
     body: 'describe the video and drop in anything you have. no timeline skills needed.',
   },
   {
     title: 'watch it',
+    Art: WatchItArt,
     body: 'every cut, caption and colour change shows up live. nothing hidden, nothing to wait for.',
   },
   {
     title: 'steer it',
+    Art: SteerItArt,
     body: 'jump in mid-edit, rewrite any word, ask for changes. render in 1080p when it’s right.',
   },
 ] as const;
@@ -86,13 +89,7 @@ export function LandingPage() {
             {how.map((item) => (
               <article key={item.title}>
                 <div className="landing-still">
-                  <Image
-                    src="/dev/still.png"
-                    alt=""
-                    width={1600}
-                    height={1000}
-                    unoptimized
-                  />
+                  <item.Art />
                 </div>
                 <h3>{item.title}</h3>
                 <p>{item.body}</p>

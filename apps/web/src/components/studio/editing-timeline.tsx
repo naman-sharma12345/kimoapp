@@ -14,12 +14,20 @@ import {
   Type,
   Music,
 } from 'lucide-react';
-import type { Asset, Clip, KimoProject, Op, Track } from '@kimo/client';
+import {
+  isLocalAssetUrl,
+  type Asset,
+  type Clip,
+  type KimoProject,
+  type Op,
+  type Track,
+} from '@kimo/client';
 
 const filmCache = new Map<string, Promise<ImageBitmap[]>>();
 let filmQueue: Promise<unknown> = Promise.resolve();
 function framesFor(asset: Asset, clip: Clip) {
-  let frames = filmCache.get(asset.id);
+  const key = `${asset.id}:${asset.url}`;
+  let frames = filmCache.get(key);
   if (!frames) {
     const task = filmQueue.then(async () => {
       const { filmstripFor } = await import('@kimo/compositor');
@@ -37,17 +45,22 @@ function framesFor(asset: Asset, clip: Clip) {
     });
     filmQueue = task.catch(() => undefined);
     frames = task;
-    filmCache.set(asset.id, frames);
+    filmCache.set(key, frames);
   }
   return frames;
 }
 type Tool = 'select' | 'blade' | 'slip' | 'text';
+const RULER_HEIGHT = 28;
+const MIN_ROW_HEIGHT = 28;
+const MAX_ROW_HEIGHT = 160;
+const PANBAR_HEIGHT = 12;
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 const clock = (time: number) =>
   `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 function TrackCanvas({
   track,
+  rowHeight,
   clips,
   scale,
   scroll,
@@ -56,6 +69,8 @@ function TrackCanvas({
   beatGrid,
 }: {
   track: Track;
+  /** Drawn height: the track's share of the panel, not a fixed size. */
+  rowHeight: number;
   clips: Clip[];
   scale: number;
   scroll: number;
@@ -72,11 +87,14 @@ function TrackCanvas({
     let alive = true;
     for (const clip of clips) {
       const asset = assets.find((item) => item.id === clip.assetId);
-      if (asset?.kind === 'video' && !films.current.has(asset.id)) {
+      if (
+        asset?.kind === 'video' &&
+        !films.current.has(`${asset.id}:${asset.url}`)
+      ) {
         void framesFor(asset, clip)
           .then((frames) => {
             if (alive) {
-              films.current.set(asset.id, frames);
+              films.current.set(`${asset.id}:${asset.url}`, frames);
               setMediaVersion((n) => n + 1);
             }
           })
@@ -86,7 +104,8 @@ function TrackCanvas({
     for (const asset of assets) {
       if (
         (asset.thumbUrl || asset.kind === 'image') &&
-        !pictures.current.has(asset.id)
+        !isLocalAssetUrl(asset.thumbUrl ?? asset.url) &&
+        pictures.current.get(asset.id)?.src !== (asset.thumbUrl ?? asset.url)
       ) {
         const image = new Image();
         image.crossOrigin = 'anonymous';
@@ -120,10 +139,9 @@ function TrackCanvas({
     const ratio = window.devicePixelRatio || 1;
     if (canvas.width !== Math.ceil(width * ratio))
       canvas.width = Math.ceil(width * ratio);
-    if (canvas.height !== track.height * ratio)
-      canvas.height = track.height * ratio;
+    if (canvas.height !== rowHeight * ratio) canvas.height = rowHeight * ratio;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.clearRect(0, 0, width, track.height);
+    ctx.clearRect(0, 0, width, rowHeight);
     const css = getComputedStyle(canvas);
     ctx.fillStyle =
       css
@@ -134,10 +152,10 @@ function TrackCanvas({
     ctx.save();
     ctx.strokeStyle = css.getPropertyValue('--cream-16').trim();
     ctx.globalAlpha = 0.1875;
-    for (let x = -track.height; x < width; x += 6) {
+    for (let x = -rowHeight; x < width; x += 6) {
       ctx.beginPath();
-      ctx.moveTo(x, track.height);
-      ctx.lineTo(x + track.height, 0);
+      ctx.moveTo(x, rowHeight);
+      ctx.lineTo(x + rowHeight, 0);
       ctx.stroke();
     }
     ctx.restore();
@@ -146,7 +164,7 @@ function TrackCanvas({
       const size = clip.duration * scale;
       if (left + size < -width || left > width * 2) continue;
       ctx.beginPath();
-      ctx.roundRect(left, 4, Math.max(1, size), track.height - 8, 6);
+      ctx.roundRect(left, 4, Math.max(1, size), rowHeight - 8, 6);
       ctx.fill();
       if (beatGrid && clip.kind === 'audio') {
         const source = assets.find((a) => a.id === clip.assetId);
@@ -158,18 +176,20 @@ function TrackCanvas({
           const x = t * scale - scroll;
           ctx.beginPath();
           ctx.moveTo(x, 4);
-          ctx.lineTo(x, track.height - 4);
+          ctx.lineTo(x, rowHeight - 4);
           ctx.stroke();
         }
         ctx.restore();
       }
-      const frames = clip.assetId ? films.current.get(clip.assetId) : undefined;
       const asset = assets.find((item) => item.id === clip.assetId);
+      const frames = asset
+        ? films.current.get(`${asset.id}:${asset.url}`)
+        : undefined;
       if (frames?.length) {
         ctx.save();
         ctx.clip();
         ctx.globalAlpha = 0.6;
-        const h = track.height - 26;
+        const h = rowHeight - 26;
         const first = frames[0];
         const w = first ? (h * first.width) / first.height : 80;
         for (
@@ -199,7 +219,7 @@ function TrackCanvas({
         ctx.save();
         ctx.clip();
         ctx.globalAlpha = 0.6;
-        const h = track.height - 26;
+        const h = rowHeight - 26;
         const w = Math.max(
           1,
           (h * picture.naturalWidth) / picture.naturalHeight,
@@ -223,14 +243,14 @@ function TrackCanvas({
         ) {
           const sample =
             wave[Math.floor(((x - left) / size) * wave.length)] ?? 0;
-          const h = Math.max(1, sample * (track.height - 24));
-          ctx.fillRect(x, track.height / 2 - h / 2, 1, h);
+          const h = Math.max(1, sample * (rowHeight - 24));
+          ctx.fillRect(x, rowHeight / 2 - h / 2, 1, h);
         }
         ctx.restore();
       }
       ctx.save();
       ctx.beginPath();
-      ctx.rect(left + 4, 4, Math.max(0, size - 8), track.height - 8);
+      ctx.rect(left + 4, 4, Math.max(0, size - 8), rowHeight - 8);
       ctx.clip();
       ctx.fillStyle = css
         .getPropertyValue(clip.kind === 'text' ? '--cream-100' : '--cream-60')
@@ -250,12 +270,22 @@ function TrackCanvas({
       }
       ctx.restore();
     }
-  }, [track, clips, scale, scroll, width, mediaVersion, assets, beatGrid]);
+  }, [
+    track,
+    rowHeight,
+    clips,
+    scale,
+    scroll,
+    width,
+    mediaVersion,
+    assets,
+    beatGrid,
+  ]);
   return (
     <canvas
       ref={ref}
       className="editor-track-canvas"
-      style={{ width, height: track.height, left: scroll }}
+      style={{ width, height: rowHeight, left: scroll }}
       aria-hidden="true"
     />
   );
@@ -335,18 +365,53 @@ export function EditingTimeline({
     moved: boolean;
     value: Clip;
   } | null>(null);
+  const [height, setHeight] = useState(0);
+  const [scrollX, setScrollX] = useState(0);
   useEffect(() => {
     const el = viewport.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    const measure = () => {
+      setWidth(el.clientWidth);
+      setHeight(el.clientHeight);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
-    setWidth(el.clientWidth);
+    measure();
     return () => observer.disconnect();
   }, []);
   const bodyWidth = Math.max(1, width - 160);
+  // Zoom 50 is "fit": the whole project spans the panel width.
   const fit = Math.max(4, bodyWidth / Math.max(project.duration * 1.1, 1));
   const scale = clamp(fit * 2 ** ((zoom - 50) / 12), 4, 600);
-  const total = Math.max(bodyWidth, project.duration * scale * 1.1);
+  const total = Math.max(bodyWidth, Math.floor(project.duration * scale * 1.1));
+  const overflowX = total + 160 > width + 1;
+  // Rows share the panel's height in proportion to their set size, so the
+  // tracks fill the panel without a vertical scrollbar.
+  const rowHeights = useMemo(() => {
+    const available = Math.max(
+      0,
+      height - RULER_HEIGHT - (overflowX ? PANBAR_HEIGHT : 0),
+    );
+    const base = project.tracks.reduce((sum, track) => sum + track.height, 0);
+    const factor = base && available ? available / base : 1;
+    return new Map(
+      project.tracks.map((track) => [
+        track.id,
+        Math.floor(
+          clamp(track.height * factor, MIN_ROW_HEIGHT, MAX_ROW_HEIGHT),
+        ),
+      ]),
+    );
+  }, [height, project.tracks, overflowX]);
+  const rowsFit =
+    [...rowHeights.values()].reduce((sum, value) => sum + value, 0) +
+      RULER_HEIGHT +
+      (overflowX ? PANBAR_HEIGHT : 0) <=
+    height + 1;
+  const panTo = (left: number) => {
+    const el = viewport.current;
+    if (el) el.scrollLeft = clamp(left, 0, el.scrollWidth - el.clientWidth);
+  };
   const drawStart = Math.max(0, scroll - bodyWidth);
   const clips = useMemo(
     () =>
@@ -559,12 +624,27 @@ export function EditingTimeline({
   return (
     <div
       className="editor-timeline-scroll"
+      data-rows-fit={rowsFit || undefined}
+      id="editor-timeline"
       inert={readOnly}
       ref={viewport}
       onScroll={(e) => {
+        setScrollX(e.currentTarget.scrollLeft);
         const next =
           Math.floor(e.currentTarget.scrollLeft / bodyWidth) * bodyWidth;
         setScroll((old) => (old === next ? old : next));
+      }}
+      onWheel={(event) => {
+        // A plain wheel pans the zoomed timeline sideways when the rows
+        // already fit; trackpads and shift+wheel pan natively.
+        const el = event.currentTarget;
+        if (
+          !event.shiftKey &&
+          Math.abs(event.deltaY) > Math.abs(event.deltaX) &&
+          el.scrollHeight <= el.clientHeight + 1 &&
+          el.scrollWidth > el.clientWidth
+        )
+          panTo(el.scrollLeft + event.deltaY);
       }}
     >
       {menu && project.clips[menu.id] ? (
@@ -803,7 +883,7 @@ export function EditingTimeline({
                 className="editor-track"
                 data-editor-track={track.id}
                 key={track.id}
-                style={{ height: track.height }}
+                style={{ height: rowHeights.get(track.id) ?? track.height }}
               >
                 <div className="editor-track-header">
                   {track.kind === 'text' ? (
@@ -1105,6 +1185,7 @@ export function EditingTimeline({
                   <TrackCanvas
                     beatGrid={beatGrid}
                     track={track}
+                    rowHeight={rowHeights.get(track.id) ?? track.height}
                     assets={assets}
                     clips={row}
                     scale={scale}
@@ -1174,7 +1255,8 @@ export function EditingTimeline({
                           style={{
                             left: clip.start * scale,
                             width: Math.max(4, clip.duration * scale),
-                            height: track.height - 8,
+                            height:
+                              (rowHeights.get(track.id) ?? track.height) - 8,
                             top: 4,
                           }}
                         >
@@ -1340,6 +1422,85 @@ export function EditingTimeline({
           aria-hidden="true"
         />
       </div>
+      {overflowX ? (
+        <PanBar
+          offset={scrollX}
+          visible={width - 160}
+          total={total}
+          onPan={panTo}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Replaces the hidden native scrollbar when zoomed in: a thin bar showing
+ * the visible window, draggable, clickable and keyboard operable.
+ */
+function PanBar({
+  offset,
+  visible,
+  total,
+  onPan,
+}: {
+  offset: number;
+  visible: number;
+  total: number;
+  onPan: (left: number) => void;
+}) {
+  const track = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; offset: number } | null>(null);
+  const span = Math.max(1, total);
+  const thumb = clamp(visible / span, 0.04, 1);
+  const position = clamp(offset / span, 0, 1 - thumb);
+  const toOffset = (clientX: number) => {
+    const rect = track.current?.getBoundingClientRect();
+    if (!rect?.width) return offset;
+    return ((clientX - rect.left) / rect.width - thumb / 2) * span;
+  };
+  return (
+    <div
+      className="editor-panbar"
+      ref={track}
+      role="scrollbar"
+      aria-label="pan timeline"
+      aria-controls="editor-timeline"
+      aria-orientation="horizontal"
+      aria-valuemin={0}
+      aria-valuemax={Math.round(Math.max(0, span - visible))}
+      aria-valuenow={Math.round(offset)}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? visible : visible / 8;
+        if (event.key === 'ArrowLeft') onPan(offset - step);
+        else if (event.key === 'ArrowRight') onPan(offset + step);
+        else if (event.key === 'Home') onPan(0);
+        else if (event.key === 'End') onPan(span);
+        else return;
+        event.preventDefault();
+      }}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const target = event.target as HTMLElement;
+        if (!target.classList.contains('editor-panbar-thumb'))
+          onPan(toOffset(event.clientX));
+        drag.current = { x: event.clientX, offset };
+      }}
+      onPointerMove={(event) => {
+        const start = drag.current;
+        const rect = track.current?.getBoundingClientRect();
+        if (!start || !rect?.width) return;
+        onPan(start.offset + ((event.clientX - start.x) / rect.width) * span);
+      }}
+      onPointerUp={() => {
+        drag.current = null;
+      }}
+    >
+      <div
+        className="editor-panbar-thumb"
+        style={{ left: `${position * 100}%`, width: `${thumb * 100}%` }}
+      />
     </div>
   );
 }

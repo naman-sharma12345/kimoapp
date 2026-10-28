@@ -690,17 +690,6 @@ html[data-warmup-unfold='native'] .studio-mark {
   color: var(--orange);
   pointer-events: none;
 }
-.studio-timeline-footer {
-  flex: none;
-  height: var(--studio-scroll-height);
-  padding: var(--space-8) var(--space-16);
-}
-.studio-timeline-footer span {
-  display: block;
-  height: var(--space-8);
-  border-radius: var(--r-pill);
-  background: var(--ink-3);
-}
 html[data-warmup-unfold='native'] .studio-agent {
   view-transition-name: studio-agent;
 }
@@ -944,10 +933,48 @@ html[data-warmup-unfold='native'] .studio-timeline-playhead {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior-x: contain;
+}
+/* Horizontal panning has its own control (.editor-panbar), so the native
+   horizontal scrollbar is hidden. When the rows fit the panel there is
+   nothing to scroll vertically either, so all native bars are hidden. */
+.editor-timeline-scroll::-webkit-scrollbar:horizontal {
+  height: 0;
+}
+.editor-timeline-scroll[data-rows-fit] {
+  scrollbar-width: none;
+}
+.editor-timeline-scroll[data-rows-fit]::-webkit-scrollbar {
+  display: none;
 }
 .editor-timeline-inner {
   position: relative;
-  min-height: 100%;
+}
+.editor-panbar {
+  position: sticky;
+  left: 0;
+  bottom: 0;
+  z-index: 4;
+  width: 100%;
+  height: var(--space-12);
+  background: var(--ink-1);
+  cursor: pointer;
+}
+.editor-panbar:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.editor-panbar-thumb {
+  position: absolute;
+  top: var(--space-4);
+  height: var(--space-4);
+  border-radius: var(--r-pill);
+  background: var(--cream-16);
+  cursor: grab;
+}
+.editor-panbar:hover .editor-panbar-thumb,
+.editor-panbar:focus-visible .editor-panbar-thumb {
+  background: var(--cream-38);
 }
 .editor-ruler,
 .editor-track {
