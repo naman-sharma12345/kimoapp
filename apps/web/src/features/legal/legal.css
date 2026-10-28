@@ -1,0 +1,162 @@
+/* Styles ported from the AI Studio import; scoped to .kimo-legal. */
+.kimo-legal {
+  --danger: #e5534b;
+  --danger-border: rgb(229 83 75 / 0.4);
+  --danger-hover-bg: rgb(229 83 75 / 0.08);
+  --font-serif: var(--font-display);
+  --r-999: 999px;
+  --h-24: 24px;
+  --h-28: 28px;
+  --h-32: 32px;
+  --h-40: 40px;
+  --h-48: 48px;
+  --h-64: 64px;
+  min-height: 100dvh;
+  background-color: var(--ink-0);
+  color: var(--cream-100);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-legal *:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.kimo-legal .t-11 {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.kimo-legal .t-12 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-legal .t-13 {
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-legal .t-15 {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+}
+
+.kimo-legal .t-15-body {
+  font-size: 15px;
+  line-height: 26px;
+  letter-spacing: -0.005em;
+  font-weight: 400;
+}
+
+.kimo-legal .t-17 {
+  font-size: 17px;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+.kimo-legal .t-20 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+
+.kimo-legal .t-28 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.kimo-legal .t-display {
+  font-size: clamp(44px, 6.2vw, 88px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 400;
+}
+
+/* Wordmark */
+.kimo-legal .kimo-wordmark {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+  color: var(--cream-100);
+}
+
+/* Inline article links */
+.kimo-legal .kimo-inline-link {
+  color: var(--cream-100);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition:
+    text-decoration-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+  border-radius: var(--r-4);
+}
+
+.kimo-legal .kimo-inline-link:hover {
+  text-decoration-color: var(--cream-60);
+}
+
+/* Buttons */
+.kimo-legal .kimo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  border-radius: var(--r-8);
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  text-decoration: none;
+}
+
+.kimo-legal .kimo-btn:disabled {
+  background-color: var(--ink-4);
+  color: var(--cream-38);
+  border-color: transparent;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kimo-legal .kimo-btn-ghost {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--cream-60);
+}
+
+.kimo-legal .kimo-btn-ghost:hover:not(:disabled) {
+  background-color: var(--ink-2);
+  color: var(--cream-100);
+}
+
+.kimo-legal .kimo-btn-secondary {
+  background-color: var(--ink-2);
+  border: 1px solid var(--line);
+  color: var(--cream-100);
+}
+
+.kimo-legal .kimo-btn-secondary:hover:not(:disabled) {
+  background-color: var(--ink-3);
+  border-color: var(--line-strong);
+}
