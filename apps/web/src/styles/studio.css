@@ -940,3 +940,318 @@ html[data-warmup-unfold='native'] .studio-timeline-playhead {
     transform: none;
   }
 }
+.editor-timeline-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.editor-timeline-inner {
+  position: relative;
+  min-height: 100%;
+}
+.editor-ruler,
+.editor-track {
+  display: flex;
+  position: relative;
+}
+.editor-ruler {
+  height: 28px;
+  background: var(--ink-1);
+}
+.editor-header-spacer,
+.editor-track-header {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 160px;
+  flex: 0 0 160px;
+  background: var(--ink-1);
+}
+.editor-ruler-content {
+  position: relative;
+  cursor: pointer;
+  color: var(--cream-38);
+  font:
+    var(--t-11) var(--font-geist-mono),
+    var(--font-mono);
+}
+.editor-ruler-content span {
+  position: absolute;
+  top: 4px;
+  border-left: 1px solid var(--cream-16);
+  padding-left: 4px;
+}
+.editor-track-header {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-8);
+  gap: var(--space-4);
+}
+.editor-track-header input {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--cream-60);
+  font-size: var(--t-12);
+}
+.editor-track-header > div {
+  display: flex;
+  opacity: 0;
+}
+.editor-track-header:hover > div,
+.editor-track-header:focus-within > div {
+  opacity: 1;
+}
+.editor-track-header button,
+.editor-inspector button {
+  border: 0;
+  background: transparent;
+  color: var(--cream-60);
+  cursor: pointer;
+}
+.editor-track-body {
+  position: relative;
+  flex: none;
+  background: var(--ink-0);
+}
+.editor-track-canvas {
+  position: sticky;
+  left: 160px;
+  display: block;
+  pointer-events: none;
+}
+.editor-clip-wrap {
+  position: absolute;
+}
+.editor-clip {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: var(--cream-100);
+  border: 1px solid transparent;
+  border-radius: var(--r-6);
+  text-align: left;
+  padding: var(--space-6);
+  overflow: hidden;
+  cursor: grab;
+  font-size: var(--t-11);
+}
+.editor-clip span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-clip[data-selected] {
+  border: 1.5px solid var(--cream-100);
+}
+.editor-clip-wrap input {
+  width: 100%;
+  height: 100%;
+  background: var(--ink-2);
+  color: var(--cream-100);
+}
+.editor-trim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+}
+.editor-trim-left {
+  left: 0;
+}
+.editor-trim-right {
+  right: 0;
+}
+.editor-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--orange);
+  pointer-events: none;
+  z-index: 2;
+}
+.editor-inspector {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-12);
+  color: var(--cream-60);
+  font-size: var(--t-12);
+}
+.editor-inspector details {
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--line);
+}
+.editor-inspector summary {
+  color: var(--cream-100);
+  cursor: pointer;
+  padding-bottom: var(--space-8);
+}
+.editor-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+.editor-field input,
+.editor-field select,
+.editor-text-label textarea {
+  color: var(--cream-100);
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-6);
+  padding: var(--space-6);
+  min-width: 0;
+}
+.editor-field input[type='number'] {
+  width: 90px;
+}
+.editor-text-label {
+  display: grid;
+  gap: var(--space-6);
+}
+.editor-text-label textarea {
+  min-height: 72px;
+  resize: none;
+}
+.editor-speed {
+  display: flex;
+  gap: var(--space-8);
+}
+.editor-speed button[aria-pressed='true'] {
+  color: var(--cream-100);
+  background: var(--ink-3);
+}
+.editor-effect {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--space-8);
+}
+.editor-error {
+  color: var(--error);
+  background: var(--ink-2);
+  border: 0;
+}
+.editor-timeline-scroll button:focus-visible,
+.editor-timeline-scroll input:focus-visible,
+.editor-inspector :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.editor-assets {
+  flex: none;
+  height: 240px;
+  overflow: auto;
+  padding: var(--space-8);
+  border-bottom: 1px solid var(--line);
+}
+.editor-asset-tabs,
+.editor-assets-grid {
+  display: flex;
+  gap: var(--space-8);
+}
+.editor-assets button {
+  border: 0;
+  background: transparent;
+  color: var(--cream-60);
+  font-size: var(--t-11);
+  text-align: left;
+  cursor: pointer;
+}
+.editor-asset-tabs button[aria-pressed='true'] {
+  color: var(--cream-100);
+}
+.editor-assets-grid {
+  flex-wrap: wrap;
+  padding-top: var(--space-8);
+}
+.editor-assets-grid button {
+  width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-assets-grid button span {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 54px;
+  background: var(--ink-2);
+  border-radius: var(--r-6);
+  overflow: hidden;
+}
+.editor-assets-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.editor-asset-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+.editor-context {
+  position: fixed;
+  z-index: 50;
+  display: grid;
+  padding: var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-8);
+  background: var(--ink-2);
+  box-shadow: var(--shadow-pop);
+}
+.editor-context button {
+  border: 0;
+  padding: var(--space-6) var(--space-12);
+  text-align: left;
+  background: transparent;
+  color: var(--cream-100);
+  font-size: var(--t-12);
+  cursor: pointer;
+}
+.editor-context button:hover {
+  background: var(--ink-3);
+}
+.editor-viewer-text {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.editor-viewer-text-position {
+  position: absolute;
+  width: 90%;
+  text-align: center;
+  pointer-events: auto;
+  color: var(--cream-100);
+}
+.editor-viewer-text-trigger {
+  display: block;
+  width: 100%;
+  min-height: 60px;
+  opacity: 0;
+  cursor: text;
+}
+.editor-viewer-text-position [contenteditable] {
+  outline: 1px solid var(--cream-60);
+  white-space: pre-wrap;
+  caret-color: var(--cream-100);
+}
+.editor-viewer-text-position [contenteditable]::selection {
+  background: var(--orange-24);
+}
+.editor-dropzone {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}

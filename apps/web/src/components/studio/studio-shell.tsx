@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowUp,
   Grid3X3,
+  FolderOpen,
   History,
   Link2,
   Magnet,
@@ -46,6 +47,8 @@ import {
   KimoClient,
   ProjectSync,
   type ClientEvent,
+  type Clip,
+  type Op,
   type ServerEvent,
   type SessionSnapshot,
 } from '@kimo/client';
@@ -65,6 +68,11 @@ import { useSessionStore } from '@/stores/session';
 import { useUploads } from '@/lib/uploads/manager';
 import { isUnfolding } from '@/lib/warmup/transition';
 import { assetTransitionName } from '@/components/warmup/warmup-reel';
+import { EditingTimeline } from './editing-timeline';
+import { EditingInspector } from './editing-inspector';
+import { inverseOps } from './edit-history';
+import { ViewerTextEditor } from './viewer-text-editor';
+import { isTypingTarget } from '@/lib/keyboard';
 
 type AgentState = 'thinking' | 'acting' | 'waiting_user' | 'idle';
 type Sizes = { agent: number; inspector: number; timeline: number };
@@ -189,6 +197,8 @@ export function StudioShell({
   const [selection, setSelection] = useState<string | null>(null);
   const [follow, setFollow] = useState(true);
   const [tool, setTool] = useState<Tool>('select');
+  const [assetsOpen, setAssetsOpen] = useState(false);
+  const [assetTab, setAssetTab] = useState<'user' | 'web'>('user');
   const [snap, setSnap] = useState(true);
   const [linked, setLinked] = useState(true);
   const [zoom, setZoom] = useState(50);
@@ -237,6 +247,15 @@ export function StudioShell({
   );
   const lastOpReceived = useRef<number | undefined>(undefined);
   const snapshotRef = useRef(snapshot);
+  const syncRef = useRef<ProjectSync | null>(null);
+  const editingRef = useRef(false);
+  const pendingEvents = useRef<
+    Extract<ServerEvent, { t: 'project.ops' | 'hello' }>[]
+  >([]);
+  const undoStack = useRef<{ undo: Op[]; redo: Op[] }[]>([]);
+  const redoStack = useRef<{ undo: Op[]; redo: Op[] }[]>([]);
+  const [historyCount, setHistoryCount] = useState(0);
+  const [editError, setEditError] = useState('');
   const composer = useRef<HTMLTextAreaElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const sessionStart = useRef(snapshot?.createdAt ?? 0);
@@ -244,12 +263,10 @@ export function StudioShell({
   followRef.current = follow;
   const agentOpenRef = useRef(agentOpen);
   agentOpenRef.current = agentOpen;
-  const pinch = useRef<{ distance: number; zoom: number } | null>(null);
   const pingAt = useRef(0);
   const seen = useRef(new Set<string>());
   const breakpoint = useRef<number | null>(null);
   const project = current?.project;
-  const projectClips = Object.values(project?.clips ?? {});
   const files = useMemo(
     () =>
       (current?.assets ?? []).filter(
@@ -329,9 +346,10 @@ export function StudioShell({
   useEffect(() => {
     if (!snapshot) return;
     let alive = true;
-    const replace = (next: SessionSnapshot) => {
+    const replace = (next: SessionSnapshot, force = false) => {
       if (!alive) return;
       if (
+        !force &&
         snapshotRef.current &&
         next.project.version < snapshotRef.current.project.version
       )
@@ -345,8 +363,9 @@ export function StudioShell({
       client,
       sessionId,
       () => snapshotRef.current ?? snapshot,
-      replace,
+      (next) => replace(next, true),
     );
+    syncRef.current = sync;
     const event = (message: ServerEvent) => {
       if (message.t === 'asset.added' && snapshotRef.current) {
         const existing = snapshotRef.current;
@@ -361,7 +380,8 @@ export function StudioShell({
       if (message.t === 'hello' || message.t === 'project.ops') {
         if (message.t === 'project.ops')
           lastOpReceived.current = performance.now();
-        void sync.receive(message).catch(() => undefined);
+        if (editingRef.current) pendingEvents.current.push(message);
+        else void sync.receive(message).catch(() => undefined);
         if (message.t === 'project.ops' && followRef.current) {
           const operation = message.ops.find(
             (op) =>
@@ -465,6 +485,7 @@ export function StudioShell({
       alive = false;
       connection.dispose();
       socket.current = null;
+      syncRef.current = null;
       if (overlayTimer.current) clearTimeout(overlayTimer.current);
       cancelAnimationFrame(followFrame.current);
     };
@@ -622,6 +643,57 @@ export function StudioShell({
     (message: ClientEvent) => socket.current?.send(message) ?? false,
     [],
   );
+  const edit = useCallback((ops: Op[], record = true) => {
+    const before = snapshotRef.current?.project;
+    if (!before || !syncRef.current || !ops.length) return;
+    try {
+      const undo = inverseOps(before, ops);
+      if (record && undo.length) {
+        undoStack.current.push({ undo, redo: ops });
+        redoStack.current = [];
+        setHistoryCount(undoStack.current.length);
+      }
+      void syncRef.current
+        .edit(ops)
+        .catch(() => setEditError('could not save edit · try again'));
+    } catch {
+      setEditError('could not apply edit');
+    }
+  }, []);
+  const history = useCallback(
+    (redo: boolean) => {
+      const source = redo ? redoStack.current : undoStack.current;
+      const target = redo ? undoStack.current : redoStack.current;
+      const item = source.pop();
+      if (!item) return;
+      target.push(item);
+      setHistoryCount(undoStack.current.length);
+      edit(redo ? item.redo : item.undo, false);
+    },
+    [edit],
+  );
+  const interaction = useCallback((active: boolean) => {
+    editingRef.current = active;
+    if (!active && syncRef.current) {
+      for (const event of pendingEvents.current.splice(0))
+        void syncRef.current
+          .receive(event)
+          .catch(() => setEditError('could not update the project'));
+    }
+  }, []);
+  const draftClip = useCallback((clip: Clip | null) => {
+    const snapshot = snapshotRef.current;
+    if (!snapshot) return;
+    preview.current?.update(
+      clip
+        ? {
+            ...snapshot.project,
+            clips: { ...snapshot.project.clips, [clip.id]: clip },
+          }
+        : snapshot.project,
+      snapshot.assets,
+    );
+  }, []);
   const togglePause = useCallback(() => {
     if (send({ t: paused ? 'resume' : 'pause' })) setPaused(!paused);
   }, [paused, send]);
@@ -679,8 +751,9 @@ export function StudioShell({
       else if (value === 'inPoint') setInPoint(playheadRef.current);
       else if (value === 'outPoint') setOutPoint(playheadRef.current);
       else if (value === 'fit') setZoom(50);
+      else if (value === 'undo' || value === 'redo') history(value === 'redo');
     },
-    [duration, togglePause, togglePlayback, seekPreview],
+    [duration, togglePause, togglePlayback, seekPreview, history],
   );
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -688,21 +761,140 @@ export function StudioShell({
         setFullscreen(false);
         return;
       }
-      const action = keyboardCommand(event);
       if (
-        !action ||
-        shortcutsOpen ||
-        leaveOpen ||
-        finishOpen ||
-        ['undo', 'redo'].includes(action)
-      )
+        !isTypingTarget(event.target) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === 't' &&
+        project
+      ) {
+        event.preventDefault();
+        const existing = project.tracks.find(
+          (track) => track.kind === 'text' && !track.locked,
+        );
+        const track = existing ?? {
+          id: crypto.randomUUID(),
+          kind: 'text' as const,
+          name: 'text',
+          height: 48 as const,
+          hidden: false,
+          muted: false,
+          locked: false,
+        };
+        const clip: Clip = {
+          id: crypto.randomUUID(),
+          kind: 'text',
+          trackId: track.id,
+          start: playheadRef.current,
+          duration: 3,
+          in: 0,
+          speed: 1,
+          transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+          effects: [],
+          keyframes: [],
+          text: { content: 'your text', style: 'caption-clean' },
+        };
+        edit([
+          ...(existing ? [] : [{ op: 'track.add' as const, track }]),
+          { op: 'clip.add', clip },
+        ]);
+        setSelection(clip.id);
         return;
+      }
+      if (!isTypingTarget(event.target) && selection && project) {
+        const clip = project.clips[selection];
+        const mod = event.metaKey || event.ctrlKey;
+        if (
+          clip &&
+          !clip.locked &&
+          (event.key === 'Delete' || event.key === 'Backspace')
+        ) {
+          event.preventDefault();
+          const operations: Op[] = [{ op: 'clip.remove', id: clip.id }];
+          if (
+            !event.shiftKey &&
+            project.tracks.find((t) => t.id === clip.trackId)?.kind === 'video'
+          )
+            for (const other of Object.values(project.clips))
+              if (
+                other.trackId === clip.trackId &&
+                other.start >= clip.start + clip.duration &&
+                other.id !== clip.id
+              )
+                operations.push({
+                  op: 'clip.move',
+                  id: other.id,
+                  trackId: other.trackId,
+                  start: other.start - clip.duration,
+                });
+          edit(operations);
+          setSelection(null);
+          return;
+        }
+        if (
+          clip &&
+          mod &&
+          event.key.toLowerCase() === 'b' &&
+          playheadRef.current > clip.start &&
+          playheadRef.current < clip.start + clip.duration
+        ) {
+          event.preventDefault();
+          edit([
+            {
+              op: 'clip.split',
+              id: clip.id,
+              at: playheadRef.current,
+              newId: crypto.randomUUID(),
+            },
+          ]);
+          return;
+        }
+        if (clip && !mod && event.key.toLowerCase() === 'l') {
+          event.preventDefault();
+          edit([
+            { op: 'clip.update', id: clip.id, patch: { locked: !clip.locked } },
+          ]);
+          return;
+        }
+        if (
+          clip &&
+          !clip.locked &&
+          !mod &&
+          (event.key === ',' || event.key === '.')
+        ) {
+          event.preventDefault();
+          edit([
+            {
+              op: 'clip.move',
+              id: clip.id,
+              trackId: clip.trackId,
+              start: Math.max(
+                0,
+                clip.start +
+                  ((event.key === ',' ? -1 : 1) * (event.shiftKey ? 10 : 1)) /
+                    project.fps,
+              ),
+            },
+          ]);
+          return;
+        }
+      }
+      const action = keyboardCommand(event);
+      if (!action || shortcutsOpen || leaveOpen || finishOpen) return;
       event.preventDefault();
       command(action);
     };
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
-  }, [command, shortcutsOpen, leaveOpen, finishOpen, fullscreen]);
+  }, [
+    command,
+    shortcutsOpen,
+    leaveOpen,
+    finishOpen,
+    fullscreen,
+    selection,
+    project,
+    edit,
+  ]);
   if (!current || current.status === 'failed')
     return (
       <FullScreenError
@@ -818,6 +1010,16 @@ export function StudioShell({
           />
         </label>
       </header>
+      {project ? (
+        <EditingInspector
+          clip={selected}
+          project={project}
+          assets={current.assets}
+          onEdit={edit}
+          onDraft={draftClip}
+          onInteraction={interaction}
+        />
+      ) : null}
     </section>
   );
   const viewer = (
@@ -891,6 +1093,16 @@ export function StudioShell({
             className="studio-preview-canvas"
             aria-label="live video preview"
           />
+          {selected?.text && project ? (
+            <ViewerTextEditor
+              key={selected.id}
+              clip={selected}
+              project={project}
+              onEdit={edit}
+              onDraft={draftClip}
+              onInteraction={interaction}
+            />
+          ) : null}
           {thumbnail && !hasProject ? (
             <div
               className="studio-thumbnail"
@@ -1114,6 +1326,16 @@ export function StudioShell({
             variant="ghost"
             size="sm"
             iconOnly
+            icon={FolderOpen}
+            aria-label="toggle assets"
+            tooltip="toggle assets"
+            aria-pressed={assetsOpen}
+            onClick={() => setAssetsOpen(!assetsOpen)}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
             icon={Magnet}
             aria-label="toggle snapping"
             tooltip="toggle snapping"
@@ -1157,136 +1379,134 @@ export function StudioShell({
       </div>
       {timelineOpen ? (
         <>
-          <div className="studio-ruler">
-            <span>00:00</span>
-            <span>00:10</span>
-            <span>00:20</span>
-            <span>00:30</span>
-            <input
-              className="studio-ruler-scrub"
-              type="range"
-              min="0"
-              max={Math.max(duration, 0.01)}
-              step="0.033333"
-              value={Math.min(playhead, Math.max(duration, 0.01))}
-              aria-label="seek timeline"
-              onPointerDown={() => {
-                scrubbingRef.current = true;
-                preview.current?.setScrubbing(true);
-              }}
-              onPointerUp={() => {
-                scrubbingRef.current = false;
-                preview.current?.setScrubbing(false);
-              }}
-              onPointerCancel={() => {
-                scrubbingRef.current = false;
-                preview.current?.setScrubbing(false);
-              }}
-              onChange={(event) => seekPreview(Number(event.target.value))}
-            />
-          </div>
-          <div className="studio-tracks">
-            <div className="studio-track-headers">
-              {(project?.tracks ?? []).slice(0, 4).map((track) => (
-                <div key={track.id}>
-                  {hasProject ? (
-                    track.name
-                  ) : (
-                    <span className="studio-skeleton-header" />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div
-              className="studio-track-content"
-              data-timeline-content
-              onTouchStart={(event) => {
-                const first = event.touches[0];
-                const second = event.touches[1];
-                if (event.touches.length === 2 && first && second)
-                  pinch.current = {
-                    distance: Math.abs(first.clientX - second.clientX),
-                    zoom,
-                  };
-              }}
-              onTouchMove={(event) => {
-                const first = event.touches[0];
-                const second = event.touches[1];
-                if (
-                  event.touches.length === 2 &&
-                  first &&
-                  second &&
-                  pinch.current?.distance
-                )
-                  setZoom(
-                    clamp(
-                      pinch.current.zoom +
-                        (Math.abs(first.clientX - second.clientX) -
-                          pinch.current.distance) /
-                          2,
-                      0,
-                      100,
-                    ),
-                  );
-              }}
-              onTouchEnd={() => {
-                pinch.current = null;
-              }}
-            >
-              <div className="studio-clips">
-                {hasProject
-                  ? projectClips.map((clip, index) => (
-                      <button
-                        key={clip.id}
-                        className="studio-clip"
-                        onClick={() => {
-                          setSelection(clip.id);
-                          setInspectorOpen(true);
-                        }}
-                        style={{
-                          viewTransitionName:
-                            clip.assetId &&
-                            projectClips.findIndex(
-                              (item) => item.assetId === clip.assetId,
-                            ) === index
-                              ? assetTransitionName(clip.assetId)
-                              : undefined,
-                        }}
-                      >
-                        {current.assets.find(
-                          (asset) => asset.id === clip.assetId,
-                        )?.name ??
-                          clip.text?.content ??
-                          clip.kind}
-                      </button>
-                    ))
-                  : Array.from({ length: 3 }, (_, index) => (
-                      <span
-                        className="studio-skeleton-clip"
-                        key={index}
-                        style={{
-                          viewTransitionName: files[index]
-                            ? assetTransitionName(files[index].id)
-                            : undefined,
-                        }}
-                      />
-                    ))}
+          {assetsOpen ? (
+            <div className="editor-assets">
+              <div className="editor-asset-tabs">
+                <button
+                  aria-pressed={assetTab === 'user'}
+                  onClick={() => setAssetTab('user')}
+                >
+                  your files
+                </button>
+                <button
+                  aria-pressed={assetTab === 'web'}
+                  onClick={() => setAssetTab('web')}
+                >
+                  found by kimo
+                </button>
               </div>
-              <svg
-                className="studio-timeline-playhead"
-                style={{
-                  left: duration
-                    ? `${Math.min(100, (playhead / duration) * 100)}%`
-                    : '0%',
-                }}
-                viewBox="0 0 7 80"
-                aria-hidden="true"
-              >
-                <path d="M3.5 6v74" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M0 0h7L3.5 7z" fill="currentColor" />
-              </svg>
+              <div className="editor-assets-grid">
+                {current.assets
+                  .filter(
+                    (asset) =>
+                      asset.source === assetTab && asset.kind !== 'doc',
+                  )
+                  .map((asset) => (
+                    <button
+                      key={asset.id}
+                      draggable
+                      onDragStart={(event) => {
+                        event.dataTransfer.setData(
+                          'application/x-kimo-asset',
+                          asset.id,
+                        );
+                        event.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      title={asset.attribution?.site ?? asset.name}
+                      onClick={() => {
+                        const track = project?.tracks.find(
+                          (item) =>
+                            !item.locked &&
+                            (asset.kind === 'audio'
+                              ? item.kind === 'audio'
+                              : item.kind === 'video' ||
+                                item.kind === 'overlay'),
+                        );
+                        if (!track || asset.kind === 'doc') return;
+                        const clip: Clip = {
+                          id: crypto.randomUUID(),
+                          trackId: track.id,
+                          assetId: asset.id,
+                          kind: asset.kind,
+                          start: playhead,
+                          duration: asset.durationSec ?? 3,
+                          in: 0,
+                          transform: {
+                            x: 0,
+                            y: 0,
+                            scale: 1,
+                            rotation: 0,
+                            opacity: 1,
+                          },
+                          effects: [],
+                          keyframes: [],
+                          speed: 1,
+                        };
+                        edit([{ op: 'clip.add', clip }]);
+                        setSelection(clip.id);
+                      }}
+                    >
+                      <span>
+                        {asset.thumbUrl || asset.kind === 'image' ? (
+                          <span
+                            className="editor-asset-image"
+                            style={{
+                              backgroundImage: `url(${JSON.stringify(asset.thumbUrl ?? asset.url)})`,
+                            }}
+                          />
+                        ) : (
+                          asset.kind
+                        )}
+                      </span>
+                      {asset.name}
+                    </button>
+                  ))}
+              </div>
             </div>
-          </div>
+          ) : null}
+          {project && hasProject ? (
+            <EditingTimeline
+              project={project}
+              assets={current.assets}
+              selected={selection}
+              onSelect={(id) => {
+                setSelection(id);
+                setInspectorOpen(true);
+              }}
+              tool={tool}
+              snap={snap}
+              zoom={zoom}
+              playhead={playhead}
+              onSeek={seekPreview}
+              onEdit={edit}
+              onDraft={draftClip}
+              onInteraction={interaction}
+            />
+          ) : (
+            <div className="studio-tracks">
+              <div className="studio-track-headers">
+                <span className="studio-skeleton-header" />
+              </div>
+              <div className="studio-clips">
+                {Array.from({ length: 3 }, (_, index) => (
+                  <span
+                    className="studio-skeleton-clip"
+                    key={index}
+                    style={{
+                      viewTransitionName: files[index]
+                        ? assetTransitionName(files[index].id)
+                        : undefined,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {editError ? (
+            <button className="editor-error" onClick={() => setEditError('')}>
+              {editError}
+            </button>
+          ) : null}
           <div className="studio-timeline-footer">
             <span />
           </div>
@@ -1402,8 +1622,9 @@ export function StudioShell({
             iconOnly
             icon={Undo2}
             aria-label="undo"
-            tooltip="undo available in a later phase"
-            disabled
+            tooltip="undo"
+            disabled={!historyCount}
+            onClick={() => history(false)}
           />
           <Button
             variant="ghost"
@@ -1411,8 +1632,9 @@ export function StudioShell({
             iconOnly
             icon={Redo2}
             aria-label="redo"
-            tooltip="redo available in a later phase"
-            disabled
+            tooltip="redo"
+            disabled={!redoStack.current.length}
+            onClick={() => history(true)}
           />
           <span className="studio-divider" />
           <Button

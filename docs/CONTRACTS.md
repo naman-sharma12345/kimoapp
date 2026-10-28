@@ -98,3 +98,7 @@ GET session may include `actionCount`, `paused`, `agentState`, and `createdAt` (
 ## Phase 06 preview extensions
 
 Keyframes additionally accept hold and bezier easing and optional two-number in/out control handles. These optional fields preserve existing project compatibility; the real engine must agree on their timing and coordinate conventions. Transition duration remains seconds under the existing schema. Mask RLE, effect scope, LUT representation and audio solo need agreed contracts before full preview parity.
+
+## Phase 07
+
+Manual edits use the existing typed operations endpoint with version retry. The mock skips agent operations on locked clips. Editing caption text preserves existing word times when word counts agree and redistributes the existing timing span when they differ. Upload-more session attachment, project properties, richer text styling and scoped effects require additional agreed operations.

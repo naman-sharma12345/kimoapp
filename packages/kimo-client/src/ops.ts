@@ -78,6 +78,22 @@ export function applyOps(
       case 'text.update': {
         const item = clip(op.clipId);
         if (!item.text) throw new Error('Clip has no text');
+        const words = op.content.trim().split(/\s+/).filter(Boolean);
+        if (item.text.words?.length && words.length) {
+          const previous = item.text.words;
+          const start = previous[0]?.t ?? 0;
+          const last = previous.at(-1);
+          const length = (last ? last.t + last.d : item.duration) - start;
+          item.text.words = words.map((w, index) =>
+            words.length === previous.length && previous[index]
+              ? { ...previous[index], w }
+              : {
+                  w,
+                  t: start + (index * length) / words.length,
+                  d: Math.max(1 / 1000, length / words.length),
+                },
+          );
+        } else if (!words.length) item.text.words = undefined;
         item.text.content = op.content;
         break;
       }

@@ -74,6 +74,17 @@ export function createMockServer(options: MockOptions = {}) {
     ops: ScriptAction['ops'],
     actionId: string,
   ) => {
+    if (actionId !== 'user') {
+      ops = ops.filter((op) => {
+        const clipId =
+          'clipId' in op
+            ? op.clipId
+            : 'id' in op && op.op.startsWith('clip.')
+              ? op.id
+              : undefined;
+        return !clipId || !session.project.clips[clipId]?.locked;
+      });
+    }
     if (!ops.length) return;
     session.project = applyOps(session.project, ops);
     emit(session, {

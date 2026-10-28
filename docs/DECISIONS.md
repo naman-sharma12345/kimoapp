@@ -72,3 +72,7 @@ The supplied PDF is the product specification. Its implementation rules govern t
 ## Phase 06
 
 The compositor uses the existing Pixi dependency and WebGL. Preview-only font files are loaded on demand with their licenses. The existing contract expresses transition duration in seconds, so the preview keeps that unit. Unknown effects and unsupported grade parameters are marked approximate; exact engine equations and LUT assets need a backend contract before parity can be asserted. The filmstrip fallback runs on the main thread pending a worker implementation.
+
+## Phase 07
+
+The Phase 7 extension retains the existing Studio layout and tokens. It uses native pointer capture for timeline gestures, sends one operation group on release and renders tentative changes directly in the preview. Track body rendering uses cached thumbnails and audio waveforms; true video filmstrip extraction is pending. Optional clip fields that lack a clear operation cannot yet be fully reset through the server contract.

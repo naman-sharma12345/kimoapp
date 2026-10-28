@@ -1065,3 +1065,219 @@ FIDELITY.md written; golden-frame tests green; benchmark numbers logged.
 •
 5
 ```
+
+## Phase 07 source specification
+
+```text
+Phase 7 — Timeline, Inspector and Manual
+Editing (the user can change everything)
+READ THIS FIRST — rules for this phase (repeated in every
+phase on purpose)
+You are a senior frontend engineer building kimo web, the browser app for kimo, an AI video editor.
+You are NOT the designer. Every visual decision has already been made and is written below or in
+docs/DESIGN.md (created in Phase 0). Your job is to implement it exactly.
+1. No improvising. If a value (color, size, radius, spacing, duration, easing, copy) is written here,
+use exactly that value. If something is not specified, pick the closest existing token from docs/
+DESIGN.md and write a line in docs/DECISIONS.md saying what you chose and why. Never invent
+a new color, font, font size, radius, shadow or easing curve.
+2. No extra libraries beyond the ones listed in Phase 0's stack table. If you think you need one,
+write it in docs/DECISIONS.md as a proposal and continue without it.
+3. Only tokens. Never hard-code a hex value, px font size or duration inside a component. Use
+the CSS variables / Tailwind theme tokens defined in Phase 0 (--ink-0, --cream-100, --
+orange, --dur-2, --ease-out, etc.).
+4. Copy is exact. Every user-facing string written in quotes in these prompts is final. Use it
+character for character, including lowercase "kimo". Never write "Kimo" with a capital K in UI
+text.
+5. One orange rule. Orange (--orange #FF5A24) means "the AI is doing this right now" or "the
+one primary action". At most ONE orange element per panel at a time. Never use orange for
+decoration.
+6. No: gradients (except the two named exceptions in DESIGN.md), glassmorphism, drop
+shadows (except the named --shadow-pop), emoji in UI, stock illustrations, lorem ipsum,
+purple, neon, glow effects, rounded-full buttons except where named, bouncy overshoot
+springs except where named.
+7. Accessibility is not optional: every interactive element is keyboard reachable, has a visible
+focus ring (--focus-ring), and has an accessible name. Respect prefers-reduced-motion
+(every animation has a reduced variant listed in DESIGN.md §Motion).
+8. TypeScript strict. No any. No // @ts-ignore. ESLint and Prettier must pass with zero
+warnings.
+9. Finish the phase completely before stopping. At the end, run pnpm lint && pnpm typecheck
+&& pnpm test && pnpm build. All must pass. Then fill in the "Acceptance checklist" at the end of
+this document in docs/PHASE_LOG.md, ticking each item honestly, with a screenshot path for
+each visual item (docs/screens/phase-XX-*.png, captured with the Playwright script from Phase
+0).
+10. Do not touch the kimo engine repo or any backend code outside apps/web and packages/*
+listed in Phase 0. The backend is reached only through the typed client in packages/kimo-
+client.
+11. Skills. The agent skills installed in Phase 0 (listed in docs/SKILLS.md) are for craft, quality and
+review. Use the ones named under "Skills to load" in this phase. If a skill suggests a different
+look (new fonts, colors, bolder layout), this spec wins, always. Skills never override a written
+value.
+1
+
+12. If an instruction in this phase seems to conflict with an earlier phase, this phase wins for the
+parts it names; everything else from earlier phases stays.
+Goal: make the timeline and inspector fully interactive so the user can edit anything the AI made —
+move, trim, split, delete, reorder, retime, restyle, and rewrite every single line of text — while the
+AI keeps working. Every user edit is an op (Phase 0 contract), applied optimistically, previewed live
+(Phase 6), and sent to the server so the AI sees it.
+Skills to load: emil kowalski skills, accessibility-compliance, react-best-practices,
+impeccable.
+7.1 Timeline rendering
+• Render the tracks area with one <canvas> per visible track row for clip bodies, filmstrips
+and waveforms (fast), and DOM only for interactive handles and labels of the clips currently
+under the pointer/selected. Virtualize horizontally: draw only the visible time range + 1 screen
+margin.
+• Time scale: pxPerSec from zoom, range 4 → 600 px/s, default = fit whole edit into the visible
+width with 10% right padding.
+• Ruler (h28, bg --ink-1): major ticks every "nice" interval (1s, 2s, 5s, 10s, 30s, 1min) chosen
+so majors are ≥ 80px apart, labels mono t-11 cream-38 00:12; minor ticks cream-16 4px tall;
+frame ticks appear at ≥ 300 px/s. Click/drag on the ruler scrubs.
+• Playhead: 1.5px --orange line across ruler and tracks, with the 7px triangle head on the ruler
+(draggable, 16px hit area). While the agent acts and follow-kimo moves the playhead, it glides
+(240ms ease-in-out).
+• Track headers (160 wide, sticky left, bg --ink-1): 24px track-kind icon (Film, Image, Type,
+Music, Mic) cream-38, name t-12 cream-60 (double-click to rename), and on hover three 20px
+ghost toggles: Eye/EyeOff (hide), Volume2/VolumeX (mute, audio only), Lock/Unlock. Order
+top to bottom: text tracks, overlay tracks, V1 main video, then audio (voice, music, sfx). Track
+heights: text 48, overlay 64, video 88, audio 64.
+• Clip body: r6, fill = track tint (Phase 0), 1px inner top highlight rgb(245 241 231 / .05). Label
+row (top 18px): clip name t-11 normal case cream-60 truncated, speed badge "1.5×" mono
+t-11 if ≠ 1. Video clips: filmstrip below the label at 60% opacity; audio clips: waveform
+cream-38 centered; text clips: the text content itself in t-12 cream-100 (live, updates as
+edited), image clips: repeated thumbnail.
+• Selection: 1.5px cream-100 inner border + handles. Hover: tint +4% lightness.
+• AI is touching this clip: 1.5px --orange inner border + an --orange-12 wash, plus a tiny
+14px orange spinner at the clip's top-right — only during the running action. When the action
+ends, border fades to transparent over 600ms. A clip just created by the AI grows in from width
+0 at its start (spring.snappy). A clip the AI moves slides with spring.snappy. A clip the AI
+deletes collapses to width 0 and fades (220ms).
+• Transitions: a 20px-wide rounded chip (r-pill, --ink-3, lucide Blend 12) centered on the cut,
+label on hover "cross dissolve · 12f".
+• Markers: 8px rotated-square diamonds on the ruler in cream-60; AI markers (e.g. "beat", "best
+moment") in cream-38 with tooltip text.
+• Gaps: hatched pattern of rgb(245 241 231 / .03) diagonal lines 6px apart.
+2
+
+7.2 Editing interactions (Select tool unless stated)
+Action Gesture Behaviour
+Select click; ⇧-click add; drag selection syncs with inspector
+marquee on empty space
+Move drag clip snaps (if snapping on) to playhead, clip edges, markers within 8px,
+showing a 1px cream-60 vertical snap line; can change track of same
+kind; ⌥-drag duplicates
+Trim drag left/right edge (8px hit live preview updates during drag at playhead; tooltip shows new in/out
+zone, cursor ew-resize) and duration mono
+Ripple ⌘-drag edge shifts later clips on the track
+trim
+Split Blade tool click, or ⌘B at clip.split
+playhead on selected/all-
+under-playhead
+Slip Slip tool drag changes in without moving clip; viewer shows source frame
+Delete Delete/Backspace ripple delete on V1, lift on other tracks; ⇧Delete always lift
+Speed inspector or right-click →
+"speed…"
+Add text Text tool click on a text creates caption-clean text clip of 3s at playhead with content "your
+track or ⌘T text" selected for editing
+Context right-click clip "split at playhead", "duplicate", "delete", "speed…",
+menu "detach audio", "replace media…", "ask kimo about this
+clip" (prefills composer with @clip_name ), separator, "lock"
+• All gestures produce ops; during a drag, ops are applied locally every frame but sent to the
+server once on release (one batch). Keyboard equivalents exist for move (,/. nudge 1
+frame, ⇧ nudge 10 frames) and trim ([/] trim start/end to playhead).
+• Accessibility: clips are focusable (roving tabindex per track; arrow keys move focus between
+clips; Enter selects; Space plays). Each clip has aria-label like "beach_02, video, starts
+00:04, 3.2 seconds".
+7.3 Conflict rules with the AI (very important)
+• A clip the user is currently dragging or editing is soft-locked: incoming agent ops for that
+clip are queued and applied after the user releases (then animated), unless they are
+clip.remove (then show toast "kimo removed a clip you were editing · undo").
+• After the user edits something, the client sends the ops; the server tells the agent. In the agent
+panel a system line appears: "you changed the title text" (t-12 cream-38, Phase 8).
+• The user can lock any clip (lock icon on hover in clip label row, or L with clip selected). Locked
+clips show a 10px Lock icon cream-38 and the agent must not change them (the server
+enforces; the client sends locked: true).
+• Undo/redo is per author: ⌘Z undoes the user's last op group only (never the agent's). The
+history popover (top bar History icon in agent panel) lets the user revert an agent action group
+with "revert this step".
+3
+
+7.4 Editing text — every line, everywhere
+The user must be able to change every word on screen.
+1. In the viewer: double-click a text layer → it becomes a contenteditable overlay positioned
+exactly over the canvas text (same font, size scaled to viewer, same colour, caret cream-100,
+selection rgb(255 90 36 / .35)); the canvas hides that layer while editing to avoid double
+text. Enter = newline for titles; for captions Enter commits. Esc cancels, click outside commits.
+Each commit = one text.update op.
+2. In the timeline: double-click a text clip → inline input inside the clip body.
+3. In the inspector Text section: a Textarea with the full content, live-updating on each
+keystroke (debounced 150ms op locally, sent on blur or after 800ms idle).
+4. Captions editor: a dedicated inspector mode for caption tracks: a scrollable list of caption
+segments, each row: start timecode mono t-11 cream-38, the text in an editable field t-13
+cream-100, a 16px ghost Trash2. Clicking a row seeks the preview there. Editing a word keeps
+word timings (re-split words by spaces; if word count changes, redistribute timings evenly
+inside the segment). Buttons at the top: "find & replace" (popover with two inputs and
+"replace all"), "style" (menu of the 3 caption styles), "position" (segmented "bottom",
+"middle", "top").
+5. A text the AI is about to change while the user is editing it: the AI change is queued (§7.3) and
+a small inline hint appears under the field: t-11 --warning "kimo wants to change this too ·
+see suggestion"; clicking shows the AI's suggested text with "use it" / "keep mine".
+7.5 Inspector sections (exact controls)
+All rows use Row + controls from Phase 1. Numeric fields: drag horizontally on the label to scrub
+values (cursor ew-resize), type to set, ↑/↓ ±1 (⇧ ±10). Every changed value shows a 6px cream-60
+dot left of the label with "reset" on hover. Values being written by the AI right now are shown in --
+orange with a 1px underline and tween (--dur-2).
+• Transform: position X, Y (px), scale (%), rotation (°), opacity (%), with a keyframe toggle
+diamond (12px, hollow cream-38 / filled cream-100 when a key exists at playhead, orange
+when the AI is setting one) next to each.
+• Crop: L, T, R, B (%), aspect lock toggle, "reset crop".
+• Speed: segmented 0.5× 1× 1.5× 2× + custom field; toggle "keep pitch".
+• Text: content textarea; style select (8 styles from Phase 6 with tiny previews); size; alignment
+segmented; colour swatches limited to: white, black, cream #F5F1E7, kimo orange #FF5A24,
+yellow #FFD84D (content colours) + custom picker; animation select "none", "fade", "rise",
+"type on", "pop words".
+• Colour: exposure, contrast, saturation, temperature, tint sliders; three small wheels (lift,
+gamma, gain) 72px each with numeric RGB below in mono t-11; LUT select ("none", "warm
+film", "teal & orange", "bleach", "mono"); a before/after toggle that shows a split wipe in
+the viewer.
+• Effects: list of applied effects (drag to reorder, toggle eye, remove) + "add effect" menu:
+blur, vignette, grain, sharpen, black & white, zoom punch-in.
+• Mask (SAM 3.1): shows the mask thumbnail (subject cutout on checkerboard of ink-2/ink-3
+8px squares), label (e.g. "person"), invert toggle, feather slider, "apply effect to"
+segmented "subject" / "background", and a text field "re-segment: describe what to select"
++ secondary button "run sam" (sends a message to the agent: use sam 3.1 to select
+"{text}" on {clip}).
+4
+
+• Audio: volume dB slider (−60 to +12), fade in/out (s), "duck under voice" toggle, a 120×24
+live level meter (cream-60 bars, --warning above −6 dB, --error at 0 dB).
+• Transitions: in/out type select + duration in frames.
+• Source (for web images): image thumb, "found on {site}" t-12 cream-60 with link "open
+page" (new tab, ArrowUpRight 12), licence text if known, button "replace image" (asks the
+agent for another search) and "upload my own".
+• Project (nothing selected): aspect (16:9 / 9:16 / 1:1 — changing asks for confirmation "change
+the frame? kimo will reframe every clip."), duration readout, fps readout, background colour
+(black/white/cream), "project notes for kimo" textarea (sent as context).
+7.6 Assets drawer
+A collapsible drawer (toggle FolderOpen button in timeline toolbar, opens as a 240px-tall area above
+tracks): tabs "your files" and "found by kimo". Grid of 96×54 tiles (r6), name t-11 under each;
+drag a tile onto the timeline to add a clip; "upload more" tile at the start (opens file picker → Phase 3
+manager → asset.added). "Found by kimo" tiles show a 12px Globe badge and the source site on
+hover.
+Acceptance checklist (Phase 7)
+•
+Canvas-rendered tracks with filmstrips/waveforms; 60fps scroll and zoom on a 50-clip fixture.
+•
+Every interaction in §7.2 with snapping, keyboard equivalents and accessible names.
+•
+Conflict rules §7.3 (soft-lock, queued agent ops, per-author undo, revert step, clip lock).
+•
+Text editable in viewer, timeline, inspector and captions editor; ops sent; preview live.
+•
+Inspector sections §7.5 with AI-written values in orange tweening.
+•
+Assets drawer with drag-to-timeline and upload more.
+•
+E2E: while the mock agent edits, the user renames the title, trims a clip, locks it; agent
+respects it; undo only reverts user ops.
+5
+```

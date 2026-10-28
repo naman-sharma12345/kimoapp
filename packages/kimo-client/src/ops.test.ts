@@ -92,3 +92,34 @@ describe('atomic timeline operations', () => {
     ).toThrow();
   });
 });
+
+describe('caption text edits', () => {
+  it('preserves timing for matching words and redistributes changed word counts', () => {
+    const caption = {
+      ...clip,
+      kind: 'text' as const,
+      text: {
+        content: 'one two',
+        style: 'caption-clean',
+        words: [
+          { w: 'one', t: 0, d: 1 },
+          { w: 'two', t: 1, d: 1 },
+        ],
+      },
+    };
+    const source = { ...project, clips: { clip: caption } };
+    const matching = applyOps(source, [
+      { op: 'text.update', clipId: 'clip', content: 'hello world' },
+    ]);
+    expect(matching.clips.clip?.text?.words).toEqual([
+      { w: 'hello', t: 0, d: 1 },
+      { w: 'world', t: 1, d: 1 },
+    ]);
+    const longer = applyOps(source, [
+      { op: 'text.update', clipId: 'clip', content: 'one two three four' },
+    ]);
+    expect(longer.clips.clip?.text?.words?.map((word) => word.d)).toEqual([
+      0.5, 0.5, 0.5, 0.5,
+    ]);
+  });
+});

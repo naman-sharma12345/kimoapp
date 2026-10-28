@@ -120,3 +120,21 @@ The Studio now uses a Pixi canvas, a scene builder, per-clip media pooling, Web 
 The existing logo and the requested Studio composer styling are preserved.
 
 The required lint, typecheck, 119 unit/integration tests and production build passed. Browser checks cover mock video playback, fullscreen, paused updates, a grayscale mask, overlays and twelve golden frames.
+
+## Phase 07 — Timeline and manual editing
+
+The current implementation adds time-based canvas track bodies, repeated source thumbnails, computed/cached audio waveforms, virtualized clip controls, inspector editing, optimistic user operations, clip locks, user undo/redo, an assets drawer and viewer/timeline/inspector text entry. The phase is not yet fully accepted.
+
+### Acceptance checklist
+
+- [ ] Canvas tracks and waveform/thumbnail rendering are present. True temporal filmstrips and a measured 60 fps scroll/zoom run on 50 clips remain outstanding.
+- [ ] Move, trim, ripple trim, split, slip, delete, duplication, snapping, track controls and several keyboard commands are implemented. Marquee/multi-selection, complete context actions, cross-track gestures, roving clip focus, marker/transition drawing and AI clip animations remain incomplete.
+- [ ] Optimistic edits, user history and queued updates during editing are present, and the mock filters edits to locked clips. Per-clip suggestion resolution, agent-step reversion and full removal-conflict handling remain outstanding.
+- [ ] Text entry is implemented in the viewer, timeline and inspector. A dedicated captions editor, complete autosave timing and text suggestions remain outstanding.
+- [ ] Inspector controls cover transform, crop, speed, text content/style, basic colour, effects, mask invert/feather, volume, transitions and source attribution. The remaining specified controls and AI value tweening remain outstanding.
+- [ ] The drawer displays user and found assets, supports drag to a compatible track and keyboard insertion at the playhead. Session attachment for upload-more remains outstanding.
+- [ ] A real-session browser test verifies text persistence, a trim gesture, lock persistence and user undo. Continuous simultaneous-agent editing and all conflict scenarios have not been established.
+
+Visual evidence: [editor](screens/phase-07-editor-1440x900.png). Existing composer treatment and logo remain as requested.
+
+Verification: `pnpm lint`, `pnpm typecheck`, `pnpm test` (122 tests) and `pnpm build` passed. The focused Playwright editing test passed, covering viewer and inspector text edits, a trim gesture, persistence, clip lock and undo. The final typecheck ran after the build to avoid concurrent regeneration of Next.js type files.
