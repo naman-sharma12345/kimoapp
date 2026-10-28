@@ -473,6 +473,82 @@ export function createEditing(deps: EditingDeps) {
   }
 
   /**
+   * Asks the model, validates, and if anything was rejected asks once more
+   * with the reasons fed back. Returns whichever answer applies more ops.
+   * Logs only counts, stop reasons and short validation reasons (never the
+   * key, the note or media) so failures can be diagnosed with wrangler tail.
+   */
+  async function bestAiAnswer(
+    config: AiConfig,
+    input: Parameters<typeof requestAiEdit>[2],
+  ) {
+    const log = (attempt: number, data: Record<string, unknown>) =>
+      console.log(
+        JSON.stringify({
+          ai: 'edit',
+          provider: config.provider,
+          model: config.model,
+          attempt,
+          ...data,
+        }),
+      );
+    const score = (ops: unknown) => {
+      try {
+        const result = validateAiOps(input.project, input.assets, ops);
+        return { valid: result.ops.length, skipped: result.skipped };
+      } catch (error) {
+        return {
+          valid: -1,
+          skipped:
+            error instanceof AiEditError
+              ? (error.details.skipped ?? [error.message])
+              : ['invalid'],
+        };
+      }
+    };
+    let first: Awaited<ReturnType<typeof requestAiEdit>> | null = null;
+    let feedback: { previous: string; errors: string[] };
+    try {
+      first = await requestAiEdit(config, deps.fetcher, input);
+      const result = score(first.ops);
+      log(1, {
+        finish: first.finish,
+        valid: result.valid,
+        skipped: result.skipped.slice(0, 10),
+      });
+      if (!result.skipped.length) return first;
+      feedback = { previous: first.raw, errors: result.skipped };
+    } catch (error) {
+      if (!(error instanceof AiEditError) || error.code !== 'ai_invalid_edit')
+        throw error;
+      log(1, { finish: error.details.finish, parse: 'failed' });
+      feedback = {
+        previous: error.details.raw || '(no usable answer)',
+        errors: [
+          error.details.finish === 'length'
+            ? 'the answer was cut off: return fewer, essential ops'
+            : 'the answer was not one valid json object {"message","ops"}',
+        ],
+      };
+    }
+    let second: Awaited<ReturnType<typeof requestAiEdit>> | null = null;
+    try {
+      second = await requestAiEdit(config, deps.fetcher, input, feedback);
+    } catch (error) {
+      if (!first || !(error instanceof AiEditError)) throw error;
+    }
+    if (!second) return first as Awaited<ReturnType<typeof requestAiEdit>>;
+    const retry = score(second.ops);
+    log(2, {
+      finish: second.finish,
+      valid: retry.valid,
+      skipped: retry.skipped.slice(0, 10),
+    });
+    if (!first) return second;
+    return retry.valid >= score(first.ops).valid ? second : first;
+  }
+
+  /**
    * One AI edit: quota, model call, strict validation, atomic save, then the
    * realtime events. Throws HttpError for the caller to answer with.
    * With the user's own key (`userAi`) the edit goes to their provider and
@@ -524,23 +600,33 @@ export function createEditing(deps: EditingDeps) {
     try {
       const ids = parseIds(row.asset_ids);
       const assets = await assetsFor(env, userId, ids);
-      const answer = await requestAiEdit(config, deps.fetcher, {
+      const input = {
         project: parseProject(row.project_json),
         assets,
         analyses: await analysesFor(env, userId, ids),
         prompt: text,
-      });
+      };
+      const answer = await bestAiAnswer(config, input);
       for (let attempt = 0; attempt < 3; attempt++) {
         const project = parseProject(row.project_json);
-        const { ops, next } = validateAiOps(project, assets, answer.ops);
+        const { ops, next, skipped } = validateAiOps(
+          project,
+          assets,
+          answer.ops,
+        );
+        const base =
+          answer.message ||
+          (ops.length ? 'done. take a look.' : 'i left the timeline as is.');
         const message: ServerEvent = {
           t: 'agent.message',
           id: `${actionId}-say`,
           role: 'agent',
           kind: 'say',
-          text:
-            answer.message ||
-            (ops.length ? 'done. take a look.' : 'i left the timeline as is.'),
+          text: skipped.length
+            ? `${base} (skipped ${skipped.length} step${skipped.length === 1 ? '' : 's'} that couldn’t be applied safely: ${skipped
+                .slice(0, 3)
+                .join('; ')}${skipped.length > 3 ? '; …' : ''})`.slice(0, 900)
+            : base,
         };
         if (!ops.length) {
           await deps.broadcast(env, sessionId, row.version, [message, idle]);

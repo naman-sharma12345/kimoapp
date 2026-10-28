@@ -50,6 +50,8 @@ function framesFor(asset: Asset, clip: Clip) {
   return frames;
 }
 type Tool = 'select' | 'blade' | 'slip' | 'text';
+/** Smallest zoom, in pixels per second (a 4-hour project in ~300px). */
+const MIN_SCALE = 0.02;
 const RULER_HEIGHT = 28;
 const MIN_ROW_HEIGHT = 28;
 const MAX_ROW_HEIGHT = 160;
@@ -381,8 +383,9 @@ export function EditingTimeline({
   }, []);
   const bodyWidth = Math.max(1, width - 160);
   // Zoom 50 is "fit": the whole project spans the panel width.
-  const fit = Math.max(4, bodyWidth / Math.max(project.duration * 1.1, 1));
-  const scale = clamp(fit * 2 ** ((zoom - 50) / 12), 4, 600);
+  // No pixel floor on fit, so long projects (minutes to hours) still fit.
+  const fit = bodyWidth / Math.max(project.duration * 1.1, 1);
+  const scale = clamp(fit * 2 ** ((zoom - 50) / 12), MIN_SCALE, 600);
   const total = Math.max(bodyWidth, Math.floor(project.duration * scale * 1.1));
   const overflowX = total + 160 > width + 1;
   // Rows share the panel's height in proportion to their set size, so the
@@ -431,7 +434,9 @@ export function EditingTimeline({
     [project.tracks, clips],
   );
   const ticks =
-    [1, 2, 5, 10, 30, 60, 120, 300].find((value) => value * scale >= 80) ?? 300;
+    [1, 2, 5, 10, 30, 60, 120, 300, 600, 900, 1800, 3600].find(
+      (value) => value * scale >= 80,
+    ) ?? 3600;
   function start(
     event: PointerEvent<HTMLButtonElement>,
     clip: Clip,

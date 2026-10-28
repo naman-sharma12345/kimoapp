@@ -934,6 +934,12 @@ html[data-warmup-unfold='native'] .studio-timeline-playhead {
   min-height: 0;
   overflow: auto;
   overscroll-behavior-x: contain;
+  /* No native bars in any browser (Firefox has no per-axis control): the
+     rows share the panel height and .editor-panbar pans sideways. */
+  scrollbar-width: none;
+}
+.editor-timeline-scroll::-webkit-scrollbar {
+  display: none;
 }
 /* Horizontal panning has its own control (.editor-panbar), so the native
    horizontal scrollbar is hidden. When the rows fit the panel there is

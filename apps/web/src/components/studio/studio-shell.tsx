@@ -438,6 +438,7 @@ export function StudioShell({
       await new KimoClient()
         .message(sessionId, { text: prompt }, userAiRef.current)
         .catch((error: unknown) => {
+          setAgentState('idle');
           const friendly = noteError(error);
           feed.error(
             friendly instanceof NoteError
@@ -476,6 +477,12 @@ export function StudioShell({
     setCuts(readCuts(sessionId));
   }, [sessionId]);
   const project = viewedCut?.project ?? current?.project;
+  // Fit the whole project to the timeline width on load and whenever clips
+  // are added (resizes re-fit on their own while zoom stays at fit).
+  const mediaCount = current?.assets.length ?? 0;
+  useEffect(() => {
+    if (mediaCount) setZoom(50);
+  }, [mediaCount]);
   const files = useMemo(
     () =>
       (current?.assets ?? []).filter(
@@ -501,7 +508,9 @@ export function StudioShell({
       ? 'waiting for you'
       : agentState === 'acting'
         ? 'kimo is editing'
-        : 'kimo is thinking';
+        : agentState === 'thinking'
+          ? 'kimo is thinking'
+          : 'kimo is ready';
 
   useEffect(() => {
     const resize = () => {
@@ -1446,6 +1455,7 @@ export function StudioShell({
               userAiRef.current,
             )
             .catch((error: unknown) => {
+              setAgentState('idle');
               throw noteError(error);
             });
       }}

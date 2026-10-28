@@ -103,7 +103,11 @@ test('desktop geometry, controls, persisted resize and keyboard', async ({
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await expect(
-    page.getByText(/kimo is editing|kimo is thinking|waiting for you/).first(),
+    page
+      .getByText(
+        /kimo is editing|kimo is thinking|kimo is ready|waiting for you/,
+      )
+      .first(),
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'finish', exact: true }),

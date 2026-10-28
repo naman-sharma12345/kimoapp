@@ -39,6 +39,7 @@ export class KimoClient {
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     body?: unknown,
     extra?: Record<string, string>,
+    timeoutMs = 30000,
   ): Promise<T> {
     const headers = {
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
@@ -46,7 +47,7 @@ export class KimoClient {
     };
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
       credentials: 'include',
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(timeoutMs),
       method: body === undefined ? 'GET' : 'POST',
       headers: Object.keys(headers).length ? headers : undefined,
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -266,6 +267,8 @@ export class KimoClient {
       z.undefined(),
       s.messageRequestSchema.parse(body),
       ai ? aiHeaders(ai) : undefined,
+      // An edit can take two model calls (one retry with feedback).
+      150_000,
     );
   }
   ops(id: string, body: z.input<typeof s.opsRequestSchema>) {

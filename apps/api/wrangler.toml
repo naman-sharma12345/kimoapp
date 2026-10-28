@@ -12,7 +12,10 @@ COOKIE_DOMAIN = ".getkimo.tech"
 # Meta Model API (OpenAI-compatible chat completions). The key itself is the
 # Worker secret META_API_KEY, added in the Cloudflare dashboard, never here.
 META_API_BASE_URL = "https://api.meta.ai/v1"
-META_MODEL = "muse-spark-1.3"
+# muse-spark-1.3-contributor is the cheapest tier ($0.10 in / $0.20 out per 1M
+# tokens, 100 RPM). Meta may train on its prompts and completions; the
+# privacy and terms pages say so.
+META_MODEL = "muse-spark-1.3-contributor"
 
 [[d1_databases]]
 binding = "DB"

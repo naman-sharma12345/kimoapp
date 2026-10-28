@@ -43,6 +43,6 @@ export interface Env {
   META_API_KEY?: string;
   /** OpenAI-compatible base URL, default https://api.meta.ai/v1. */
   META_API_BASE_URL?: string;
-  /** Model id, default muse-spark-1.3. */
+  /** Model id, default muse-spark-1.3-contributor. */
   META_MODEL?: string;
 }

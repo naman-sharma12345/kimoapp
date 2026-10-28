@@ -7,7 +7,7 @@ import {
 import { createApp } from './app.ts';
 import { createTestDb } from './d1-fake.ts';
 import type { Env } from './env.ts';
-import { validateAiOps, AiEditError } from './ai.ts';
+import { validateAiOps, AiEditError, answerText, parseAnswer } from './ai.ts';
 import { assembleProject } from './editing.ts';
 
 const APP = 'https://app.getkimo.tech';
@@ -413,8 +413,8 @@ describe('AI editing', () => {
     expect(ctx.aiCalls[0]?.auth).toBe('Bearer secret-key');
     const sent = ctx.aiCalls[0]?.body ?? '';
     expect(sent).toContain('beach.mp4');
-    expect(sent).toContain('muse-spark-1.3');
-    expect(sent).toContain('json_schema');
+    expect(sent).toContain('muse-spark-1.3-contributor');
+    expect(sent).toContain('json_object');
     expect(sent).not.toContain('kimo-local://');
     const after = sessionSnapshotSchema.parse(
       await (await me.get(`/v1/sessions/${sessionId}`)).json(),
@@ -431,7 +431,7 @@ describe('AI editing', () => {
       'agent.status',
     ]);
     expect((await (await ctx.call('/v1/ai/status')).json()) as unknown).toEqual(
-      { available: true, model: 'muse-spark-1.3' },
+      { available: true, model: 'muse-spark-1.3-contributor' },
     );
   });
 
@@ -529,16 +529,10 @@ describe('AI editing', () => {
         message: 'ok',
         ops: [{ op: 'project.update', patch: { width: 1920, height: 1920 } }],
       }),
-      JSON.stringify({
-        message: 'ok',
-        ops: Array.from({ length: 61 }, (_, i) => ({
-          op: 'marker.add',
-          marker: { id: `m${i}`, time: 0, label: 'x' },
-        })),
-      }),
     ];
     for (const content of attacks) {
-      const ctx = setup({ aiKey: 'k', ai: [{ content }] });
+      // The model gets one retry with the reasons; both answers are bad.
+      const ctx = setup({ aiKey: 'k', ai: [{ content }, { content }] });
       const me = await ctx.user('naman');
       const { sessionId } = await startSession(me, 'x');
       ctx.aiCalls.length = 0;
@@ -570,6 +564,116 @@ describe('AI editing', () => {
     });
     expect(response.status).toBe(429);
     expect(((await response.json()) as { code: string }).code).toBe('ai_quota');
+  });
+});
+
+describe('robust AI edits', () => {
+  it('normalises loose ops, applies the valid ones and reports what was skipped', async () => {
+    const ctx = setup({ aiKey: 'k' });
+    const me = await ctx.user('naman');
+    const { sessionId } = await startSession(me, 'x');
+    const snap = sessionSnapshotSchema.parse(
+      await (await me.get(`/v1/sessions/${sessionId}`)).json(),
+    );
+    const clip = Object.values(snap.project.clips).find(
+      (item) => item.kind === 'video',
+    );
+    if (!clip) throw new Error('no clip');
+    ctx.events.length = 0;
+    const loose = {
+      message: 'cut it tighter and added a title.',
+      ops: [
+        { type: 'clip_split', id: clip.id, at: '4' },
+        { op: 'track.add', id: 'titles', kind: 'text' },
+        {
+          op: 'clip.add',
+          clip: {
+            trackId: 'titles',
+            kind: 'text',
+            start: 0,
+            duration: 2,
+            text: 'hello',
+            bogus: true,
+          },
+        },
+        { op: 'clip.remove', id: 'does-not-exist' },
+        { op: 'marker.add', time: 1, label: 'hook' },
+      ],
+    };
+    // The retry with feedback answers worse, so the first answer is kept.
+    ctx.replies.push(
+      { content: '```json\n' + JSON.stringify(loose) + '\n```' },
+      { content: 'sorry' },
+    );
+    const response = await me.post(`/v1/sessions/${sessionId}/messages`, {
+      text: 'make it a youtube video',
+    });
+    expect(response.status).toBe(202);
+    expect(ctx.aiCalls).toHaveLength(2);
+    expect(ctx.aiCalls[1]?.body).toContain('could not be fully applied');
+    const after = sessionSnapshotSchema.parse(
+      await (await me.get(`/v1/sessions/${sessionId}`)).json(),
+    );
+    const clips = Object.values(after.project.clips);
+    expect(clips.some((item) => item.text?.content === 'hello')).toBe(true);
+    expect(clips.filter((item) => item.assetId === clip.assetId)).toHaveLength(
+      2,
+    );
+    expect(after.project.markers[0]?.label).toBe('hook');
+    const said = ctx.events
+      .flatMap((item) => item.events)
+      .find((event) => event.t === 'agent.message');
+    expect(said && 'text' in said ? said.text : '').toContain('skipped 1 step');
+    const last = ctx.events.at(-1)?.events.at(-1);
+    expect(last).toEqual({ t: 'agent.status', state: 'idle', label: 'ready' });
+  });
+
+  it('uses the retry when the first answer is not json, and reads Responses-shaped answers', async () => {
+    const ctx = setup({ aiKey: 'k' });
+    const me = await ctx.user('naman');
+    const { sessionId } = await startSession(me, 'x');
+    ctx.replies.push(
+      { content: 'here is my plan: first i will' },
+      {
+        content: JSON.stringify({
+          message: 'added a marker.',
+          ops: [{ op: 'marker.add', marker: { time: 2, label: 'start' } }],
+        }),
+      },
+    );
+    const response = await me.post(`/v1/sessions/${sessionId}/messages`, {
+      text: 'mark the start',
+    });
+    expect(response.status).toBe(202);
+    const after = sessionSnapshotSchema.parse(
+      await (await me.get(`/v1/sessions/${sessionId}`)).json(),
+    );
+    expect(after.project.markers).toHaveLength(1);
+    expect(
+      answerText({
+        output: [{ content: [{ type: 'output_text', text: '{"ops":[]}' }] }],
+      }).text,
+    ).toBe('{"ops":[]}');
+    expect(parseAnswer('[{"op":"marker.remove","id":"m"}]')).toEqual({
+      message: '',
+      ops: [{ op: 'marker.remove', id: 'm' }],
+    });
+  });
+
+  it('goes back to idle when the AI fails', async () => {
+    const ctx = setup({ aiKey: 'k', ai: [{ status: 500, content: '' }] });
+    const me = await ctx.user('naman');
+    const { sessionId } = await startSession(me, 'x');
+    ctx.events.length = 0;
+    const response = await me.post(`/v1/sessions/${sessionId}/messages`, {
+      text: 'go',
+    });
+    expect(response.status).toBe(502);
+    expect(ctx.events.at(-1)?.events.at(-1)).toEqual({
+      t: 'agent.status',
+      state: 'idle',
+      label: 'ready',
+    });
   });
 });
 
