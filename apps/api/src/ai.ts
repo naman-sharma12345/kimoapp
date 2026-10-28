@@ -56,6 +56,8 @@ export interface AiConfig {
   key: string;
   baseUrl: string;
   model: string;
+  /** Records token counts for kimo's own key (spend guard). */
+  meter?: (model: string, body: unknown) => Promise<void>;
 }
 
 export function aiConfig(env: Env): AiConfig | null {
@@ -427,7 +429,9 @@ export async function requestAiEdit(
   }
   let answer: { text: unknown; finish: string };
   try {
-    answer = answerText(await response.json());
+    const body: unknown = await response.json();
+    await config.meter?.(config.model, body).catch(() => undefined);
+    answer = answerText(body);
   } catch {
     throw upstream();
   }

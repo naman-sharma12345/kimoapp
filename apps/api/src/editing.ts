@@ -31,6 +31,7 @@ import {
   type AiConfig,
 } from './ai.ts';
 import { userAiConfig } from './ai-providers.ts';
+import { assertBudget, recordUsage, usageOf } from './ai-budget.ts';
 import { LIMITS, checkProjectLimits } from './limits.ts';
 
 /**
@@ -227,6 +228,14 @@ function titleFrom(prompt: string) {
   const text = prompt.replace(/[\p{Cc}\p{Cf}]/gu, ' ').trim();
   if (!text || text === DEFAULT_PROMPT) return 'untitled video';
   return text.length > 60 ? `${text.slice(0, 57).trimEnd()}…` : text;
+}
+
+/** kimo's own key, with every call's token counts recorded. */
+export function meteredConfig(env: Env, config: AiConfig): AiConfig {
+  return {
+    ...config,
+    meter: (model, body) => recordUsage(env, model, usageOf(body)),
+  };
 }
 
 export function createEditing(deps: EditingDeps) {
@@ -582,13 +591,15 @@ export function createEditing(deps: EditingDeps) {
       throw new HttpError(413, 'too_large', 'That note is too long');
     // Ownership first, so another account only ever sees a 404.
     let row = await loadSession(env, userId, sessionId);
-    const config = userAi ?? aiConfig(env);
+    const base = userAi ?? aiConfig(env);
+    const config = base?.source === 'kimo' ? meteredConfig(env, base) : base;
     if (!config)
       throw new HttpError(
         503,
         'ai_unavailable',
         "AI editing isn't switched on yet",
       );
+    if (config.source === 'kimo') await assertBudget(env);
     if (config.source === 'kimo' && !(await bumpAiUsage(env, userId)))
       throw new HttpError(
         429,

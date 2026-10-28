@@ -45,4 +45,14 @@ export interface Env {
   META_API_BASE_URL?: string;
   /** Model id, default muse-spark-1.3-contributor. */
   META_MODEL?: string;
+  /** Model for requests that carry frames or audio (default contributor). */
+  META_MEDIA_MODEL?: string;
+  /** Total USD cap for kimo's own key (default 10); BYOK is not counted. */
+  AI_BUDGET_USD?: string;
+  /** The kimo v6 engine Space, e.g. https://getkimo-kimo-engine.hf.space */
+  KIMO_ENGINE_URL?: string;
+  /** Shared secret the engine checks in X-Engine-Token. */
+  KIMO_ENGINE_TOKEN?: string;
+  /** Hugging Face token that opens the private Space. */
+  KIMO_ENGINE_HF_TOKEN?: string;
 }
