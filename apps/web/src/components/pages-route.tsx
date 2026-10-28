@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { KimoApiError, KimoClient, type SessionSnapshot } from '@kimo/client';
 import { sessionDestination } from '@/lib/session-routing';
 import { useRouter } from '@/lib/app-router';
+import { isNewProjectId, startNewProject } from '@/lib/new-project';
 const Studio = dynamic(
   () => import('./studio/studio-shell').then((m) => m.StudioShell),
   { ssr: false },
@@ -37,6 +38,21 @@ export function ClientRoute({
       location.pathname.split('/').filter(Boolean)[1] ?? '',
     );
     const client = new KimoClient();
+    if (kind === 'studio' && isNewProjectId(id)) {
+      // "new video": make an empty project, then open its studio.
+      void startNewProject(client)
+        .then((href) => {
+          if (!alive) return;
+          if (href.startsWith('/signin')) location.replace(href);
+          else router.replace(href);
+        })
+        .catch(() => {
+          if (alive) setError('failed');
+        });
+      return () => {
+        alive = false;
+      };
+    }
     void client
       .session(id)
       .then((session) => {

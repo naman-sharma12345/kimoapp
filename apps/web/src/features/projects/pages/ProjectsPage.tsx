@@ -727,14 +727,7 @@ export default function ProjectsPage({
               >
                 sign in
               </button>
-              <a
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onOpenStudio('new');
-                }}
-                className="btn-base btn-ghost h-40 t-15"
-              >
+              <a href="/" className="btn-base btn-ghost h-40 t-15">
                 back to kimo
               </a>
             </div>

@@ -113,11 +113,11 @@ export function TopBar({
         </span>
       </div>
 
-      {/* Right: primary/secondary md button "new video" with Plus 16 (links "/"), 12px gap, 28px round avatar */}
+      {/* Right: primary/secondary md button "new video" with Plus 16 (links "/studio/new"), 12px gap, 28px round avatar */}
       <div className="flex items-center" style={{ gap: '12px' }}>
         {isCompactMobile ? (
           <a
-            href="/"
+            href="/studio/new"
             onClick={(e) => {
               e.preventDefault();
               onNewVideo();
@@ -135,7 +135,7 @@ export function TopBar({
           </a>
         ) : (
           <a
-            href="/"
+            href="/studio/new"
             onClick={(e) => {
               e.preventDefault();
               onNewVideo();
