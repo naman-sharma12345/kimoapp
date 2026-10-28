@@ -40,6 +40,7 @@ export const assetSchema = z
     name: z.string(),
     url: z.string().url(),
     proxyUrl: z.string().url().optional(),
+    beats: z.array(seconds).optional(),
     thumbUrl: z.string().url().optional(),
     durationSec: positive.optional(),
     width: positive.int().optional(),
@@ -347,6 +348,7 @@ export const messageRequestSchema = z
   .strict();
 export const opsRequestSchema = z
   .object({
+    mutationId: id.optional(),
     ops: z.array(opSchema).min(1),
     baseVersion: z.number().int().nonnegative(),
   })
@@ -356,6 +358,9 @@ export const opsResponseSchema = z
   .strict();
 export const approveRequestSchema = z
   .object({
+    resolution: z.enum(['1080p', '720p']).optional(),
+    format: z.enum(['mp4', 'webm']).optional(),
+    alsoVertical: z.boolean().optional(),
     burnInCaptions: z.boolean().optional(),
     title: id.optional(),
   })
@@ -388,6 +393,10 @@ export const videoResponseSchema = z
     title: id,
     sessionId: id.optional(),
     captionsUrl: z.string().url().optional(),
+    format: z.enum(['mp4', 'webm']).optional(),
+    resolution: z.enum(['1080p', '720p']).optional(),
+    captionsSrtUrl: z.string().url().optional(),
+    alternateVideoId: id.optional(),
     sessionExpiresAt: z.number().nonnegative().optional(),
     madeInSec: seconds.optional(),
     fps: positive.optional(),
@@ -527,3 +536,11 @@ export type TextStyleId = z.infer<typeof textStyleIdSchema>;
 export type ServerEvent = z.infer<typeof serverEventSchema>;
 export type ClientEvent = z.infer<typeof clientEventSchema>;
 export type SessionSnapshot = z.infer<typeof sessionSnapshotSchema>;
+
+export const authSchema = z
+  .object({
+    signedIn: z.boolean(),
+    remaining: z.number().int().nonnegative(),
+    mock: z.boolean(),
+  })
+  .strict();

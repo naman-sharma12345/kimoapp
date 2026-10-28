@@ -73,7 +73,7 @@ describe('warm-up socket recovery', () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
-  it('retries after 2, 4 and 8 seconds and reports exhaustion', () => {
+  it('retries after 1, 2, 4, 8 and 15 seconds and reports exhaustion', () => {
     vi.useFakeTimers();
     class Socket {
       static CLOSING = 2;
@@ -93,15 +93,15 @@ describe('warm-up socket recovery', () => {
     const failed = vi.fn();
     const connection = new WarmupConnection('ws://localhost', vi.fn(), failed);
     connection.start();
-    for (const delay of [2000, 4000, 8000]) {
+    for (const delay of [1000, 2000, 4000, 8000, 15000]) {
       Socket.instances.at(-1)?.onclose?.();
       vi.advanceTimersByTime(delay - 1);
       expect(Socket.instances).toHaveLength(
-        [2000, 4000, 8000].indexOf(delay) + 1,
+        [1000, 2000, 4000, 8000, 15000].indexOf(delay) + 1,
       );
       vi.advanceTimersByTime(1);
     }
-    expect(Socket.instances).toHaveLength(4);
+    expect(Socket.instances).toHaveLength(6);
     Socket.instances.at(-1)?.onclose?.();
     expect(failed).toHaveBeenCalledOnce();
     connection.dispose();

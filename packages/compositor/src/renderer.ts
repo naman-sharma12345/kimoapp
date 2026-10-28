@@ -123,6 +123,7 @@ export class PixiRenderer {
   private configureFilters(node: Node, clip: Clip) {
     const signature = JSON.stringify(clip.effects);
     if (signature === node.signature) return;
+    node.root.filters = null;
     for (const filter of node.filters) filter.destroy();
     node.filters = [];
     node.signature = signature;
@@ -219,7 +220,7 @@ export class PixiRenderer {
     const byId = new Map(assets.map((asset) => [asset.id, asset]));
     for (const [id, node] of this.nodes)
       if (!active.has(id)) {
-        node.root.destroy({ children: true });
+        this.destroyNode(node);
         this.nodes.delete(id);
       }
     this.media.retain(active);
@@ -521,8 +522,17 @@ export class PixiRenderer {
       quality: 0.85,
     });
   }
+  private destroyNode(node: Node) {
+    node.root.filters = null;
+    for (const filter of node.filters) filter.destroy();
+    for (const filter of node.maskSprite.filters ?? []) filter.destroy();
+    node.maskSprite.filters = null;
+    node.root.destroy({ children: true });
+  }
   destroy() {
     this.generation++;
+    for (const node of this.nodes.values()) this.destroyNode(node);
+    this.nodes.clear();
     this.media.destroy();
     if (this.ready) this.app.destroy({ removeView: false }, { children: true });
     this.ready = false;

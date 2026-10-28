@@ -1,17 +1,8 @@
+import { RouteFocus } from '@/components/route-focus';
 import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
-import localFont from 'next/font/local';
-import './globals.css';
-import { UploadsProvider } from '@/components/uploads/uploads-provider';
 
-const instrument = localFont({
-  src: '../assets/fonts/InstrumentSerif-Italic.ttf',
-  weight: '400',
-  style: 'italic',
-  variable: '--font-instrument-serif',
-  display: 'swap',
-});
+import './globals.css';
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://app.getkimo.tech'),
   title: 'kimo · tell it the video',
@@ -23,15 +14,31 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${GeistSans.variable} ${GeistMono.variable} ${instrument.variable}`}
-    >
+    <html lang="en">
+      <head>
+        <link
+          rel="preload"
+          href="/fonts/Geist-UI.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+          fetchPriority="high"
+        />
+        <link
+          rel="preload"
+          href="/fonts/InstrumentSerif-Italic.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+          fetchPriority="high"
+        />
+      </head>
       <body>
         <a className="skip-link" href="#main">
           skip to content
         </a>
-        <UploadsProvider>{children}</UploadsProvider>
+        <RouteFocus />
+        {children}
       </body>
     </html>
   );

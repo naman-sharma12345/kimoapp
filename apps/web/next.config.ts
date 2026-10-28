@@ -1,3 +1,4 @@
+import bundleAnalyzer from '@next/bundle-analyzer';
 import type { NextConfig } from 'next';
 import path from 'node:path';
 
@@ -8,4 +9,7 @@ const config: NextConfig = {
   devIndicators: false,
   outputFileTracingRoot: path.resolve(__dirname, '../..'),
 };
-export default config;
+export default bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+})(config);

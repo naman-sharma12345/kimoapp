@@ -125,7 +125,13 @@ export class CompositorController {
     }
   }
   get current() {
-    return this.time;
+    return this.currentTime();
+  }
+  get isPlaying() {
+    return this.playing;
+  }
+  get playbackRate() {
+    return this.rate;
   }
   async captureFrame(time = 1) {
     const priorTime = this.currentTime();

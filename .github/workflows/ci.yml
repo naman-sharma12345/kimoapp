@@ -1,4 +1,4 @@
-name: foundation
+name: kimo checks
 on: [push, pull_request]
 jobs:
   verify:
@@ -14,10 +14,87 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint && pnpm typecheck && pnpm test && pnpm build
+      - run: pnpm budgets
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: phase-00-screens
+          name: product-screens
           path: docs/screens/
+  browser-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chrome msedge firefox webkit
+      - run: pnpm exec playwright test e2e/launch.spec.ts
+        env:
+          KIMO_MATRIX: '1'
+          KIMO_E2E_PRODUCTION: '1'
+          MOCK_SPEED: '12'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-matrix
+          path: test-results/
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm analyze && pnpm budgets
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test e2e/performance.spec.ts e2e/soak.spec.ts
+        env:
+          KIMO_E2E_PRODUCTION: '1'
+          KIMO_PERF: '1'
+          KIMO_SOAK: '1'
+          MOCK_SPEED: '12'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-and-analyzer
+          path: |
+            apps/web/.next/analyze/
+            docs/performance-*.json
+            docs/bundle-budget.json
+            test-results-soak/
+            test-results/
+  pages-preview-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:pages
+        env:
+          NEXT_PUBLIC_KIMO_API: ${{ vars.MOCK_PUBLIC_API || 'http://localhost:8787' }}
+          NEXT_PUBLIC_KIMO_WS: ${{ vars.MOCK_PUBLIC_WS || 'ws://localhost:8787' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pages-mock-preview-build
+          path: apps/web/.pages-build/out/
+      # Publication is intentionally absent. See docs/DEPLOY.md.

@@ -1,0 +1,22 @@
+# Backend handoff — Phase 10
+
+The real kimo REST/WebSocket service does not exist yet. No production endpoint was contacted, deployed, or inferred. `https://api.getkimo.tech` and `wss://api.getkimo.tech/v1/ws` in `.env.example` are future placeholders only. The frontend defaults to the local mock.
+
+These are backend dependencies, not completed production claims:
+
+- Implement every REST route and WS event in `CONTRACTS.md`, including upload registration/renewal/multipart completion, attach/detach, session creation/restoration, messages, ordered ops, cancellation/reopen, approval, render polling/frame JPEGs/cancellation, delivery/ranges/subtitles, and authentication.
+- Support the separate WS URL `/v1/ws?sessionId=…`, authenticated with the session cookie. Return an authoritative snapshot before reconnection. Preserve ordered, monotonic project versions and emit user operations with `actionId: "user"`.
+- Atomically deduplicate `mutationId` per session **before** checking `baseVersion`. Retain mutation outcomes for the entire session lifetime. A response can be lost after a successful write; replay must return the original version without applying it again. Persist state across worker/server restarts.
+- Implement Google OAuth at `GET /v1/auth/google?returnTo=…` with state/CSRF protection and a strict redirect allowlist. Set a Secure, httpOnly cookie with appropriate SameSite/domain policy. `GET /v1/auth/session` returns `{signedIn, remaining, mock:false}`. The mock signs into a demonstration identity; it does not contact Google.
+- Enforce anonymous one-video-per-browser UTC day plus abuse/rate limits on the server. Use durable counters. Enforce 30 files, 2 GiB per file and 5 GiB per session across registration and later attachments, validate actual bytes/MIME, and return typed limit errors. Client checks alone do not enforce quotas.
+- Store uploads in R2; expire originals/proxies/session media after 24 hours and final videos after 30 days. Implement deletion requests at hello@getkimo.tech. Do not present the mock's local disk storage as this retention service.
+- Keep all Meta/model/engine keys on the backend. Wire planning/video understanding, word-level transcription, SAM masks, licensed web image search and source attribution. Supply browser-decodable MP4 proxies for unsupported source codecs, including HEVC in Firefox.
+- Supply actual detected music beats in optional `Asset.beats` (seconds in source-media time). Frontend ticks/snapping consume these timings; the mock's fixed half-second grid is demonstration data, not AI analysis.
+- Implement export options `resolution:1080p|720p`, `format:mp4|webm`, `alsoVertical:boolean`. For a second 9:16 export, ask the agent to reframe a separate project snapshot, render both, and return `alternateVideoId` only when available. The mock serves prerecorded, correctly encoded fixtures; it does not run an encoder or an intelligent reframe.
+- Return `captionsSrtUrl` for real timed SRT captions and `captionsUrl` for WebVTT player captions when available. Serve correct MIME, CORS, byte ranges and Content-Disposition, including actual resolution/format. Delivery metadata must match real bytes.
+- Validate the compositor fidelity limitations in `packages/compositor/FIDELITY.md` against actual engine output. Approximate masks/grades/transitions must not be presented as verified engine parity.
+- Supply exact production API/WS/R2 origins and the chosen PostHog region; configure credentialed CORS for the app, expiring upload URLs and permitted preview origins. Configure optional Sentry reporting separately. No private keys belong in `NEXT_PUBLIC_*` variables.
+- Run `KIMO_CONTRACT_API=<actual-url> KIMO_CONTRACT_WS=<actual-ws-url> pnpm test:contract` against staging, with an isolated test identity/dataset. This suite creates uploads, edits and renders and cancels its test session. Run the mock's multipart/failure suites against equivalent staging fault-injection controls too. Review every documented WS branch, including failures and choices, not only the successful lifecycle.
+- After staging contracts, real-media QA, auth and retention checks pass, replace placeholders, verify headers/metadata against the deployed service, and then authorize the **v1.0.0** tag. No release tag is created in this change.
+
+Cloudflare project creation/DNS/deployment are intentionally deferred by the user, not blocked by missing backend code. Actual Safari/VoiceOver and NVDA manual validation are separate environment/manual QA gates; see `A11Y.md` and `QA.md`.

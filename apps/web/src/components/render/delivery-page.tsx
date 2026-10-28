@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { track } from '@/lib/telemetry';
+import { useRouter } from '@/lib/app-router';
 import { motion } from 'motion/react';
 import { Download, Link2, Share2, Pencil } from 'lucide-react';
 import { KimoApiError, KimoClient, type DeliveredVideo } from '@kimo/client';
@@ -60,6 +61,7 @@ export function DeliveryPage({
     return () => clearTimeout(timer);
   }, [video.sessionExpiresAt]);
   const copy = async () => {
+    track('share_clicked');
     try {
       await navigator.clipboard.writeText(location.href);
       toast({ message: 'link copied' });
@@ -68,6 +70,7 @@ export function DeliveryPage({
     }
   };
   const share = async () => {
+    track('share_clicked');
     if (navigator.share) {
       try {
         await navigator.share({
@@ -138,14 +141,17 @@ export function DeliveryPage({
         <div className="delivery-actions">
           <motion.a
             href={video.url}
-            download={videoFilename(video.title)}
+            download={videoFilename(video.title).replace(
+              '1080p.mp4',
+              `${video.resolution ?? '1080p'}.${video.format ?? 'mp4'}`,
+            )}
             className="ui-button ui-button-primary ui-size-lg delivery-download"
             data-sheen={sheen || undefined}
             {...enter(0)}
           >
             <span className="ui-button-label">
               <Download size={16} aria-hidden />
-              download mp4
+              download {video.format ?? 'mp4'}
             </span>
           </motion.a>
           <motion.div {...enter(1, renderTiming.actionStagger)}>
@@ -172,21 +178,21 @@ export function DeliveryPage({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  X
+                  x
                 </a>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(`${video.title} ${url}`)}`}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  WhatsApp
+                  whatsapp
                 </a>
                 <a
                   href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  LinkedIn
+                  linkedin
                 </a>
                 <Button variant="ghost" size="sm" onClick={() => void copy()}>
                   copy link
@@ -219,6 +225,23 @@ export function DeliveryPage({
             )}
           </motion.div>
         </div>
+        {video.captionsSrtUrl ? (
+          <a
+            className="ui-button ui-button-ghost ui-size-md"
+            href={video.captionsSrtUrl}
+            download="captions.srt"
+          >
+            download captions (.srt)
+          </a>
+        ) : null}
+        {video.alternateVideoId ? (
+          <Link
+            className="ui-button ui-button-ghost ui-size-md"
+            href={`/v/${encodeURIComponent(video.alternateVideoId)}`}
+          >
+            view 9:16 version
+          </Link>
+        ) : null}
         <p className="delivery-meta">
           <span>
             {video.width} × {video.height}

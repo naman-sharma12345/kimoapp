@@ -1,5 +1,7 @@
 'use client';
 import {
+  memo,
+  useMemo,
   useCallback,
   useEffect,
   useRef,
@@ -7,7 +9,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/app-router';
 import {
   ArrowUp,
   Film,
@@ -17,7 +19,10 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react';
-import { KimoClient } from '@kimo/client';
+import { AuthDialog } from '@/components/auth-dialog';
+import { logger } from '@/lib/logger';
+import { rememberPrompt, track } from '@/lib/telemetry';
+import { KimoApiError, KimoClient } from '@kimo/client';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Menu, MenuItem } from '@/components/ui/menu';
@@ -77,18 +82,20 @@ function lengthLabel(value: number | undefined) {
     (value === undefined ? 'any length' : `${value}s`)
   );
 }
-function Selectors({
+function SelectorFields({
   aspect,
   setAspect,
   duration,
   setDuration,
   inline = false,
+  initialMenu,
 }: {
   aspect: Aspect;
   setAspect: (value: Aspect) => void;
   duration: number | undefined;
   setDuration: (value: number | undefined) => void;
   inline?: boolean;
+  initialMenu?: string;
 }) {
   const [customOpen, setCustomOpen] = useState(false);
   const [custom, setCustom] = useState('');
@@ -169,6 +176,7 @@ function Selectors({
   return (
     <>
       <Menu
+        defaultOpen={initialMenu === 'aspect'}
         trigger={
           <Button
             size="sm"
@@ -224,6 +232,7 @@ function Selectors({
         </Popover>
       ) : (
         <Menu
+          defaultOpen={initialMenu === 'duration'}
           trigger={
             <Button
               size="sm"
@@ -249,30 +258,45 @@ function Selectors({
   );
 }
 
+const Selectors = memo(SelectorFields);
 export function LandingComposer({
   onExit,
   exiting,
+  initialPrompt,
+  initialFiles,
+  initialAction,
+  initialDragging,
+  initialFocus,
 }: {
   onExit: (exiting: boolean) => void;
   exiting: boolean;
+  initialPrompt?: string;
+  initialFiles?: File[];
+  initialAction?: string;
+  initialDragging?: boolean;
+  initialFocus?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const reduced = useReducedMotion();
   const draft = useSessionStore((state) => state.draft);
-  const [prompt, setPrompt] = useState(draft?.prompt ?? '');
+  const [prompt, setPrompt] = useState(initialPrompt ?? draft?.prompt ?? '');
   const [aspect, setAspect] = useState<Aspect>(draft?.aspect ?? 'auto');
   const [duration, setDuration] = useState<number | undefined>(
     draft?.durationHint,
   );
   const [localIds, setLocalIds] = useState<string[]>(draft?.localIds ?? []);
   const uploadItems = useUploads((state) => state.items);
-  const attachments = uploadItems.filter(
-    (item) => localIds.includes(item.localId) && item.status !== 'canceled',
+  const attachments = useMemo(
+    () =>
+      uploadItems.filter(
+        (item) => localIds.includes(item.localId) && item.status !== 'canceled',
+      ),
+    [uploadItems, localIds],
   );
   const [focused, setFocused] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [dragging, setDragging] = useState(false);
+  const [dragging, setDragging] = useState(initialDragging ?? false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [placeholderVisible, setPlaceholderVisible] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -296,12 +320,25 @@ export function LandingComposer({
   }, [draft, localIds.length, prompt]);
 
   useEffect(() => {
-    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches)
+    if (
+      initialFocus !== false &&
+      (!initialAction ||
+        initialAction === 'send' ||
+        initialAction === 'example') &&
+      (initialFocus ||
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches)
+    ) {
       textarea.current?.focus({ preventScroll: true });
+      if (initialPrompt)
+        textarea.current?.setSelectionRange(
+          initialPrompt.length,
+          initialPrompt.length,
+        );
+    }
     return () => {
       if (typingTimer.current) clearTimeout(typingTimer.current);
     };
-  }, []);
+  }, [initialPrompt, initialAction, initialFocus]);
   useEffect(() => {
     if (focused || prompt || reduced) {
       setPlaceholderVisible(true);
@@ -333,6 +370,13 @@ export function LandingComposer({
     },
     [toast, localIds],
   );
+  const addedInitial = useRef(false);
+  useEffect(() => {
+    if (initialFiles?.length && !addedInitial.current) {
+      addedInitial.current = true;
+      addFiles(initialFiles);
+    }
+  }, [initialFiles, addFiles]);
   useEffect(() => {
     const hasFiles = (event: DragEvent) =>
       Array.from(event.dataTransfer?.types ?? []).includes('Files');
@@ -399,6 +443,7 @@ export function LandingComposer({
       uiTiming.typingIdle,
     );
   };
+  const [authOpen, setAuthOpen] = useState(false);
   const send = async () => {
     if (submittingRef.current || (!prompt.trim() && !attachments.length))
       return;
@@ -425,6 +470,14 @@ export function LandingComposer({
     const startedAt = Date.now();
     try {
       const client = new KimoClient();
+      const auth = await client.auth();
+      if (!auth.signedIn && !auth.remaining) {
+        setAuthOpen(true);
+        onExit(false);
+        setSubmitting(false);
+        submittingRef.current = false;
+        return;
+      }
       const assetLocalMap = await uploadManager.start(
         attachments.map((item) => item.localId),
       );
@@ -433,6 +486,19 @@ export function LandingComposer({
         assetIds: Object.values(assetLocalMap),
         aspect,
         durationHint: duration,
+      });
+      rememberPrompt(finalPrompt);
+      track('prompt_sent', {
+        length: finalPrompt.length,
+        video: attachments.filter((a) => a.file.type.startsWith('video/'))
+          .length,
+        image: attachments.filter((a) => a.file.type.startsWith('image/'))
+          .length,
+        audio: attachments.filter((a) => a.file.type.startsWith('audio/'))
+          .length,
+        doc: attachments.filter(
+          (a) => !/^(video|image|audio)\//.test(a.file.type),
+        ).length,
       });
       useSessionStore.getState().startSession({
         sessionId: session.sessionId,
@@ -458,8 +524,9 @@ export function LandingComposer({
       await new Promise((resolve) => setTimeout(resolve, delay));
       navigateToWarmup(router, session.sessionId, reduced);
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production')
-        console.error('Could not start session:', error);
+      logger.error('session_start_failed');
+      if (error instanceof KimoApiError && error.code === 'anonymous_limit')
+        setAuthOpen(true);
       onExit(false);
       setSubmitting(false);
       submittingRef.current = false;
@@ -470,6 +537,11 @@ export function LandingComposer({
       });
     }
   };
+  const sendCurrent = useRef(send);
+  sendCurrent.current = send;
+  useEffect(() => {
+    if (initialAction === 'send') void sendCurrent.current();
+  }, [initialAction]);
   const keyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       event.key === 'Enter' &&
@@ -490,6 +562,7 @@ export function LandingComposer({
   const selected = { aspect, setAspect, duration, setDuration };
   return (
     <>
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
       <div
         className="landing-composer-wrap"
         data-focused={focused || undefined}
@@ -499,6 +572,7 @@ export function LandingComposer({
         <div className="landing-horizon" aria-hidden="true" />
         <motion.div
           {...composerEntrance(reduced)}
+          initial={initialPrompt !== undefined ? false : undefined}
           ref={composer}
           className="landing-composer"
           style={exitStyle}
@@ -567,10 +641,11 @@ export function LandingComposer({
                 disabled={submitting}
               />
               <div className="landing-desktop-selectors">
-                <Selectors {...selected} />
+                <Selectors {...selected} initialMenu={initialAction} />
               </div>
               <div className="landing-mobile-settings">
                 <Dialog
+                  defaultOpen={initialAction === 'settings'}
                   trigger={
                     <Button
                       variant="ghost"
@@ -641,6 +716,10 @@ export function LandingComposer({
           </button>
         ))}
       </div>
+      <p className="landing-privacy">
+        by sending, you agree that your files are processed by ai models. don’t
+        upload anything private. <a href="/privacy">privacy</a>
+      </p>
       <span className="landing-sr-only" role="status" aria-live="polite">
         {dragging ? 'drop to add to your video' : ''}
       </span>

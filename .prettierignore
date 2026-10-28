@@ -9,3 +9,15 @@ packages/mock-server/fixtures
 test-results
 playwright-report
 .mock-data
+
+**/.pages-build/**
+
+.next-production
+
+**/.next-perf/**
+
+test-results-matrix/
+
+**/.next-*/**
+
+docs/bundle-analysis.html

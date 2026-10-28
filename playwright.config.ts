@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+const baseURL = process.env.KIMO_E2E_URL ?? 'http://localhost:3000';
 
 export default defineConfig({
   testDir: './e2e',
@@ -7,14 +8,29 @@ export default defineConfig({
   workers: 1,
   timeout: 60000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     browserName: 'chromium',
     trace: 'retain-on-failure',
   },
+  projects:
+    process.env.KIMO_MATRIX === '1'
+      ? [
+          {
+            name: 'chrome',
+            use: { browserName: 'chromium', channel: 'chrome' },
+          },
+          { name: 'edge', use: { browserName: 'chromium', channel: 'msedge' } },
+          { name: 'firefox', use: { browserName: 'firefox' } },
+          { name: 'webkit', use: { browserName: 'webkit' } },
+        ]
+      : [{ name: 'chromium', use: { browserName: 'chromium' } }],
   webServer: [
     {
-      command: 'pnpm dev',
-      url: 'http://localhost:3000/dev/tokens',
+      command:
+        process.env.KIMO_E2E_PRODUCTION === '1'
+          ? `pnpm --filter @kimo/web exec next start --port ${new URL(baseURL).port || '3000'}`
+          : 'pnpm dev',
+      url: baseURL + '/',
       timeout: 120000,
       reuseExistingServer: !process.env.CI,
     },

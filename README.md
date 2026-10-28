@@ -1,47 +1,85 @@
 # kimo web
 
-Phase 0 foundation for the browser app at app.getkimo.tech. This repository contains the monorepo, design tokens, contract client, scripted mock backend and screenshot tooling. The token preview is the only Phase 0 screen; the product landing page and editor belong to later phases.
+A browser video editor with a prompt-led landing page, uploads and warm-up, a live composited Studio, manual timeline/caption editing, an interruptible agent panel, review/export and delivery.
 
-## Start
+**Current mode: mock-backed frontend.** The real kimo backend is not built yet. Mock auth does not contact Google; edits and exports use scripted events and prerecorded CC0 media. Production endpoints in `.env.example` are placeholders. Nothing in Phase 10 deploys the app or tags v1.0.0.
 
-Use Node.js 22+ and pnpm 9.15.9.
+![landing](docs/screens/phase-10-landing.png)
+![studio](docs/screens/phase-10-studio.png)
+![delivery](docs/screens/phase-10-delivery.png)
+
+## Run with the mock
+
+Use Node 22 and pnpm 9.15.9.
 
 ```sh
-pnpm install
-pnpm dev
-# In a second terminal:
-pnpm mock
-# In a third terminal, to print the complete scripted WebSocket edit:
-pnpm mock:demo
+pnpm install --frozen-lockfile
+pnpm dev:mock
 ```
 
-Open [the token preview](http://localhost:3000/dev/tokens). Web runs on 3000, mock API/WebSocket on 8787. `.env.example` lists configuration. Environment variables for the standalone mock must be exported in its terminal; Next reads browser configuration from `apps/web/.env.local`.
+Open [kimo locally](http://localhost:3000). Web runs on 3000 and mock REST/WS on 8787. Alternatively run `pnpm dev` and `pnpm mock` in separate terminals. `pnpm mock:demo` prints the scripted event stream. Set `MOCK_SPEED=2` on the mock terminal to accelerate the demo. `MOCK_FAIL=upload|ws|action|render` exercises recovery.
 
-Phase 1 adds [the component gallery](http://localhost:3000/dev/ui): the reusable UI library, keyboard behavior, overlay focus management, accessible feedback, reduced-motion variants and a full state gallery. See [UI.md](docs/UI.md) for APIs and [the Phase 1 review](docs/PHASE_01_REVIEW.md) for accessibility evidence and explicit spec exceptions.
+A browser gets one anonymous video per UTC day in the mock. The sign-in dialog grants a demo identity via an httpOnly mock cookie. Clear site cookies to repeat the anonymous flow. Uploads live on the mock host's local disk; production retention is not implemented there.
 
-## Verify
+## Configure a future backend
+
+Create `apps/web/.env.local` with **actual verified** service URLs:
+
+```dotenv
+NEXT_PUBLIC_KIMO_API=<actual-rest-origin>
+NEXT_PUBLIC_KIMO_WS=<actual-websocket-url>
+```
+
+The WS URL may be an origin using `/v1/sessions/:id/ws`, or `/v1/ws` with `sessionId` added as a query parameter. Public variables are embedded at build time. Never put model, OAuth or storage secret keys in them. Optional analytics/error variables are documented in `.env.example` and [deployment instructions](docs/DEPLOY.md).
+
+```sh
+# Set these to an isolated staging service before running:
+# KIMO_CONTRACT_API=<actual-rest-origin>
+# KIMO_CONTRACT_WS=<actual-websocket-url>
+pnpm test:contract
+```
+
+Without the contract variables, that command starts and tests an isolated mock. It exercises writes, uploads and renders; use a test identity/data set on staging. See [backend handoff](docs/BACKEND_TODO.md) and [contracts](docs/CONTRACTS.md). The v1.0.0 tag waits for real-backend acceptance.
+
+## Architecture
+
+```text
+Next.js / React UI
+  | landing -> uploads -> warm-up -> Studio -> review -> render -> delivery
+  |                               | Pixi live compositor + media pool
+  |                               | timeline, inspector, captions, agent feed
+  +-- typed REST / Zod client -----+-- IndexedDB outbox / ordered replay
+  +-- reconnecting WebSocket ------+-- authoritative project versions
+                 |
+        local mock HTTP + WS today
+        real auth / R2 / models / kimo engine later
+```
+
+| Workspace            | Responsibility                                                           |
+| -------------------- | ------------------------------------------------------------------------ |
+| apps/web             | Next 15 / React 19 UI, accessibility and browser media preparation       |
+| packages/kimo-client | strict Zod contracts, typed REST, atomic ops and ordered synchronization |
+| packages/compositor  | PixiJS live preview, media decoding, audio and capture                   |
+| packages/mock-server | demo auth/quota, uploads, scripted agent and fixture delivery            |
+
+Studio supports Ctrl/⌘P command search, named review cuts and restore, synchronized comparison, backend-supplied beat snapping, first-visit tips, 1080p/720p MP4/WebM requests, optional vertical delivery and SRT download. Offline manual operations are saved before display and replayed with stable mutation IDs. Real rendering and intelligent reframing remain backend work; [preview fidelity limits](packages/compositor/FIDELITY.md) are explicit.
+
+## Verify and preview
 
 ```sh
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm exec playwright install chromium
+pnpm budgets
+pnpm exec playwright install chromium firefox webkit
 pnpm e2e
 pnpm shots
+pnpm build:pages
 ```
 
-Screenshots are written to `docs/screens/phase-00-tokens-{viewport}.png` at desktop and mobile sizes. Register later routes in `e2e/routes.ts` and set their root `data-ready="true"` after paint. Studio routes also capture 1920×1080.
+`pnpm analyze` generates bundle treemaps. CI enforces initial gzip JS budgets, mobile loading/interaction budgets and a dedicated 20-minute memory gate. See [QA](docs/QA.md) for profiles, browser matrix, visual baselines, actual executed results and remaining manual checks. [Accessibility](docs/A11Y.md) does not claim unrun VoiceOver/NVDA or Safari certification.
 
-## Workspaces
+The prepared hosting target is a new **Cloudflare Pages `kimo-app`** project at **app.getkimo.tech**. The Pages build exports static route shells and a small public metadata Function; local Next SSR remains available. PR artifacts use the mock. No deployment command or DNS change is performed. Follow [DEPLOY.md](docs/DEPLOY.md) when publishing is authorized, and coordinate with the separate Workers workflow branch before choosing one hosting path. Marketing remains a separate repository; its handoff is [MARKETING_LINK.md](docs/MARKETING_LINK.md).
 
-| Path                 | Role                                                                            |
-| -------------------- | ------------------------------------------------------------------------------- |
-| apps/web             | Next.js 15, React 19, Tailwind v4, strict TypeScript                            |
-| packages/kimo-client | Zod contracts, typed REST, native WebSocket, atomic ops and version recovery    |
-| packages/compositor  | PixiJS v8 dependency and Phase 6 interface; renderer deliberately deferred      |
-| packages/mock-server | plain Node HTTP + ws, uploads, 45-action edit, interrupts and render simulation |
-
-Read [DESIGN.md](docs/DESIGN.md), [CONTRACTS.md](docs/CONTRACTS.md), [DECISIONS.md](docs/DECISIONS.md), [SKILLS.md](docs/SKILLS.md), and [PHASE_LOG.md](docs/PHASE_LOG.md). `AGENTS.md` contains the twelve phase guardrails and commands. Component hex literals fail ESLint; Next's production build also runs that lint rule.
-
-Media fixtures are original CC0 assets, bundled for reliable local development, with checksums, download URLs and reproducible generation. See [fixture sources](packages/mock-server/fixtures/SOURCES.md) for the documented substitution for the brief's unspecified Pexels/Pixabay URLs.
+Read [DESIGN.md](docs/DESIGN.md), [DECISIONS.md](docs/DECISIONS.md), [STATES.md](docs/STATES.md), [PHASE_LOG.md](docs/PHASE_LOG.md) and the [three-minute demo script](docs/DEMO_SCRIPT.md). The supplied logo and fixed visual tokens remain authoritative. Media licenses/checksums are in [fixture sources](packages/mock-server/fixtures/SOURCES.md); OFL font licenses remain under apps/web/src/assets/fonts.

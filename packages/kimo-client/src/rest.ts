@@ -27,13 +27,17 @@ export class KimoClient {
     body?: unknown,
   ): Promise<T> {
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(30000),
       method: body === undefined ? 'GET' : 'POST',
       headers:
         body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!response.ok) {
-      const result = s.errorResponseSchema.safeParse(await response.json());
+      const result = s.errorResponseSchema.safeParse(
+        await response.json().catch(() => null),
+      );
       throw new KimoApiError(
         response.status,
         result.success ? result.data.code : 'http_error',
@@ -42,6 +46,14 @@ export class KimoClient {
     }
     if (response.status === 202) return schema.parse(undefined);
     return schema.parse(await response.json());
+  }
+  auth() {
+    return this.request('/v1/auth/session', s.authSchema);
+  }
+  googleSignInUrl(returnTo: string) {
+    const url = new URL('/v1/auth/google', this.baseUrl);
+    url.searchParams.set('returnTo', returnTo);
+    return url.toString();
   }
   uploads(body: z.input<typeof s.uploadRequestSchema>) {
     return this.request(

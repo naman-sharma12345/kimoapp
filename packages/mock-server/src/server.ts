@@ -43,6 +43,7 @@ interface Session extends SessionSnapshot {
   actions: ScriptAction[];
   interrupts: { due: number; text: string }[];
   records?: Map<string, ScriptAction>;
+  mutations?: Map<string, number>;
   active?: { id: string; finish: (stopped?: boolean) => void };
   failInjected?: boolean;
   renderFailed?: boolean;
@@ -56,6 +57,9 @@ interface RenderJob {
   project: KimoProject;
   title: string;
   burnInCaptions: boolean;
+  resolution?: '1080p' | '720p';
+  format?: 'mp4' | 'webm';
+  alternate?: RenderJob;
   history: { summary: string; stepCount: number }[];
   cancelled?: boolean;
   failed?: boolean;
@@ -68,9 +72,19 @@ export interface MockOptions {
 }
 export function createMockServer(options: MockOptions = {}) {
   const speed = options.speed ?? 1;
+  const appOrigins = (process.env.MOCK_APP_ORIGINS ?? '')
+    .split(',')
+    .filter(Boolean);
+  const allowedApp = (origin: string) =>
+    /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+    appOrigins.includes(origin);
   if (!Number.isFinite(speed) || speed <= 0)
     throw new Error('MOCK_SPEED must be positive');
   const sessions = new Map<string, Session>();
+  const visitors = new Map<
+    string,
+    { day: string; count: number; signedIn: boolean }
+  >();
   const renders = new Map<string, RenderJob>();
   const videos = new Map<string, RenderJob>();
   const dataDir = resolve(options.dataDir ?? '.mock-data');
@@ -257,7 +271,12 @@ export function createMockServer(options: MockOptions = {}) {
     }
   };
   const server = createServer((request, response) => {
-    response.setHeader('Access-Control-Allow-Origin', '*');
+    const origin = request.headers.origin;
+    if (origin && allowedApp(origin)) {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+      response.setHeader('Access-Control-Allow-Credentials', 'true');
+      response.setHeader('Vary', 'Origin');
+    } else response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader(
       'Access-Control-Allow-Methods',
       'GET, POST, PUT, OPTIONS',
@@ -302,6 +321,43 @@ export function createMockServer(options: MockOptions = {}) {
   async function route(request: IncomingMessage, response: ServerResponse) {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname;
     const method = request.method;
+    const cookie = /(?:^|; )kimo_mock=([a-zA-Z0-9-]+)/.exec(
+      request.headers.cookie ?? '',
+    )?.[1];
+    const visitorId = cookie ?? randomUUID();
+    const day = new Date().toISOString().slice(0, 10);
+    let visitor = visitors.get(visitorId);
+    if (!visitor || visitor.day !== day) {
+      visitor = { day, count: 0, signedIn: visitor?.signedIn ?? false };
+      visitors.set(visitorId, visitor);
+    }
+    if (!cookie)
+      response.setHeader(
+        'Set-Cookie',
+        `kimo_mock=${visitorId}; HttpOnly; ${process.env.MOCK_COOKIE_SECURE === '1' ? 'Secure; SameSite=None' : 'SameSite=Lax'}; Path=/; Max-Age=86400`,
+      );
+    if (path === '/v1/auth/session' && method === 'GET') {
+      json(response, 200, {
+        signedIn: visitor.signedIn,
+        remaining: visitor.signedIn ? 999 : Math.max(0, 1 - visitor.count),
+        mock: true,
+      });
+      return;
+    }
+    if (path === '/v1/auth/google' && method === 'GET') {
+      const target =
+        new URL(request.url ?? '/', base).searchParams.get('returnTo') ??
+        'http://localhost:3000/';
+      if (!allowedApp(new URL(target).origin)) {
+        fail(response, 400, 'invalid_return', 'invalid return address');
+        return;
+      }
+      // Demo only: no Google credentials or identity claims are involved.
+      visitor.signedIn = true;
+      response.writeHead(302, { Location: target });
+      response.end();
+      return;
+    }
     if (path === '/health') {
       json(response, 200, { ok: true });
       return;
@@ -354,6 +410,10 @@ export function createMockServer(options: MockOptions = {}) {
     }
     if (path === '/v1/sessions' && method === 'POST') {
       const input = sessionRequestSchema.parse(await body(request));
+      if (!visitor.signedIn && visitor.count >= 1) {
+        fail(response, 429, 'anonymous_limit', 'sign in to keep making videos');
+        return;
+      }
       if (input.assetIds.some((id) => !uploads.has(id))) {
         fail(
           response,
@@ -363,6 +423,18 @@ export function createMockServer(options: MockOptions = {}) {
         );
         return;
       }
+      if (
+        input.assetIds.length > 30 ||
+        input.assetIds.reduce(
+          (sum, id) => sum + (uploads.get(id)?.size ?? 0),
+          0,
+        ) >
+          5 * 1024 ** 3
+      ) {
+        fail(response, 413, 'upload_too_large', 'upload limits exceeded');
+        return;
+      }
+      visitor.count++;
       const id = randomUUID();
       const assets = input.assetIds.map((assetId): Asset => {
         const upload = uploads.get(assetId);
@@ -418,6 +490,21 @@ export function createMockServer(options: MockOptions = {}) {
           'upload_incomplete',
           'Finish uploading before attaching',
         );
+        return;
+      }
+      const combined = new Set([
+        ...session.assets.map((a) => a.id).filter((id) => uploads.has(id)),
+        ...input.assetIds,
+      ]);
+      if (
+        combined.size > 30 ||
+        [...combined].reduce(
+          (sum, id) => sum + (uploads.get(id)?.size ?? 0),
+          0,
+        ) >
+          5 * 1024 ** 3
+      ) {
+        fail(response, 413, 'upload_too_large', 'upload limits exceeded');
         return;
       }
       const added = input.assetIds.map((id): Asset => {
@@ -520,6 +607,13 @@ export function createMockServer(options: MockOptions = {}) {
       }
       if (operation === 'ops' && method === 'POST') {
         const input = opsRequestSchema.parse(await body(request));
+        const previousMutation = input.mutationId
+          ? session.mutations?.get(input.mutationId)
+          : undefined;
+        if (previousMutation !== undefined) {
+          json(response, 200, { version: previousMutation });
+          return;
+        }
         if (input.baseVersion !== session.project.version) {
           fail(
             response,
@@ -530,6 +624,10 @@ export function createMockServer(options: MockOptions = {}) {
           return;
         }
         batch(session, input.ops, 'user');
+        if (input.mutationId) {
+          session.mutations ??= new Map();
+          session.mutations.set(input.mutationId, session.project.version);
+        }
         json(response, 200, { version: session.project.version });
         return;
       }
@@ -571,9 +669,30 @@ export function createMockServer(options: MockOptions = {}) {
                 Boolean(clip.text?.words?.length) ||
                 Boolean(clip.text?.style.startsWith('caption')),
             ),
+          resolution: input.resolution ?? previous?.resolution ?? '1080p',
+          format: input.format ?? previous?.format ?? 'mp4',
           history: structuredClone(session.history ?? []),
           failed,
         });
+        const job = renders.get(renderId);
+        if (!job) throw new Error('render not created');
+        if (input.alsoVertical && job.project.width >= job.project.height) {
+          const reframed = applyOps(job.project, [
+            { op: 'project.update', patch: { width: 1080, height: 1920 } },
+          ]);
+          emit(session, {
+            t: 'agent.message',
+            id: randomUUID(),
+            role: 'agent',
+            kind: 'say',
+            text: 'preparing a 9:16 version · demo reframe',
+          });
+          job.alternate = {
+            ...job,
+            project: reframed,
+            title: `${job.title} · 9:16`,
+          };
+        }
         session.status = 'rendering';
         session.renderId = renderId;
         json(response, 200, { renderId });
@@ -665,6 +784,10 @@ export function createMockServer(options: MockOptions = {}) {
       if (progress === 1 && !job.videoId) {
         job.videoId = randomUUID();
         videos.set(job.videoId, job);
+        if (job.alternate) {
+          job.alternate.videoId = randomUUID();
+          videos.set(job.alternate.videoId, job.alternate);
+        }
         if (session) {
           session.status = 'done';
           session.videoId = job.videoId;
@@ -688,6 +811,37 @@ export function createMockServer(options: MockOptions = {}) {
       });
       return;
     }
+    const subtitles = /^\/v1\/videos\/([^/]+)\/captions.srt$/.exec(path);
+    if (subtitles && method === 'GET') {
+      const video = videos.get(subtitles[1] ?? '');
+      if (!video) {
+        fail(response, 404, 'not_found', 'unknown video');
+        return;
+      }
+      const stamp = (t: number) =>
+        new Date(Math.max(0, t) * 1000)
+          .toISOString()
+          .slice(11, 23)
+          .replace('.', ',');
+      const text = Object.values(video.project.clips)
+        .filter(
+          (c) =>
+            c.text &&
+            (c.text.style.startsWith('caption') || c.text.words?.length),
+        )
+        .sort((a, b) => a.start - b.start)
+        .map(
+          (c, i) =>
+            `${i + 1}\n${stamp(c.start)} --> ${stamp(c.start + c.duration)}\n${(c.text?.content ?? '').replace(/\r?\n/g, ' ')}\n`,
+        )
+        .join('\n');
+      response.writeHead(200, {
+        'Content-Type': 'application/x-subrip; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="captions.srt"',
+      });
+      response.end(text);
+      return;
+    }
     const videoFile = /^\/v1\/videos\/([^/]+)\/file$/.exec(path);
     if (videoFile && method === 'GET') {
       const job = videos.get(videoFile[1] ?? '');
@@ -704,18 +858,13 @@ export function createMockServer(options: MockOptions = {}) {
           .replace(/^-|-$/g, '') || 'video';
       response.setHeader(
         'Content-Disposition',
-        `attachment; filename="${slug}-kimo-1080p.mp4"`,
+        `attachment; filename="${slug}-kimo-${job.resolution ?? '1080p'}.${job.format ?? 'mp4'}"`,
       );
       await media(
         request,
         response,
-        resolve(
-          fixtures,
-          job.project.width < job.project.height
-            ? 'delivery-vertical.mp4'
-            : 'delivery-final.mp4',
-        ),
-        'video/mp4',
+        resolve(fixtures, exportFixture(job)),
+        job.format === 'webm' ? 'video/webm' : 'video/mp4',
       );
       return;
     }
@@ -727,19 +876,36 @@ export function createMockServer(options: MockOptions = {}) {
         return;
       }
       const vertical = video.project.width < video.project.height;
-      const info = await stat(
-        resolve(
-          fixtures,
-          vertical ? 'delivery-vertical.mp4' : 'delivery-final.mp4',
-        ),
-      );
+      const info = await stat(resolve(fixtures, exportFixture(video)));
       const session = sessions.get(video.sessionId);
       json(response, 200, {
         url: `${base}/v1/videos/${videoMatch[1]}/file`,
         posterUrl: `${base}/v1/renders/${Array.from(renders).find(([, job]) => job === video)?.[0] ?? ''}/frame.jpg?n=0`,
         durationSec: 24,
-        width: vertical ? 1080 : 1920,
-        height: vertical ? 1920 : 1080,
+        width:
+          video.resolution === '720p'
+            ? vertical
+              ? 720
+              : 1280
+            : vertical
+              ? 1080
+              : 1920,
+        height:
+          video.resolution === '720p'
+            ? vertical
+              ? 1280
+              : 720
+            : vertical
+              ? 1920
+              : 1080,
+        format: video.format ?? 'mp4',
+        resolution: video.resolution ?? '1080p',
+        alternateVideoId: video.alternate?.videoId,
+        captionsSrtUrl: Object.values(video.project.clips).some(
+          (c) => c.text?.style.startsWith('caption') || c.text?.words?.length,
+        )
+          ? `${base}/v1/videos/${videoMatch[1]}/captions.srt`
+          : undefined,
         sizeBytes: info.size,
         title: video.title,
         sessionId: video.sessionId,
@@ -1016,4 +1182,14 @@ export function createMockServer(options: MockOptions = {}) {
       );
     },
   };
+}
+
+function exportFixture(job: RenderJob) {
+  const vertical = job.project.width < job.project.height;
+  if (
+    (job.resolution ?? '1080p') === '1080p' &&
+    (job.format ?? 'mp4') === 'mp4'
+  )
+    return vertical ? 'delivery-vertical.mp4' : 'delivery-final.mp4';
+  return `delivery-${vertical ? 'vertical' : 'horizontal'}-${job.resolution ?? '1080p'}.${job.format ?? 'mp4'}`;
 }

@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/app-router';
 import { flushSync } from 'react-dom';
 import {
   KimoClient,
@@ -20,6 +20,7 @@ import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { FullScreenError } from '@/components/errors/full-screen-error';
 import { Ready } from '@/app/dev/tokens/ready';
+import { track } from '@/lib/telemetry';
 import { uiTiming } from '@/lib/motion';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
 import { uploadManager, useUploads } from '@/lib/uploads/manager';
@@ -129,6 +130,8 @@ export function WarmupScreen({
   const [unfoldStyle, setUnfoldStyle] = useState<CSSProperties>({});
   const connection = useRef<WarmupConnection | null>(null);
   const prefetched = useRef(false);
+  const warmupStarted = useRef(Date.now());
+  const firstOp = useRef(false);
   const navigating = useRef(false);
   const stopped = useRef(false);
   const currentSnapshot = useRef(snapshot);
@@ -184,6 +187,12 @@ export function WarmupScreen({
       },
     );
     const onEvent = (event: ServerEvent) => {
+      if (event.t === 'project.ops' && !firstOp.current) {
+        firstOp.current = true;
+        track('first_op_latency', {
+          duration: Date.now() - warmupStarted.current,
+        });
+      }
       if (event.t === 'hello' || event.t === 'project.ops')
         void sync.receive(event).catch(() => setConnectionFailed(true));
       setState((current) => updateWarmup(current, event));
@@ -192,6 +201,9 @@ export function WarmupScreen({
       sessionSocketUrl(sessionId, snapshot.wsUrl),
       onEvent,
       () => setConnectionFailed(true),
+      undefined,
+      false,
+      () => sync.restore(),
     );
     connection.current = socket;
     socket.start();
@@ -229,6 +241,9 @@ export function WarmupScreen({
       () => {
         if (stopped.current || navigating.current) return;
         navigating.current = true;
+        track('warmup_duration', {
+          duration: Date.now() - warmupStarted.current,
+        });
         const strip = document
           .querySelector<HTMLElement>('[data-reel-strip]')
           ?.getBoundingClientRect();

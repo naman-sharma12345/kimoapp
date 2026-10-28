@@ -11,7 +11,7 @@ export function navigateToStudio(
   const url = `/studio/${encodeURIComponent(sessionId)}`;
   guardNavigation(url, '[data-studio-transition-ready]');
   const root = document.documentElement;
-  if (typeof document.startViewTransition === 'function') {
+  if (!reduced && typeof document.startViewTransition === 'function') {
     root.dataset.warmupUnfold = reduced ? 'reduced' : 'native';
     activeTransition = document.startViewTransition(
       () =>

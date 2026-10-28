@@ -1,0 +1,4 @@
+/studio/* /studio/shell/index.html 200
+/warmup/* /warmup/shell/index.html 200
+/render/* /render/shell/index.html 200
+/v/* /v/shell/index.html 200

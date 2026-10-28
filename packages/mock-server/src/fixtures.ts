@@ -18,6 +18,8 @@ export function fixtureAssets(base: string): Asset[] {
         id: 'sample-music',
         kind: 'audio',
         name: 'quiet-study.wav',
+        // Demonstration grid; real timings must come from backend analysis.
+        beats: Array.from({ length: 48 }, (_, i) => i * 0.5),
         url: `${base}/fixtures/quiet-study.wav`,
         durationSec: 24,
         source: 'user',

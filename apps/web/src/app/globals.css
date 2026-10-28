@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../styles/fonts.css';
 @import '../styles/tokens.css';
 @import '../styles/ui.css';
 @import '../styles/landing.css';
@@ -6,6 +7,7 @@
 @import '../styles/warmup.css';
 @import '../styles/studio.css';
 @import '../styles/agent.css';
+@import '../styles/launch.css';
 
 @layer base {
   :root {

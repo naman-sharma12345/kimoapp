@@ -160,5 +160,47 @@
     "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/sprite-vertical.jpg",
     "sha256": "f27e6692efa3cb35029d9f64b466d7d957f830157866f4d150870e3b5a3f2dd3",
     "license": "CC0-1.0"
+  },
+  {
+    "name": "delivery-horizontal-1080p.webm",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-horizontal-1080p.webm",
+    "sha256": "ea0031e2f97ad61331989d4cc44d26bda0a01c638f0b220e61f08021998e7d71",
+    "license": "CC0-1.0",
+    "derivedFrom": "delivery-final.mp4"
+  },
+  {
+    "name": "delivery-horizontal-720p.mp4",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-horizontal-720p.mp4",
+    "sha256": "24cfb866c55a1a24298922f8a264d36f7f17362f74ee979d3a75b5d8a31a6546",
+    "license": "CC0-1.0",
+    "derivedFrom": "delivery-final.mp4"
+  },
+  {
+    "name": "delivery-horizontal-720p.webm",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-horizontal-720p.webm",
+    "sha256": "c523ca3d3a493524e2be2666282466581bda2d58e879eb7a6546819111f2be60",
+    "license": "CC0-1.0",
+    "derivedFrom": "delivery-final.mp4"
+  },
+  {
+    "name": "delivery-vertical-1080p.webm",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-vertical-1080p.webm",
+    "sha256": "cda932d60016e7730ad6dc7c917274a3d09a82cb3cd991b4ba9bfacc353966a8",
+    "license": "CC0-1.0",
+    "derivedFrom": "delivery-vertical.mp4"
+  },
+  {
+    "name": "delivery-vertical-720p.mp4",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-vertical-720p.mp4",
+    "sha256": "d234bea4414c3e4076ebbd79755dc9efab781a9627e893ac2ea9c67303bec3ef",
+    "license": "CC0-1.0",
+    "derivedFrom": "delivery-vertical.mp4"
+  },
+  {
+    "name": "delivery-vertical-720p.webm",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-vertical-720p.webm",
+    "sha256": "cc5fe67fba62d84a684863f1f0b7d5ecd58c86f91d92b1d58d65238a0aa02f42",
+    "license": "CC0-1.0",
+    "derivedFrom": "delivery-vertical.mp4"
   }
 ]

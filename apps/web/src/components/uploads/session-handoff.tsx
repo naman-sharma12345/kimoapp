@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/app-router';
 import { KimoClient, type SessionSnapshot } from '@kimo/client';
 import { Spinner } from '@/components/ui/spinner';
 import { AttachmentChip } from '@/components/ui/attachment-chip';
