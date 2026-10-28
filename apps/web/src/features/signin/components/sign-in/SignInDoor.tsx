@@ -17,6 +17,8 @@ import type {
   SignInUser,
 } from '../../types/sign-in';
 import { GoogleMark } from './GoogleMark';
+import { GitHubMark } from './GitHubMark';
+import { AUTH_PROVIDER, AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
 import { KimoMark } from './KimoMark';
 
 export interface SignInDoorProps {
@@ -112,7 +114,7 @@ export function SignInDoor({
   // Live polite announcement string
   const liveStatusText =
     state === 'redirecting'
-      ? 'opening google'
+      ? `opening ${AUTH_PROVIDER_LABEL}`
       : state === 'returning'
         ? 'signing you in. one second'
         : state === 'error' && errorInfo
@@ -431,7 +433,9 @@ export function SignInDoor({
                 type="button"
                 onClick={onGoogleClick}
                 aria-label={
-                  isRedirecting ? 'opening google…' : 'continue with google'
+                  isRedirecting
+                    ? `opening ${AUTH_PROVIDER_LABEL}…`
+                    : `continue with ${AUTH_PROVIDER_LABEL}`
                 }
                 className="kimo-btn kimo-btn-primary t-15 w-full"
                 style={{
@@ -440,7 +444,11 @@ export function SignInDoor({
                   paddingRight: 'var(--space-16)',
                 }}
               >
-                <GoogleMark isRedirecting={isRedirecting} />
+                {AUTH_PROVIDER === 'google' ? (
+                  <GoogleMark isRedirecting={isRedirecting} />
+                ) : (
+                  <GitHubMark isRedirecting={isRedirecting} />
+                )}
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span
                     key={isRedirecting ? 'opening' : 'continue'}
@@ -452,7 +460,9 @@ export function SignInDoor({
                       ease: EASE.easeOut,
                     }}
                   >
-                    {isRedirecting ? 'opening google…' : 'continue with google'}
+                    {isRedirecting
+                      ? `opening ${AUTH_PROVIDER_LABEL}…`
+                      : `continue with ${AUTH_PROVIDER_LABEL}`}
                   </motion.span>
                 </AnimatePresence>
               </button>

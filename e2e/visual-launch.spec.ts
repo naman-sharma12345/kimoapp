@@ -32,7 +32,7 @@ test('controlled visual baselines across the product routes and new states', asy
   await capture('landing');
   await page.getByRole('button', { name: 'sign in', exact: true }).click();
   await expect(
-    page.getByText('demo sign-in · the mock does not connect to google.'),
+    page.getByText('demo sign-in · the mock does not connect to github.'),
   ).toBeVisible();
   await capture('sign-in');
   await page.keyboard.press('Escape');

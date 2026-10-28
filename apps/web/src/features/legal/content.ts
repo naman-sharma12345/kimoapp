@@ -14,7 +14,7 @@ export const PRIVACY_CONTENT: LegalContent = {
       id: 'what-we-collect',
       heading: 'what we collect',
       paragraphs: [
-        'when you sign in with google, we receive your name, email address, and profile avatar so we can create your workspace and keep your projects tied to you.',
+        'when you sign in with github (or google, where offered), we receive your name, email address, and profile avatar so we can create your workspace and keep your projects tied to you.',
         'while you edit in kimo, we store the prompts you type, the raw video and audio files you upload, and the timeline edits made by the ai or by your own hand.',
         'we also record basic usage counts, such as render minutes and daily prompt runs, to keep the service reliable and enforce fair use limits.',
       ],

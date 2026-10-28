@@ -84,6 +84,15 @@ importers:
         specifier: ^8.18.3
         version: 8.22.0
 
+  apps/api:
+    dependencies:
+      '@kimo/client':
+        specifier: workspace:*
+        version: link:../../packages/kimo-client
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+
   apps/web:
     dependencies:
       '@kimo/client':

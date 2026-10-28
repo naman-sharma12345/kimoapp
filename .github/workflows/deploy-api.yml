@@ -1,0 +1,42 @@
+name: deploy api.getkimo.tech
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/kimo-client/src/account.ts'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: b29c220cfa40ee9d5371b8999294b457
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run --project api
+      - run: pnpm --filter @kimo/api typecheck
+      # Free plan only: Workers + D1. OAuth client ids/secrets are Worker
+      # secrets set out of band and persist across deploys.
+      - name: apply D1 migrations
+        working-directory: apps/api
+        run: npx wrangler@4 d1 migrations apply kimo-api --remote
+      - name: deploy worker
+        working-directory: apps/api
+        run: npx wrangler@4 deploy
+      - name: smoke test
+        run: |
+          curl -fsS https://api.getkimo.tech/v1/auth/session | grep -q '"mock":false'

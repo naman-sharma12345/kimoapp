@@ -15,8 +15,17 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'api',
+          include: ['apps/api/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'components',
           include: ['apps/**/*.test.{ts,tsx}'],
+          exclude: ['apps/api/**', '**/node_modules/**'],
           environment: 'jsdom',
         },
       },

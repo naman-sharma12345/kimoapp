@@ -29,7 +29,7 @@ test('privacy, anonymous limit and mock httpOnly sign-in', async ({
   );
   await page.screenshot({ path: 'docs/screens/phase-10-auth.png' });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByRole('button', { name: 'continue with google' }).click();
+  await page.getByRole('button', { name: 'continue with github' }).click();
   await page.waitForURL('/');
   expect(
     (await context.cookies(api)).some(

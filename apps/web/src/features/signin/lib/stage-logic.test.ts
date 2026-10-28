@@ -88,14 +88,14 @@ test('getActiveCaptionWordCount progresses karaoke words from 0.4s to 4.6s', () 
 test('getErrorCopy returns exact lowercase messages', () => {
   assert.equal(
     getErrorCopy('popup_closed').message,
-    "google sign-in didn't finish. try again?",
+    "github sign-in didn't finish. try again?",
   );
   assert.equal(
     getErrorCopy('network').message,
-    "google sign-in didn't finish. try again?",
+    "github sign-in didn't finish. try again?",
   );
   assert.equal(
     getErrorCopy('not_allowed').message,
-    "this google account can't be used with kimo yet.",
+    "this github account can't be used with kimo yet.",
   );
 });

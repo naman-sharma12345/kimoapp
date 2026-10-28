@@ -9,6 +9,7 @@ import type {
   SignInReason,
   SignInState,
 } from '@/features/signin/types/sign-in';
+import { AUTH_PROVIDER } from '@/lib/auth-provider';
 
 const ERROR_KINDS: readonly SignInErrorKind[] = [
   'popup_closed',
@@ -43,7 +44,7 @@ export function SignInRoute() {
   );
   const [error, setError] = useState<SignInError | null>(urlError);
 
-  // Coming back from Google (or already signed in): confirm the session, then leave.
+  // Coming back from the provider (or already signed in): confirm the session, then leave.
   useEffect(() => {
     let cancelled = false;
     client
@@ -71,7 +72,7 @@ export function SignInRoute() {
     const back = new URL('/signin', window.location.origin);
     back.searchParams.set('state', 'returning');
     if (next !== '/projects') back.searchParams.set('next', next);
-    window.location.assign(client.googleSignInUrl(back.toString()));
+    window.location.assign(client.signInUrl(AUTH_PROVIDER, back.toString()));
     // The page navigates away; keep the redirecting state until it does.
     return new Promise<void>(() => undefined);
   }, [client, next]);

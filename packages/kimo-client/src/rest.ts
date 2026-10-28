@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import * as s from './schema.ts';
+import * as a from './account.ts';
 
 export class KimoApiError extends Error {
   readonly status: number;
@@ -47,8 +48,99 @@ export class KimoClient {
     if (response.status === 202) return schema.parse(undefined);
     return schema.parse(await response.json());
   }
+  /** JSON call with any method; 202/204 answers parse as undefined. */
+  private async send<T>(
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    path: string,
+    schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+    body?: unknown,
+  ): Promise<T> {
+    const response = await this.fetcher(`${this.baseUrl}${path}`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(30000),
+      method,
+      headers:
+        body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const result = s.errorResponseSchema.safeParse(
+        await response.json().catch(() => null),
+      );
+      throw new KimoApiError(
+        response.status,
+        result.success ? result.data.code : 'http_error',
+        result.success ? result.data.message : response.statusText,
+      );
+    }
+    if (response.status === 202 || response.status === 204)
+      return schema.parse(undefined);
+    return schema.parse(await response.json());
+  }
   auth() {
     return this.request('/v1/auth/session', s.authSchema);
+  }
+  /** Start URL for an OAuth sign-in with the given provider. */
+  signInUrl(provider: a.AuthProvider, returnTo: string) {
+    const url = new URL(`/v1/auth/${provider}`, this.baseUrl);
+    url.searchParams.set('returnTo', returnTo);
+    return url.toString();
+  }
+  signOut() {
+    return this.send('POST', '/v1/auth/signout', z.undefined());
+  }
+  me() {
+    return this.send('GET', '/v1/me', a.meSchema);
+  }
+  updatePreferences(patch: Partial<a.Preferences>) {
+    return this.send(
+      'PATCH',
+      '/v1/me/preferences',
+      a.preferencesResponseSchema,
+      patch,
+    );
+  }
+  exportAccount() {
+    return this.send('GET', '/v1/me/export', a.exportSchema);
+  }
+  deleteAccount() {
+    return this.send('DELETE', '/v1/me', z.undefined());
+  }
+  projects() {
+    return this.send('GET', '/v1/projects', a.projectListSchema);
+  }
+  createProject(body: a.ProjectCreate) {
+    return this.send(
+      'POST',
+      '/v1/projects',
+      a.projectResponseSchema,
+      a.projectCreateSchema.parse(body),
+    );
+  }
+  duplicateProject(id: string) {
+    return this.createProject({ duplicateOf: id });
+  }
+  updateProject(id: string, patch: a.ProjectPatch) {
+    return this.send(
+      'PATCH',
+      `/v1/projects/${encodeURIComponent(id)}`,
+      a.projectResponseSchema,
+      a.projectPatchSchema.parse(patch),
+    );
+  }
+  deleteProject(id: string) {
+    return this.send(
+      'DELETE',
+      `/v1/projects/${encodeURIComponent(id)}`,
+      z.undefined(),
+    );
+  }
+  restoreProject(id: string) {
+    return this.send(
+      'POST',
+      `/v1/projects/${encodeURIComponent(id)}/restore`,
+      a.projectResponseSchema,
+    );
   }
   googleSignInUrl(returnTo: string) {
     const url = new URL('/v1/auth/google', this.baseUrl);

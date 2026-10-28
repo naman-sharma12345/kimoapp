@@ -4,6 +4,7 @@ import type {
   StageFrameState,
   ViewerScene,
 } from '../types/sign-in';
+import { AUTH_PROVIDER_LABEL } from '../../../lib/auth-provider';
 
 export const LOOP_DURATION_SEC = 14.0;
 export const TIMELINE_TOTAL_SEC = 7.2;
@@ -265,12 +266,12 @@ export function getErrorCopy(kind: SignInErrorKind): {
 } {
   if (kind === 'not_allowed') {
     return {
-      message: "this google account can't be used with kimo yet.",
+      message: `this ${AUTH_PROVIDER_LABEL} account can't be used with kimo yet.`,
       canRetry: true,
     };
   }
   return {
-    message: "google sign-in didn't finish. try again?",
+    message: `${AUTH_PROVIDER_LABEL} sign-in didn't finish. try again?`,
     canRetry: true,
   };
 }

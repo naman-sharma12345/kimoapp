@@ -54,6 +54,7 @@ import type {
   ToastItem,
   ViewMode,
 } from '../types/projects';
+import { AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
 
 const SORT_LABELS: Record<SortOption, string> = {
   recent: 'recent',
@@ -723,7 +724,7 @@ export default function ProjectsPage({
                 onClick={onSignIn}
                 className="btn-base btn-primary h-40 t-15"
               >
-                continue with google
+                continue with {AUTH_PROVIDER_LABEL}
               </button>
               <a
                 href="/"

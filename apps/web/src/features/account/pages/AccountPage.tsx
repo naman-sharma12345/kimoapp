@@ -25,6 +25,7 @@ import { DeleteAccountDialog } from '../components/account-page/DeleteAccountDia
 import { AccountSkeleton } from '../components/account-page/AccountSkeleton';
 import { SignedOutView } from '../components/account-page/SignedOutView';
 import { ToastBanner } from '../components/account-page/ToastBanner';
+import { AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
 
 export default function AccountPage({
   user,
@@ -180,7 +181,7 @@ export default function AccountPage({
                 index={0}
                 isFirst
                 title="profile"
-                description="from your google account"
+                description={`from your ${AUTH_PROVIDER_LABEL} account`}
               >
                 <ProfileSection user={user} onSignOut={onSignOut} />
               </SectionRow>

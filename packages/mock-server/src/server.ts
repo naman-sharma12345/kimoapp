@@ -344,7 +344,10 @@ export function createMockServer(options: MockOptions = {}) {
       });
       return;
     }
-    if (path === '/v1/auth/google' && method === 'GET') {
+    if (
+      (path === '/v1/auth/google' || path === '/v1/auth/github') &&
+      method === 'GET'
+    ) {
       const target =
         new URL(request.url ?? '/', base).searchParams.get('returnTo') ??
         'http://localhost:3000/';
