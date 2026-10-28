@@ -506,6 +506,8 @@ export function createEditing(deps: EditingDeps) {
         };
       }
     };
+    // The browser waits up to 150 s; leave room for the save and events.
+    const deadline = Date.now() + 135_000;
     let first: Awaited<ReturnType<typeof requestAiEdit>> | null = null;
     let feedback: { previous: string; errors: string[] };
     try {
@@ -532,8 +534,20 @@ export function createEditing(deps: EditingDeps) {
       };
     }
     let second: Awaited<ReturnType<typeof requestAiEdit>> | null = null;
+    const left = deadline - Date.now();
+    if (left < 20_000) {
+      log(2, { skippedRetry: 'no time left' });
+      if (first) return first;
+      throw new AiEditError('ai_invalid_edit', 'The AI answer was not an edit');
+    }
     try {
-      second = await requestAiEdit(config, deps.fetcher, input, feedback);
+      second = await requestAiEdit(
+        config,
+        deps.fetcher,
+        input,
+        feedback,
+        Math.min(100_000, left),
+      );
     } catch (error) {
       if (!first || !(error instanceof AiEditError)) throw error;
     }

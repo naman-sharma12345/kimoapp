@@ -31,7 +31,7 @@ export const DEFAULT_META_BASE_URL = 'https://api.meta.ai/v1';
 export const DEFAULT_META_MODEL = 'muse-spark-1.3-contributor';
 const MAX_AI_OPS = 150;
 const MAX_REPLY_CHARS = 600;
-const AI_TIMEOUT_MS = 50_000;
+const AI_TIMEOUT_MS = 100_000;
 
 export class AiEditError extends Error {
   readonly code: 'ai_invalid_edit' | 'ai_upstream' | 'ai_key_rejected';
@@ -261,17 +261,29 @@ async function post(
   fetcher: typeof fetch,
   path: string,
   body: unknown,
+  timeoutMs = AI_TIMEOUT_MS,
 ): Promise<Response> {
   try {
     return await fetcher(`${config.baseUrl}${path}`, {
       method: 'POST',
       redirect: 'manual',
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { 'Content-Type': 'application/json', ...authHeaders(config) },
       body: JSON.stringify(body),
     });
-  } catch {
+  } catch (error) {
     // Never rethrow the fetch error: it could carry request details.
+    console.log(
+      JSON.stringify({
+        ai: 'upstream',
+        provider: config.provider,
+        model: config.model,
+        status:
+          error instanceof Error && error.name === 'TimeoutError'
+            ? 'timeout'
+            : 'network',
+      }),
+    );
     throw upstream();
   }
 }
@@ -369,6 +381,7 @@ export async function requestAiEdit(
   fetcher: typeof fetch,
   input: EditInput,
   feedback?: AiFeedback,
+  timeoutMs = AI_TIMEOUT_MS,
 ): Promise<AiAnswer> {
   let response: Response;
   if (config.wire === 'anthropic')
@@ -377,6 +390,7 @@ export async function requestAiEdit(
       fetcher,
       '/messages',
       anthropicBody(config, input, feedback),
+      timeoutMs,
     );
   else {
     response = await post(
@@ -384,6 +398,7 @@ export async function requestAiEdit(
       fetcher,
       '/chat/completions',
       chatBody(config, input, false, feedback),
+      timeoutMs,
     );
     // Some models refuse JSON mode or sampling options; try once plainly.
     if (response.status === 400)
