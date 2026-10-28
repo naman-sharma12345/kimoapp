@@ -23,7 +23,14 @@ import {
 } from '@kimo/client';
 import type { Env } from './env.ts';
 import { HttpError, json, readJson, safeDecode } from './http.ts';
-import { AiEditError, aiConfig, requestAiEdit, validateAiOps } from './ai.ts';
+import {
+  AiEditError,
+  aiConfig,
+  requestAiEdit,
+  validateAiOps,
+  type AiConfig,
+} from './ai.ts';
+import { userAiConfig } from './ai-providers.ts';
 import { LIMITS, checkProjectLimits } from './limits.ts';
 
 /**
@@ -468,12 +475,16 @@ export function createEditing(deps: EditingDeps) {
   /**
    * One AI edit: quota, model call, strict validation, atomic save, then the
    * realtime events. Throws HttpError for the caller to answer with.
+   * With the user's own key (`userAi`) the edit goes to their provider and
+   * does not count toward kimo's daily quota; the key lives only in this
+   * call's memory.
    */
   async function aiEdit(
     env: Env,
     userId: string,
     sessionId: string,
     prompt: string,
+    userAi: AiConfig | null = null,
   ) {
     const text = prompt.trim();
     if (!text) throw new HttpError(400, 'invalid_request', 'Write a note');
@@ -481,14 +492,14 @@ export function createEditing(deps: EditingDeps) {
       throw new HttpError(413, 'too_large', 'That note is too long');
     // Ownership first, so another account only ever sees a 404.
     let row = await loadSession(env, userId, sessionId);
-    const config = aiConfig(env);
+    const config = userAi ?? aiConfig(env);
     if (!config)
       throw new HttpError(
         503,
         'ai_unavailable',
         "AI editing isn't switched on yet",
       );
-    if (!(await bumpAiUsage(env, userId)))
+    if (config.source === 'kimo' && !(await bumpAiUsage(env, userId)))
       throw new HttpError(
         429,
         'ai_quota',
@@ -569,11 +580,17 @@ export function createEditing(deps: EditingDeps) {
       if (error instanceof AiEditError)
         throw error.code === 'ai_upstream'
           ? new HttpError(502, 'ai_upstream', 'The AI editor did not answer')
-          : new HttpError(
-              422,
-              'ai_invalid_edit',
-              'That note did not turn into a safe edit; nothing changed',
-            );
+          : error.code === 'ai_key_rejected'
+            ? new HttpError(
+                400,
+                'ai_key_rejected',
+                'The provider refused that key',
+              )
+            : new HttpError(
+                422,
+                'ai_invalid_edit',
+                'That note did not turn into a safe edit; nothing changed',
+              );
       throw error;
     }
   }
@@ -783,7 +800,13 @@ export function createEditing(deps: EditingDeps) {
 
     if (action === 'messages') {
       const body = messageSchema.parse(await readJson(request));
-      await aiEdit(env, userId, sessionId, body.text);
+      await aiEdit(
+        env,
+        userId,
+        sessionId,
+        body.text,
+        userAiConfig(request.headers),
+      );
       return new Response(null, { status: 202 });
     }
 

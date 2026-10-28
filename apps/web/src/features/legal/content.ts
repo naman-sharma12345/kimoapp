@@ -7,6 +7,7 @@ export const PRIVACY_CONTENT: LegalContent = {
     'we keep only what an account needs: your sign-in id, email, name and avatar, your projects and their edit timelines, your preferences and daily usage counts.',
     'your video never leaves your device. clips you add live only in the open browser tab while you edit, and are not uploaded, saved on our servers or kept on your device after you close or refresh the tab. exports are made in your browser and downloaded straight to you.',
     'only when you ask the ai to edit do we send meta your instruction and the timeline (clip names, lengths and positions), never the video itself.',
+    'if you bring your own ai key, it stays in that tab only: we forward it to the provider you picked for that one request and never store it.',
     'one essential cookie keeps you signed in. no ads, no trackers, no analytics cookies.',
     'export or delete everything from /account at any time. we never sell your data.',
   ],
@@ -50,6 +51,7 @@ export const PRIVACY_CONTENT: LegalContent = {
         'exports are recorded in your browser and downloaded straight to you. kimo does not receive, host or keep a copy of the finished video.',
         "ai editing is optional. only when you send an edit request, kimo sends meta platforms (through the meta model api) your written instruction and the project timeline: clip names, kinds, lengths, positions, trims, any on-screen text and marker labels. no video, audio, images or thumbnails are ever sent. meta processes this to suggest edits and, under its standard mode terms, does not use it to train its models; meta keeps request data under its own policies. kimo does not keep the ai's raw answer, only the timeline changes you see.",
         "ai suggestions are checked against kimo's edit format before anything changes, and anything invalid is rejected without touching your project.",
+        "you can bring your own ai key instead (openai, anthropic, google gemini, groq, openrouter, meta or another openai-compatible service). your key is kept only in the memory of the open tab, never in your device's storage or cookies, and a refresh clears it. it travels over https with each ai request to kimo's server, which forwards it to the provider you chose for that one request and then drops it: kimo never stores your key in its database, logs or error messages. with your own key, that request (your instruction and the timeline, never your video) goes to that provider, and the provider's own terms and privacy policy apply to it. your provider and model choice, but never the key, may be remembered in your browser.",
       ],
     },
     {
@@ -113,6 +115,7 @@ export const TERMS_CONTENT: LegalContent = {
     'kimo is free, within daily fair use limits, and provided as is.',
     'your video stays on your device: clips live only in the open tab and exports download straight to you.',
     'ai editing is optional and sends meta only your instruction and the timeline, never your video.',
+    "you can use your own ai key; it is forwarded to the provider you pick for each request only, never stored, and that provider's terms apply.",
     'the core kimo editing engine is open source on github.',
   ],
   sections: [
@@ -130,6 +133,7 @@ export const TERMS_CONTENT: LegalContent = {
       paragraphs: [
         'the hosted service keeps your account, projects, edit timelines and preferences. you edit, preview and export video in your own browser: clips stay in the open tab and are never uploaded or stored by kimo, so keep your original files and export before you close or refresh the tab. we will update these terms and the privacy page before kimo ever stores video.',
         "optional ai editing sends your written instruction and the project timeline (never your video) to meta's model api and applies the edits it suggests after checking them. ai suggestions can be wrong; review your cut before you export.",
+        "if you add your own ai key, kimo forwards it with your instruction and timeline to the provider you chose for that request only and never stores it. you are responsible for that key, its use and any charges from your provider, and the provider's own terms apply to those requests.",
       ],
     },
     {

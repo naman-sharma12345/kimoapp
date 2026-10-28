@@ -13,6 +13,17 @@ export class KimoApiError extends Error {
     this.code = code;
   }
 }
+/** Per-request headers carrying the user's own key; never stored. */
+export function aiHeaders(ai: s.AiCredentials): Record<string, string> {
+  return {
+    'X-AI-Key': ai.key.trim(),
+    'X-AI-Provider': ai.provider,
+    ...(ai.model?.trim() ? { 'X-AI-Model': ai.model.trim() } : {}),
+    ...(ai.provider === 'custom' && ai.baseUrl?.trim()
+      ? { 'X-AI-Base-URL': ai.baseUrl.trim() }
+      : {}),
+  };
+}
 export class KimoClient {
   readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
@@ -27,13 +38,17 @@ export class KimoClient {
     path: string,
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     body?: unknown,
+    extra?: Record<string, string>,
   ): Promise<T> {
+    const headers = {
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...extra,
+    };
     const response = await this.fetcher(`${this.baseUrl}${path}`, {
       credentials: 'include',
       signal: AbortSignal.timeout(30000),
       method: body === undefined ? 'GET' : 'POST',
-      headers:
-        body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers: Object.keys(headers).length ? headers : undefined,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!response.ok) {
@@ -209,6 +224,12 @@ export class KimoClient {
   aiStatus() {
     return this.send('GET', '/v1/ai/status', s.aiStatusSchema);
   }
+  /** The provider's real model list, fetched with the user's own key. */
+  aiModels(ai: s.AiCredentials) {
+    return this.request('/v1/ai/models', s.aiModelsSchema, undefined, {
+      ...aiHeaders({ ...ai, model: undefined }),
+    });
+  }
   /** Sends numbers measured from clips in this tab (never the media). */
   sendAnalysis(id: string, body: z.input<typeof s.analysisRequestSchema>) {
     return this.send(
@@ -234,11 +255,17 @@ export class KimoClient {
       {},
     );
   }
-  message(id: string, body: z.input<typeof s.messageRequestSchema>) {
+  /** An AI note; with `ai`, it runs on the user's own key and model. */
+  message(
+    id: string,
+    body: z.input<typeof s.messageRequestSchema>,
+    ai?: s.AiCredentials | null,
+  ) {
     return this.request(
       `/v1/sessions/${encodeURIComponent(id)}/messages`,
       z.undefined(),
       s.messageRequestSchema.parse(body),
+      ai ? aiHeaders(ai) : undefined,
     );
   }
   ops(id: string, body: z.input<typeof s.opsRequestSchema>) {

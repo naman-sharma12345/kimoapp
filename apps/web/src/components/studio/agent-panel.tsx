@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
   type RefObject,
 } from 'react';
 import type { Asset, ClientEvent, KimoProject } from '@kimo/client';
@@ -50,6 +51,7 @@ export function AgentPanel({
   onUpload,
   onPlay,
   notice,
+  aiSettings,
 }: {
   feed: AgentFeed;
   project: KimoProject;
@@ -78,6 +80,8 @@ export function AgentPanel({
   onPlay: () => void;
   /** A calm line above the composer, e.g. when AI editing is off. */
   notice?: string;
+  /** The bring-your-own-key control, shown in the panel header. */
+  aiSettings?: ReactNode;
 }) {
   const state = useSyncExternalStore(
     feed.subscribe,
@@ -268,6 +272,7 @@ export function AgentPanel({
             stop now
           </Button>
         ) : null}
+        {aiSettings}
         <Button
           size="sm"
           variant="ghost"

@@ -36,6 +36,12 @@ import {
 } from './editing.ts';
 import { aiConfig } from './ai.ts';
 import {
+  AI_HEADERS,
+  listModels,
+  redact,
+  userAiConfig,
+} from './ai-providers.ts';
+import {
   authorizeUrl,
   exchangeCode,
   pkceChallenge,
@@ -54,7 +60,7 @@ const BIN_DAYS = 30;
 const DAY_MS = 24 * 60 * 60_000;
 /** Free D1 counters: requests per client per 10-minute window. */
 const RATE_WINDOW_MS = 10 * 60_000;
-const RATE_LIMITS = { auth: 30, write: 300, ai: 20 } as const;
+const RATE_LIMITS = { auth: 30, write: 300, ai: 20, models: 30 } as const;
 
 export type SignInErrorKind =
   'cancelled' | 'expired' | 'not_allowed' | 'unavailable' | 'rate_limited';
@@ -893,6 +899,24 @@ export function createApp(options: AppOptions = {}) {
       }
     }
 
+    // The user's own provider key lists that provider's models. The key is
+    // read from the header, used for this one call and never kept.
+    if (path === '/v1/ai/models' && method === 'GET') {
+      if (request.headers.get('Origin') !== env.APP_ORIGIN)
+        throw new HttpError(403, 'forbidden_origin', 'Origin not allowed');
+      const config = userAiConfig(request.headers, { requireModel: false });
+      if (!config)
+        throw new HttpError(
+          400,
+          'ai_key_missing',
+          'Add your API key to list models',
+        );
+      const user = await requireUser(request, env);
+      if (await rateLimited(env, 'models', user.id))
+        throw new HttpError(429, 'rate_limited', 'Too many requests');
+      return json({ models: await listModels(config, fetcher) });
+    }
+
     if (path === '/v1/ai/status' && method === 'GET') {
       const config = aiConfig(env);
       return json(
@@ -965,7 +989,12 @@ export function createApp(options: AppOptions = {}) {
             'The request does not match the contract',
           );
         else {
-          console.error(error);
+          // Log without any user-supplied AI key, whatever the error holds.
+          const text =
+            error instanceof Error
+              ? `${error.name}: ${error.message}\n${error.stack ?? ''}`
+              : String(error);
+          console.error(redact(text, request.headers.get(AI_HEADERS.key)));
           response = errorResponse(500, 'internal', 'Something went wrong');
         }
       }

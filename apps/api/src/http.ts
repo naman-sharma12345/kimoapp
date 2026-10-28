@@ -55,7 +55,10 @@ export function withCors(request: Request, response: Response, env: Env) {
       'Access-Control-Allow-Methods',
       'GET, POST, PATCH, DELETE, OPTIONS',
     );
-    headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    headers.set(
+      'Access-Control-Allow-Headers',
+      'Content-Type, X-AI-Key, X-AI-Provider, X-AI-Model, X-AI-Base-URL',
+    );
     headers.set('Access-Control-Max-Age', '600');
   }
   headers.append('Vary', 'Origin');

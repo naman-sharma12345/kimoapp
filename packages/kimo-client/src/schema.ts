@@ -558,6 +558,39 @@ export const authSchema = z
 export const aiStatusSchema = z
   .object({ available: z.boolean(), model: z.string().optional() })
   .strict();
+/** Providers a user can bring their own key for. */
+export const aiProviderSchema = z.enum([
+  'openai',
+  'anthropic',
+  'gemini',
+  'groq',
+  'openrouter',
+  'meta',
+  'custom',
+]);
+export type AiProviderId = z.infer<typeof aiProviderSchema>;
+/**
+ * The user's own AI key and choice. Held only in memory for the open tab and
+ * sent per request in headers; never stored by the app or the API.
+ */
+export interface AiCredentials {
+  provider: AiProviderId;
+  key: string;
+  model?: string;
+  baseUrl?: string;
+}
+export const aiModelsSchema = z
+  .object({
+    models: z.array(
+      z
+        .object({
+          id: z.string().min(1).max(200),
+          name: z.string().max(120).optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
 export const exportRecordSchema = z
   .object({
     durationSec: positive.max(4 * 60 * 60),

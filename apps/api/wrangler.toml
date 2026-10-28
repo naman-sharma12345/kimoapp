@@ -32,3 +32,8 @@ new_sqlite_classes = ["SessionRoom"]
 # Secrets (set with `wrangler secret put`, never committed):
 # GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 # META_API_KEY (optional; AI editing answers 503 ai_unavailable without it)
+
+# Workers Logs stay off: requests may carry a user's own AI key in the
+# X-AI-Key header, and kimo never keeps it anywhere, logs included.
+[observability]
+enabled = false

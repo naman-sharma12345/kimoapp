@@ -9,9 +9,17 @@ import {
 import type { Env } from './env.ts';
 import { checkProjectLimits, withinSources } from './limits.ts';
 import { KNOWLEDGE_PACK } from './ai/knowledge.generated.ts';
+import {
+  authHeaders,
+  redact,
+  type AiProvider,
+  type AiWire,
+} from './ai-providers.ts';
 
 /**
- * AI editing through Meta's Model API (OpenAI-compatible chat completions).
+ * AI editing through Meta's Model API (OpenAI-compatible chat completions),
+ * or through the user's own provider key (OpenAI-compatible or Anthropic
+ * Messages) sent with the request and never stored.
  * Only edit instructions and timeline metadata (clip names, kinds, times)
  * are sent; media never leaves the user's browser tab. The model answers
  * with JSON edit ops, which are parsed with the shared zod contract and
@@ -25,7 +33,7 @@ const MAX_REPLY_CHARS = 600;
 const AI_TIMEOUT_MS = 25_000;
 
 export class AiEditError extends Error {
-  readonly code: 'ai_invalid_edit' | 'ai_upstream';
+  readonly code: 'ai_invalid_edit' | 'ai_upstream' | 'ai_key_rejected';
   constructor(code: AiEditError['code'], message: string) {
     super(message);
     this.code = code;
@@ -33,6 +41,10 @@ export class AiEditError extends Error {
 }
 
 export interface AiConfig {
+  /** kimo's own Meta key, or a key the user sent with this request. */
+  source: 'kimo' | 'user';
+  provider: AiProvider;
+  wire: AiWire;
   key: string;
   baseUrl: string;
   model: string;
@@ -49,6 +61,9 @@ export function aiConfig(env: Env): AiConfig | null {
     baseUrl = DEFAULT_META_BASE_URL;
   }
   return {
+    source: 'kimo',
+    provider: 'meta',
+    wire: 'openai',
     key,
     baseUrl: baseUrl.replace(/\/+$/, ''),
     model: (env.META_MODEL ?? '').trim() || DEFAULT_META_MODEL,
@@ -152,68 +167,173 @@ const RESPONSE_SCHEMA = {
   required: ['message', 'ops'],
 };
 
+type EditInput = {
+  project: KimoProject;
+  assets: Asset[];
+  analyses?: Map<string, AssetAnalysis>;
+  prompt: string;
+};
+
+function userMessage(input: EditInput) {
+  return JSON.stringify({
+    timeline: timelineContext(input.project, input.assets, input.analyses),
+    note: input.prompt,
+  });
+}
+
+/** The body for OpenAI-compatible chat completions, per provider quirks. */
+function chatBody(config: AiConfig, input: EditInput, minimal: boolean) {
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: userMessage(input) },
+  ];
+  if (minimal) return { model: config.model, messages };
+  const strict = {
+    type: 'json_schema',
+    json_schema: { name: 'kimo_edit', schema: RESPONSE_SCHEMA },
+  };
+  if (config.provider === 'openai')
+    // Newer OpenAI models take max_completion_tokens and only temperature 1.
+    return {
+      model: config.model,
+      max_completion_tokens: 8000,
+      messages,
+      response_format: strict,
+    };
+  return {
+    model: config.model,
+    temperature: 0.2,
+    max_tokens: config.provider === 'meta' ? 4000 : 8000,
+    messages,
+    response_format:
+      config.provider === 'meta' || config.provider === 'gemini'
+        ? strict
+        : { type: 'json_object' },
+  };
+}
+
+function anthropicBody(config: AiConfig, input: EditInput) {
+  return {
+    model: config.model,
+    max_tokens: 8000,
+    temperature: 0.2,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage(input) }],
+  };
+}
+
+const upstream = () =>
+  new AiEditError('ai_upstream', 'The AI editor did not answer');
+
+async function post(
+  config: AiConfig,
+  fetcher: typeof fetch,
+  path: string,
+  body: unknown,
+): Promise<Response> {
+  try {
+    return await fetcher(`${config.baseUrl}${path}`, {
+      method: 'POST',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+      headers: { 'Content-Type': 'application/json', ...authHeaders(config) },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Never rethrow the fetch error: it could carry request details.
+    throw upstream();
+  }
+}
+
+/** Text out of a chat or messages answer, whatever shape it came in. */
+function answerText(wire: AiConfig['wire'], body: unknown): unknown {
+  if (!body || typeof body !== 'object') return undefined;
+  const parts = (value: unknown) =>
+    Array.isArray(value)
+      ? value
+          .map((part: unknown) =>
+            part && typeof part === 'object' && 'text' in part
+              ? String((part as { text: unknown }).text)
+              : '',
+          )
+          .join('')
+      : value;
+  if (wire === 'anthropic')
+    return parts(
+      (
+        (body as { content?: unknown }).content as unknown[] | undefined
+      )?.filter(
+        (part) =>
+          !!part &&
+          typeof part === 'object' &&
+          (part as { type?: unknown }).type === 'text',
+      ),
+    );
+  return parts(
+    (body as { choices?: { message?: { content?: unknown } }[] }).choices?.[0]
+      ?.message?.content,
+  );
+}
+
+/** Parses the model's JSON, tolerating code fences and stray prose. */
+function parseAnswer(content: string): unknown {
+  const fenced = content.replace(/^\s*```(?:json)?|```\s*$/g, '');
+  try {
+    return JSON.parse(fenced);
+  } catch {
+    const first = fenced.indexOf('{');
+    const last = fenced.lastIndexOf('}');
+    if (first < 0 || last <= first) throw new Error('no json');
+    return JSON.parse(fenced.slice(first, last + 1));
+  }
+}
+
 export async function requestAiEdit(
   config: AiConfig,
   fetcher: typeof fetch,
-  input: {
-    project: KimoProject;
-    assets: Asset[];
-    analyses?: Map<string, AssetAnalysis>;
-    prompt: string;
-  },
+  input: EditInput,
 ): Promise<{ message: string; ops: unknown }> {
   let response: Response;
-  try {
-    response = await fetcher(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-      headers: {
-        Authorization: `Bearer ${config.key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: config.model,
-        temperature: 0.2,
-        max_tokens: 4000,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              timeline: timelineContext(
-                input.project,
-                input.assets,
-                input.analyses,
-              ),
-              note: input.prompt,
-            }),
-          },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: { name: 'kimo_edit', schema: RESPONSE_SCHEMA },
-        },
-      }),
-    });
-  } catch {
-    throw new AiEditError('ai_upstream', 'The AI editor did not answer');
+  if (config.wire === 'anthropic')
+    response = await post(
+      config,
+      fetcher,
+      '/messages',
+      anthropicBody(config, input),
+    );
+  else {
+    response = await post(
+      config,
+      fetcher,
+      '/chat/completions',
+      chatBody(config, input, false),
+    );
+    // Some models refuse JSON mode or sampling options; try once plainly.
+    if (response.status === 400 && config.source === 'user')
+      response = await post(
+        config,
+        fetcher,
+        '/chat/completions',
+        chatBody(config, input, true),
+      );
   }
-  if (!response.ok)
-    throw new AiEditError('ai_upstream', 'The AI editor did not answer');
+  if (
+    config.source === 'user' &&
+    (response.status === 401 || response.status === 403)
+  )
+    throw new AiEditError('ai_key_rejected', 'The provider refused that key');
+  if (!response.ok) throw upstream();
   let content: unknown;
   try {
-    const body = (await response.json()) as {
-      choices?: { message?: { content?: unknown } }[];
-    };
-    content = body.choices?.[0]?.message?.content;
+    content = answerText(config.wire, await response.json());
   } catch {
-    throw new AiEditError('ai_upstream', 'The AI editor did not answer');
+    throw upstream();
   }
   if (typeof content !== 'string' || content.length > 200_000)
     throw new AiEditError('ai_invalid_edit', 'The AI answer was not an edit');
   let parsed: unknown;
   try {
-    parsed = JSON.parse(content.replace(/^\s*```(?:json)?|```\s*$/g, ''));
+    parsed = parseAnswer(content);
   } catch {
     throw new AiEditError('ai_invalid_edit', 'The AI answer was not an edit');
   }
@@ -223,7 +343,7 @@ export async function requestAiEdit(
   return {
     message:
       typeof record.message === 'string'
-        ? clean(record.message, MAX_REPLY_CHARS).trim()
+        ? redact(clean(record.message, MAX_REPLY_CHARS), config.key).trim()
         : '',
     ops: record.ops,
   };

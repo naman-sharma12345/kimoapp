@@ -47,6 +47,7 @@ import {
   ProjectSync,
   resolveAsset,
   resolveAssets,
+  type AiCredentials,
   type ClientEvent,
   type Clip,
   type Op,
@@ -95,6 +96,7 @@ import {
 import { ViewerTextEditor } from './viewer-text-editor';
 import { LocalClipsNotice } from './local-clips-notice';
 import { NoteError } from './agent-panel';
+import { AiSettings, activeAi, aiErrorCopy, readAiChoice } from './ai-settings';
 import {
   hasLocalMedia,
   localFile,
@@ -120,7 +122,9 @@ function noteError(error: unknown) {
     rate_limited: 'that’s a lot of notes at once. give it a minute.',
     too_large: 'that note is too long. try a shorter one.',
   };
-  return copy[error.code] ? new NoteError(copy[error.code]) : error;
+  if (copy[error.code]) return new NoteError(copy[error.code]);
+  if (error.code.startsWith('ai_')) return new NoteError(aiErrorCopy(error));
+  return error;
 }
 import { isTypingTarget } from '@/lib/keyboard';
 
@@ -346,6 +350,20 @@ export function StudioShell({
   const [beatGrid, setBeatGrid] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [aiAvailable, setAiAvailable] = useState<boolean>();
+  // The user's own AI key: in-memory React state for this tab only. It is
+  // never written to storage or cookies, and a refresh clears it.
+  const [aiSettings, setAiSettings] = useState<AiCredentials>({
+    provider: 'openai',
+    key: '',
+    model: '',
+  });
+  const userAi = activeAi(aiSettings);
+  const userAiRef = useRef(userAi);
+  userAiRef.current = userAi;
+  const userAiReady = Boolean(userAi);
+  useEffect(() => {
+    setAiSettings((value) => ({ ...value, ...readAiChoice() }));
+  }, []);
   const [clipsInTab, setClipsInTab] = useState(hasLocalMedia);
   useEffect(() => {
     let alive = true;
@@ -410,7 +428,7 @@ export function StudioShell({
       if (
         !alive ||
         !prompt ||
-        aiAvailable !== true ||
+        (aiAvailable !== true && !userAiRef.current) ||
         promptsRun.has(sessionId) ||
         missingAssets(snap.assets).length
       )
@@ -418,7 +436,7 @@ export function StudioShell({
       promptsRun.add(sessionId);
       feed.system(`working on: ${prompt}`);
       await new KimoClient()
-        .message(sessionId, { text: prompt })
+        .message(sessionId, { text: prompt }, userAiRef.current)
         .catch((error: unknown) => {
           const friendly = noteError(error);
           feed.error(
@@ -431,7 +449,7 @@ export function StudioShell({
     return () => {
       alive = false;
     };
-  }, [assetKey, aiAvailable, sessionId, feed]);
+  }, [assetKey, aiAvailable, sessionId, feed, userAiReady]);
   const recordCut = useCallback(() => {
     const next = snapshotRef.current;
     if (!next) return;
@@ -975,7 +993,7 @@ export function StudioShell({
     (text: string) => {
       if (viewedRef.current) return;
       void new KimoClient()
-        .message(sessionId, { text })
+        .message(sessionId, { text }, userAiRef.current)
         .then(() => setSystemLines((lines) => [...lines, text]))
         .catch(() => setEditError('could not send message · try again'));
     },
@@ -1411,16 +1429,22 @@ export function StudioShell({
       onSend={async (text, attachments, interrupt) => {
         if (viewedRef.current)
           throw new Error('return to the current cut to edit');
-        if (interrupt) {
+        // The realtime socket never carries the user's key, so with their
+        // own key an interrupt goes over HTTPS like any other note.
+        if (interrupt && !userAiRef.current) {
           rememberPrompt(text);
           track('interrupt_sent');
           if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
         } else
           await new KimoClient()
-            .message(sessionId, {
-              text,
-              attachments: attachments.map((asset) => asset.id),
-            })
+            .message(
+              sessionId,
+              {
+                text,
+                attachments: attachments.map((asset) => asset.id),
+              },
+              userAiRef.current,
+            )
             .catch((error: unknown) => {
               throw noteError(error);
             });
@@ -1486,7 +1510,8 @@ export function StudioShell({
         seekPreview(0);
         void preview.current?.play();
       }}
-      notice={aiAvailable === false ? AI_OFF_NOTICE : undefined}
+      notice={aiAvailable === false && !userAi ? AI_OFF_NOTICE : undefined}
+      aiSettings={<AiSettings value={aiSettings} onChange={setAiSettings} />}
     />
   ) : null;
   const inspector = (
