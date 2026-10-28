@@ -1,0 +1,51 @@
+name: deploy app.getkimo.tech
+
+on:
+  push:
+    branches: [main, deploy-cloudflare]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: b29c220cfa40ee9d5371b8999294b457
+      NEXT_PUBLIC_KIMO_API: ${{ vars.KIMO_API_URL || 'https://api.getkimo.tech' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Cloudflare adapter is added at deploy time only, so the app code stays host-agnostic.
+      - name: add OpenNext Cloudflare adapter
+        working-directory: apps/web
+        run: |
+          pnpm add -D @opennextjs/cloudflare@latest wrangler@latest
+          cat > open-next.config.ts <<'CFG'
+          import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+          export default defineCloudflareConfig();
+          CFG
+          cat > wrangler.jsonc <<'CFG'
+          {
+            "name": "kimo-app",
+            "main": ".open-next/worker.js",
+            "compatibility_date": "2026-10-01",
+            "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+            "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+            "routes": [{ "pattern": "app.getkimo.tech", "custom_domain": true }]
+          }
+          CFG
+      - name: build
+        working-directory: apps/web
+        run: npx opennextjs-cloudflare build
+      - name: deploy
+        working-directory: apps/web
+        run: npx wrangler deploy
