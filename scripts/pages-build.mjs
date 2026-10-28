@@ -39,13 +39,19 @@ await writeFile(
   root + '/app/privacy/page.tsx',
   `export { default, metadata } from '../../../src/app/privacy/page';`,
 );
-for (const kind of ['studio', 'warmup', 'render', 'v']) {
+for (const kind of ['studio', 'warmup', 'render']) {
   await mkdir(`${root}/app/${kind}/shell`, { recursive: true });
   await writeFile(
     `${root}/app/${kind}/shell/page.tsx`,
     `import { PagesRoute } from '@/components/pages-route'; export const metadata = { robots: { index: false, follow: false } }; export default function Page() { return <PagesRoute kind="${kind}" />; }`,
   );
 }
+// Old share links: kimo no longer hosts videos, so /v/* is a static notice.
+await mkdir(`${root}/app/v/shell`, { recursive: true });
+await writeFile(
+  `${root}/app/v/shell/page.tsx`,
+  `export { default, metadata } from '../../../../src/app/v/[videoId]/page';`,
+);
 await cp('apps/web/public', root + '/public', { recursive: true });
 const result = spawnSync(
   process.execPath,
