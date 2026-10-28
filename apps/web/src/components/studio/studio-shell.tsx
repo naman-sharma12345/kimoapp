@@ -106,6 +106,7 @@ import {
 } from '@/lib/local-media';
 import { analyzeBytes } from '@/lib/media-analysis';
 import { videoPoster } from '@/lib/landing-files';
+import { PERCEIVE_NOTE, perceiveClips } from '@/lib/perceive';
 import {
   CLIPS_WAIT_NOTE,
   firstPromptGate,
@@ -487,6 +488,10 @@ export function StudioShell({
       if (!alive || !prompt || gate() !== 'run') return;
       promptsRun.add(sessionId);
       feed.system(`working on: ${prompt}`);
+      await perceiveClips(sessionId, snap.assets, userAiRef.current, () =>
+        feed.system(PERCEIVE_NOTE),
+      );
+      if (!alive) return;
       await new KimoClient()
         .message(sessionId, { text: prompt }, userAiRef.current)
         .catch((error: unknown) => {
@@ -1053,12 +1058,19 @@ export function StudioShell({
   const messageAgent = useCallback(
     (text: string) => {
       if (viewedRef.current) return;
-      void new KimoClient()
-        .message(sessionId, { text }, userAiRef.current)
+      void perceiveClips(
+        sessionId,
+        snapshotRef.current?.assets ?? [],
+        userAiRef.current,
+        () => feed.system(PERCEIVE_NOTE),
+      )
+        .then(() =>
+          new KimoClient().message(sessionId, { text }, userAiRef.current),
+        )
         .then(() => setSystemLines((lines) => [...lines, text]))
         .catch(() => setEditError('could not send message · try again'));
     },
-    [sessionId],
+    [sessionId, feed],
   );
   const uploadFiles = useCallback(
     async (files: File[]) => {

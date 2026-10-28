@@ -950,7 +950,7 @@ export function createApp(options: AppOptions = {}) {
     if (/^\/v1\/(sessions|uploads)(\/|$)/.test(path)) {
       const user = await requireUser(request, env);
       if (
-        /^\/v1\/sessions\/[^/]+\/messages$/.test(path) &&
+        /^\/v1\/sessions\/[^/]+\/(messages|perceive)$/.test(path) &&
         method === 'POST' &&
         (await rateLimited(env, 'ai', user.id))
       )

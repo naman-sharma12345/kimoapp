@@ -623,9 +623,62 @@ export const assetAnalysisSchema = z
       .optional(),
     beats: z.array(seconds).max(4000).optional(),
     bpm: z.number().min(30).max(300).optional(),
+    /** What was said, as timed phrases of 1 to 4 words (look-and-listen pass). */
+    words: z
+      .array(
+        z
+          .object({
+            t: seconds,
+            d: positive.max(30),
+            w: z.string().min(1).max(60),
+          })
+          .strict(),
+      )
+      .max(2000)
+      .optional(),
+    /** Short notes on what is on screen at a time (look-and-listen pass). */
+    scenes: z
+      .array(
+        z.object({ t: seconds, note: z.string().min(1).max(160) }).strict(),
+      )
+      .max(60)
+      .optional(),
+    /** One or two sentences on the clip and its strongest moment. */
+    summary: z.string().max(400).optional(),
   })
   .strict();
 export type AssetAnalysis = z.infer<typeof assetAnalysisSchema>;
+/**
+ * One look-and-listen pass: a few small frames and the clip's sound at
+ * 16 kHz, passed straight through to the AI model and never stored.
+ */
+export const perceiveRequestSchema = z
+  .object({
+    assetId: id,
+    durationSec: positive.max(600),
+    audio: z
+      .string()
+      .max(14_000_000)
+      .regex(/^[A-Za-z0-9+/=]+$/)
+      .optional(),
+    frames: z
+      .array(
+        z
+          .object({
+            t: seconds,
+            image: z
+              .string()
+              .max(400_000)
+              .regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/),
+          })
+          .strict(),
+      )
+      .max(16),
+  })
+  .strict();
+export const perceiveResponseSchema = z.object({
+  analysis: assetAnalysisSchema,
+});
 export const analysisRequestSchema = z
   .object({ analyses: z.array(assetAnalysisSchema).min(1).max(30) })
   .strict();

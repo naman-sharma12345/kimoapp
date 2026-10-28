@@ -240,6 +240,24 @@ export class KimoClient {
       s.analysisRequestSchema.parse(body),
     );
   }
+  /**
+   * One look-and-listen pass for a clip: small frames and its sound go
+   * through to the AI model (never stored); answers the clip's notes.
+   */
+  perceive(
+    id: string,
+    body: z.input<typeof s.perceiveRequestSchema>,
+    ai?: s.AiCredentials | null,
+  ) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(id)}/perceive`,
+      s.perceiveResponseSchema,
+      s.perceiveRequestSchema.parse(body),
+      ai ? aiHeaders(ai) : undefined,
+      // The model watches and listens to the whole clip first.
+      120_000,
+    );
+  }
   /** Counts a finished in-browser export toward today's usage. */
   recordExport(id: string, body: z.input<typeof s.exportRecordSchema>) {
     return this.send(

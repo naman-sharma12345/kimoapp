@@ -102,7 +102,10 @@ export function safeDecode(value: string): string | null {
   }
 }
 
-export async function readJson(request: Request): Promise<unknown> {
+export async function readJson(
+  request: Request,
+  maxChars = 64_000,
+): Promise<unknown> {
   const type = request.headers.get('Content-Type') ?? '';
   const text = await request.text();
   if (text && !/^application\/json(;|$)/i.test(type.trim()))
@@ -111,7 +114,7 @@ export async function readJson(request: Request): Promise<unknown> {
       'unsupported_media_type',
       'Send JSON with Content-Type: application/json',
     );
-  if (text.length > 64_000)
+  if (text.length > maxChars)
     throw new HttpError(413, 'too_large', 'Request body is too large');
   if (!text) return {};
   try {

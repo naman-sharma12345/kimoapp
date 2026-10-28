@@ -45,6 +45,8 @@ export interface Env {
   META_API_BASE_URL?: string;
   /** Model id, default muse-spark-1.3-contributor. */
   META_MODEL?: string;
+  /** Multimodal model for the look-and-listen pass, default muse-spark-1.2-contributor. */
+  META_PERCEIVE_MODEL?: string;
   /** Model for requests that carry frames or audio (default contributor). */
   META_MEDIA_MODEL?: string;
   /** Total USD cap for kimo's own key (default 10); BYOK is not counted. */

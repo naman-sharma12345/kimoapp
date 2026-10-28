@@ -2,11 +2,11 @@ import type { LegalContent, LegalContentMap } from './types/legal-page';
 
 export const PRIVACY_CONTENT: LegalContent = {
   title: 'privacy',
-  updated: 'last updated oct 28, 2026',
+  updated: 'last updated oct 29, 2026',
   shortVersion: [
     'we keep only what an account needs: your sign-in id, email, name and avatar, your projects and their edit timelines, your preferences and daily usage counts.',
-    'your video never leaves your device. clips you add live only in the open browser tab while you edit, and are not uploaded, saved on our servers or kept on your device after you close or refresh the tab. exports are made in your browser and downloaded straight to you.',
-    'only when you ask the ai to edit do we send meta your instruction and the timeline (clip names, lengths and positions), never the video itself. with the model kimo uses today, meta may train on those requests.',
+    "your clips stay on your device: they live only in the open browser tab while you edit, are never uploaded to kimo's storage or saved on our servers, and are gone when you close or refresh the tab. exports are made in your browser and downloaded straight to you.",
+    "only when you ask the ai to edit, kimo sends meta your instruction and the timeline, and for each clip once a few small still frames and the clip's sound so the ai can see and hear it (passed straight through, never stored by kimo). with the model kimo uses today, meta may train on those requests, including the frames and sound.",
     'if you bring your own ai key, it stays in that tab only: we forward it to the provider you picked for that one request and never store it.',
     'one essential cookie keeps you signed in. no ads, no trackers, no analytics cookies.',
     'export or delete everything from /account at any time. we never sell your data.',
@@ -47,11 +47,11 @@ export const PRIVACY_CONTENT: LegalContent = {
       id: 'files-and-ai',
       heading: 'your video and ai',
       paragraphs: [
-        "your video never leaves your device. when you add clips, the browser keeps them in the memory of that one open tab so you can preview and edit. they are not uploaded to kimo, not sent to any ai model, and not saved to your device's storage. when you close or refresh the tab they are gone, and reopening the project asks you to add the same files again.",
+        "your video file never leaves your device. when you add clips, the browser keeps them in the memory of that one open tab so you can preview and edit. they are not uploaded to kimo's storage and not saved to your device's storage; the only thing that leaves the tab is the small look-and-listen sample described below, and only when you use ai editing. when you close or refresh the tab they are gone, and reopening the project asks you to add the same files again.",
         'exports are recorded in your browser and downloaded straight to you. kimo does not receive, host or keep a copy of the finished video.',
-        "ai editing is optional. only when you send an edit request, kimo sends meta platforms (through the meta model api) your written instruction and the project timeline: clip names, kinds, lengths, positions, trims, any on-screen text and marker labels. no video, audio, images or thumbnails are ever sent. meta processes this to suggest edits. kimo currently uses meta's muse spark contributor model, and under meta's terms for that model meta may use these requests (your instruction, the timeline details above and the ai's answer) to train and improve its models; meta keeps request data under its own policies. never put anything private in an edit note or a clip name. if kimo moves to a model meta does not train on, this page will say so. kimo does not keep the ai's raw answer, only the timeline changes you see.",
+        "ai editing is optional. only when you send an edit request, kimo sends meta platforms (through the meta model api) your written instruction and the project timeline: clip names, kinds, lengths, positions, trims, any on-screen text and marker labels. the first time you ask the ai to edit a clip, kimo also sends a look-and-listen sample of it: up to 12 small still frames (about 512 pixels wide) and the clip's sound as low-quality mono audio (up to 5 minutes). these pass through kimo's server straight to meta and are never written to kimo's database, logs or any storage. meta returns a short text summary, scene notes and a timed transcript, which kimo keeps with your project (as text) so later edits can use them; delete the project or your account to remove them. meta processes all of this to suggest edits. kimo currently uses meta's muse spark contributor model, and under meta's terms for that model meta may use these requests (your instruction, the timeline details above, the frames and sound, and the ai's answer) to train and improve its models; meta keeps request data under its own policies. never put anything private in an edit note or a clip name, and don't use ai editing on footage you don't want meta to see or hear. if kimo moves to a model meta does not train on, this page will say so. kimo does not keep the ai's raw answer, only the timeline changes you see.",
         "ai suggestions are checked against kimo's edit format before anything changes, and anything invalid is rejected without touching your project.",
-        "you can bring your own ai key instead (openai, anthropic, google gemini, groq, openrouter, meta or another openai-compatible service). your key is kept only in the memory of the open tab, never in your device's storage or cookies, and a refresh clears it. it travels over https with each ai request to kimo's server, which forwards it to the provider you chose for that one request and then drops it: kimo never stores your key in its database, logs or error messages. with your own key, that request (your instruction and the timeline, never your video) goes to that provider, and the provider's own terms and privacy policy apply to it. your provider and model choice, but never the key, may be remembered in your browser.",
+        "you can bring your own ai key instead (openai, anthropic, google gemini, groq, openrouter, meta or another openai-compatible service). your key is kept only in the memory of the open tab, never in your device's storage or cookies, and a refresh clears it. it travels over https with each ai request to kimo's server, which forwards it to the provider you chose for that one request and then drops it: kimo never stores your key in its database, logs or error messages. with your own key, that request (your instruction and the timeline; with a meta key also the look-and-listen sample) goes to that provider, and the provider's own terms and privacy policy apply to it. your provider and model choice, but never the key, may be remembered in your browser.",
       ],
     },
     {
@@ -109,11 +109,11 @@ export const PRIVACY_CONTENT: LegalContent = {
 
 export const TERMS_CONTENT: LegalContent = {
   title: 'terms',
-  updated: 'last updated oct 28, 2026',
+  updated: 'last updated oct 29, 2026',
   shortVersion: [
     'you own what you make in kimo.',
     'kimo is free, within daily fair use limits, and provided as is.',
-    'your video stays on your device: clips live only in the open tab and exports download straight to you.',
+    'your video file stays on your device: clips live only in the open tab and exports download straight to you. ai editing sends meta a few small frames and the sound of each clip, which meta may train on.',
     'ai editing is optional and sends meta only your instruction and the timeline, never your video.',
     "you can use your own ai key; it is forwarded to the provider you pick for each request only, never stored, and that provider's terms apply.",
     'the core kimo editing engine is open source on github.',
@@ -132,7 +132,7 @@ export const TERMS_CONTENT: LegalContent = {
       heading: "what's live today",
       paragraphs: [
         'the hosted service keeps your account, projects, edit timelines and preferences. you edit, preview and export video in your own browser: clips stay in the open tab and are never uploaded or stored by kimo, so keep your original files and export before you close or refresh the tab. we will update these terms and the privacy page before kimo ever stores video.',
-        "optional ai editing sends your written instruction and the project timeline (never your video) to meta's model api and applies the edits it suggests after checking them. kimo currently uses meta's contributor model, whose terms let meta use those requests and answers to train its models, so keep private details out of notes and clip names. ai suggestions can be wrong; review your cut before you export.",
+        "optional ai editing sends your written instruction, the project timeline and, once per clip, a few small frames and the clip's sound (never the video file, never stored by kimo) to meta's model api and applies the edits it suggests after checking them. kimo currently uses meta's contributor model, whose terms let meta use those requests, frames, sound and answers to train its models, so keep private details out of notes and clip names and don't use ai editing on footage you can't share with meta. ai suggestions can be wrong; review your cut before you export.",
         "if you add your own ai key, kimo forwards it with your instruction and timeline to the provider you chose for that request only and never stores it. you are responsible for that key, its use and any charges from your provider, and the provider's own terms apply to those requests.",
       ],
     },

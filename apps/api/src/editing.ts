@@ -3,6 +3,7 @@ import {
   AI_PROMPT_MAX,
   DAILY_AI_EDIT_LIMIT,
   analysisRequestSchema,
+  perceiveRequestSchema,
   applyOps,
   assetAnalysisSchema,
   assetSchema,
@@ -27,6 +28,8 @@ import {
   AiEditError,
   aiConfig,
   requestAiEdit,
+  requestPerception,
+  DEFAULT_PERCEIVE_MODEL,
   validateAiOps,
   type AiConfig,
 } from './ai.ts';
@@ -907,6 +910,66 @@ export function createEditing(deps: EditingDeps) {
         ),
       );
       return new Response(null, { status: 204 });
+    }
+
+    if (action === 'perceive') {
+      const body = perceiveRequestSchema.parse(
+        await readJson(request, 16_000_000),
+      );
+      const row = await loadSession(env, userId, sessionId);
+      if (!parseIds(row.asset_ids).includes(body.assetId))
+        throw new HttpError(404, 'not_found', 'That file was not found');
+      // Frames and sound go straight to a multimodal model on kimo's Meta
+      // key (or the user's own Meta key) and are never written anywhere.
+      const userAi = userAiConfig(request.headers);
+      const base = userAi ?? aiConfig(env);
+      if (!base || base.provider !== 'meta' || base.wire !== 'openai')
+        throw new HttpError(
+          409,
+          'perceive_unavailable',
+          'Watching clips needs kimo’s AI or a Meta key',
+        );
+      const config = {
+        ...(base.source === 'kimo' ? meteredConfig(env, base) : base),
+        model:
+          base.source === 'kimo'
+            ? (env.META_PERCEIVE_MODEL ?? '').trim() || DEFAULT_PERCEIVE_MODEL
+            : base.model,
+      };
+      if (config.source === 'kimo') await assertBudget(env);
+      let notes: Awaited<ReturnType<typeof requestPerception>>;
+      try {
+        notes = await requestPerception(config, deps.fetcher, body);
+      } catch (error) {
+        if (error instanceof AiEditError && error.code === 'ai_key_rejected')
+          throw new HttpError(
+            400,
+            'ai_key_rejected',
+            'The provider refused that key',
+          );
+        throw new HttpError(502, 'ai_upstream', 'The AI editor did not answer');
+      }
+      const previous = (await analysesFor(env, userId, [body.assetId])).get(
+        body.assetId,
+      );
+      const analysis = assetAnalysisSchema.parse({
+        ...(previous ?? {}),
+        assetId: body.assetId,
+        ...notes,
+      });
+      await env.DB.prepare(
+        `INSERT INTO asset_analysis (asset_id, user_id, data, updated_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (asset_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+         WHERE asset_analysis.user_id = excluded.user_id`,
+      )
+        .bind(
+          body.assetId,
+          userId,
+          JSON.stringify(analysis),
+          now().toISOString(),
+        )
+        .run();
+      return json({ analysis });
     }
 
     if (action === 'messages') {
