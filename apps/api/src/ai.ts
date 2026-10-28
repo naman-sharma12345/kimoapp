@@ -1205,3 +1205,74 @@ export function describeOp(op: Op, project: KimoProject): string {
       return op.op.replace('.', ' ');
   }
 }
+
+/**
+ * Word-synced captions straight from the look-and-listen transcript, mapped
+ * through the cut (each video clip's start, in and speed), so captions are
+ * exact without spending model output on them. Skipped when the captions
+ * track already holds captions.
+ */
+export function autoCaptionOps(
+  project: KimoProject,
+  analyses: Map<string, AssetAnalysis>,
+  style = 'caption-pop',
+): Op[] {
+  const track = project.tracks.find(
+    (item) => item.kind === 'text' && /caption/i.test(item.name),
+  );
+  if (!track || track.locked) return [];
+  const clips = Object.values(project.clips);
+  if (clips.filter((clip) => clip.trackId === track.id).length >= 3) return [];
+  const lines: { start: number; end: number; w: string }[] = [];
+  for (const clip of clips) {
+    if (clip.kind !== 'video' || !clip.assetId) continue;
+    const words = analyses.get(clip.assetId)?.words;
+    if (!words?.length) continue;
+    const speed = clip.speed || 1;
+    const sourceEnd = clip.in + clip.duration * speed;
+    const end = clip.start + clip.duration;
+    for (const word of words) {
+      if (word.t < clip.in - 0.05 || word.t >= sourceEnd) continue;
+      const start = clip.start + Math.max(0, word.t - clip.in) / speed;
+      lines.push({
+        start,
+        end: Math.min(end, start + Math.max(0.3, word.d / speed)),
+        w: word.w,
+      });
+    }
+  }
+  lines.sort((a, b) => a.start - b.start);
+  const ops: Op[] = [];
+  for (const [index, line] of lines.entries()) {
+    const next = lines[index + 1];
+    let stop = line.end;
+    if (next) {
+      if (next.start - stop < 0.15 || stop > next.start) stop = next.start;
+    }
+    const duration = round(stop - line.start);
+    if (duration < 0.1) continue;
+    ops.push({
+      op: 'clip.add',
+      clip: {
+        id: `cap-${index}-${Math.random().toString(36).slice(2, 7)}`,
+        trackId: track.id,
+        kind: 'text',
+        start: round(line.start),
+        duration,
+        in: 0,
+        transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+        text: {
+          content: line.w,
+          style,
+          position: 'bottom',
+          animation: 'pop words',
+        },
+        effects: [],
+        keyframes: [],
+        speed: 1,
+      },
+    } as Op);
+    if (ops.length >= 120) break;
+  }
+  return ops;
+}

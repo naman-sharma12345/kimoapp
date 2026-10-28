@@ -52,3 +52,55 @@ describe('look-and-listen pass', () => {
     });
   });
 });
+
+describe('auto captions', () => {
+  it('maps transcript phrases through the cut onto the captions track', async () => {
+    const { autoCaptionOps } = await import('./ai.ts');
+    const project = {
+      tracks: [
+        { id: 'video', kind: 'video', name: 'video' },
+        { id: 'text', kind: 'text', name: 'captions' },
+      ],
+      clips: {
+        a: {
+          id: 'a',
+          trackId: 'video',
+          assetId: 'x',
+          kind: 'video',
+          start: 0,
+          duration: 2,
+          in: 3,
+          speed: 1,
+        },
+      },
+    } as never;
+    const analyses = new Map([
+      [
+        'x',
+        {
+          assetId: 'x',
+          words: [
+            { t: 1, d: 0.5, w: 'cut away' },
+            { t: 3.2, d: 0.5, w: 'hello there' },
+            { t: 3.8, d: 0.4, w: 'friends' },
+          ],
+        },
+      ],
+    ]);
+    const ops = autoCaptionOps(project, analyses as never) as unknown as {
+      clip: {
+        start: number;
+        duration: number;
+        trackId: string;
+        text: { content: string };
+      };
+    }[];
+    expect(ops.map((op) => op.clip.text.content)).toEqual([
+      'hello there',
+      'friends',
+    ]);
+    expect(ops[0]?.clip.start).toBe(0.2);
+    expect(ops[0]?.clip.duration).toBe(0.6);
+    expect(ops[0]?.clip.trackId).toBe('text');
+  });
+});

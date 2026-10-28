@@ -33,6 +33,7 @@ import {
   requestScript,
   requestReview,
   describeOp,
+  autoCaptionOps,
   DEFAULT_PERCEIVE_MODEL,
   validateAiOps,
   type AiConfig,
@@ -592,6 +593,7 @@ export function createEditing(deps: EditingDeps) {
     raw: unknown,
     actionId: string,
     strict = false,
+    stepMs = LIVE_STEP_MS,
   ) {
     let row = start;
     let project = parseProject(row.project_json);
@@ -660,7 +662,7 @@ export function createEditing(deps: EditingDeps) {
       project = next;
       applied.push(op);
       // A beat between steps so each change is visible as it lands.
-      await new Promise((resolve) => setTimeout(resolve, LIVE_STEP_MS));
+      await new Promise((resolve) => setTimeout(resolve, stepMs));
     }
     return {
       row,
@@ -761,7 +763,7 @@ export function createEditing(deps: EditingDeps) {
       const answer = await bestAiAnswer(config, {
         ...input,
         prompt: script
-          ? `${text}\n\nyour edit script, build exactly this:\n${script}`
+          ? `${text}\n\nyour edit script, build exactly this:\n${script}\n\ndo not add caption clips for speech: right after your build kimo adds word-synced captions from words[] on the captions track. titles, kinetic text and everything else are yours. keep the ops list tight.`
           : text,
       });
       const built = await applyLive(
@@ -773,6 +775,28 @@ export function createEditing(deps: EditingDeps) {
         actionId,
         true,
       );
+      // Captions from the transcript, mapped through the cut, also live.
+      if (built.applied) {
+        const captions = autoCaptionOps(
+          parseProject(built.row.project_json),
+          input.analyses,
+        );
+        if (captions.length) {
+          const captioned = await applyLive(
+            env,
+            userId,
+            built.row,
+            assets,
+            captions,
+            `${actionId}-cap`,
+            false,
+            120,
+          );
+          built.row = captioned.row;
+          built.applied += captioned.applied;
+          built.ops.push(...captioned.ops);
+        }
+      }
       const base =
         answer.message ||
         (built.applied ? 'done. take a look.' : 'i left the timeline as is.');
