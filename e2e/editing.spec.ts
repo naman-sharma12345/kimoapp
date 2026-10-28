@@ -87,6 +87,11 @@ test('edits text, trims and locks a clip, then undoes only the user edit', async
   expect(result.ok()).toBe(true);
   await page.goto(`/studio/${sessionId}`);
   await expect(page.locator('[data-ready="true"]')).toBeVisible();
+  await page.getByRole('switch', { name: 'follow kimo', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'let kimo continue', exact: true })
+    .click();
+
   const title = page.getByRole('button', {
     name: /original title, text, starts/,
   });
@@ -159,4 +164,54 @@ test('edits text, trims and locks a clip, then undoes only the user edit', async
   );
   snapshot = (await response.json()) as typeof snapshot;
   expect(snapshot.project.clips[id]?.text?.content).toBe('my new title');
+  const footage = page.getByRole('button', {
+    name: /study-1.mp4, video, starts/,
+  });
+  await expect(footage).toBeVisible({ timeout: 30000 });
+  await footage.click();
+  await footage.focus();
+  await page.keyboard.press('l');
+  await expect
+    .poll(async () => {
+      const r = await request.get(
+        `http://127.0.0.1:8787/v1/sessions/${sessionId}`,
+      );
+      return ((await r.json()) as typeof snapshot).project.clips['clip-1']
+        ?.locked;
+    })
+    .toBe(true);
+  await expect
+    .poll(
+      async () => {
+        const r = await request.get(
+          `http://127.0.0.1:8787/v1/sessions/${sessionId}`,
+        );
+        return ((await r.json()) as typeof snapshot).project.clips['clip-2']
+          ?.duration;
+      },
+      { timeout: 45000 },
+    )
+    .toBe(7);
+  let live = await request.get(
+    `http://127.0.0.1:8787/v1/sessions/${sessionId}`,
+  );
+  let liveProject = (await live.json()) as typeof snapshot;
+  expect(liveProject.project.clips['clip-1']?.duration).toBe(8);
+  expect(liveProject.project.clips[id]?.text?.content).toBe('my new title');
+  await page.getByRole('button', { name: 'undo', exact: true }).click();
+  await expect
+    .poll(async () => {
+      const r = await request.get(
+        `http://127.0.0.1:8787/v1/sessions/${sessionId}`,
+      );
+      return ((await r.json()) as typeof snapshot).project.clips['clip-1']
+        ?.locked;
+    })
+    .toBe(false);
+  live = await request.get(`http://127.0.0.1:8787/v1/sessions/${sessionId}`);
+  liveProject = (await live.json()) as typeof snapshot;
+  expect(liveProject.project.clips['clip-2']?.duration).toBe(7);
+  await page.screenshot({
+    path: 'docs/screens/phase-07-live-agent-1440x900.png',
+  });
 });

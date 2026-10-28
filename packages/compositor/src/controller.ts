@@ -9,6 +9,7 @@ export interface PreviewMetrics {
   playing: boolean;
   approximate: boolean;
   latencyMs: number | null;
+  levelDb?: number;
   lowQuality: boolean;
 }
 export class CompositorController {
@@ -249,6 +250,7 @@ export class CompositorController {
         playing: this.playing,
         approximate: this.renderer.approximate,
         latencyMs: this.latency,
+        levelDb: this.audio.levelDb,
         lowQuality: this.lowQuality,
       });
     }

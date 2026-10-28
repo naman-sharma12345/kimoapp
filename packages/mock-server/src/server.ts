@@ -1,3 +1,4 @@
+import { filterAgentOps } from './locks.ts';
 import {
   createServer,
   type IncomingMessage,
@@ -74,17 +75,7 @@ export function createMockServer(options: MockOptions = {}) {
     ops: ScriptAction['ops'],
     actionId: string,
   ) => {
-    if (actionId !== 'user') {
-      ops = ops.filter((op) => {
-        const clipId =
-          'clipId' in op
-            ? op.clipId
-            : 'id' in op && op.op.startsWith('clip.')
-              ? op.id
-              : undefined;
-        return !clipId || !session.project.clips[clipId]?.locked;
-      });
-    }
+    if (actionId !== 'user') ops = filterAgentOps(session.project, ops);
     if (!ops.length) return;
     session.project = applyOps(session.project, ops);
     emit(session, {
@@ -339,6 +330,51 @@ export function createMockServer(options: MockOptions = {}) {
         sessionId: id,
         wsUrl: `${base.replace('http', 'ws')}/v1/sessions/${id}/ws`,
       });
+      return;
+    }
+    const attach = /^\/v1\/sessions\/([^/]+)\/assets\/add$/.exec(path);
+    if (attach && method === 'POST') {
+      const session = sessions.get(attach[1] ?? '');
+      if (!session) {
+        fail(response, 404, 'not_found', 'Unknown session');
+        return;
+      }
+      const input = z
+        .object({ assetIds: z.array(z.string().min(1)).min(1) })
+        .strict()
+        .parse(await body(request));
+      if (input.assetIds.some((id) => !uploads.get(id)?.ready)) {
+        fail(
+          response,
+          400,
+          'upload_incomplete',
+          'Finish uploading before attaching',
+        );
+        return;
+      }
+      const added = input.assetIds.map((id): Asset => {
+        const upload = uploads.get(id);
+        if (!upload) throw new Error('Unknown upload');
+        return {
+          id,
+          name: upload.name,
+          kind: upload.mime.startsWith('video/')
+            ? 'video'
+            : upload.mime.startsWith('image/')
+              ? 'image'
+              : upload.mime.startsWith('audio/')
+                ? 'audio'
+                : 'doc',
+          url: `${base}/assets/${id}`,
+          source: 'user',
+        };
+      });
+      for (const asset of added) {
+        if (!session.assets.some((item) => item.id === asset.id))
+          session.assets.push(asset);
+        emit(session, { t: 'asset.added', asset });
+      }
+      json(response, 200, { assets: added });
       return;
     }
     const detach = /^\/v1\/sessions\/([^/]+)\/assets\/remove$/.exec(path);
@@ -598,13 +634,13 @@ export function createMockServer(options: MockOptions = {}) {
             emit(session, {
               t: 'agent.status',
               state: 'thinking',
-              label: 'reading every frame…',
+              label: 'reading every frameâ€¦',
             });
           if (step === 'plan')
             emit(session, {
               t: 'agent.status',
               state: 'thinking',
-              label: 'looking for the best moments…',
+              label: 'looking for the best momentsâ€¦',
             });
         }
       }

@@ -1255,3 +1255,258 @@ html[data-warmup-unfold='native'] .studio-timeline-playhead {
   background: transparent;
   cursor: default;
 }
+.editor-captions {
+  max-height: 320px;
+  overflow: auto;
+}
+.editor-caption-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 24px;
+  align-items: start;
+  gap: var(--space-4);
+  padding-block: var(--space-6);
+}
+.editor-caption-row > button:first-child {
+  font: var(--t-11) var(--font-mono);
+  color: var(--cream-38);
+}
+.editor-caption-tools {
+  display: grid;
+  gap: var(--space-6);
+}
+.editor-suggestion {
+  color: var(--warning);
+  font-size: var(--t-11);
+}
+.editor-suggestion button {
+  color: var(--warning);
+}
+.editor-swatches {
+  display: flex;
+  gap: var(--space-6);
+  padding-block: var(--space-8);
+}
+.editor-swatches > button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-4);
+}
+.editor-grade-wheels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.editor-colour-wheel {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+.editor-grade-wheels .editor-field {
+  display: grid;
+  gap: 0;
+}
+.editor-grade-wheels input[type='number'] {
+  width: 100%;
+}
+.editor-level-meter {
+  width: 120px;
+  height: 24px;
+  accent-color: var(--cream-60);
+}
+.editor-mask-thumbnail,
+.editor-source-thumb {
+  width: 96px;
+  height: 54px;
+  background-color: var(--ink-2);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.editor-number-label {
+  cursor: ew-resize;
+}
+.editor-reset-dot {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  padding: 0;
+  border-radius: var(--r-pill);
+  background: var(--cream-60) !important;
+}
+.editor-field[data-ai] input {
+  color: var(--orange);
+  border-bottom-color: var(--orange);
+  transition: color var(--dur-2) var(--ease-out);
+}
+.editor-system-line,
+.editor-history-step {
+  font-size: var(--t-12);
+  color: var(--cream-38);
+  padding: var(--space-8);
+}
+.editor-history-step button {
+  background: var(--ink-2);
+  color: var(--cream-60);
+  border: 1px solid var(--line);
+  border-radius: var(--r-6);
+}
+.editor-marquee {
+  position: absolute;
+  border: 1px solid var(--cream-60);
+  background: var(--line);
+  pointer-events: none;
+  z-index: 5;
+}
+.editor-snap-line {
+  position: absolute;
+  top: 28px;
+  bottom: 0;
+  width: 1px;
+  background: var(--cream-60);
+  z-index: 5;
+  pointer-events: none;
+}
+.editor-marker {
+  position: absolute;
+  top: 16px;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  background: var(--cream-60);
+  transform: rotate(45deg);
+  z-index: 1;
+}
+.editor-minor-tick {
+  position: absolute;
+  top: 24px;
+  height: 4px;
+  width: 1px;
+  background: var(--cream-16);
+  pointer-events: none;
+}
+.editor-transition-chip {
+  position: absolute;
+  top: 20px;
+  left: -10px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--ink-3);
+  color: var(--cream-60);
+  z-index: 4;
+}
+.editor-playhead::before {
+  content: '';
+  position: absolute;
+  left: -2.75px;
+  top: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 7px solid var(--orange);
+}
+.editor-clip {
+  transition:
+    border-color var(--dur-5) var(--ease-out),
+    background-color var(--dur-5) var(--ease-out);
+}
+.editor-clip[data-ai] {
+  border: 1.5px solid var(--orange);
+  background: var(--orange-12);
+}
+.editor-clip[data-ai]::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--orange);
+  border-right-color: transparent;
+  border-radius: var(--r-pill);
+  animation: editor-spin var(--dur-spin) linear infinite;
+}
+@keyframes editor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .editor-clip[data-ai]::after {
+    animation: none;
+  }
+  .editor-clip {
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+}
+.editor-track-header > svg {
+  flex: none;
+  color: var(--cream-38);
+}
+.editor-track-header > div button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+.editor-clip span > svg {
+  display: inline;
+  margin-right: var(--space-4);
+}
+.editor-transition-chip {
+  display: grid;
+  place-items: center;
+}
+.studio-inspector {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.editor-inspector {
+  min-height: 0;
+}
+.editor-track-body {
+  overflow: clip;
+}
+.editor-track-canvas {
+  position: absolute;
+  top: 0;
+}
+.editor-clip > span {
+  visibility: hidden;
+}
+.editor-level-meter {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.editor-level-meter span {
+  flex: 1;
+  background: var(--ink-3);
+}
+.editor-level-meter span[data-active] {
+  background: currentColor;
+}
+.editor-mask-checkerboard {
+  width: 96px;
+  height: 54px;
+  background: repeating-conic-gradient(var(--ink-2) 0% 25%, var(--ink-3) 0% 50%)
+    0 / 16px 16px;
+}
+.editor-mask-thumbnail {
+  background-color: transparent;
+}
+.editor-reset-dot {
+  order: -1;
+}
+.editor-ruler-content,
+.editor-caption-row > button:first-child,
+.editor-system-line,
+.editor-history-step {
+  color: var(--cream-60);
+}

@@ -1,5 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { Toggle } from '@/components/ui/toggle';
+import { Textarea } from '@/components/ui/textarea';
+import { CaptionsEditor } from './captions-editor';
+import { InspectorDetails, ProjectInspector } from './inspector-details';
 import type { Asset, Clip, Op, KimoProject } from '@kimo/client';
 const styles = [
   'caption-clean',
@@ -11,13 +15,17 @@ const styles = [
   'label-mono',
   'quote',
 ];
-function NumberField({
+export function NumberField({
   label,
   value,
   onCommit,
   min,
   max,
   step = 1,
+  keyframe,
+  onKeyframe,
+  reset = 0,
+  ai = false,
 }: {
   label: string;
   value: number;
@@ -25,12 +33,67 @@ function NumberField({
   min?: number;
   max?: number;
   step?: number;
+  keyframe?: boolean;
+  onKeyframe?: () => void;
+  reset?: number;
+  ai?: boolean;
 }) {
   const [draft, setDraft] = useState(String(value));
+  const drag = useRef<{ x: number; value: number } | null>(null);
   useEffect(() => setDraft(String(Math.round(value * 100) / 100)), [value]);
   return (
-    <label className="editor-field">
-      <span>{label}</span>
+    <label className="editor-field" data-ai={ai || undefined}>
+      <button
+        type="button"
+        aria-label={`scrub ${label}`}
+        onPointerDown={(event) => {
+          drag.current = { x: event.clientX, value };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const start = drag.current;
+          if (start)
+            setDraft(
+              String(
+                Math.min(
+                  max ?? Infinity,
+                  Math.max(
+                    min ?? -Infinity,
+                    start.value + (event.clientX - start.x) * step,
+                  ),
+                ),
+              ),
+            );
+        }}
+        onPointerUp={() => {
+          if (drag.current) {
+            drag.current = null;
+            onCommit(Number(draft));
+          }
+        }}
+        className="editor-number-label"
+      >
+        {label}
+      </button>
+      {value !== reset ? (
+        <button
+          type="button"
+          className="editor-reset-dot"
+          aria-label={`reset ${label}`}
+          title="reset"
+          onClick={() => onCommit(reset)}
+        />
+      ) : null}
+      {onKeyframe ? (
+        <button
+          type="button"
+          aria-label={`keyframe ${label}`}
+          aria-pressed={keyframe}
+          onClick={onKeyframe}
+        >
+          {keyframe ? '◆' : '◇'}
+        </button>
+      ) : null}
       <input
         type="number"
         aria-label={label}
@@ -47,6 +110,10 @@ function NumberField({
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur();
+          if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            setDraft(String(Number(draft) + (e.key === 'ArrowUp' ? 10 : -10)));
+          }
         }}
       />
     </label>
@@ -59,33 +126,85 @@ export function EditingInspector({
   onEdit,
   onDraft,
   onInteraction,
+  playhead,
+  onSeek,
+  onMessage,
+  onUpload,
+  suggestion,
+  onSuggestion,
+  levelDb = -60,
+  ai = false,
 }: {
   clip?: Clip;
   project: KimoProject;
   assets: Asset[];
   onEdit: (ops: Op[]) => void;
   onDraft: (clip: Clip | null) => void;
-  onInteraction: (active: boolean) => void;
+  onInteraction: (active: boolean, ids?: string[]) => void;
+  playhead: number;
+  onSeek: (time: number) => void;
+  onMessage: (text: string) => void;
+  onUpload: () => void;
+  suggestion?: string;
+  onSuggestion: (use: boolean, mine?: string) => void;
+  levelDb?: number;
+  ai?: boolean;
 }) {
   const [text, setText] = useState(clip?.text?.content ?? '');
+  const localTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const lastSaved = useRef(clip?.text?.content ?? '');
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  useEffect(
+    () => () => {
+      clearTimeout(localTimer.current);
+      clearTimeout(saveTimer.current);
+    },
+    [],
+  );
   useEffect(() => {
     setText(clip?.text?.content ?? '');
+    lastSaved.current = clip?.text?.content ?? '';
   }, [clip?.id, clip?.text?.content]);
   if (!clip)
     return (
-      <div className="editor-inspector">
-        <h3>project</h3>
-        <p>
-          {project.width} × {project.height}
-        </p>
-        <p>duration · {project.duration.toFixed(1)}s</p>
-        <p>{project.fps} fps</p>
-      </div>
+      <ProjectInspector
+        project={project}
+        onEdit={onEdit}
+        onMessage={onMessage}
+      />
     );
   const update = (patch: Partial<Clip>) =>
     onEdit([{ op: 'clip.update', id: clip.id, patch }]);
   const transform = (patch: Partial<Clip['transform']>) =>
     update({ transform: { ...clip.transform, ...patch } });
+  const cropSide = (side: 'l' | 't' | 'r' | 'b', value: number) => {
+    const old = { l: 0, t: 0, r: 0, b: 0, ...clip.transform.crop };
+    const next = { ...old, [side]: value / 100 };
+    if (clip.cropAspectLock) {
+      const ratio = (1 - old.l - old.r) / Math.max(0.01, 1 - old.t - old.b);
+      if (side === 'l' || side === 'r') {
+        const vertical = Math.max(0, 1 - (1 - next.l - next.r) / ratio);
+        next.t = Math.max(
+          0,
+          Math.min(vertical, old.t + (vertical - old.t - old.b) / 2),
+        );
+        next.b = vertical - next.t;
+      } else {
+        const horizontal = Math.max(0, 1 - (1 - next.t - next.b) * ratio);
+        next.l = Math.max(
+          0,
+          Math.min(horizontal, old.l + (horizontal - old.l - old.r) / 2),
+        );
+        next.r = horizontal - next.l;
+      }
+    }
+    transform({ crop: next });
+  };
   const effect = (type: string, params: Record<string, unknown>) => {
     const found = clip.effects.find((e) => e.type === type);
     update({
@@ -100,33 +219,210 @@ export function EditingInspector({
     });
   };
   return (
-    <div className="editor-inspector" key={clip.id}>
+    <div
+      className="editor-inspector"
+      key={clip.id}
+      onFocusCapture={() => onInteraction(true, [clip.id])}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          onInteraction(false);
+      }}
+    >
+      {suggestion ? (
+        <div className="editor-suggestion">
+          <button onClick={() => setShowSuggestion(!showSuggestion)}>
+            kimo wants to change this too · see suggestion
+          </button>
+          {showSuggestion ? (
+            <div>
+              <p>{suggestion}</p>
+              <button
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => onSuggestion(true, text)}
+              >
+                use it
+              </button>
+              <button
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => onSuggestion(false, text)}
+              >
+                keep mine
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <details open>
         <summary>transform</summary>
         <div className="editor-fields">
           <NumberField
             label="position x"
+            ai={ai}
+            reset={0}
+            keyframe={clip.keyframes.some(
+              (key) =>
+                key.property === 'x' &&
+                Math.abs(key.time - (playhead - clip.start)) < 1 / project.fps,
+            )}
+            onKeyframe={() => {
+              const time = Math.max(0, playhead - clip.start);
+              const existing = clip.keyframes.find(
+                (key) =>
+                  key.property === 'x' &&
+                  Math.abs(key.time - time) < 1 / project.fps,
+              );
+              update({
+                keyframes: existing
+                  ? clip.keyframes.filter((key) => key !== existing)
+                  : [
+                      ...clip.keyframes,
+                      {
+                        id: crypto.randomUUID(),
+                        property: 'x',
+                        time,
+                        value: clip.transform.x,
+                        easing: 'linear',
+                      },
+                    ],
+              });
+            }}
             value={clip.transform.x}
             onCommit={(x) => transform({ x })}
           />
           <NumberField
             label="position y"
+            ai={ai}
+            reset={0}
+            keyframe={clip.keyframes.some(
+              (key) =>
+                key.property === 'y' &&
+                Math.abs(key.time - (playhead - clip.start)) < 1 / project.fps,
+            )}
+            onKeyframe={() => {
+              const time = Math.max(0, playhead - clip.start);
+              const existing = clip.keyframes.find(
+                (key) =>
+                  key.property === 'y' &&
+                  Math.abs(key.time - time) < 1 / project.fps,
+              );
+              update({
+                keyframes: existing
+                  ? clip.keyframes.filter((key) => key !== existing)
+                  : [
+                      ...clip.keyframes,
+                      {
+                        id: crypto.randomUUID(),
+                        property: 'y',
+                        time,
+                        value: clip.transform.y,
+                        easing: 'linear',
+                      },
+                    ],
+              });
+            }}
             value={clip.transform.y}
             onCommit={(y) => transform({ y })}
           />
           <NumberField
             label="scale %"
+            ai={ai}
+            reset={100}
+            keyframe={clip.keyframes.some(
+              (key) =>
+                key.property === 'scale' &&
+                Math.abs(key.time - (playhead - clip.start)) < 1 / project.fps,
+            )}
+            onKeyframe={() => {
+              const time = Math.max(0, playhead - clip.start);
+              const existing = clip.keyframes.find(
+                (key) =>
+                  key.property === 'scale' &&
+                  Math.abs(key.time - time) < 1 / project.fps,
+              );
+              update({
+                keyframes: existing
+                  ? clip.keyframes.filter((key) => key !== existing)
+                  : [
+                      ...clip.keyframes,
+                      {
+                        id: crypto.randomUUID(),
+                        property: 'scale',
+                        time,
+                        value: clip.transform.scale,
+                        easing: 'linear',
+                      },
+                    ],
+              });
+            }}
             value={clip.transform.scale * 100}
             min={1}
             onCommit={(scale) => transform({ scale: scale / 100 })}
           />
           <NumberField
             label="rotation °"
+            ai={ai}
+            reset={0}
+            keyframe={clip.keyframes.some(
+              (key) =>
+                key.property === 'rotation' &&
+                Math.abs(key.time - (playhead - clip.start)) < 1 / project.fps,
+            )}
+            onKeyframe={() => {
+              const time = Math.max(0, playhead - clip.start);
+              const existing = clip.keyframes.find(
+                (key) =>
+                  key.property === 'rotation' &&
+                  Math.abs(key.time - time) < 1 / project.fps,
+              );
+              update({
+                keyframes: existing
+                  ? clip.keyframes.filter((key) => key !== existing)
+                  : [
+                      ...clip.keyframes,
+                      {
+                        id: crypto.randomUUID(),
+                        property: 'rotation',
+                        time,
+                        value: clip.transform.rotation,
+                        easing: 'linear',
+                      },
+                    ],
+              });
+            }}
             value={clip.transform.rotation}
             onCommit={(rotation) => transform({ rotation })}
           />
           <NumberField
             label="opacity %"
+            ai={ai}
+            reset={100}
+            keyframe={clip.keyframes.some(
+              (key) =>
+                key.property === 'opacity' &&
+                Math.abs(key.time - (playhead - clip.start)) < 1 / project.fps,
+            )}
+            onKeyframe={() => {
+              const time = Math.max(0, playhead - clip.start);
+              const existing = clip.keyframes.find(
+                (key) =>
+                  key.property === 'opacity' &&
+                  Math.abs(key.time - time) < 1 / project.fps,
+              );
+              update({
+                keyframes: existing
+                  ? clip.keyframes.filter((key) => key !== existing)
+                  : [
+                      ...clip.keyframes,
+                      {
+                        id: crypto.randomUUID(),
+                        property: 'opacity',
+                        time,
+                        value: clip.transform.opacity,
+                        easing: 'linear',
+                      },
+                    ],
+              });
+            }}
             value={clip.transform.opacity * 100}
             min={0}
             max={100}
@@ -136,6 +432,14 @@ export function EditingInspector({
       </details>
       <details>
         <summary>crop</summary>
+        <div className="editor-field">
+          aspect lock
+          <Toggle
+            aria-label="crop aspect lock"
+            checked={clip.cropAspectLock ?? false}
+            onCheckedChange={(cropAspectLock) => update({ cropAspectLock })}
+          />
+        </div>
         <div className="editor-fields">
           {(['l', 't', 'r', 'b'] as const).map((side) => (
             <NumberField
@@ -144,18 +448,7 @@ export function EditingInspector({
               value={(clip.transform.crop?.[side] ?? 0) * 100}
               min={0}
               max={99}
-              onCommit={(value) =>
-                transform({
-                  crop: {
-                    l: 0,
-                    t: 0,
-                    r: 0,
-                    b: 0,
-                    ...clip.transform.crop,
-                    [side]: value / 100,
-                  },
-                })
-              }
+              onCommit={(value) => cropSide(side, value)}
             />
           ))}
         </div>
@@ -165,6 +458,14 @@ export function EditingInspector({
       </details>
       <details>
         <summary>speed</summary>
+        <div className="editor-field">
+          keep pitch
+          <Toggle
+            aria-label="keep pitch"
+            checked={clip.keepPitch ?? true}
+            onCheckedChange={(keepPitch) => update({ keepPitch })}
+          />
+        </div>
         <div className="editor-speed">
           {[0.5, 1, 1.5, 2].map((n) => (
             <button
@@ -188,24 +489,38 @@ export function EditingInspector({
       {clip.text ? (
         <details open>
           <summary>text</summary>
-          <label className="editor-text-label">
+          <label
+            className="editor-text-label"
+            htmlFor={`editor-text-${clip.id}`}
+          >
             content
-            <textarea
+            <Textarea
+              id={`editor-text-${clip.id}`}
               aria-label="text content"
               value={text}
-              onFocus={() => onInteraction(true)}
+              onFocus={() => onInteraction(true, [clip.id])}
               onChange={(e) => {
-                setText(e.target.value);
-                if (clip.text)
-                  onDraft({
-                    ...clip,
-                    text: { ...clip.text, content: e.target.value },
-                  });
+                const content = e.target.value;
+                setText(content);
+                clearTimeout(localTimer.current);
+                clearTimeout(saveTimer.current);
+                localTimer.current = setTimeout(() => {
+                  if (clip.text)
+                    onDraft({ ...clip, text: { ...clip.text, content } });
+                }, 150);
+                saveTimer.current = setTimeout(() => {
+                  if (content !== lastSaved.current) {
+                    onEdit([{ op: 'text.update', clipId: clip.id, content }]);
+                    lastSaved.current = content;
+                  }
+                }, 800);
               }}
               onBlur={() => {
+                clearTimeout(localTimer.current);
+                clearTimeout(saveTimer.current);
                 onDraft(null);
                 onInteraction(false);
-                if (text !== clip.text?.content)
+                if (text !== lastSaved.current)
                   onEdit([
                     { op: 'text.update', clipId: clip.id, content: text },
                   ]);
@@ -336,7 +651,7 @@ export function EditingInspector({
                 update({
                   [key]:
                     e.target.value === 'none'
-                      ? undefined
+                      ? null
                       : {
                           type: e.target.value,
                           duration: clip[key]?.duration ?? 0.4,
@@ -360,6 +675,31 @@ export function EditingInspector({
           </label>
         ))}
       </details>
+      {clip.text?.style.startsWith('caption') ? (
+        <CaptionsEditor
+          project={project}
+          trackId={clip.trackId}
+          onEdit={onEdit}
+          onSeek={onSeek}
+          onInteraction={onInteraction}
+        />
+      ) : null}
+      <InspectorDetails
+        clip={clip}
+        assets={assets}
+        onUpdate={update}
+        onMessage={onMessage}
+        onUpload={onUpload}
+        levelDb={levelDb}
+        onCompare={(enabled) => {
+          const effects = clip.effects.map((effect) =>
+            ['color_grade', 'colour_grade'].includes(effect.type)
+              ? { ...effect, params: { ...effect.params, compare: enabled } }
+              : effect,
+          );
+          onDraft(enabled ? { ...clip, effects } : null);
+        }}
+      />
       {assets.find((asset) => asset.id === clip.assetId)?.attribution ? (
         <details>
           <summary>source</summary>

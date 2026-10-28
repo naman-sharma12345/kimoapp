@@ -34,3 +34,25 @@ describe('user edit history', () => {
     expect(undone.clips.second).toBeUndefined();
   });
 });
+
+describe('optional settings through JSON transport', () => {
+  it('removes a newly introduced setting when undo is serialized', () => {
+    const edits = [
+      {
+        op: 'clip.update' as const,
+        id: 'clip',
+        patch: {
+          fadeIn: 2,
+          keepPitch: false,
+          transitionIn: { type: 'cross-dissolve', duration: 0.4 },
+        },
+      },
+    ];
+    const inverse = inverseOps(project, edits);
+    const encoded = JSON.parse(JSON.stringify(inverse)) as typeof inverse;
+    const undone = applyOps(applyOps(project, edits), encoded);
+    expect(undone.clips.clip?.fadeIn).toBeUndefined();
+    expect(undone.clips.clip?.keepPitch).toBeUndefined();
+    expect(undone.clips.clip?.transitionIn).toBeUndefined();
+  });
+});

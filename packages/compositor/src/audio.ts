@@ -8,6 +8,17 @@ type AudioClip = {
 export class AudioEngine {
   private context?: AudioContext;
   private master?: GainNode;
+  private analyser?: AnalyserNode;
+  private samples = new Float32Array(256);
+  get levelDb() {
+    if (!this.analyser) return -60;
+    this.analyser.getFloatTimeDomainData(this.samples);
+    const rms = Math.sqrt(
+      this.samples.reduce((sum, value) => sum + value * value, 0) /
+        this.samples.length,
+    );
+    return rms > 0 ? Math.max(-60, 20 * Math.log10(rms)) : -60;
+  }
   private buffers = new Map<string, AudioBuffer>();
   private loading = new Set<string>();
   private active = new Map<string, AudioClip>();
@@ -51,7 +62,9 @@ export class AudioEngine {
     if (!this.context) {
       this.context = new AudioContext();
       this.master = this.context.createGain();
-      this.master.connect(this.context.destination);
+      this.analyser = this.context.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.master.connect(this.analyser).connect(this.context.destination);
       this.setVolume(this.volume, this.muted);
       for (const id of this.videos.keys()) this.connectVideo(id);
     }
@@ -130,13 +143,26 @@ export class AudioEngine {
         this.active.delete(id);
       }
     if (!context || !this.master) return;
-    const gainFor = (clip: Clip) =>
-      (clip.volume ?? 1) *
-      (voice && /music/i.test(tracks.get(clip.trackId)?.name ?? '')
-        ? 10 ** (-12 / 20)
-        : 1);
+    const gainFor = (clip: Clip) => {
+      const elapsed = time - clip.start;
+      const fade = Math.min(
+        1,
+        clip.fadeIn ? elapsed / clip.fadeIn : 1,
+        clip.fadeOut ? (clip.duration - elapsed) / clip.fadeOut : 1,
+      );
+      return (
+        (clip.volume ?? 1) *
+        Math.max(0, fade) *
+        (voice &&
+        (clip.duckUnderVoice ??
+          /music/i.test(tracks.get(clip.trackId)?.name ?? ''))
+          ? 10 ** (-12 / 20)
+          : 1)
+      );
+    };
     for (const [id, item] of this.videos) {
       const clip = clips.find((entry) => entry.id === id);
+      item.element.preservesPitch = clip?.keepPitch ?? true;
       if (item.gain)
         item.gain.gain.setTargetAtTime(
           clip ? gainFor(clip) : 0,

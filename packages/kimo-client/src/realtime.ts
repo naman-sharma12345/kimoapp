@@ -44,6 +44,44 @@ export function connectRealtime(
 /** Serializes incoming batches, refetching snapshots on gaps. */
 export class ProjectSync {
   private queue: Promise<void> = Promise.resolve();
+  private locks = new Set<string>();
+  private deferred: Op[] = [];
+  onSuggestion?: (clipId: string, content: string) => void;
+  onRemoved?: (clipId: string) => void;
+  onAgentBatch?: (
+    project: SessionSnapshot['project'],
+    ops: Op[],
+    actionId?: string,
+  ) => void;
+  lock(ids: string[]) {
+    for (const id of ids) this.locks.add(id);
+  }
+  unlock(discardTextFor?: string) {
+    this.locks.clear();
+    const work = this.queue.then(() => {
+      const current = this.get();
+      const pending = this.deferred.splice(0).flatMap((op) => {
+        if (op.op === 'text.update' && op.clipId === discardTextFor) return [];
+        if (
+          op.op === 'clip.update' &&
+          op.id === discardTextFor &&
+          op.patch.text
+        ) {
+          const { text, ...patch } = op.patch;
+          void text;
+          return Object.keys(patch).length ? [{ ...op, patch }] : [];
+        }
+        return [op];
+      });
+      if (pending.length)
+        this.replace({
+          ...current,
+          project: applyOps(current.project, pending, current.project.version),
+        });
+    });
+    this.queue = work.catch(() => undefined);
+    return work;
+  }
   private readonly client: KimoClient;
   private readonly sessionId: string;
   private readonly get: () => SessionSnapshot;
@@ -59,6 +97,31 @@ export class ProjectSync {
     this.get = get;
     this.replace = replace;
   }
+  private protectFresh(
+    fresh: SessionSnapshot,
+    current: SessionSnapshot,
+  ): SessionSnapshot {
+    const clips = { ...fresh.project.clips };
+    for (const id of this.locks) {
+      const latest = clips[id];
+      const local = current.project.clips[id];
+      if (!latest) {
+        this.locks.delete(id);
+        this.deferred = this.deferred.filter(
+          (op) => ('clipId' in op ? op.clipId : 'id' in op ? op.id : '') !== id,
+        );
+        this.onRemoved?.(id);
+      } else if (local) {
+        const { id: clipId, ...patch } = latest;
+        this.deferred.push({ op: 'clip.update', id: clipId, patch });
+        clips[id] = local;
+      }
+    }
+    return {
+      ...fresh,
+      project: applyOps({ ...fresh.project, clips }, [], fresh.project.version),
+    };
+  }
   receive(
     event: Extract<ServerEvent, { t: 'project.ops' | 'hello' }>,
   ): Promise<void> {
@@ -69,21 +132,55 @@ export class ProjectSync {
         event.t === 'hello' ||
         event.version !== current.project.version + 1
       ) {
-        this.replace(await this.client.session(this.sessionId));
+        this.replace(
+          this.protectFresh(await this.client.session(this.sessionId), current),
+        );
         return;
       }
+      if (event.actionId !== 'user')
+        this.onAgentBatch?.(current.project, event.ops, event.actionId);
+      const immediate = event.ops.filter((op) => {
+        const id =
+          'clipId' in op
+            ? op.clipId
+            : 'id' in op && op.op.startsWith('clip.')
+              ? op.id
+              : undefined;
+        if (!id || !this.locks.has(id) || event.actionId === 'user')
+          return true;
+        if (op.op === 'clip.remove') {
+          this.locks.delete(id);
+          this.deferred = this.deferred.filter(
+            (item) =>
+              ('clipId' in item ? item.clipId : 'id' in item ? item.id : '') !==
+              id,
+          );
+          this.onRemoved?.(id);
+          return true;
+        }
+        this.deferred.push(op);
+        if (op.op === 'text.update') this.onSuggestion?.(id, op.content);
+        if (op.op === 'clip.update' && op.patch.text)
+          this.onSuggestion?.(id, op.patch.text.content);
+        return false;
+      });
       this.replace({
         ...current,
-        project: applyOps(current.project, event.ops, event.version),
+        project: applyOps(current.project, immediate, event.version),
       });
     });
     this.queue = work.catch(() => undefined);
     return work;
   }
-  edit(ops: Op[]): Promise<void> {
+  edit(
+    ops: Op[],
+    onBefore?: (project: SessionSnapshot['project']) => void,
+  ): Promise<void> {
     const work = this.queue.then(async () => {
       const before = this.get();
-      this.replace({ ...before, project: applyOps(before.project, ops) });
+      const optimistic = applyOps(before.project, ops);
+      onBefore?.(before.project);
+      this.replace({ ...before, project: optimistic });
       try {
         await this.client.ops(this.sessionId, {
           ops,
@@ -94,6 +191,7 @@ export class ProjectSync {
           const fresh = await this.client.session(this.sessionId);
           this.replace(fresh);
           const optimistic = applyOps(fresh.project, ops);
+          onBefore?.(fresh.project);
           this.replace({ ...fresh, project: optimistic });
           try {
             await this.client.ops(this.sessionId, {

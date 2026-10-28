@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState, useEffect } from 'react';
 import type { Clip, Op, KimoProject } from '@kimo/client';
-import { textStyle } from '@kimo/compositor/text-styles';
+import { textStyle, contentColors } from '@kimo/compositor/text-styles';
 export function ViewerTextEditor({
   clip,
   project,
@@ -13,7 +13,7 @@ export function ViewerTextEditor({
   project: KimoProject;
   onEdit: (ops: Op[]) => void;
   onDraft: (clip: Clip | null) => void;
-  onInteraction: (active: boolean) => void;
+  onInteraction: (active: boolean, ids?: string[]) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [scale, setScale] = useState(1);
@@ -53,9 +53,14 @@ export function ViewerTextEditor({
         className="editor-viewer-text-position"
         style={{
           left: `${50 + (clip.transform.x / project.width) * 100}%`,
-          top: `${(spec.position === 'bottom' ? 88 : 50) + (clip.transform.y / project.height) * 100}%`,
+          top: `${((clip.text?.position ?? spec.position) === 'bottom' ? 88 : clip.text?.position === 'top' ? 12 : 50) + (clip.transform.y / project.height) * 100}%`,
           fontFamily: spec.family,
-          fontSize: spec.size * scale * clip.transform.scale,
+          color: clip.text?.color ?? contentColors[0],
+          fontWeight: spec.weight,
+          fontStyle: 'italic' in spec && spec.italic ? 'italic' : 'normal',
+          textAlign: clip.text?.align ?? 'center',
+          fontSize:
+            (clip.text?.size ?? spec.size) * scale * clip.transform.scale,
           transform: `translate(-50%, -50%) rotate(${clip.transform.rotation}deg)`,
         }}
       >
@@ -90,7 +95,7 @@ export function ViewerTextEditor({
             aria-label="edit selected text in viewer"
             onDoubleClick={() => {
               setEditing(true);
-              onInteraction(true);
+              onInteraction(true, [clip.id]);
               if (clip.text)
                 onDraft({ ...clip, text: { ...clip.text, content: '' } });
               requestAnimationFrame(() => field.current?.focus());

@@ -7,7 +7,12 @@ const unit = z.number().min(0).max(1);
 export const aspectSchema = z.enum(['16:9', '9:16', '1:1', 'auto']);
 export const textStyleIdSchema = id;
 export const effectSchema = z
-  .object({ id, type: id, params: z.record(z.unknown()) })
+  .object({
+    id,
+    type: id,
+    params: z.record(z.unknown()),
+    enabled: z.boolean().optional(),
+  })
   .strict();
 export const keyframeSchema = z
   .object({
@@ -74,6 +79,16 @@ export const clipSchema = z
       .object({
         content: z.string(),
         style: textStyleIdSchema,
+        size: positive.optional(),
+        align: z.enum(['left', 'center', 'right']).optional(),
+        color: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{6}$/)
+          .optional(),
+        animation: z
+          .enum(['none', 'fade', 'rise', 'type on', 'pop words'])
+          .optional(),
+        position: z.enum(['bottom', 'middle', 'top']).optional(),
         words: z
           .array(z.object({ t: seconds, d: positive, w: z.string() }).strict())
           .optional(),
@@ -88,13 +103,20 @@ export const clipSchema = z
         maskAssetId: id,
         invert: z.boolean(),
         feather: seconds,
+        scope: z.enum(['subject', 'background']).optional(),
+        label: z.string().optional(),
       })
       .strict()
       .optional(),
     speed: positive,
+    keepPitch: z.boolean().optional(),
+    cropAspectLock: z.boolean().optional(),
+    fadeIn: seconds.optional(),
+    fadeOut: seconds.optional(),
+    duckUnderVoice: z.boolean().optional(),
     volume: seconds.optional(),
-    transitionIn: transitionSchema.optional(),
-    transitionOut: transitionSchema.optional(),
+    transitionIn: transitionSchema.nullable().optional(),
+    transitionOut: transitionSchema.nullable().optional(),
     locked: z.boolean().optional(),
   })
   .strict();
@@ -117,6 +139,8 @@ export const projectSchema = z
     width: z.union([z.literal(1920), z.literal(1080)]),
     height: z.union([z.literal(1080), z.literal(1920)]),
     duration: seconds,
+    background: z.enum(['black', 'white', 'cream']).optional(),
+    notes: z.string().optional(),
     tracks: z.array(trackSchema),
     clips: z.record(clipSchema),
     markers: z.array(markerSchema),
@@ -141,6 +165,45 @@ export const projectSchema = z
     }
   });
 export const opSchema = z.discriminatedUnion('op', [
+  z.object({ op: z.literal('marker.remove'), id }).strict(),
+  z
+    .object({
+      op: z.literal('clip.unset'),
+      id,
+      fields: z
+        .array(
+          z.enum([
+            'keepPitch',
+            'cropAspectLock',
+            'fadeIn',
+            'fadeOut',
+            'duckUnderVoice',
+            'volume',
+            'transitionIn',
+            'transitionOut',
+            'locked',
+            'mask',
+            'text',
+            'assetId',
+          ]),
+        )
+        .min(1),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal('project.update'),
+      patch: z
+        .object({
+          width: z.union([z.literal(1920), z.literal(1080)]).optional(),
+          height: z.union([z.literal(1080), z.literal(1920)]).optional(),
+          background: z.enum(['black', 'white', 'cream']).optional(),
+          notes: z.string().optional(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z.object({ op: z.literal('track.remove'), id }).strict(),
   z.object({ op: z.literal('clip.add'), clip: clipSchema }).strict(),
   z
     .object({

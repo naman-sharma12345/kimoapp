@@ -65,7 +65,7 @@ import { Ready } from '@/app/dev/tokens/ready';
 import { keyboardCommand, shortcuts, type StudioCommand } from '@/lib/keyboard';
 import { sessionSocketUrl, WarmupConnection } from '@/lib/warmup/connection';
 import { useSessionStore } from '@/stores/session';
-import { useUploads } from '@/lib/uploads/manager';
+import { useUploads, uploadManager } from '@/lib/uploads/manager';
 import { isUnfolding } from '@/lib/warmup/transition';
 import { assetTransitionName } from '@/components/warmup/warmup-reel';
 import { EditingTimeline } from './editing-timeline';
@@ -172,6 +172,7 @@ export function StudioShell({
   const online = useUploads((state) => state.online);
   const [current, setCurrent] = useState(snapshot);
   const [connection, setConnection] = useState(false);
+  const [aiClips, setAiClips] = useState<string[]>([]);
   const [agentState, setAgentState] = useState<AgentState>(
     snapshot?.agentState ??
       (snapshot?.status === 'awaiting_review' ? 'waiting_user' : 'thinking'),
@@ -249,6 +250,21 @@ export function StudioShell({
   const snapshotRef = useRef(snapshot);
   const syncRef = useRef<ProjectSync | null>(null);
   const editingRef = useRef(false);
+  const selectedRef = useRef(selection);
+  selectedRef.current = selection;
+  const [suggestion, setSuggestion] = useState<{
+    id: string;
+    content: string;
+    mine: string;
+  } | null>(null);
+  const [agentSteps, setAgentSteps] = useState<{ id: string; undo: Op[] }[]>(
+    [],
+  );
+  const [systemLines, setSystemLines] = useState<string[]>([]);
+  const removedClip = useRef<Clip | null>(null);
+  const filePicker = useRef<HTMLInputElement>(null);
+  const replaceClip = useRef<string | null>(null);
+  const [uploadError, setUploadError] = useState('');
   const pendingEvents = useRef<
     Extract<ServerEvent, { t: 'project.ops' | 'hello' }>[]
   >([]);
@@ -366,6 +382,25 @@ export function StudioShell({
       (next) => replace(next, true),
     );
     syncRef.current = sync;
+    sync.onSuggestion = (id, content) =>
+      setSuggestion({
+        id,
+        content,
+        mine: snapshotRef.current?.project.clips[id]?.text?.content ?? '',
+      });
+    sync.onRemoved = (id) => {
+      removedClip.current = snapshotRef.current?.project.clips[id] ?? null;
+      setEditError('kimo removed a clip you were editing · undo');
+    };
+    sync.onAgentBatch = (project, ops, id) => {
+      try {
+        const undo = inverseOps(project, ops);
+        if (undo.length && id)
+          setAgentSteps((steps) => [...steps, { id, undo }]);
+      } catch {
+        /* Invalidated agent groups cannot be safely reverted. */
+      }
+    };
     const event = (message: ServerEvent) => {
       if (message.t === 'asset.added' && snapshotRef.current) {
         const existing = snapshotRef.current;
@@ -378,11 +413,27 @@ export function StudioShell({
         });
       }
       if (message.t === 'hello' || message.t === 'project.ops') {
-        if (message.t === 'project.ops')
+        if (message.t === 'project.ops') {
           lastOpReceived.current = performance.now();
-        if (editingRef.current) pendingEvents.current.push(message);
-        else void sync.receive(message).catch(() => undefined);
-        if (message.t === 'project.ops' && followRef.current) {
+          if (message.actionId !== 'user')
+            setAiClips(
+              message.ops.flatMap((op) =>
+                'clipId' in op
+                  ? [op.clipId]
+                  : 'id' in op && op.op.startsWith('clip.')
+                    ? [op.id]
+                    : op.op === 'clip.add'
+                      ? [op.clip.id]
+                      : [],
+              ),
+            );
+        }
+        void sync.receive(message).catch(() => undefined);
+        if (
+          message.t === 'project.ops' &&
+          followRef.current &&
+          !editingRef.current
+        ) {
           const operation = message.ops.find(
             (op) =>
               op.op === 'clip.update' ||
@@ -444,6 +495,9 @@ export function StudioShell({
       if (message.t === 'sam.mask')
         setMaskPolygon(message.previewPolygon ?? null);
       if (message.t === 'agent.action.end') {
+        setTimeout(() => {
+          if (alive) setAiClips([]);
+        }, 600);
         if (overlayTimer.current) clearTimeout(overlayTimer.current);
         overlayTimer.current = setTimeout(() => {
           setRegion(null);
@@ -644,21 +698,27 @@ export function StudioShell({
     [],
   );
   const edit = useCallback((ops: Op[], record = true) => {
-    const before = snapshotRef.current?.project;
-    if (!before || !syncRef.current || !ops.length) return;
-    try {
-      const undo = inverseOps(before, ops);
-      if (record && undo.length) {
-        undoStack.current.push({ undo, redo: ops });
-        redoStack.current = [];
-        setHistoryCount(undoStack.current.length);
-      }
-      void syncRef.current
-        .edit(ops)
-        .catch(() => setEditError('could not save edit · try again'));
-    } catch {
-      setEditError('could not apply edit');
-    }
+    const sync = syncRef.current;
+    if (!sync || !ops.length) return;
+    let undo: Op[] = [];
+    void sync
+      .edit(ops, (project) => {
+        undo = inverseOps(project, ops);
+      })
+      .then(() => {
+        if (record && undo.length) {
+          undoStack.current.push({ undo, redo: ops });
+          redoStack.current = [];
+          setHistoryCount(undoStack.current.length);
+        }
+        setSystemLines((lines) => [
+          ...lines,
+          ops.some((op) => op.op === 'text.update')
+            ? 'you changed the title text'
+            : 'you changed the edit',
+        ]);
+      })
+      .catch(() => setEditError('could not save edit · try again'));
   }, []);
   const history = useCallback(
     (redo: boolean) => {
@@ -672,15 +732,96 @@ export function StudioShell({
     },
     [edit],
   );
-  const interaction = useCallback((active: boolean) => {
+  const interaction = useCallback((active: boolean, ids?: string[]) => {
     editingRef.current = active;
-    if (!active && syncRef.current) {
-      for (const event of pendingEvents.current.splice(0))
-        void syncRef.current
-          .receive(event)
-          .catch(() => setEditError('could not update the project'));
+    if (active)
+      syncRef.current?.lock(
+        ids ?? (selectedRef.current ? [selectedRef.current] : []),
+      );
+    else {
+      void syncRef.current?.unlock();
+      pendingEvents.current = [];
     }
   }, []);
+  const messageAgent = useCallback(
+    (text: string) => {
+      void new KimoClient()
+        .message(sessionId, { text })
+        .then(() => setSystemLines((lines) => [...lines, text]))
+        .catch(() => setEditError('could not send message · try again'));
+    },
+    [sessionId],
+  );
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      setUploadError('');
+      try {
+        const { localIds, rejected } = uploadManager.add(files);
+        if (rejected.length) setUploadError('some files could not be added');
+        if (!localIds.length) return;
+        const registered = await uploadManager.start(localIds);
+        await new Promise<void>((resolve, reject) => {
+          let unsubscribe = () => {};
+          const check = () => {
+            const items = uploadManager.store
+              .getState()
+              .items.filter((item) => localIds.includes(item.localId));
+            if (
+              items.some(
+                (item) => item.status === 'error' || item.status === 'canceled',
+              )
+            ) {
+              unsubscribe();
+              reject(new Error('upload failed · try again'));
+            } else if (
+              items.length === localIds.length &&
+              items.every((item) => item.status === 'done')
+            ) {
+              unsubscribe();
+              resolve();
+            }
+          };
+          unsubscribe = uploadManager.store.subscribe(check);
+          check();
+        });
+        const result = await new KimoClient().attachAssets(
+          sessionId,
+          Object.values(registered),
+        );
+        const old = snapshotRef.current;
+        if (old) {
+          const next = {
+            ...old,
+            assets: [
+              ...old.assets.filter(
+                (asset) => !result.assets.some((item) => item.id === asset.id),
+              ),
+              ...result.assets,
+            ],
+          };
+          snapshotRef.current = next;
+          setCurrent(next);
+        }
+        const replaceId = replaceClip.current;
+        replaceClip.current = null;
+        const asset = result.assets[0];
+        if (replaceId && asset && asset.kind !== 'doc')
+          edit([
+            {
+              op: 'clip.update',
+              id: replaceId,
+              patch: { assetId: asset.id, kind: asset.kind, in: 0 },
+            },
+          ]);
+        setAssetsOpen(true);
+      } catch (error) {
+        setUploadError(
+          error instanceof Error ? error.message : 'upload failed · try again',
+        );
+      }
+    },
+    [sessionId, edit],
+  );
   const draftClip = useCallback((clip: Clip | null) => {
     const snapshot = snapshotRef.current;
     if (!snapshot) return;
@@ -803,6 +944,32 @@ export function StudioShell({
       if (!isTypingTarget(event.target) && selection && project) {
         const clip = project.clips[selection];
         const mod = event.metaKey || event.ctrlKey;
+        if (clip && !clip.locked && (event.key === '[' || event.key === ']')) {
+          const at = playheadRef.current;
+          if (at > clip.start && at < clip.start + clip.duration) {
+            event.preventDefault();
+            edit([
+              {
+                op: 'clip.trim',
+                id: clip.id,
+                edge: event.key === '[' ? 'in' : 'out',
+                value: clip.in + (at - clip.start) * clip.speed,
+              },
+            ]);
+            return;
+          }
+        }
+        if (clip && !clip.locked && mod && event.key.toLowerCase() === 'd') {
+          event.preventDefault();
+          const copy = {
+            ...clip,
+            id: crypto.randomUUID(),
+            start: clip.start + clip.duration,
+          };
+          edit([{ op: 'clip.add', clip: copy }]);
+          setSelection(copy.id);
+          return;
+        }
         if (
           clip &&
           !clip.locked &&
@@ -812,7 +979,7 @@ export function StudioShell({
           const operations: Op[] = [{ op: 'clip.remove', id: clip.id }];
           if (
             !event.shiftKey &&
-            project.tracks.find((t) => t.id === clip.trackId)?.kind === 'video'
+            project.tracks.find((t) => t.kind === 'video')?.id === clip.trackId
           )
             for (const other of Object.values(project.clips))
               if (
@@ -944,11 +1111,31 @@ export function StudioShell({
           <TabsTrigger value="actions">actions</TabsTrigger>
         </TabsList>
         <TabsContent value="chat" data-studio-agent-content>
+          {systemLines.map((line, index) => (
+            <p className="editor-system-line" key={index}>
+              {line}
+            </p>
+          ))}
           {saved?.sessionId === sessionId && saved.prompt ? (
             <p className="studio-first-message">{saved.prompt}</p>
           ) : null}
         </TabsContent>
         <TabsContent value="actions" data-studio-agent-content>
+          {agentSteps.map((step, index) => (
+            <div key={`${step.id}-${index}`} className="editor-history-step">
+              <span>step {index + 1}</span>
+              <button
+                onClick={() => {
+                  edit(step.undo);
+                  setAgentSteps((steps) =>
+                    steps.filter((item) => item !== step),
+                  );
+                }}
+              >
+                revert this step
+              </button>
+            </div>
+          ))}
           <ol className="studio-action-list">
             {actions.map((action, index) => (
               <li key={`${index}-${action}`}>{action}</li>
@@ -1018,6 +1205,39 @@ export function StudioShell({
           onEdit={edit}
           onDraft={draftClip}
           onInteraction={interaction}
+          playhead={playhead}
+          levelDb={metrics?.levelDb ?? -60}
+          ai={
+            Boolean(selected && aiClips.includes(selected.id)) &&
+            !editingRef.current
+          }
+          onSeek={seekPreview}
+          onMessage={messageAgent}
+          onUpload={() => {
+            replaceClip.current = selected?.id ?? null;
+            filePicker.current?.click();
+          }}
+          suggestion={
+            suggestion && suggestion.id === selected?.id
+              ? suggestion.content
+              : undefined
+          }
+          onSuggestion={(use, mine) => {
+            const item = suggestion;
+            if (item) {
+              editingRef.current = false;
+              void syncRef.current?.unlock(item.id);
+            }
+            if (item)
+              edit([
+                {
+                  op: 'text.update',
+                  clipId: item.id,
+                  content: use ? item.content : (mine ?? item.mine),
+                },
+              ]);
+            setSuggestion(null);
+          }}
         />
       ) : null}
     </section>
@@ -1379,6 +1599,18 @@ export function StudioShell({
       </div>
       {timelineOpen ? (
         <>
+          <input
+            ref={filePicker}
+            type="file"
+            multiple
+            hidden
+            aria-label="upload more files"
+            onChange={(event) => {
+              void uploadFiles(Array.from(event.target.files ?? []));
+              event.target.value = '';
+            }}
+          />
+          {uploadError ? <p role="status">{uploadError}</p> : null}
           {assetsOpen ? (
             <div className="editor-assets">
               <div className="editor-asset-tabs">
@@ -1396,6 +1628,9 @@ export function StudioShell({
                 </button>
               </div>
               <div className="editor-assets-grid">
+                <button onClick={() => filePicker.current?.click()}>
+                  <span>+</span>upload more
+                </button>
                 {current.assets
                   .filter(
                     (asset) =>
@@ -1414,7 +1649,7 @@ export function StudioShell({
                       }}
                       title={asset.attribution?.site ?? asset.name}
                       onClick={() => {
-                        const track = project?.tracks.find(
+                        const existing = project?.tracks.find(
                           (item) =>
                             !item.locked &&
                             (asset.kind === 'audio'
@@ -1422,7 +1657,29 @@ export function StudioShell({
                               : item.kind === 'video' ||
                                 item.kind === 'overlay'),
                         );
-                        if (!track || asset.kind === 'doc') return;
+                        if (asset.kind === 'doc') return;
+                        const track = existing ?? {
+                          id: crypto.randomUUID(),
+                          kind:
+                            asset.kind === 'audio'
+                              ? ('audio' as const)
+                              : asset.kind === 'image'
+                                ? ('overlay' as const)
+                                : ('video' as const),
+                          name:
+                            asset.kind === 'audio'
+                              ? 'audio'
+                              : asset.kind === 'image'
+                                ? 'images'
+                                : 'video',
+                          height:
+                            asset.kind === 'video'
+                              ? (88 as const)
+                              : (64 as const),
+                          hidden: false,
+                          muted: false,
+                          locked: false,
+                        };
                         const clip: Clip = {
                           id: crypto.randomUUID(),
                           trackId: track.id,
@@ -1442,7 +1699,12 @@ export function StudioShell({
                           keyframes: [],
                           speed: 1,
                         };
-                        edit([{ op: 'clip.add', clip }]);
+                        edit([
+                          ...(existing
+                            ? []
+                            : [{ op: 'track.add' as const, track }]),
+                          { op: 'clip.add', clip },
+                        ]);
                         setSelection(clip.id);
                       }}
                     >
@@ -1466,6 +1728,7 @@ export function StudioShell({
           ) : null}
           {project && hasProject ? (
             <EditingTimeline
+              aiClips={aiClips}
               project={project}
               assets={current.assets}
               selected={selection}
@@ -1481,6 +1744,15 @@ export function StudioShell({
               onEdit={edit}
               onDraft={draftClip}
               onInteraction={interaction}
+              onAsk={(name) => {
+                setNote(`@${name} `);
+                composer.current?.focus();
+              }}
+              onReplace={(id) => {
+                replaceClip.current = id;
+                setSelection(id);
+                filePicker.current?.click();
+              }}
             />
           ) : (
             <div className="studio-tracks">
@@ -1503,7 +1775,16 @@ export function StudioShell({
             </div>
           )}
           {editError ? (
-            <button className="editor-error" onClick={() => setEditError('')}>
+            <button
+              className="editor-error"
+              onClick={() => {
+                if (removedClip.current) {
+                  edit([{ op: 'clip.add', clip: removedClip.current }]);
+                  removedClip.current = null;
+                }
+                setEditError('');
+              }}
+            >
               {editError}
             </button>
           ) : null}

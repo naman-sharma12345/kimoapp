@@ -99,6 +99,12 @@ GET session may include `actionCount`, `paused`, `agentState`, and `createdAt` (
 
 Keyframes additionally accept hold and bezier easing and optional two-number in/out control handles. These optional fields preserve existing project compatibility; the real engine must agree on their timing and coordinate conventions. Transition duration remains seconds under the existing schema. Mask RLE, effect scope, LUT representation and audio solo need agreed contracts before full preview parity.
 
-## Phase 07
+## Phase 07 — manual editing extensions
 
-Manual edits use the existing typed operations endpoint with version retry. The mock skips agent operations on locked clips. Editing caption text preserves existing word times when word counts agree and redistributes the existing timing span when they differ. Upload-more session attachment, project properties, richer text styling and scoped effects require additional agreed operations.
+All edits use POST `/v1/sessions/:id/ops` and its version/retry protocol. Added operations are `project.update` (dimensions, background and notes), `track.remove`, `marker.remove`, and `clip.unset` for restoring absent optional fields through JSON. Transitions accept null to remove them. The undo stack records the project immediately before each serialized user group. It never adds agent groups to user undo.
+
+Clips optionally carry cropAspectLock, keepPitch, fadeIn, fadeOut, duckUnderVoice; text optionally carries size, align, color, animation and position; effects optionally carry enabled; SAM masks optionally carry scope and label. Project background and notes are optional. The new fields and operations are implemented by the typed client and mock and require the same support in a production backend.
+
+POST `/v1/sessions/:id/assets/add` accepts `{assetIds: string[]}` only after upload completion, returns `{assets: Asset[]}`, and emits `asset.added`. Repeated attachment of the same ID is safe.
+
+`ProjectSync` queues operations only for the soft-locked clip, advances the authoritative version for unrelated operations, and applies deferred operations on release. Removal bypasses a soft lock and exposes recovery. The mock filters agent operations on explicitly locked clips and tracks. Caption text edits preserve timing for matching word counts and redistribute the existing segment interval otherwise.

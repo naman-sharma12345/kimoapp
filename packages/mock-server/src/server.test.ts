@@ -370,3 +370,37 @@ describe('mock backend end-to-end contract', () => {
     },
   );
 });
+
+describe('adding session assets after warmup', () => {
+  it('attaches a completed upload to a running session', async () => {
+    const { client } = await setup();
+    const session = await client.createSession({
+      prompt: 'edit',
+      assetIds: [],
+      aspect: 'auto',
+    });
+    const registered = await client.uploads({
+      files: [{ name: 'extra.txt', size: 4, mime: 'text/plain' }],
+    });
+    const upload = registered.uploads[0];
+    if (!upload || !('putUrl' in upload)) throw new Error('Missing upload');
+    await expect(
+      client.attachAssets(session.sessionId, [upload.assetId]),
+    ).rejects.toMatchObject({ status: 400 });
+    const response = await fetch(upload.putUrl, {
+      method: 'PUT',
+      headers: upload.headers,
+      body: 'note',
+    });
+    expect(response.ok).toBe(true);
+    const result = await client.attachAssets(session.sessionId, [
+      upload.assetId,
+    ]);
+    expect(result.assets[0]?.name).toBe('extra.txt');
+    expect(
+      (await client.session(session.sessionId)).assets.some(
+        (asset) => asset.id === upload.assetId,
+      ),
+    ).toBe(true);
+  });
+});

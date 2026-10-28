@@ -59,3 +59,11 @@ export function textStyle(id: string) {
   if (id === 'title') return textStyles['title-serif'];
   return textStyles[id as TextStyleId] ?? textStyles['caption-clean'];
 }
+
+export const contentColors = [
+  '#ffffff',
+  '#000000',
+  '#F5F1E7',
+  '#FF5A24',
+  '#FFD84D',
+] as const;

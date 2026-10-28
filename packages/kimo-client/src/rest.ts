@@ -74,6 +74,13 @@ export class KimoClient {
       s.uploadCompletionSchema.parse(body),
     );
   }
+  attachAssets(sessionId: string, assetIds: string[]) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(sessionId)}/assets/add`,
+      z.object({ assets: z.array(s.assetSchema) }).strict(),
+      { assetIds },
+    );
+  }
   detachAsset(sessionId: string, assetId: string) {
     return this.request(
       `/v1/sessions/${encodeURIComponent(sessionId)}/assets/remove`,

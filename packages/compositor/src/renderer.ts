@@ -14,11 +14,12 @@ import type { Asset, Clip, KimoProject } from '@kimo/client';
 import { MediaPool } from './media-pool.ts';
 import { buildScene, type SceneLayer } from './scene.ts';
 import { textStyle } from './text-styles.ts';
-import { detailFilter } from './effects.ts';
+import { detailFilter, gradeFilter } from './effects.ts';
 
 type Node = {
   root: Container;
   display: Sprite | Text | Graphics;
+  unfiltered: Sprite;
   crop: Graphics;
   background: Graphics;
   words: Container;
@@ -45,6 +46,7 @@ const number = (value: unknown, fallback: number) =>
 
 export class PixiRenderer {
   private app = new Application();
+  private backdrop = new Graphics();
   private stage = new Container({ isRenderGroup: true });
   private nodes = new Map<string, Node>();
   private ready = false;
@@ -74,7 +76,7 @@ export class PixiRenderer {
       this.app.destroy({ removeView: false }, { children: true });
       return;
     }
-    this.app.stage.addChild(this.stage);
+    this.app.stage.addChild(this.backdrop, this.stage);
     this.ready = true;
     this.invalidate();
   }
@@ -93,16 +95,19 @@ export class PixiRenderer {
         : layer.clip.kind === 'shape'
           ? new Graphics()
           : new Sprite(Texture.EMPTY);
+    const unfiltered = new Sprite(Texture.EMPTY);
+    unfiltered.visible = false;
     const crop = new Graphics();
     const background = new Graphics();
     const words = new Container();
     const maskSprite = new Sprite(Texture.EMPTY);
     maskSprite.visible = false;
-    root.addChild(background, display, words, crop, maskSprite);
+    root.addChild(unfiltered, background, display, words, crop, maskSprite);
     this.stage.addChild(root);
     const node = {
       root,
       display,
+      unfiltered,
       crop,
       background,
       words,
@@ -122,7 +127,9 @@ export class PixiRenderer {
     node.filters = [];
     node.signature = signature;
     node.approximate = false;
-    for (const effect of clip.effects) {
+    for (const effect of clip.effects.filter(
+      (effect) => effect.enabled !== false,
+    )) {
       if (effect.type === 'blur' || effect.type === 'gaussian_blur')
         node.filters.push(
           new BlurFilter({
@@ -159,20 +166,15 @@ export class PixiRenderer {
           'black-and-white',
         ].includes(effect.type)
       ) {
-        const filter = new ColorMatrixFilter();
-        if (effect.type.includes('black')) filter.blackAndWhite(false);
-        else {
-          filter.brightness(2 ** number(effect.params.exposure, 0), false);
-          filter.contrast(number(effect.params.contrast, 1) - 1, true);
-          filter.saturate(number(effect.params.saturation, 1) - 1, true);
-          if (
-            Object.keys(effect.params).some(
-              (key) => !['exposure', 'contrast', 'saturation'].includes(key),
-            )
-          )
+        if (effect.type.includes('black')) {
+          const filter = new ColorMatrixFilter();
+          filter.blackAndWhite(false);
+          node.filters.push(filter);
+        } else {
+          node.filters.push(gradeFilter(effect.params));
+          if (effect.params.lut && effect.params.lut !== 'none')
             node.approximate = true;
         }
-        node.filters.push(filter);
       } else if (
         ['zoom-punch', 'zoom_punch', 'zoom_punch_in'].includes(effect.type)
       ) {
@@ -193,6 +195,16 @@ export class PixiRenderer {
   ) {
     if (!this.ready) return false;
     this.resize(width, height);
+    this.backdrop
+      .clear()
+      .rect(0, 0, width, height)
+      .fill(
+        project.background === 'white'
+          ? 0xffffff
+          : project.background === 'cream'
+            ? 0xf5f1e7
+            : 0x000000,
+      );
     this.approximate = false;
     let frameReady = true;
     const scene = buildScene(
@@ -318,11 +330,11 @@ export class PixiRenderer {
             : (clip.text?.content ?? '');
         node.display.style = {
           fontFamily: spec.family,
-          fontSize: spec.size,
+          fontSize: clip.text?.size ?? spec.size,
           fontWeight: spec.weight,
           fontStyle: 'italic' in spec && spec.italic ? 'italic' : 'normal',
-          fill: 0xffffff,
-          align: 'center',
+          fill: clip.text?.color ?? 0xffffff,
+          align: clip.text?.align ?? 'center',
           wordWrap: true,
           wordWrapWidth: project.width * 0.9,
           stroke:
@@ -331,10 +343,26 @@ export class PixiRenderer {
               : undefined,
         };
         node.display.anchor.set(0.5);
+        const placement = clip.text?.position ?? spec.position;
         node.display.position.set(
           0,
-          spec.position === 'bottom' ? project.height * 0.38 : 0,
+          placement === 'bottom'
+            ? project.height * 0.38
+            : placement === 'top'
+              ? -project.height * 0.38
+              : 0,
         );
+        const progress = Math.min(1, layer.localTime / 0.3);
+        if (clip.text?.animation === 'fade') node.root.alpha *= progress;
+        if (clip.text?.animation === 'rise') {
+          node.root.alpha *= progress;
+          node.display.y += (1 - progress) * spec.size;
+        }
+        if (clip.text?.animation === 'type on')
+          node.display.text = node.display.text.slice(
+            0,
+            Math.ceil(layer.localTime * 24),
+          );
         node.background.clear();
         if ('box' in spec && spec.box)
           node.background
@@ -347,7 +375,9 @@ export class PixiRenderer {
             )
             .fill({ color: 0x000000, alpha: 0.7 });
         const highlighted =
-          clip.text?.style === 'caption-pop' && clip.text.words?.length;
+          (clip.text?.style === 'caption-pop' ||
+            clip.text?.animation === 'pop words') &&
+          clip.text.words?.length;
         node.display.visible = !highlighted;
         if (highlighted && clip.text?.words) {
           while (node.words.children.length > clip.text.words.length)
@@ -363,7 +393,7 @@ export class PixiRenderer {
             text.text = word.w.toUpperCase();
             text.style = {
               fontFamily: spec.family,
-              fontSize: spec.size,
+              fontSize: clip.text?.size ?? spec.size,
               fill:
                 layer.localTime >= word.t && layer.localTime < word.t + word.d
                   ? 0xffd84d
@@ -408,6 +438,20 @@ export class PixiRenderer {
           clip.speed * rate,
           scrubbing,
         ).texture;
+      node.unfiltered.visible = Boolean(
+        clip.mask?.scope && node.display instanceof Sprite,
+      );
+      if (node.unfiltered.visible && node.display instanceof Sprite) {
+        node.unfiltered.texture = node.display.texture;
+        node.unfiltered.anchor.set(0.5);
+        node.unfiltered.width = project.width;
+        node.unfiltered.height = project.height;
+        node.root.filters = [];
+        node.display.filters = node.filters;
+      } else {
+        node.display.filters = [];
+        node.root.filters = node.filters;
+      }
       if (clip.mask && maskTexture) {
         node.maskSprite.visible = true;
         node.maskSprite.texture = maskTexture;
@@ -424,7 +468,10 @@ export class PixiRenderer {
         }
         node.display.setMask({
           mask: node.maskSprite,
-          inverse: clip.mask.invert,
+          inverse:
+            clip.mask.scope === 'background'
+              ? !clip.mask.invert
+              : clip.mask.invert,
           channel: 'red',
         });
         if (crop) this.approximate = true;

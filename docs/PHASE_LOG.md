@@ -121,20 +121,20 @@ The existing logo and the requested Studio composer styling are preserved.
 
 The required lint, typecheck, 119 unit/integration tests and production build passed. Browser checks cover mock video playback, fullscreen, paused updates, a grayscale mask, overlays and twelve golden frames.
 
-## Phase 07 — Timeline and manual editing
+## Phase 07 — Timeline, inspector and manual editing
 
-The current implementation adds time-based canvas track bodies, repeated source thumbnails, computed/cached audio waveforms, virtualized clip controls, inspector editing, optimistic user operations, clip locks, user undo/redo, an assets drawer and viewer/timeline/inspector text entry. The phase is not yet fully accepted.
+Completed against the typed mock session on 28 October 2026. The supplied logo and requested composer focus/resize treatment are preserved.
 
 ### Acceptance checklist
 
-- [ ] Canvas tracks and waveform/thumbnail rendering are present. True temporal filmstrips and a measured 60 fps scroll/zoom run on 50 clips remain outstanding.
-- [ ] Move, trim, ripple trim, split, slip, delete, duplication, snapping, track controls and several keyboard commands are implemented. Marquee/multi-selection, complete context actions, cross-track gestures, roving clip focus, marker/transition drawing and AI clip animations remain incomplete.
-- [ ] Optimistic edits, user history and queued updates during editing are present, and the mock filters edits to locked clips. Per-clip suggestion resolution, agent-step reversion and full removal-conflict handling remain outstanding.
-- [ ] Text entry is implemented in the viewer, timeline and inspector. A dedicated captions editor, complete autosave timing and text suggestions remain outstanding.
-- [ ] Inspector controls cover transform, crop, speed, text content/style, basic colour, effects, mask invert/feather, volume, transitions and source attribution. The remaining specified controls and AI value tweening remain outstanding.
-- [ ] The drawer displays user and found assets, supports drag to a compatible track and keyboard insertion at the playhead. Session attachment for upload-more remains outstanding.
-- [ ] A real-session browser test verifies text persistence, a trim gesture, lock persistence and user undo. Continuous simultaneous-agent editing and all conflict scenarios have not been established.
+- [x] Canvas track rows paint clip bodies, labels, temporal filmstrips and cached/computed waveforms. Only hovered, selected and roving-focus clips need DOM controls. Three viewport widths are cached, with bucketed updates during native scrolling. Production benchmark on an RTX 4050 laptop: 179 measured intervals averaged **60.0 fps scrolling** and **60.0 fps continuous zooming**, worst interval **16.8 ms** for each. Trace recording was disabled. Development measurements were 41–56 fps and are not substituted for the production result. Evidence: [captions and 50-clip timeline](screens/phase-07-captions-1440x900.png).
+- [x] Selection, shift selection, marquee, same-kind track moves, snapping, duplicate, trim, ripple trim, split, slip, delete, speed, text creation, context actions and keyboard editing use project operations. Ruler scrubbing, markers, frame ticks, transition chips, track toggles, clip locks and AI clip feedback are present. Roving focus supports arrow navigation between clips. Evidence: [editor](screens/phase-07-editor-1440x900.png).
+- [x] Soft locks defer only the edited clip; other agent changes advance immediately. Removed clips bypass the soft lock and expose undo recovery. Text suggestions support use-it/keep-mine; user undo records the actual serialized group baseline and optional-field resets survive JSON. Agent action groups have explicit revert controls. Unit tests cover queued updates, removals, suggestion resolution and lock filtering.
+- [x] Viewer, timeline, inspector and captions editor all edit text. Inspector preview and save timers are 150/800 ms, with blur commit. Caption find/replace, styles and position work across a track; word timing is preserved or redistributed by the typed operation layer. Evidence: [captions](screens/phase-07-captions-1440x900.png).
+- [x] Inspector controls cover transform/keyframes/reset, crop/aspect lock, speed/pitch, text formatting/animations, grading/wheels/LUT presets/split comparison, effect order and enable state, SAM settings/re-segmentation, audio envelopes/ducking/live analyser level, transition frame durations, source attribution/replacement, and project aspect/background/notes. AI-written fields use orange feedback. Evidence: [inspector](screens/phase-07-inspector-1440x900.png).
+- [x] Assets drawer supports user/found tabs, drag to compatible tracks, keyboard insertion, automatic compatible-track creation, upload-more through the Phase 3 manager, and typed attachment with asset-added events. Evidence: [assets](screens/phase-07-assets-1440x900.png).
+- [x] The production browser flow renames a title and trims/locks clips while the real mock script runs, verifies that the agent skips a locked clip while trimming its neighbor, and verifies that undo restores the user lock without reverting the neighbor's agent edit. Evidence: [live agent](screens/phase-07-live-agent-1440x900.png).
 
-Visual evidence: [editor](screens/phase-07-editor-1440x900.png). Existing composer treatment and logo remain as requested.
+The required lint, typecheck, 128 unit/integration tests and production build pass. Two focused production browser flows cover editing and the captions/upload/formatting benchmark. Engine rendering fidelity limitations remain documented in [FIDELITY.md](../packages/compositor/FIDELITY.md); Phase 7 does not claim exact export-render parity.
 
-Verification: `pnpm lint`, `pnpm typecheck`, `pnpm test` (122 tests) and `pnpm build` passed. The focused Playwright editing test passed, covering viewer and inspector text edits, a trim gesture, persistence, clip lock and undo. The final typecheck ran after the build to avoid concurrent regeneration of Next.js type files.
+The final Axe scan reported zero violations in the tested inspector/timeline state. Raw production frame measurements are saved in [the benchmark record](benchmarks/phase-07-timeline.json); the workload contains 50 caption clips plus the uploaded still image.

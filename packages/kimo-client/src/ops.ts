@@ -1,5 +1,6 @@
 import {
   projectSchema,
+  clipSchema,
   type Clip,
   type KimoProject,
   type Op,
@@ -19,6 +20,28 @@ export function applyOps(
   };
   for (const op of ops) {
     switch (op.op) {
+      case 'project.update':
+        Object.assign(project, op.patch);
+        break;
+      case 'track.remove':
+        project.tracks = project.tracks.filter((track) => track.id !== op.id);
+        project.clips = Object.fromEntries(
+          Object.entries(project.clips).filter(
+            ([, clip]) => clip.trackId !== op.id,
+          ),
+        );
+        break;
+      case 'clip.unset': {
+        const item = clip(op.id);
+        project.clips[op.id] = clipSchema.parse(
+          Object.fromEntries(
+            Object.entries(item).filter(
+              ([key]) => !op.fields.some((field) => field === key),
+            ),
+          ),
+        );
+        break;
+      }
       case 'clip.add':
         if (project.clips[op.clip.id]) throw new Error('Duplicate clip ID');
         project.clips[op.clip.id] = structuredClone(op.clip);
@@ -113,6 +136,11 @@ export function applyOps(
         ];
         break;
       }
+      case 'marker.remove':
+        project.markers = project.markers.filter(
+          (marker) => marker.id !== op.id,
+        );
+        break;
       case 'marker.add':
         project.markers = [
           ...project.markers.filter((marker) => marker.id !== op.marker.id),

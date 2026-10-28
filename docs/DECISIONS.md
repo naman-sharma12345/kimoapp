@@ -75,4 +75,12 @@ The compositor uses the existing Pixi dependency and WebGL. Preview-only font fi
 
 ## Phase 07
 
-The Phase 7 extension retains the existing Studio layout and tokens. It uses native pointer capture for timeline gestures, sends one operation group on release and renders tentative changes directly in the preview. Track body rendering uses cached thumbnails and audio waveforms; true video filmstrip extraction is pending. Optional clip fields that lack a clear operation cannot yet be fully reset through the server contract.
+The editor retains the existing Studio layout and tokens. Canvas rows paint bodies, labels, temporal filmstrips and waveforms; DOM controls appear for hover, selection and keyboard focus. Rows cache three viewport widths and refresh by viewport-sized scroll buckets. This lets native scrolling move painted content without per-frame React work. Ruler and clip controls use the same visible-range window.
+
+Pointer gestures render a tentative project locally and send one batch on release. User history is built inside the serialized sync queue and restores absent fields with an explicit unset operation. Incoming changes to other clips remain live during editing. Recovery, suggestions and agent-step reversion use the same typed operations.
+
+The named content-colour swatches live with compositor text styles. SAM checkerboard squares use the specified ink-2/ink-3 pattern; this is the Phase 7 functional thumbnail pattern. Optional control values use existing typography, radius, spacing and focus tokens. The 72px colour controls use the browser colour picker with numeric RGB editing. Filmstrip extraction reuses the Phase 6 browser fallback; worker extraction and exact engine rendering parity remain Phase 6 fidelity work.
+
+Performance is measured on the production build with trace capture disabled. Development React checks and browser trace recording materially reduce throughput and are recorded separately, rather than treated as production frame-rate measurements.
+
+The Phase 7 accessibility audit found cream-38 ruler/system/caption labels below 4.5:1. They use cream-60 under the established small-text readability decision; non-text track icons retain cream-38.
