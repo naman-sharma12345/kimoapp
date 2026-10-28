@@ -113,6 +113,9 @@ export function LandingPage() {
                 <span className="landing-sr-only"> (opens in a new tab)</span>
               </a>
               <a href="https://getkimo.tech">getkimo.tech</a>
+              <a href="/privacy">privacy</a>
+              <a href="/terms">terms</a>
+              <a href="/privacy#cookies">cookies</a>
             </div>
           </div>
         </footer>

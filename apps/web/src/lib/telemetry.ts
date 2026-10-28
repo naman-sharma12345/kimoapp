@@ -36,7 +36,22 @@ const opTypes = new Set([
   'marker.add',
   'marker.remove',
 ]);
-/** Explicit event allowlist, no autocapture, cookies, page URLs or session replay. */
+/** localStorage key holding the visitor's analytics choice. */
+export const ANALYTICS_CONSENT_KEY = 'kimo.analytics-consent';
+
+/** Product analytics run only after an explicit opt-in ("granted"). */
+export function analyticsConsented(): boolean {
+  try {
+    return window.localStorage.getItem(ANALYTICS_CONSENT_KEY) === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Explicit event allowlist, no autocapture, cookies, page URLs or session
+ * replay. Off unless PostHog is configured AND the visitor opted in.
+ */
 export function track(
   event: EventName,
   values: Record<string, number | string> = {},
@@ -47,7 +62,8 @@ export function track(
     !key ||
     !host ||
     typeof window === 'undefined' ||
-    navigator.doNotTrack === '1'
+    navigator.doNotTrack === '1' ||
+    !analyticsConsented()
   )
     return;
   const properties: Record<string, number | string | boolean> = {

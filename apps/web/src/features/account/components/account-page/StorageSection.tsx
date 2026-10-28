@@ -16,7 +16,7 @@ export function StorageSection({ storage }: StorageSectionProps) {
   return (
     <div className="flex flex-col">
       <div className="divide-y divide-[var(--line)]">
-        {/* Row 1: Upload "uploaded files" "deleted after 24 hours" */}
+        {/* Row 1: Upload "uploaded files": uploads are not stored yet */}
         <div
           className="flex items-center justify-between gap-[var(--space-12)]"
           style={{ height: 'var(--h-40)' }}
@@ -33,7 +33,7 @@ export function StorageSection({ storage }: StorageSectionProps) {
             </span>
           </div>
           <span className="t-13 text-[var(--cream-60)] text-right shrink-0">
-            deleted after 24 hours
+            not stored yet
           </span>
         </div>
 
@@ -54,7 +54,7 @@ export function StorageSection({ storage }: StorageSectionProps) {
             </span>
           </div>
           <span className="t-13 text-[var(--cream-60)] text-right shrink-0">
-            kept for 30 days
+            not stored yet
           </span>
         </div>
 
@@ -96,12 +96,9 @@ export function StorageSection({ storage }: StorageSectionProps) {
       </div>
 
       <p className="t-12 text-[var(--cream-38)] mt-[var(--space-12)] mb-0">
-        files are stored in cloudflare r2 and processed by ai models. read the{' '}
-        <a
-          href="/privacy"
-          onClick={(e) => e.preventDefault()}
-          className="kimo-inline-link"
-        >
+        kimo doesn&apos;t store uploads or videos yet. your account, projects
+        and preferences live in cloudflare d1. read the{' '}
+        <a href="/privacy" className="kimo-inline-link">
           privacy page
         </a>
         .

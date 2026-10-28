@@ -43,7 +43,7 @@ export const ArticleSection: React.FC<ArticleSectionProps> = ({
           type="button"
           onClick={() => onCopyAnchor(section.id)}
           aria-label={`copy link to ${section.heading}`}
-          className="w-[var(--h-28)] h-[var(--h-28)] rounded-[var(--r-6)] inline-flex items-center justify-center text-[var(--cream-38)] hover:text-[var(--cream-100)] opacity-70 lg:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-[var(--dur-1)] cursor-pointer ml-[var(--space-8)] lg:ml-0 lg:absolute lg:-left-[var(--space-28)] shrink-0"
+          className="w-[var(--h-28)] h-[var(--h-28)] rounded-[var(--r-6)] inline-flex items-center justify-center text-[var(--cream-60)] hover:text-[var(--cream-100)] opacity-70 lg:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-[var(--dur-1)] cursor-pointer ml-[var(--space-8)] lg:ml-0 lg:absolute lg:-left-[var(--space-28)] shrink-0"
         >
           <LinkIcon size={14} strokeWidth={1.5} aria-hidden="true" />
         </button>

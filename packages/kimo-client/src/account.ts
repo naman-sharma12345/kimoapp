@@ -44,16 +44,35 @@ export const projectResponseSchema = z
   .object({ project: apiProjectSchema })
   .strict();
 
-export const projectTitleSchema = z.string().trim().min(1).max(120);
+/** Project ids are server-minted UUIDs; anything else is rejected early. */
+export const projectIdSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{1,64}$/, 'invalid project id');
+
+const NO_CONTROL = /^[^\p{Cc}\p{Cf}]*$/u;
+
+export const projectTitleSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(NO_CONTROL, 'title has control characters');
 
 export const projectCreateSchema = z.union([
-  z.object({ duplicateOf: z.string().min(1) }).strict(),
+  z.object({ duplicateOf: projectIdSchema }).strict(),
   z
     .object({
       title: projectTitleSchema,
-      prompt: z.string().max(4000).default(''),
+      prompt: z
+        .string()
+        .max(4000)
+        .refine((value) => !value.includes('\u0000'), 'prompt has NUL')
+        .default(''),
       aspect: projectAspectSchema.default('16:9'),
-      sessionId: z.string().min(1).max(200).optional(),
+      sessionId: z
+        .string()
+        .regex(/^[A-Za-z0-9._:-]{1,200}$/, 'invalid session id')
+        .optional(),
     })
     .strict(),
 ]);
@@ -126,12 +145,48 @@ export const preferencesResponseSchema = z
   .object({ preferences: preferencesSchema })
   .strict();
 
+/** Sign-in providers the API can use right now (GET /v1/auth/providers). */
+export const providersSchema = z
+  .object({ providers: z.array(authProviderSchema) })
+  .strict();
+
 export const exportSchema = z
   .object({
     exportedAt: z.string().min(1),
     user: meUserSchema,
+    /** Sign-in accounts linked to this kimo account. */
+    identities: z
+      .array(
+        z
+          .object({
+            provider: authProviderSchema,
+            email: z.string(),
+            linkedAt: z.string(),
+            lastUsedAt: z.string(),
+          })
+          .strict(),
+      )
+      .optional(),
+    /** Active sign-in sessions (the token itself is never stored or exported). */
+    sessions: z
+      .array(
+        z
+          .object({
+            provider: z.string(),
+            createdAt: z.string(),
+            expiresAt: z.string(),
+          })
+          .strict(),
+      )
+      .optional(),
     preferences: preferencesSchema,
     projects: z.array(apiProjectSchema),
+    /** Projects in the bin, permanently removed 30 days after deletion. */
+    deletedProjects: z
+      .array(
+        z.object({ project: apiProjectSchema, deletedAt: z.string() }).strict(),
+      )
+      .optional(),
     usage: z.array(
       z
         .object({

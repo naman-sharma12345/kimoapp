@@ -18,7 +18,8 @@ import type {
 } from '../../types/sign-in';
 import { GoogleMark } from './GoogleMark';
 import { GitHubMark } from './GitHubMark';
-import { AUTH_PROVIDER, AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
+import type { AuthProvider } from '@kimo/client';
+import { providerLabel } from '@/lib/auth-provider';
 import { KimoMark } from './KimoMark';
 
 export interface SignInDoorProps {
@@ -26,7 +27,11 @@ export interface SignInDoorProps {
   reason?: SignInReason;
   user?: SignInUser | null;
   error?: SignInError | null;
-  onGoogleClick: () => void;
+  /** Providers to offer, in order; the first is the one primary button. */
+  providers: readonly AuthProvider[];
+  /** The provider being opened while state is "redirecting". */
+  pendingProvider?: AuthProvider | null;
+  onProviderClick: (provider: AuthProvider) => void;
   onSkipClick: () => void;
   onUseDifferentAccountClick: () => void;
   onEntryComplete: () => void;
@@ -63,7 +68,9 @@ export function SignInDoor({
   reason = null,
   user = null,
   error = null,
-  onGoogleClick,
+  providers,
+  pendingProvider = null,
+  onProviderClick,
   onSkipClick,
   onUseDifferentAccountClick,
   onEntryComplete,
@@ -101,7 +108,16 @@ export function SignInDoor({
 
   const activeError: SignInError | null =
     state === 'error' ? (error ?? { kind: 'popup_closed' }) : null;
-  const errorInfo = activeError ? getErrorCopy(activeError.kind) : null;
+  const errorProvider: AuthProvider | undefined =
+    activeError?.provider ?? pendingProvider ?? providers[0];
+  const errorInfo = activeError
+    ? getErrorCopy(activeError.kind, errorProvider)
+    : null;
+  const retryProvider =
+    errorProvider && providers.includes(errorProvider)
+      ? errorProvider
+      : providers[0];
+  const openingLabel = `opening ${providerLabel(pendingProvider ?? providers[0] ?? 'github')}…`;
 
   const dimOtherOpacity = isRedirecting ? 0.6 : 1;
 
@@ -111,15 +127,14 @@ export function SignInDoor({
     delay: prefersReducedMotion ? 0 : 0.12 + index * 0.05,
   });
 
-  // Live polite announcement string
+  // Live polite announcement string. Errors are announced by their own
+  // role="alert" row, so they are not repeated here.
   const liveStatusText =
     state === 'redirecting'
-      ? `opening ${AUTH_PROVIDER_LABEL}`
+      ? openingLabel
       : state === 'returning'
         ? 'signing you in. one second'
-        : state === 'error' && errorInfo
-          ? errorInfo.message
-          : '';
+        : '';
 
   return (
     <div
@@ -419,53 +434,66 @@ export function SignInDoor({
                 : 'sign in to keep every project, pick up any edit, and make more than one video a day.'}
             </motion.p>
 
-            {/* 4. 32px gap, primary button "continue with google" */}
+            {/* 4. 32px gap, one button per sign-in provider; the first is primary */}
             <motion.div
               initial={
                 prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }
               }
               animate={{ opacity: 1, y: 0 }}
               transition={getStaggerTransition(3)}
-              className="w-full"
-              style={{ marginTop: 'var(--space-32)' }}
+              className="w-full flex flex-col"
+              style={{ marginTop: 'var(--space-32)', gap: 'var(--space-12)' }}
             >
-              <button
-                type="button"
-                onClick={onGoogleClick}
-                aria-label={
-                  isRedirecting
-                    ? `opening ${AUTH_PROVIDER_LABEL}…`
-                    : `continue with ${AUTH_PROVIDER_LABEL}`
-                }
-                className="kimo-btn kimo-btn-primary t-15 w-full"
-                style={{
-                  height: 'var(--h-48)',
-                  paddingLeft: 'var(--space-16)',
-                  paddingRight: 'var(--space-16)',
-                }}
-              >
-                {AUTH_PROVIDER === 'google' ? (
-                  <GoogleMark isRedirecting={isRedirecting} />
-                ) : (
-                  <GitHubMark isRedirecting={isRedirecting} />
-                )}
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={isRedirecting ? 'opening' : 'continue'}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{
-                      duration: DUR.dur2,
-                      ease: EASE.easeOut,
+              {providers.map((provider, index) => {
+                const opening = isRedirecting && pendingProvider === provider;
+                const label = opening
+                  ? `opening ${providerLabel(provider)}…`
+                  : `continue with ${providerLabel(provider)}`;
+                return (
+                  <button
+                    key={provider}
+                    type="button"
+                    onClick={() => onProviderClick(provider)}
+                    disabled={isBusy && !opening}
+                    aria-disabled={isBusy}
+                    aria-label={label}
+                    data-provider={provider}
+                    className={`kimo-btn ${
+                      index === 0 ? 'kimo-btn-primary' : 'kimo-btn-secondary'
+                    } t-15 w-full`}
+                    style={{
+                      height: 'var(--h-48)',
+                      paddingLeft: 'var(--space-16)',
+                      paddingRight: 'var(--space-16)',
                     }}
                   >
-                    {isRedirecting
-                      ? `opening ${AUTH_PROVIDER_LABEL}…`
-                      : `continue with ${AUTH_PROVIDER_LABEL}`}
-                  </motion.span>
-                </AnimatePresence>
-              </button>
+                    {provider === 'google' ? (
+                      <GoogleMark isRedirecting={opening} />
+                    ) : (
+                      <GitHubMark isRedirecting={opening} />
+                    )}
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={opening ? 'opening' : 'continue'}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{
+                          duration: DUR.dur2,
+                          ease: EASE.easeOut,
+                        }}
+                      >
+                        {label}
+                      </motion.span>
+                    </AnimatePresence>
+                  </button>
+                );
+              })}
+              {providers.length === 0 && (
+                <p className="t-13" style={{ color: 'var(--cream-60)' }}>
+                  sign-in isn&apos;t available right now. try again soon.
+                </p>
+              )}
             </motion.div>
 
             {/* 5. 12px gap, secondary button: "continue without an account" (or "not now") */}
@@ -526,17 +554,17 @@ export function SignInDoor({
                         style={{ color: 'var(--danger)', flexShrink: 0 }}
                       />
                       <span
-                        className="t-13 truncate"
+                        className="t-13 min-w-0"
                         style={{ color: 'var(--cream-100)' }}
                       >
                         {errorInfo.message}
                       </span>
                     </div>
 
-                    {errorInfo.canRetry && (
+                    {errorInfo.canRetry && retryProvider && (
                       <button
                         type="button"
-                        onClick={onGoogleClick}
+                        onClick={() => onProviderClick(retryProvider)}
                         className="kimo-btn kimo-btn-ghost t-12 shrink-0"
                         style={{
                           height: 'var(--h-24)',

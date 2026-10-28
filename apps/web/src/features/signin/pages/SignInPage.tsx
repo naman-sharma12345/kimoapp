@@ -4,7 +4,8 @@
  * All SignInPage user-facing strings are verbatim from the prompt.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AuthProvider } from '@kimo/client';
 import { ArrowLeft } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { FilmGrain } from '../components/sign-in/FilmGrain';
@@ -20,7 +21,8 @@ import type {
 } from '../types/sign-in';
 
 export default function SignInPage({
-  onContinueWithGoogle,
+  providers,
+  onContinue,
   onSkip,
   onSuccess,
   reason = null,
@@ -62,26 +64,63 @@ export default function SignInPage({
     setIsReady(true);
   }, []);
 
-  const handleGoogleClick = useCallback(async () => {
-    if (currentState === 'redirecting' || currentState === 'returning') return;
-    setCurrentError(null);
-    setCurrentState('redirecting');
+  const [pendingProvider, setPendingProvider] = useState<AuthProvider | null>(
+    null,
+  );
+  // A ref, not state: a fast double click lands before React re-renders.
+  const inFlightRef = useRef(false);
 
-    try {
-      await onContinueWithGoogle();
-      setCurrentState('returning');
-    } catch (err) {
-      const maybeKind = (err as { kind?: SignInErrorKind } | null)?.kind;
-      const resolvedKind: SignInErrorKind =
-        maybeKind === 'network' ||
-        maybeKind === 'not_allowed' ||
-        maybeKind === 'popup_closed'
-          ? maybeKind
-          : (error?.kind ?? 'popup_closed');
-      setCurrentError({ kind: resolvedKind });
-      setCurrentState('error');
-    }
-  }, [currentState, error?.kind, onContinueWithGoogle]);
+  const handleProviderClick = useCallback(
+    async (provider: AuthProvider) => {
+      if (
+        inFlightRef.current ||
+        currentState === 'redirecting' ||
+        currentState === 'returning'
+      )
+        return;
+      inFlightRef.current = true;
+      setPendingProvider(provider);
+      setCurrentError(null);
+      setCurrentState('redirecting');
+
+      try {
+        await onContinue(provider);
+        setCurrentState('returning');
+      } catch (err) {
+        const maybeKind = (err as { kind?: SignInErrorKind } | null)?.kind;
+        const resolvedKind: SignInErrorKind =
+          maybeKind === 'network' ||
+          maybeKind === 'not_allowed' ||
+          maybeKind === 'popup_closed'
+            ? maybeKind
+            : (error?.kind ?? 'popup_closed');
+        setCurrentError({ kind: resolvedKind, provider });
+        setCurrentState('error');
+      } finally {
+        inFlightRef.current = false;
+      }
+    },
+    [currentState, error?.kind, onContinue],
+  );
+
+  // Back button from the provider page: the browser may restore this page
+  // from its back/forward cache still "opening github…". Reset it.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      inFlightRef.current = false;
+      setPendingProvider(null);
+      setCurrentState((state) =>
+        state === 'redirecting'
+          ? reason === 'limit'
+            ? 'limit-reached'
+            : 'idle'
+          : state,
+      );
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [reason]);
 
   // When in "returning" state via normal sign-in flow, complete verification and fade out stage + door
   useEffect(() => {
@@ -250,7 +289,9 @@ export default function SignInPage({
           reason={reason}
           user={user}
           error={currentError}
-          onGoogleClick={handleGoogleClick}
+          providers={providers}
+          pendingProvider={pendingProvider}
+          onProviderClick={(provider) => void handleProviderClick(provider)}
           onSkipClick={onSkip}
           onUseDifferentAccountClick={handleUseDifferentAccount}
           onEntryComplete={handleEntryComplete}

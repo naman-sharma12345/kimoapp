@@ -1,3 +1,5 @@
+import type { AuthProvider } from '@kimo/client';
+
 export type SignInState =
   | 'idle'
   | 'redirecting'
@@ -8,10 +10,29 @@ export type SignInState =
 
 export type SignInReason = 'limit' | 'expired' | null;
 
-export type SignInErrorKind = 'popup_closed' | 'network' | 'not_allowed';
+export type SignInErrorKind =
+  | 'popup_closed'
+  | 'network'
+  | 'not_allowed'
+  | 'cancelled'
+  | 'expired'
+  | 'unavailable'
+  | 'rate_limited';
+
+export const SIGN_IN_ERROR_KINDS: readonly SignInErrorKind[] = [
+  'popup_closed',
+  'network',
+  'not_allowed',
+  'cancelled',
+  'expired',
+  'unavailable',
+  'rate_limited',
+];
 
 export interface SignInError {
   kind: SignInErrorKind;
+  /** The provider the failed attempt used, when known. */
+  provider?: AuthProvider;
 }
 
 export interface SignInUser {
@@ -21,7 +42,9 @@ export interface SignInUser {
 }
 
 export interface SignInPageProps {
-  onContinueWithGoogle: () => Promise<void>;
+  /** Providers to offer, in order; the first is the primary button. */
+  providers: readonly AuthProvider[];
+  onContinue: (provider: AuthProvider) => Promise<void>;
   onSkip: () => void;
   onSuccess: (user: SignInUser) => void;
   reason?: SignInReason;

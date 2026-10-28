@@ -1,7 +1,7 @@
 import { LogOut } from 'lucide-react';
 import { getUserInitials } from '../../lib/account-utils';
 import type { AccountUser } from '../../types/account-page';
-import { AUTH_PROVIDER, AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
+import { providerLabel } from '@/lib/auth-provider';
 
 export interface ProfileSectionProps {
   user: AccountUser;
@@ -72,9 +72,9 @@ export function ProfileSection({ user, onSignOut }: ProfileSectionProps) {
             {user.email}
           </div>
           <div className="flex items-center gap-[var(--space-6)] mt-[var(--space-6)]">
-            {AUTH_PROVIDER === 'google' ? <GoogleGMark /> : <GitHubGlyph />}
-            <span className="t-12 text-[var(--cream-38)]">
-              signed in with {AUTH_PROVIDER_LABEL}
+            {user.provider === 'google' ? <GoogleGMark /> : <GitHubGlyph />}
+            <span className="t-12 text-[var(--cream-60)]">
+              signed in with {providerLabel(user.provider ?? 'github')}
             </span>
           </div>
         </div>

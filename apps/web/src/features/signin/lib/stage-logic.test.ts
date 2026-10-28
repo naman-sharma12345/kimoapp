@@ -91,11 +91,25 @@ test('getErrorCopy returns exact lowercase messages', () => {
     "github sign-in didn't finish. try again?",
   );
   assert.equal(
+    getErrorCopy('popup_closed', 'google').message,
+    "google sign-in didn't finish. try again?",
+  );
+  assert.equal(
     getErrorCopy('network').message,
-    "github sign-in didn't finish. try again?",
+    "couldn't reach kimo. check your connection and try again.",
   );
   assert.equal(
     getErrorCopy('not_allowed').message,
     "this github account can't be used with kimo yet.",
   );
+  assert.equal(
+    getErrorCopy('cancelled', 'google').message,
+    "google sign-in was cancelled. try again when you're ready.",
+  );
+  assert.equal(
+    getErrorCopy('expired').message,
+    'that sign-in link expired. start again.',
+  );
+  assert.equal(getErrorCopy('unavailable', 'google').canRetry, false);
+  assert.equal(getErrorCopy('rate_limited').canRetry, false);
 });

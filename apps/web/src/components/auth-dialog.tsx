@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { KimoClient } from '@kimo/client';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
 
 export function AuthDialog({
   open,
@@ -66,15 +65,13 @@ export function AuthDialog({
                 );
               }}
             >
-              continue with {AUTH_PROVIDER_LABEL}
+              sign in
             </Button>
           </>
         }
       >
         {mock ? (
-          <p>
-            demo sign-in · the mock does not connect to {AUTH_PROVIDER_LABEL}.
-          </p>
+          <p>demo sign-in · the mock does not connect to github or google.</p>
         ) : null}
       </DialogContent>
     </Dialog>

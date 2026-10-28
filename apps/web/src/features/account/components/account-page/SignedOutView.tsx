@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { AUTH_PROVIDER_LABEL } from '@/lib/auth-provider';
 
 export interface SignedOutViewProps {
   onContinueWithGoogle?: () => Promise<void>;
@@ -41,10 +40,10 @@ export function SignedOutView({ onContinueWithGoogle }: SignedOutViewProps) {
               className="animate-spin"
               aria-hidden="true"
             />
-            <span>continue with {AUTH_PROVIDER_LABEL}</span>
+            <span>sign in</span>
           </>
         ) : (
-          <span>continue with {AUTH_PROVIDER_LABEL}</span>
+          <span>sign in</span>
         )}
       </button>
     </div>

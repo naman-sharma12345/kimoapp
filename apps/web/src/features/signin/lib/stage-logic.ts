@@ -4,7 +4,7 @@ import type {
   StageFrameState,
   ViewerScene,
 } from '../types/sign-in';
-import { AUTH_PROVIDER_LABEL } from '../../../lib/auth-provider';
+import type { AuthProvider } from '@kimo/client';
 
 export const LOOP_DURATION_SEC = 14.0;
 export const TIMELINE_TOTAL_SEC = 7.2;
@@ -260,18 +260,49 @@ export function getStageFrameAtTime(
 /**
  * Returns the exact copy for each error variant as specified by the prompt.
  */
-export function getErrorCopy(kind: SignInErrorKind): {
+export function getErrorCopy(
+  kind: SignInErrorKind,
+  provider: AuthProvider = 'github',
+): {
   message: string;
   canRetry: boolean;
 } {
-  if (kind === 'not_allowed') {
-    return {
-      message: `this ${AUTH_PROVIDER_LABEL} account can't be used with kimo yet.`,
-      canRetry: true,
-    };
+  switch (kind) {
+    case 'not_allowed':
+      return {
+        message: `this ${provider} account can't be used with kimo yet.`,
+        canRetry: true,
+      };
+    case 'cancelled':
+      return {
+        message: `${provider} sign-in was cancelled. try again when you're ready.`,
+        canRetry: true,
+      };
+    case 'expired':
+      return {
+        message: 'that sign-in link expired. start again.',
+        canRetry: true,
+      };
+    case 'unavailable':
+      return {
+        message: `${provider} sign-in isn't available right now.`,
+        canRetry: false,
+      };
+    case 'rate_limited':
+      return {
+        message:
+          'too many sign-in attempts. wait a few minutes, then try again.',
+        canRetry: false,
+      };
+    case 'network':
+      return {
+        message: "couldn't reach kimo. check your connection and try again.",
+        canRetry: true,
+      };
+    default:
+      return {
+        message: `${provider} sign-in didn't finish. try again?`,
+        canRetry: true,
+      };
   }
-  return {
-    message: `${AUTH_PROVIDER_LABEL} sign-in didn't finish. try again?`,
-    canRetry: true,
-  };
 }

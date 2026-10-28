@@ -87,6 +87,7 @@ export function AccountRoute() {
           name: me.user.name,
           email: me.user.email,
           ...(me.user.avatarUrl ? { avatarUrl: me.user.avatarUrl } : {}),
+          provider: me.user.provider,
         });
         setUsage(me.usage);
         setStorage(me.storage);

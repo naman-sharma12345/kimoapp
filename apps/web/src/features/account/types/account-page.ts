@@ -12,6 +12,8 @@ export interface AccountUser {
   name: string;
   email: string;
   avatarUrl?: string;
+  /** The provider this session signed in with. */
+  provider?: 'github' | 'google';
 }
 
 export interface AccountUsage {

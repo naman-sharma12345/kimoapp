@@ -364,13 +364,13 @@ export default function LegalPage({
                     {showStatesMode && (
                       <span
                         data-testid="draft-copy-badge"
-                        className="t-11 text-[var(--cream-38)] bg-[var(--ink-2)] border border-[var(--line)] rounded-[var(--r-4)] px-[var(--space-6)] h-[var(--h-24)] inline-flex items-center"
+                        className="t-11 text-[var(--cream-60)] bg-[var(--ink-2)] border border-[var(--line)] rounded-[var(--r-4)] px-[var(--space-6)] h-[var(--h-24)] inline-flex items-center"
                       >
                         draft copy
                       </span>
                     )}
                   </div>
-                  <p className="t-12 text-[var(--cream-38)] m-0">
+                  <p className="t-12 text-[var(--cream-60)] m-0">
                     {activeContent.updated}
                   </p>
                 </motion.header>
@@ -402,18 +402,25 @@ export default function LegalPage({
               </motion.article>
             </AnimatePresence>
 
-            {/* Footer: 96px below the article, hairline, then t-12 cream-38 "questions? hello@getkimo.tech" and kimo mark at 14px cream-38 */}
+            {/* Footer: 96px below the article, hairline, then t-12 cream-60 (4.5:1 contrast) contact + cookie notice links and kimo mark */}
             <footer className="mt-[var(--space-96)] pt-[var(--space-24)] border-t border-[var(--line)] flex items-center justify-between gap-[var(--space-16)]">
-              <p className="t-12 text-[var(--cream-38)] m-0">
+              <p className="t-12 text-[var(--cream-60)] m-0">
                 questions?{' '}
                 <a
                   href="mailto:hello@getkimo.tech"
-                  className="kimo-inline-link text-[var(--cream-38)] hover:text-[var(--cream-100)]"
+                  className="kimo-inline-link text-[var(--cream-60)] hover:text-[var(--cream-100)]"
                 >
                   hello@getkimo.tech
+                </a>{' '}
+                ·{' '}
+                <a
+                  href="/privacy#cookies"
+                  className="kimo-inline-link text-[var(--cream-60)] hover:text-[var(--cream-100)]"
+                >
+                  cookies
                 </a>
               </p>
-              <span className="text-[var(--cream-38)] inline-flex items-center">
+              <span className="text-[var(--cream-60)] inline-flex items-center">
                 <KimoMark size={14} />
               </span>
             </footer>

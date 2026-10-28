@@ -3,8 +3,13 @@ import type { AuthProvider } from '@kimo/client/account';
 import type { Env } from './env.ts';
 import { HttpError } from './http.ts';
 
+/**
+ * The only profile data kimo keeps from a sign-in provider: a stable id,
+ * a verified email (or ''), a display name and an https avatar url.
+ */
 export interface OAuthIdentity {
   providerId: string;
+  /** Lowercased and verified by the provider, or '' when none is verified. */
   email: string;
   name: string;
   avatarUrl: string | null;
@@ -27,7 +32,8 @@ export function providerConfig(
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
       authorizeUrl: 'https://github.com/login/oauth/authorize',
-      scope: 'read:user user:email',
+      // Public profile needs no scope; user:email reads the verified primary email.
+      scope: 'user:email',
     };
   }
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
@@ -43,33 +49,86 @@ export function callbackUrl(env: Env, provider: AuthProvider) {
   return `${env.API_ORIGIN}/v1/auth/${provider}/callback`;
 }
 
+function base64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/** RFC 7636 S256 code challenge for a code verifier. */
+export async function pkceChallenge(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(verifier),
+  );
+  return base64Url(new Uint8Array(digest));
+}
+
+export interface AuthorizeParams {
+  state: string;
+  codeChallenge: string;
+  nonce: string;
+}
+
 export function authorizeUrl(
   env: Env,
   provider: AuthProvider,
   config: ProviderConfig,
-  state: string,
+  params: AuthorizeParams,
 ): string {
   const url = new URL(config.authorizeUrl);
   url.searchParams.set('client_id', config.clientId);
   url.searchParams.set('redirect_uri', callbackUrl(env, provider));
   url.searchParams.set('scope', config.scope);
-  url.searchParams.set('state', state);
+  url.searchParams.set('state', params.state);
+  url.searchParams.set('code_challenge', params.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
   if (provider === 'google') {
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('prompt', 'select_account');
+    url.searchParams.set('nonce', params.nonce);
   } else url.searchParams.set('allow_signup', 'true');
   return url.toString();
 }
 
 const USER_AGENT = 'kimo-api (+https://getkimo.tech)';
+const CONTROL = /[\p{Cc}\p{Cf}]/gu;
 
-const tokenSchema = z.object({ access_token: z.string().min(1) });
+/** Trims, strips control characters and caps a provider-supplied display name. */
+export function cleanName(raw: string | null | undefined): string {
+  return (raw ?? '').replace(CONTROL, '').trim().slice(0, 100);
+}
+
+export function cleanEmail(raw: string | null | undefined): string {
+  const email = (raw ?? '').trim().toLowerCase();
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ? email
+    : '';
+}
+
+/** Only https avatar urls of a sane length survive. */
+export function cleanAvatar(raw: string | null | undefined): string | null {
+  if (!raw || raw.length > 500) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+const tokenSchema = z.object({
+  access_token: z.string().min(1),
+  id_token: z.string().min(1).optional(),
+});
 const githubUserSchema = z.object({
   id: z.number(),
   login: z.string(),
   name: z.string().nullable().optional(),
-  email: z.string().nullable().optional(),
-  avatar_url: z.string().url().nullable().optional(),
+  avatar_url: z.string().nullable().optional(),
 });
 const githubEmailsSchema = z.array(
   z.object({
@@ -78,12 +137,16 @@ const githubEmailsSchema = z.array(
     verified: z.boolean(),
   }),
 );
-const googleUserSchema = z.object({
-  sub: z.string().min(1),
+const googleClaimsSchema = z.object({
+  iss: z.enum(['https://accounts.google.com', 'accounts.google.com']),
+  aud: z.union([z.string(), z.array(z.string())]),
+  exp: z.number(),
+  sub: z.string().min(1).max(255),
+  nonce: z.string().optional(),
   email: z.string().optional(),
   email_verified: z.boolean().optional(),
   name: z.string().optional(),
-  picture: z.string().url().optional(),
+  picture: z.string().optional(),
 });
 
 async function fetchJson(
@@ -101,12 +164,56 @@ async function fetchJson(
   return response.json();
 }
 
-/** Exchanges an authorization code and reads the signed-in identity. */
+function decodeJwtPayload(token: string): unknown {
+  const part = token.split('.')[1];
+  if (!part) throw new HttpError(401, 'not_allowed', 'Bad id token');
+  const padded = part.replace(/-/g, '+').replace(/_/g, '/');
+  const json = new TextDecoder().decode(
+    Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)),
+  );
+  return JSON.parse(json) as unknown;
+}
+
+/**
+ * Verifies a Google id_token received directly from Google's token endpoint
+ * over TLS (OIDC Core 3.1.3.7 allows TLS server validation in place of a
+ * signature check here): issuer, audience, expiry and nonce must all match.
+ */
+export function verifyGoogleIdToken(
+  idToken: string,
+  clientId: string,
+  nonce: string,
+  nowSeconds: number,
+) {
+  const claims = googleClaimsSchema.safeParse(decodeJwtPayload(idToken));
+  if (!claims.success)
+    throw new HttpError(401, 'not_allowed', 'Bad id token claims');
+  const audiences = Array.isArray(claims.data.aud)
+    ? claims.data.aud
+    : [claims.data.aud];
+  if (
+    !audiences.includes(clientId) ||
+    claims.data.exp < nowSeconds ||
+    !nonce ||
+    claims.data.nonce !== nonce
+  )
+    throw new HttpError(401, 'not_allowed', 'id token not for kimo');
+  return claims.data;
+}
+
+export interface ExchangeInput {
+  code: string;
+  codeVerifier: string;
+  nonce: string;
+  nowSeconds: number;
+}
+
+/** Exchanges an authorization code (with PKCE) and reads the identity. */
 export async function exchangeCode(
   env: Env,
   provider: AuthProvider,
   config: ProviderConfig,
-  code: string,
+  input: ExchangeInput,
   fetcher: typeof fetch = fetch,
 ): Promise<OAuthIdentity> {
   if (provider === 'github') {
@@ -121,8 +228,9 @@ export async function exchangeCode(
         body: JSON.stringify({
           client_id: config.clientId,
           client_secret: config.clientSecret,
-          code,
+          code: input.code,
           redirect_uri: callbackUrl(env, provider),
+          code_verifier: input.codeVerifier,
         }),
       }),
     );
@@ -136,23 +244,20 @@ export async function exchangeCode(
     const user = githubUserSchema.parse(
       await fetchJson(fetcher, 'https://api.github.com/user', { headers }),
     );
-    let email = user.email ?? '';
-    if (!email) {
-      const emails = githubEmailsSchema.safeParse(
-        await fetchJson(fetcher, 'https://api.github.com/user/emails', {
-          headers,
-        }).catch(() => []),
-      );
-      const primary = emails.success
-        ? emails.data.find((entry) => entry.primary && entry.verified)
-        : undefined;
-      email = primary?.email ?? '';
-    }
+    // Only the verified primary email is trusted (used to link accounts).
+    const emails = githubEmailsSchema.safeParse(
+      await fetchJson(fetcher, 'https://api.github.com/user/emails', {
+        headers,
+      }).catch(() => []),
+    );
+    const primary = emails.success
+      ? emails.data.find((entry) => entry.primary && entry.verified)
+      : undefined;
     return {
       providerId: String(user.id),
-      email,
-      name: user.name || user.login,
-      avatarUrl: user.avatar_url ?? null,
+      email: cleanEmail(primary?.email),
+      name: cleanName(user.name) || cleanName(user.login),
+      avatarUrl: cleanAvatar(user.avatar_url),
     };
   }
   const token = tokenSchema.safeParse(
@@ -162,25 +267,26 @@ export async function exchangeCode(
       body: new URLSearchParams({
         client_id: config.clientId,
         client_secret: config.clientSecret,
-        code,
+        code: input.code,
+        code_verifier: input.codeVerifier,
         grant_type: 'authorization_code',
         redirect_uri: callbackUrl(env, provider),
       }).toString(),
     }),
   );
-  if (!token.success)
+  if (!token.success || !token.data.id_token)
     throw new HttpError(401, 'not_allowed', 'Google sign-in was refused');
-  const user = googleUserSchema.parse(
-    await fetchJson(
-      fetcher,
-      'https://openidconnect.googleapis.com/v1/userinfo',
-      { headers: { Authorization: `Bearer ${token.data.access_token}` } },
-    ),
+  const claims = verifyGoogleIdToken(
+    token.data.id_token,
+    config.clientId,
+    input.nonce,
+    input.nowSeconds,
   );
+  const email = claims.email_verified === true ? cleanEmail(claims.email) : '';
   return {
-    providerId: user.sub,
-    email: user.email_verified === false ? '' : (user.email ?? ''),
-    name: user.name ?? user.email ?? '',
-    avatarUrl: user.picture ?? null,
+    providerId: claims.sub,
+    email,
+    name: cleanName(claims.name) || email.split('@')[0] || 'kimo user',
+    avatarUrl: cleanAvatar(claims.picture),
   };
 }

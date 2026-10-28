@@ -43,8 +43,23 @@ test('resolveLegalContent supports both single LegalContent and LegalContentMap'
     'privacy',
   );
   assert.equal(resolveLegalContent('terms', LEGAL_CONTENT_MAP).title, 'terms');
-  assert.equal(TERMS_CONTENT.sections.length, 8);
-  assert.equal(PRIVACY_CONTENT.sections.length, 7);
+  assert.equal(TERMS_CONTENT.sections.length, 10);
+  assert.equal(PRIVACY_CONTENT.sections.length, 11);
+  // The privacy page must name what is actually built and the user's rights.
+  const privacy = JSON.stringify(PRIVACY_CONTENT);
+  for (const fact of [
+    'cloudflare d1',
+    'kimo_session',
+    '30 days',
+    'export my data',
+    'grievance',
+    'digital personal data protection act, 2023',
+    'gdpr',
+    'namanthesharma123@gmail.com',
+  ])
+    assert.ok(privacy.includes(fact), fact);
+  assert.ok(!privacy.includes('cloudflare r2 and'), 'no stale r2 claim');
+  assert.ok(PRIVACY_CONTENT.sections.some((s) => s.id === 'cookies'));
 });
 
 test('buildSectionAnchorUrl formats clean section anchor URLs', () => {

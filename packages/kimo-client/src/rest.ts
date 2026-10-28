@@ -80,6 +80,10 @@ export class KimoClient {
   auth() {
     return this.request('/v1/auth/session', s.authSchema);
   }
+  /** Sign-in providers the API has configured right now. */
+  providers() {
+    return this.send('GET', '/v1/auth/providers', a.providersSchema);
+  }
   /** Start URL for an OAuth sign-in with the given provider. */
   signInUrl(provider: a.AuthProvider, returnTo: string) {
     const url = new URL(`/v1/auth/${provider}`, this.baseUrl);

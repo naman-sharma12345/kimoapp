@@ -59,7 +59,6 @@ export function TopBar({ user, onSignOut }: TopBarProps) {
       <div className="flex items-center gap-[var(--space-12)] min-w-0">
         <a
           href="/"
-          onClick={(e) => e.preventDefault()}
           className="inline-flex items-center gap-[var(--space-8)] text-[var(--cream-100)] no-underline rounded-[var(--r-6)] py-[var(--space-2)] px-[var(--space-4)] -ml-[var(--space-4)]"
         >
           <KimoMark size={16} />
@@ -78,87 +77,90 @@ export function TopBar({ user, onSignOut }: TopBarProps) {
 
       {/* Right: ghost sm "projects" (links /projects) and the 28px avatar menu */}
       <div className="flex items-center gap-[var(--space-12)]">
-        <a
-          href="/projects"
-          onClick={(e) => e.preventDefault()}
-          className="kimo-btn kimo-btn-sm kimo-btn-ghost"
-        >
-          projects
-        </a>
+        {/* Signed-out and loading states show no projects link or avatar menu. */}
+        {user && (
+          <>
+            <a href="/projects" className="kimo-btn kimo-btn-sm kimo-btn-ghost">
+              projects
+            </a>
 
-        <div className="relative flex items-center">
-          <button
-            ref={triggerRef}
-            type="button"
-            aria-label="account menu"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((prev) => !prev)}
-            className="inline-flex items-center justify-center rounded-[var(--r-pill)] bg-[var(--ink-2)] border border-[var(--line)] hover:border-[var(--line-strong)] hover:bg-[var(--ink-3)] text-[var(--cream-100)] t-12 cursor-pointer overflow-hidden transition-colors duration-[var(--dur-1)]"
-            style={{ width: 'var(--h-28)', height: 'var(--h-28)' }}
-          >
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span>{initials}</span>
-            )}
-          </button>
-
-          <AnimatePresence>
-            {menuOpen && user && (
-              <motion.div
-                ref={menuRef}
-                role="menu"
+            <div className="relative flex items-center">
+              <button
+                ref={triggerRef}
+                type="button"
                 aria-label="account menu"
-                initial={
-                  reduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, y: 4, scale: 0.98 }
-                }
-                animate={
-                  reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }
-                }
-                exit={
-                  reduceMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, y: 4, scale: 0.98 }
-                }
-                transition={{
-                  duration: reduceMotion ? dur.dur2 : dur.dur3,
-                  ease: ease.out,
-                }}
-                className="absolute right-0 top-[calc(100%+var(--space-8))] z-40 min-w-[200px] rounded-[var(--r-12)] bg-[var(--ink-1)] p-[var(--space-8)]"
-                style={{ boxShadow: 'var(--shadow-pop)' }}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="inline-flex items-center justify-center rounded-[var(--r-pill)] bg-[var(--ink-2)] border border-[var(--line)] hover:border-[var(--line-strong)] hover:bg-[var(--ink-3)] text-[var(--cream-100)] t-12 cursor-pointer overflow-hidden transition-colors duration-[var(--dur-1)]"
+                style={{ width: 'var(--h-28)', height: 'var(--h-28)' }}
               >
-                <div className="px-[var(--space-8)] py-[var(--space-6)] border-b border-[var(--line)] mb-[var(--space-4)]">
-                  <div className="t-13 text-[var(--cream-100)] truncate">
-                    {user.name}
-                  </div>
-                  <div className="t-12 text-[var(--cream-60)] truncate">
-                    {user.email}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onSignOut();
-                  }}
-                  className="kimo-btn kimo-btn-sm kimo-btn-ghost w-full justify-start"
-                >
-                  <LogOut size={14} strokeWidth={1.5} aria-hidden="true" />
-                  <span>sign out</span>
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    ref={menuRef}
+                    role="menu"
+                    aria-label="account menu"
+                    initial={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 4, scale: 0.98 }
+                    }
+                    animate={
+                      reduceMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, y: 0, scale: 1 }
+                    }
+                    exit={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: 4, scale: 0.98 }
+                    }
+                    transition={{
+                      duration: reduceMotion ? dur.dur2 : dur.dur3,
+                      ease: ease.out,
+                    }}
+                    className="absolute right-0 top-[calc(100%+var(--space-8))] z-40 min-w-[200px] rounded-[var(--r-12)] bg-[var(--ink-1)] p-[var(--space-8)]"
+                    style={{ boxShadow: 'var(--shadow-pop)' }}
+                  >
+                    <div className="px-[var(--space-8)] py-[var(--space-6)] border-b border-[var(--line)] mb-[var(--space-4)]">
+                      <div className="t-13 text-[var(--cream-100)] truncate">
+                        {user.name}
+                      </div>
+                      <div className="t-12 text-[var(--cream-60)] truncate">
+                        {user.email}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void onSignOut();
+                      }}
+                      className="kimo-btn kimo-btn-sm kimo-btn-ghost w-full justify-start"
+                    >
+                      <LogOut size={14} strokeWidth={1.5} aria-hidden="true" />
+                      <span>sign out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </>
+        )}
       </div>
     </header>
   );

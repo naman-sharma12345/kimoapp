@@ -125,16 +125,19 @@ describe('kimo api worker', () => {
     const bad = await call(
       `/v1/auth/github?returnTo=${encodeURIComponent('https://evil.example/')}`,
     );
-    expect(bad.status).toBe(400);
+    expect(bad.status).toBe(302);
+    expect(new URL(bad.headers.get('Location') ?? '').origin).toBe(
+      'https://github.com',
+    );
   });
 
   it('reports an unconfigured provider plainly', async () => {
     const { call } = setup();
     const response = await call('/v1/auth/google');
-    expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({
-      code: 'provider_unavailable',
-    });
+    expect(response.status).toBe(302);
+    expect(response.headers.get('Location')).toBe(
+      `${APP}/signin?error=unavailable&provider=google`,
+    );
     const providers = await call('/v1/auth/providers');
     expect(await providers.json()).toEqual({ providers: ['github'] });
   });
@@ -146,7 +149,7 @@ describe('kimo api worker', () => {
     });
     expect(response.status).toBe(302);
     expect(response.headers.get('Location')).toBe(
-      `${APP}/signin?error=popup_closed`,
+      `${APP}/signin?error=expired&provider=github`,
     );
   });
 
@@ -261,7 +264,7 @@ describe('kimo api worker', () => {
     ).toBe('9:16');
     const signedOut = await call('/v1/auth/signout', {
       method: 'POST',
-      headers,
+      headers: { Cookie: cookieHeader, Origin: APP },
     });
     expect(signedOut.status).toBe(204);
     expect(signedOut.headers.get('Set-Cookie')).toContain('Max-Age=0');
@@ -283,7 +286,10 @@ describe('kimo api worker', () => {
 
   it('says video editing is not available yet', async () => {
     const { call } = setup();
-    const response = await call('/v1/sessions', { method: 'POST' });
+    const response = await call('/v1/sessions', {
+      method: 'POST',
+      headers: { Origin: APP },
+    });
     expect(response.status).toBe(501);
   });
 });

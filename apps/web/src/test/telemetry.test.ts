@@ -4,6 +4,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   sessionStorage.clear();
+  localStorage.clear();
 });
 it('is disabled by default and allowlists only counts, timings and operation names', async () => {
   const fetcher = vi.fn().mockResolvedValue(new Response());
@@ -12,6 +13,10 @@ it('is disabled by default and allowlists only counts, timings and operation nam
   expect(fetcher).not.toHaveBeenCalled();
   vi.stubEnv('NEXT_PUBLIC_POSTHOG_KEY', 'public-test-key');
   vi.stubEnv('NEXT_PUBLIC_POSTHOG_HOST', 'https://eu.i.posthog.com');
+  // Configured but no opt-in: still nothing is sent.
+  track('prompt_sent', { length: 20 });
+  expect(fetcher).not.toHaveBeenCalled();
+  localStorage.setItem('kimo.analytics-consent', 'granted');
   track('prompt_sent', {
     length: 20,
     video: 2,

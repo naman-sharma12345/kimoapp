@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import type {
   D1Database,
@@ -11,12 +11,11 @@ import type {
 export function createTestDb(): D1Database & { sqlite: DatabaseSync } {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON');
-  sqlite.exec(
-    readFileSync(
-      new URL('../migrations/0001_init.sql', import.meta.url),
-      'utf8',
-    ),
-  );
+  const dir = new URL('../migrations/', import.meta.url);
+  for (const file of readdirSync(dir)
+    .filter((name) => name.endsWith('.sql'))
+    .sort())
+    sqlite.exec(readFileSync(new URL(file, dir), 'utf8'));
   const statement = (
     query: string,
     values: SQLInputValue[],

@@ -7,6 +7,7 @@ import {
   preferencesPatchSchema,
   preferencesSchema,
   projectCreateSchema,
+  projectIdSchema,
   projectPatchSchema,
   type ApiProject,
   type AuthProvider,
@@ -22,14 +23,33 @@ import {
   readCookie,
   readJson,
   redirect,
+  safeDecode,
   withCors,
+  withSecurityHeaders,
 } from './http.ts';
-import { authorizeUrl, exchangeCode, providerConfig } from './oauth.ts';
+import {
+  authorizeUrl,
+  exchangeCode,
+  pkceChallenge,
+  providerConfig,
+  type OAuthIdentity,
+} from './oauth.ts';
 
 export const SESSION_COOKIE = 'kimo_session';
 export const STATE_COOKIE = 'kimo_oauth_state';
 const SESSION_DAYS = 30;
 const STATE_MINUTES = 10;
+/** Most sessions one account may hold; older ones are signed out. */
+const MAX_SESSIONS = 10;
+/** Deleted projects stay restorable this long, then are purged. */
+const BIN_DAYS = 30;
+const DAY_MS = 24 * 60 * 60_000;
+/** Free D1 counters: requests per client per 10-minute window. */
+const RATE_WINDOW_MS = 10 * 60_000;
+const RATE_LIMITS = { auth: 30, write: 300 } as const;
+
+export type SignInErrorKind =
+  'cancelled' | 'expired' | 'not_allowed' | 'unavailable' | 'rate_limited';
 
 export interface AppOptions {
   fetcher?: typeof fetch;
@@ -39,6 +59,7 @@ export interface AppOptions {
 interface UserRow {
   id: string;
   provider: AuthProvider;
+  session_provider?: string;
   email: string;
   name: string;
   avatar_url: string | null;
@@ -97,15 +118,40 @@ function toProject(row: ProjectRow): ApiProject {
 }
 
 function toUser(row: UserRow) {
+  const signedInWith = authProviderSchema.safeParse(row.session_provider);
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     ...(row.avatar_url ? { avatarUrl: row.avatar_url } : {}),
-    provider: row.provider,
+    provider: signedInWith.success ? signedInWith.data : row.provider,
     createdAt: row.created_at,
   };
 }
+
+/** The visitor's IP, hashed before it is ever stored (rate limits only). */
+function clientKey(request: Request): string {
+  return (
+    request.headers.get('CF-Connecting-IP') ??
+    request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ??
+    'unknown'
+  );
+}
+
+/** Validates a project id taken from the URL path; bad ids are a 404. */
+function projectId(raw: string): string {
+  const parsed = projectIdSchema.safeParse(safeDecode(raw));
+  if (!parsed.success)
+    throw new HttpError(404, 'not_found', 'Project not found');
+  return parsed.data;
+}
+
+export const SECURITY_TXT = `Contact: mailto:namanthesharma123@gmail.com
+Expires: 2027-10-28T00:00:00.000Z
+Preferred-Languages: en, hi
+Canonical: https://api.getkimo.tech/.well-known/security.txt
+Policy: https://app.getkimo.tech/privacy
+`;
 
 const PROJECT_COLUMNS =
   'id, session_id, video_id, title, prompt, status, aspect, duration_sec, poster_url, clip_count, track_count, created_at, updated_at';
@@ -125,7 +171,7 @@ export function createApp(options: AppOptions = {}) {
     const token = readCookie(request, SESSION_COOKIE);
     if (!token) return null;
     const row = await env.DB.prepare(
-      `SELECT u.id, u.provider, u.email, u.name, u.avatar_url, u.created_at
+      `SELECT u.id, u.provider, s.provider AS session_provider, u.email, u.name, u.avatar_url, u.created_at
          FROM auth_sessions s JOIN users u ON u.id = s.user_id
         WHERE s.id = ? AND s.expires_at > ?`,
     )
@@ -162,14 +208,52 @@ export function createApp(options: AppOptions = {}) {
       .bind(userId)
       .first<{ data: string }>();
     if (!row) return defaultPreferences;
+    let stored: unknown;
+    try {
+      stored = JSON.parse(row.data);
+    } catch {
+      return defaultPreferences;
+    }
     const parsed = preferencesSchema.safeParse({
       ...defaultPreferences,
-      ...(JSON.parse(row.data) as object),
+      ...(stored && typeof stored === 'object' ? stored : {}),
     });
     return parsed.success ? parsed.data : defaultPreferences;
   }
 
+  /** Increments a D1 counter and refuses once the window's limit is passed. */
+  async function rateLimited(
+    env: Env,
+    bucket: keyof typeof RATE_LIMITS,
+    who: string,
+  ): Promise<boolean> {
+    const at = now().getTime();
+    const window = new Date(at - (at % RATE_WINDOW_MS)).toISOString();
+    const key = `${bucket}:${await sha256(who)}`;
+    const row = await env.DB.prepare(
+      `INSERT INTO rate_limits (key, window_start, count) VALUES (?, ?, 1)
+       ON CONFLICT (key, window_start) DO UPDATE SET count = count + 1
+       RETURNING count`,
+    )
+      .bind(key, window)
+      .first<{ count: number }>();
+    if (bucket === 'auth')
+      await env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?')
+        .bind(new Date(at - 6 * RATE_WINDOW_MS).toISOString())
+        .run();
+    return (row?.count ?? 0) > RATE_LIMITS[bucket];
+  }
+
+  async function purgeBin(env: Env, userId: string) {
+    await env.DB.prepare(
+      'DELETE FROM projects WHERE user_id = ? AND deleted_at IS NOT NULL AND deleted_at < ?',
+    )
+      .bind(userId, new Date(now().getTime() - BIN_DAYS * DAY_MS).toISOString())
+      .run();
+  }
+
   async function listProjects(env: Env, userId: string) {
+    await purgeBin(env, userId);
     const { results } = await env.DB.prepare(
       `SELECT ${PROJECT_COLUMNS} FROM projects
         WHERE user_id = ? AND deleted_at IS NULL
@@ -197,22 +281,48 @@ export function createApp(options: AppOptions = {}) {
     return row;
   }
 
+  /**
+   * Post sign-in destination: only an absolute https URL on the app origin
+   * (path + query kept, credentials and hash dropped); anything else falls
+   * back to /projects instead of failing.
+   */
   function safeReturnTo(env: Env, raw: string | null): string {
     const fallback = `${env.APP_ORIGIN}/projects`;
-    if (!raw) return fallback;
+    if (!raw || raw.length > 2048 || /[\\\p{Cc}\s]/u.test(raw)) return fallback;
     let url: URL;
     try {
       url = new URL(raw);
     } catch {
-      throw new HttpError(400, 'invalid_return', 'invalid return address');
+      return fallback;
     }
-    if (url.origin !== env.APP_ORIGIN)
-      throw new HttpError(400, 'invalid_return', 'invalid return address');
-    return url.toString();
+    if (url.origin !== env.APP_ORIGIN || url.username || url.password)
+      return fallback;
+    return `${env.APP_ORIGIN}${url.pathname}${url.search}`;
   }
 
-  function signinError(env: Env, kind: 'popup_closed' | 'not_allowed') {
-    return `${env.APP_ORIGIN}/signin?error=${kind}`;
+  /** /signin?error=…&provider=…, keeping the page the user was heading to. */
+  function signinError(
+    env: Env,
+    kind: SignInErrorKind,
+    provider: AuthProvider,
+    returnTo?: string,
+  ) {
+    const url = new URL('/signin', env.APP_ORIGIN);
+    url.searchParams.set('error', kind);
+    url.searchParams.set('provider', provider);
+    if (returnTo) {
+      try {
+        const back = new URL(returnTo);
+        const next =
+          back.pathname === '/signin'
+            ? back.searchParams.get('next')
+            : `${back.pathname}${back.search}`;
+        if (next && next !== '/projects') url.searchParams.set('next', next);
+      } catch {
+        // No destination to keep.
+      }
+    }
+    return url.toString();
   }
 
   async function startOAuth(
@@ -220,36 +330,119 @@ export function createApp(options: AppOptions = {}) {
     env: Env,
     provider: AuthProvider,
   ) {
-    const config = providerConfig(env, provider);
-    if (!config)
-      throw new HttpError(
-        503,
-        'provider_unavailable',
-        `${provider} sign-in is not configured yet`,
-      );
     const returnTo = safeReturnTo(
       env,
       new URL(request.url).searchParams.get('returnTo'),
     );
+    const config = providerConfig(env, provider);
+    if (!config)
+      return redirect(signinError(env, 'unavailable', provider, returnTo));
+    if (await rateLimited(env, 'auth', clientKey(request)))
+      return redirect(signinError(env, 'rate_limited', provider, returnTo));
     const state = randomToken(24);
+    const codeVerifier = randomToken(48);
+    const nonce = randomToken(16);
     const expires = new Date(now().getTime() + STATE_MINUTES * 60_000);
     await env.DB.batch([
       env.DB.prepare('DELETE FROM oauth_states WHERE expires_at < ?').bind(
         now().toISOString(),
       ),
       env.DB.prepare(
-        'INSERT INTO oauth_states (state, provider, return_to, expires_at) VALUES (?, ?, ?, ?)',
-      ).bind(state, provider, returnTo, expires.toISOString()),
-    ]);
-    return redirect(authorizeUrl(env, provider, config, state), [
-      cookie(
-        env,
-        STATE_COOKIE,
+        'INSERT INTO oauth_states (state, provider, return_to, expires_at, code_verifier, nonce) VALUES (?, ?, ?, ?, ?, ?)',
+      ).bind(
         state,
-        STATE_MINUTES * 60,
-        `/v1/auth/${provider}/callback`,
+        provider,
+        returnTo,
+        expires.toISOString(),
+        codeVerifier,
+        nonce,
       ),
     ]);
+    return redirect(
+      authorizeUrl(env, provider, config, {
+        state,
+        codeChallenge: await pkceChallenge(codeVerifier),
+        nonce,
+      }),
+      [
+        cookie(
+          env,
+          STATE_COOKIE,
+          state,
+          STATE_MINUTES * 60,
+          `/v1/auth/${provider}/callback`,
+        ),
+      ],
+    );
+  }
+
+  /**
+   * Finds the kimo account for a provider identity: the identity itself,
+   * else an account with the same provider-verified email (so GitHub and
+   * Google sign-ins land in one account), else a new account.
+   */
+  async function resolveUser(
+    env: Env,
+    provider: AuthProvider,
+    identity: OAuthIdentity,
+    stamp: string,
+  ): Promise<string> {
+    const linked = await env.DB.prepare(
+      'SELECT user_id FROM user_identities WHERE provider = ? AND provider_id = ?',
+    )
+      .bind(provider, identity.providerId)
+      .first<{ user_id: string }>();
+    let userId = linked?.user_id ?? null;
+    if (!userId && identity.email) {
+      const byEmail = await env.DB.prepare(
+        'SELECT id FROM users WHERE lower(email) = ? ORDER BY created_at LIMIT 1',
+      )
+        .bind(identity.email)
+        .first<{ id: string }>();
+      userId = byEmail?.id ?? null;
+    }
+    if (!userId) {
+      userId = crypto.randomUUID();
+      await env.DB.prepare(
+        `INSERT INTO users (id, provider, provider_id, email, name, avatar_url, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          userId,
+          provider,
+          identity.providerId,
+          identity.email,
+          identity.name,
+          identity.avatarUrl,
+          stamp,
+          stamp,
+        )
+        .run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE users SET name = ?, avatar_url = COALESCE(?, avatar_url),
+           email = CASE WHEN ? <> '' THEN ? ELSE email END, updated_at = ?
+         WHERE id = ?`,
+      )
+        .bind(
+          identity.name,
+          identity.avatarUrl,
+          identity.email,
+          identity.email,
+          stamp,
+          userId,
+        )
+        .run();
+    }
+    await env.DB.prepare(
+      `INSERT INTO user_identities (provider, provider_id, user_id, email, created_at, last_used_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (provider, provider_id) DO UPDATE SET
+         email = excluded.email, last_used_at = excluded.last_used_at`,
+    )
+      .bind(provider, identity.providerId, userId, identity.email, stamp, stamp)
+      .run();
+    return userId;
   }
 
   async function finishOAuth(
@@ -267,74 +460,104 @@ export function createApp(options: AppOptions = {}) {
       0,
       `/v1/auth/${provider}/callback`,
     );
-    const stored = state
+    if (await rateLimited(env, 'auth', clientKey(request)))
+      return redirect(signinError(env, 'rate_limited', provider), [clearState]);
+    const validState = /^[A-Za-z0-9_-]{16,64}$/.test(state);
+    const stored = validState
       ? await env.DB.prepare(
-          'SELECT return_to, provider, expires_at FROM oauth_states WHERE state = ?',
+          'SELECT return_to, provider, expires_at, code_verifier, nonce FROM oauth_states WHERE state = ?',
         )
           .bind(state)
-          .first<{ return_to: string; provider: string; expires_at: string }>()
+          .first<{
+            return_to: string;
+            provider: string;
+            expires_at: string;
+            code_verifier: string;
+            nonce: string;
+          }>()
       : null;
-    if (state)
+    // Each state is single use, whatever happens next.
+    if (stored)
       await env.DB.prepare('DELETE FROM oauth_states WHERE state = ?')
         .bind(state)
         .run();
     const config = providerConfig(env, provider);
+    if (!config)
+      return redirect(signinError(env, 'unavailable', provider), [clearState]);
+    const denied = url.searchParams.get('error');
     if (
       !stored ||
       stored.provider !== provider ||
       stored.expires_at < now().toISOString() ||
-      readCookie(request, STATE_COOKIE) !== state ||
-      !config
+      readCookie(request, STATE_COOKIE) !== state
     )
-      return redirect(signinError(env, 'popup_closed'), [clearState]);
-    if (!code) {
-      const denied = url.searchParams.get('error') === 'access_denied';
       return redirect(
-        signinError(env, denied ? 'popup_closed' : 'not_allowed'),
+        signinError(
+          env,
+          denied === 'access_denied' ? 'cancelled' : 'expired',
+          provider,
+          stored?.return_to,
+        ),
+        [clearState],
+      );
+    if (!code || denied)
+      return redirect(
+        signinError(
+          env,
+          denied === 'access_denied' ? 'cancelled' : 'not_allowed',
+          provider,
+          stored.return_to,
+        ),
+        [clearState],
+      );
+    let identity: OAuthIdentity;
+    try {
+      identity = await exchangeCode(
+        env,
+        provider,
+        config,
+        {
+          code: code.slice(0, 512),
+          codeVerifier: stored.code_verifier,
+          nonce: stored.nonce,
+          nowSeconds: Math.floor(now().getTime() / 1000),
+        },
+        fetcher,
+      );
+    } catch {
+      return redirect(
+        signinError(env, 'not_allowed', provider, stored.return_to),
         [clearState],
       );
     }
-    let identity;
-    try {
-      identity = await exchangeCode(env, provider, config, code, fetcher);
-    } catch {
-      return redirect(signinError(env, 'not_allowed'), [clearState]);
-    }
     const stamp = now().toISOString();
-    await env.DB.prepare(
-      `INSERT INTO users (id, provider, provider_id, email, name, avatar_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (provider, provider_id) DO UPDATE SET
-         email = excluded.email, name = excluded.name,
-         avatar_url = excluded.avatar_url, updated_at = excluded.updated_at`,
-    )
-      .bind(
-        crypto.randomUUID(),
-        provider,
-        identity.providerId,
-        identity.email,
-        identity.name,
-        identity.avatarUrl,
-        stamp,
-        stamp,
-      )
-      .run();
-    const user = await env.DB.prepare(
-      'SELECT id FROM users WHERE provider = ? AND provider_id = ?',
-    )
-      .bind(provider, identity.providerId)
-      .first<{ id: string }>();
-    if (!user) return redirect(signinError(env, 'not_allowed'), [clearState]);
+    const userId = await resolveUser(env, provider, identity, stamp);
+    // Rotate: the session this browser had (if any) ends, a fresh one starts.
+    const previous = readCookie(request, SESSION_COOKIE);
     const token = randomToken();
-    const expires = new Date(now().getTime() + SESSION_DAYS * 24 * 60 * 60_000);
+    const expires = new Date(now().getTime() + SESSION_DAYS * DAY_MS);
     await env.DB.batch([
       env.DB.prepare('DELETE FROM auth_sessions WHERE expires_at < ?').bind(
         stamp,
       ),
+      env.DB.prepare('DELETE FROM auth_sessions WHERE id = ?').bind(
+        previous ? await sha256(previous) : '',
+      ),
       env.DB.prepare(
-        'INSERT INTO auth_sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
-      ).bind(await sha256(token), user.id, stamp, expires.toISOString()),
+        'INSERT INTO auth_sessions (id, user_id, created_at, expires_at, provider) VALUES (?, ?, ?, ?, ?)',
+      ).bind(
+        await sha256(token),
+        userId,
+        stamp,
+        expires.toISOString(),
+        provider,
+      ),
+      env.DB.prepare(
+        `DELETE FROM auth_sessions WHERE user_id = ? AND id NOT IN (
+           SELECT id FROM auth_sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?)`,
+      ).bind(userId, userId, MAX_SESSIONS),
     ]);
+    await purgeBin(env, userId);
     return redirect(stored.return_to, [
       clearState,
       cookie(env, SESSION_COOKIE, token, SESSION_DAYS * 24 * 60 * 60),
@@ -346,11 +569,15 @@ export function createApp(options: AppOptions = {}) {
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const method = request.method;
 
-    // Browser writes must come from the app itself.
+    // CSRF: every write must come from the app itself. A missing Origin is
+    // refused too, so forms or scripts on other sites (or sibling
+    // subdomains, which SameSite=Lax treats as same-site) cannot write.
     if (method !== 'GET' && method !== 'HEAD') {
       const origin = request.headers.get('Origin');
-      if (origin && origin !== env.APP_ORIGIN)
+      if (origin !== env.APP_ORIGIN)
         throw new HttpError(403, 'forbidden_origin', 'Origin not allowed');
+      if (await rateLimited(env, 'write', clientKey(request)))
+        throw new HttpError(429, 'rate_limited', 'Too many requests');
     }
 
     if (path === '/' || path === '/health')
@@ -381,6 +608,11 @@ export function createApp(options: AppOptions = {}) {
         ? finishOAuth(request, env, provider)
         : startOAuth(request, env, provider);
     }
+
+    if (path === '/.well-known/security.txt' && method === 'GET')
+      return new Response(SECURITY_TXT, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
 
     if (path === '/v1/auth/signout' && method === 'POST') {
       const token = readCookie(request, SESSION_COOKIE);
@@ -426,12 +658,49 @@ export function createApp(options: AppOptions = {}) {
       )
         .bind(user.id)
         .all<{ day: string; videos: number; render_seconds: number }>();
+      const identities = await env.DB.prepare(
+        'SELECT provider, email, created_at, last_used_at FROM user_identities WHERE user_id = ? ORDER BY created_at',
+      )
+        .bind(user.id)
+        .all<{
+          provider: AuthProvider;
+          email: string;
+          created_at: string;
+          last_used_at: string;
+        }>();
+      const sessions = await env.DB.prepare(
+        'SELECT provider, created_at, expires_at FROM auth_sessions WHERE user_id = ? AND expires_at > ? ORDER BY created_at',
+      )
+        .bind(user.id, now().toISOString())
+        .all<{ provider: string; created_at: string; expires_at: string }>();
+      const projects = await listProjects(env, user.id);
+      const bin = await env.DB.prepare(
+        `SELECT ${PROJECT_COLUMNS}, deleted_at FROM projects
+          WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC`,
+      )
+        .bind(user.id)
+        .all<ProjectRow & { deleted_at: string }>();
       return json(
         {
           exportedAt: now().toISOString(),
           user: toUser(user),
+          identities: identities.results.map((row) => ({
+            provider: row.provider,
+            email: row.email,
+            linkedAt: row.created_at,
+            lastUsedAt: row.last_used_at,
+          })),
+          sessions: sessions.results.map((row) => ({
+            provider: row.provider,
+            createdAt: row.created_at,
+            expiresAt: row.expires_at,
+          })),
           preferences: await readPreferences(env, user.id),
-          projects: await listProjects(env, user.id),
+          projects,
+          deletedProjects: bin.results.map((row) => ({
+            project: toProject(row),
+            deletedAt: row.deleted_at,
+          })),
           usage: results.map((row) => ({
             day: row.day,
             videos: row.videos,
@@ -450,6 +719,7 @@ export function createApp(options: AppOptions = {}) {
       await env.DB.batch(
         [
           'DELETE FROM auth_sessions WHERE user_id = ?',
+          'DELETE FROM user_identities WHERE user_id = ?',
           'DELETE FROM projects WHERE user_id = ?',
           'DELETE FROM preferences WHERE user_id = ?',
           'DELETE FROM daily_usage WHERE user_id = ?',
@@ -518,7 +788,7 @@ export function createApp(options: AppOptions = {}) {
     const restore = /^\/v1\/projects\/([^/]+)\/restore$/.exec(path);
     if (restore?.[1] && method === 'POST') {
       const user = await requireUser(request, env);
-      const id = decodeURIComponent(restore[1]);
+      const id = projectId(restore[1]);
       await getProject(env, user.id, id, true);
       await env.DB.prepare(
         'UPDATE projects SET deleted_at = NULL WHERE id = ? AND user_id = ?',
@@ -530,7 +800,7 @@ export function createApp(options: AppOptions = {}) {
 
     const one = /^\/v1\/projects\/([^/]+)$/.exec(path);
     if (one?.[1]) {
-      const id = decodeURIComponent(one[1]);
+      const id = projectId(one[1]);
       if (method === 'GET') {
         const user = await requireUser(request, env);
         return json({ project: toProject(await getProject(env, user.id, id)) });
@@ -581,7 +851,7 @@ export function createApp(options: AppOptions = {}) {
   return {
     async fetch(request: Request, env: Env): Promise<Response> {
       if (request.method === 'OPTIONS')
-        return withCors(request, noContent(), env);
+        return withSecurityHeaders(withCors(request, noContent(), env));
       let response: Response;
       try {
         response = await route(request, env);
@@ -599,7 +869,7 @@ export function createApp(options: AppOptions = {}) {
           response = errorResponse(500, 'internal', 'Something went wrong');
         }
       }
-      return withCors(request, response, env);
+      return withSecurityHeaders(withCors(request, response, env));
     },
   };
 }

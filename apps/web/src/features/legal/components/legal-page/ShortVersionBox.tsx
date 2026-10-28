@@ -30,7 +30,7 @@ export const ShortVersionBox: React.FC<ShortVersionBoxProps> = ({
       }}
       className="rounded-[var(--r-12)] bg-[var(--ink-1)] border border-[var(--line)] py-[var(--space-20)] px-[var(--space-24)]"
     >
-      <div className="t-11 text-[var(--cream-38)] mb-[var(--space-12)]">
+      <div className="t-11 text-[var(--cream-60)] mb-[var(--space-12)]">
         the short version
       </div>
       <ul className="list-none m-0 p-0 flex flex-col gap-[var(--space-8)]">

@@ -130,3 +130,10 @@ Phase 10 explicitly authorizes @next/bundle-analyzer and size-limit; they are de
 Cloudflare's current Pages target requires static export. A generated isolated entrypoint preserves normal Next SSR; browser shells load project data and a Pages Function preserves public video metadata. No automatic deployment workflow is added. API/WS/R2 CSP placeholders stay closed until configured. The separate Workers workflow in the user's branch is an alternative requiring coordination at review.
 
 Compositor hardening makes shared GLSL float precision explicit, releases filters/filmstrip bitmaps, and transfers each preloaded video to only one pool. These fixes address real browser findings and retained-resource risk without changing the design or engine repository.
+
+## 2026-10-28 · sign-in, security and privacy pass
+
+- Sign-in offers every provider `/v1/auth/providers` reports (GitHub and Google). The first (GitHub) is the one orange primary button, Google uses `kimo-btn-secondary`, so the one-orange rule holds. Entry points that only route to /signin now read "sign in" instead of naming one provider.
+- Callback errors are specific (`cancelled`, `expired`, `not_allowed`, `unavailable`, `rate_limited`) with the provider in the URL; `popup_closed`/`network` stay for the client side.
+- Legal and secondary text on dark uses `--cream-60` (about 6.7:1) instead of `--cream-38` (3.2:1) to meet WCAG AA.
+- App security headers come from `next.config.ts` (`src/lib/security-headers.ts`); `deploy/_headers` is only for the old Pages build.

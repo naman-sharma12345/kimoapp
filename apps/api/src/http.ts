@@ -66,8 +66,48 @@ export function withCors(request: Request, response: Response, env: Env) {
   });
 }
 
+/** Headers every API answer carries: JSON only, never framed or sniffed. */
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  'Content-Security-Policy':
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-site',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
+export function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS))
+    headers.set(name, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/** decodeURIComponent that answers null instead of throwing on bad escapes. */
+export function safeDecode(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
 export async function readJson(request: Request): Promise<unknown> {
+  const type = request.headers.get('Content-Type') ?? '';
   const text = await request.text();
+  if (text && !/^application\/json(;|$)/i.test(type.trim()))
+    throw new HttpError(
+      415,
+      'unsupported_media_type',
+      'Send JSON with Content-Type: application/json',
+    );
   if (text.length > 64_000)
     throw new HttpError(413, 'too_large', 'Request body is too large');
   if (!text) return {};
@@ -83,7 +123,7 @@ export function readCookie(request: Request, name: string): string | null {
   for (const part of header.split(/;\s*/)) {
     const index = part.indexOf('=');
     if (index > 0 && part.slice(0, index) === name)
-      return decodeURIComponent(part.slice(index + 1));
+      return safeDecode(part.slice(index + 1));
   }
   return null;
 }

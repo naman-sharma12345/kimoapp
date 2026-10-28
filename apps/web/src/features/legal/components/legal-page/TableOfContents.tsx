@@ -61,7 +61,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                     className={`flex items-center h-[var(--h-28)] pl-[var(--space-16)] pr-[var(--space-8)] t-13 rounded-r-[var(--r-6)] transition-colors duration-[var(--dur-1)] truncate ${
                       isActive
                         ? 'text-[var(--cream-100)]'
-                        : 'text-[var(--cream-38)] hover:text-[var(--cream-60)]'
+                        : 'text-[var(--cream-60)] hover:text-[var(--cream-100)]'
                     }`}
                   >
                     <span className="truncate">{section.heading}</span>
@@ -97,7 +97,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
               duration: prefersReducedMotion ? DUR_2 : DUR_3,
               ease: EASE_OUT,
             }}
-            className="inline-flex items-center text-[var(--cream-38)]"
+            className="inline-flex items-center text-[var(--cream-60)]"
           >
             <ChevronDown size={14} strokeWidth={1.5} />
           </motion.span>
@@ -138,7 +138,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                         className={`flex items-center h-[var(--h-28)] pl-[var(--space-16)] pr-[var(--space-8)] t-13 rounded-r-[var(--r-6)] transition-colors duration-[var(--dur-1)] ${
                           isActive
                             ? 'text-[var(--cream-100)]'
-                            : 'text-[var(--cream-38)] hover:text-[var(--cream-60)]'
+                            : 'text-[var(--cream-60)] hover:text-[var(--cream-100)]'
                         }`}
                       >
                         <span className="truncate">{section.heading}</span>
