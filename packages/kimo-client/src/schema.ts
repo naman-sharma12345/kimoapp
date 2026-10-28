@@ -354,15 +354,27 @@ export const opsRequestSchema = z
 export const opsResponseSchema = z
   .object({ version: z.number().int().nonnegative() })
   .strict();
+export const approveRequestSchema = z
+  .object({
+    burnInCaptions: z.boolean().optional(),
+    title: id.optional(),
+  })
+  .strict();
 export const approveResponseSchema = z.object({ renderId: id }).strict();
 export const renderResponseSchema = z
   .object({
-    status: z.enum(['queued', 'rendering', 'done', 'failed']),
+    status: z.enum(['queued', 'rendering', 'done', 'failed', 'cancelled']),
     progress: unit,
     frame: z.number().int().nonnegative(),
     totalFrames: z.number().int().positive(),
     etaSec: seconds,
+    title: id.optional(),
+    burnInCaptions: z.boolean().optional(),
     videoId: id.optional(),
+    sessionId: id.optional(),
+    error: z.string().optional(),
+    width: positive.int().optional(),
+    height: positive.int().optional(),
   })
   .strict();
 export const videoResponseSchema = z
@@ -374,8 +386,33 @@ export const videoResponseSchema = z
     height: positive.int(),
     sizeBytes: z.number().int().nonnegative(),
     title: id,
+    sessionId: id.optional(),
+    captionsUrl: z.string().url().optional(),
+    sessionExpiresAt: z.number().nonnegative().optional(),
+    madeInSec: seconds.optional(),
+    fps: positive.optional(),
+    actionGroups: z
+      .array(
+        z
+          .object({ summary: id, stepCount: z.number().int().positive() })
+          .strict(),
+      )
+      .optional(),
+    models: z.array(id).optional(),
+    sprite: z
+      .object({
+        url: z.string().url(),
+        tileWidth: positive.int(),
+        tileHeight: positive.int(),
+        columns: positive.int(),
+        intervalSec: positive,
+      })
+      .strict()
+      .optional(),
   })
   .strict();
+export type RenderSnapshot = z.infer<typeof renderResponseSchema>;
+export type DeliveredVideo = z.infer<typeof videoResponseSchema>;
 export const errorResponseSchema = z.object({ code: id, message: id }).strict();
 export const serverEventSchema = z.discriminatedUnion('t', [
   z

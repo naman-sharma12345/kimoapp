@@ -6,9 +6,7 @@ export function sessionDestination(
   const id = encodeURIComponent(sessionId);
   if (snapshot.status === 'warming') return `/warmup/${id}`;
   if (snapshot.status === 'rendering')
-    return snapshot.renderId
-      ? `/render/${encodeURIComponent(snapshot.renderId)}`
-      : null;
+    return snapshot.renderId ? `/render/${id}` : null;
   if (snapshot.status === 'done')
     return snapshot.videoId
       ? `/v/${encodeURIComponent(snapshot.videoId)}`

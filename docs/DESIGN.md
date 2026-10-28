@@ -1446,3 +1446,207 @@ Screen reader: new agent messages announced via a polite live region; action gro
 announced as "kimo is trimming beach_02" (throttled to one announcement per 3s).
 4
 ```
+
+## Phase 09 source specification
+
+```text
+Phase 9 — Review, Final 1080p Render and
+the Delivery Page
+READ THIS FIRST — rules for this phase (repeated in every
+phase on purpose)
+You are a senior frontend engineer building kimo web, the browser app for kimo, an AI video editor.
+You are NOT the designer. Every visual decision has already been made and is written below or in
+docs/DESIGN.md (created in Phase 0). Your job is to implement it exactly.
+No improvising. If a value (color, size, radius, spacing, duration, easing, copy) is written here,
+use exactly that value. If something is not specified, pick the closest existing token from docs/
+DESIGN.md and write a line in docs/DECISIONS.md saying what you chose and why. Never invent
+a new color, font, font size, radius, shadow or easing curve.
+No extra libraries beyond the ones listed in Phase 0's stack table. If you think you need one,
+write it in docs/DECISIONS.md as a proposal and continue without it.
+Only tokens. Never hard-code a hex value, px font size or duration inside a component. Use
+the CSS variables / T ailwind theme tokens defined in Phase 0 (--ink-0, --cream-100, --
+orange, --dur-2, --ease-out, etc.).
+Copy is exact. Every user-facing string written in quotes in these prompts is final. Use it
+character for character, including lowercase "kimo". Never write "Kimo" with a capital K in UI
+text.
+One orange rule. Orange (--orange #FF5A24) means "the AI is doing this right now" or "the
+one primary action". At most ONE orange element per panel at a time. Never use orange for
+decoration.
+No: gradients (except the two named exceptions in DESIGN.md), glassmorphism, drop
+shadows (except the named --shadow-pop), emoji in UI, stock illustrations, lorem ipsum,
+purple, neon, glow effects, rounded-full buttons except where named, bouncy overshoot
+springs except where named.
+Accessibility is not optional: every interactive element is keyboard reachable, has a visible
+focus ring (--focus-ring), and has an accessible name. Respect prefers-reduced-motion
+(every animation has a reduced variant listed in DESIGN.md §Motion).
+TypeScript strict. No any. No // @ts-ignore. ESLint and Prettier must pass with zero
+warnings.
+Finish the phase completely before stopping. At the end, run pnpm lint && pnpm typecheck
+&& pnpm test && pnpm build. All must pass. Then fill in the "Acceptance checklist" at the end of
+this document in docs/PHASE_LOG.md, ticking each item honestly, with a screenshot path for
+each visual item (docs/screens/phase-XX-*.png, captured with the Playwright script from Phase
+0).
+Do not touch the kimo engine repo or any backend code outside apps/web and packages/*
+listed in Phase 0. The backend is reached only through the typed client in packages/kimo-
+client.
+Skills. The agent skills installed in Phase 0 (listed in docs/SKILLS.md) are for craft, quality and
+review. Use the ones named under "Skills to load" in this phase. If a skill suggests a different
+look (new fonts, colors, bolder layout), this spec wins, always. Skills never override a written
+value.
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+8.
+9.
+10.
+11.
+1
+
+If an instruction in this phase seems to conflict with an earlier phase, this phase wins for the
+parts it names; everything else from earlier phases stays.
+Goal: close the loop beautifully. The AI asks the user to watch the cut; the user approves or asks for
+changes; on approval a render screen with a crafted animation shows real server progress; then a
+delivery page presents the finished video with download and share.
+Skills to load:emil kowalski skills, design motion principles, react-view-transitions,
+frontend-design, kill ai slop.
+9.1 Review moment (inside the Studio)
+Triggered by agent.message kind:"ask_review" or by the user pressing finish in the top bar.
+If triggered by the agent: the review card appears in chat (Phase 8 §8.1.5), the top bar finish
+button pulses (3×), the agent status becomes "waiting for you", and the viewer shows a
+centered overlay for 3 seconds then fades (unless the user hovers): a 56px circle secondary
+play button with label t-13 under it "watch the first cut". Clicking plays from 0.
+If the user presses finish while the agent is still acting: dialog "render now?" / "kimo is still
+working on: {current group summary}. you can render now or let it finish." / primary
+"render now" / secondary "let kimo finish". Render now sends pause then approve.
+Review dialog (when the user clicks "looks good, render it" or finish when idle): Dialog md,
+title "ready to render?", body: a 16:9 r8 poster of the current frame at 0:01 (from compositor),
+under it a 3-row summary (Rows): "length"0:42, "format"1080p · 16:9 · 30 fps · mp4,
+"audio"stereo · 48 kHz. A small T oggle row "burn in captions" (default on if captions
+exist). Actions: secondary "keep editing", primary "render 1080p".
+"ask for changes" focuses the composer with placeholder "what should kimo change?".
+9.2 Render screen /render/[sessionId]
+On confirm: POST /v1/sessions/:id/approve → renderId; transition (View Transition) from the Studio:
+all panels fade out except the viewer frame, which scales to the center of the screen (640px wide,
+keeps aspect) and becomes the render scene's frame.
+Layout (bg --ink-0, grain overlay on, horizon glow centered at 60% opacity):
+The frame (640 wide, r12, 1px inset highlight): shows the most recently rendered frame. Poll
+GET /v1/renders/:id every 800ms; when frame advances, fetch the preview frame image (/
+v1/renders/:id/frame.jpg?n= — add to the contract and mock) and crossfade it in (180ms).
+Until the first frame arrives, show the poster from the review dialog at 40% opacity.
+The scanline (the signature animation): a horizontal 1px line in --orange with a 24px-tall soft
+trail above it (linear-gradient(to top, rgb(255 90 36 / .18), transparent) — this is the
+second allowed gradient, the "render sheen") moves from the top of the frame to the bottom
+once per rendered chunk (every 1s of video), and the area above it shows the freshly rendered
+frame at full brightness while below it is dimmed to 55%. This reads as "the frame is being
+printed". Reduced motion: no scanline, frame just updates.
+Under the frame (24px): progress bar h4 r-pill, fill --orange (it's a running render → allowed),
+width = progress. Right of it nothing; under it (10px) a row: left mono t-12 cream-100 "frame
+812 of 1260", right mono t-12 cream-38 "about 0:14 left".
+12.
+•
+•
+•
+•
+1.
+2.
+3.
+2
+
+32px below: a single line t-15 cream-100 that changes with stage: "composing frames" (0–
+85%), "mixing audio" (85–95%), "encoding 1080p" (95–99%), "finishing up" (99–100%).
+Each change crossfades 220ms.
+12px below: a filmstrip of the last 8 rendered frames as 64×36 r4 tiles sliding in from the right
+(spring.snappy), older ones fading to 40% — "the reel being printed".
+Bottom center: t-12 cream-38 "you can close this tab, we’ll keep rendering. come back to
+this link anytime." and a ghost xs "copy link" button.
+T op-left kimo mark; top-right ghost xs "back to editing" → confirm "cancel the render?" /
+"you’ll return to the studio with everything as it was." / danger "cancel render" /
+secondary "keep rendering".
+9.3 Completion animation (the hand-off, 1400ms total)
+When status becomes done:
+Progress bar fills to 100% and turns --success (--dur-3).
+The scanline does one final full sweep in 400ms.
+The four kimo bars (same as warm-up) rise from below the frame in a staggered spring
+(stagger 60ms, spring.snappy), hold 300ms, then collapse into a single 20px Check drawn
+with stroke-dashoffset in --success.
+The frame lifts (scale 1 → 1.03, then settles) and the View Transition morphs it into the delivery
+page's player position. Route to /v/{videoId}.
+Reduced motion: progress turns green, 220ms crossfade to delivery page.
+Render failure: frame dims, progress turns --error, line "the render hit a problem" + mono t-12
+cream-38 server message + buttons primary "try again" (re-approve) and secondary "back to
+editing".
+9.4 Delivery page /v/[videoId]
+Shareable, works for anyone with the link (read-only), indexable = no (noindex).
+Layout (max-width 1040, centered, padding 64px 24px; bg --ink-0, grain on, horizon glow at 50%
+under the player):
+T op nav: kimo mark + wordmark left; right secondary sm "make another" → /.
+40px: Headline: t-11 cream-38 uppercase "your video is ready", 8px, title in
+--font-display italic 56px (clamp(40px, 5vw, 56px)) cream-100 = project title (e.g. manali
+trip reel).
+32px: Player: full container width (or 420px wide for 9:16 videos, centered), r12, 1px inset
+highlight, custom controls (not native): big center play button 64px secondary circle on poster;
+control bar on hover (h44, gradient-free, bg rgb(8 8 9 / .7)): play, scrub bar (4px track ink-4,
+played cream-100, buffered cream-38, 12px thumb on hover, hover time tooltip with frame
+thumbnail from sprite if available), time mono t-12, volume, playback speed, fullscreen. Space/
+K play, J/L ±10s, F fullscreen, M mute.
+24px: Action row (centered on mobile, left-aligned desktop): primary lg "download mp4" with
+Download 16 (uses a[download] to the signed URL, filename {slug}-kimo-1080p.mp4);
+secondary lg "copy link" with Link 16 (toast "link copied"); secondary lg "share" with
+Share 16 (Web Share API, fallback popover with X, WhatsApp, LinkedIn links + copy); ghost lg
+4.
+5.
+6.
+7.
+1.
+2.
+3.
+4.
+1.
+2.
+3.
+4.
+3
+
+"edit again" with Pencil 16 → reopens the studio for that session if not expired (else disabled
+with tooltip "this edit has expired").
+24px: Meta row t-12 cream-38, separated by ·: "1920 × 1080", "0:42", "48 MB", "made with
+kimo in 4 min".
+48px: "how kimo made it" collapsible Section (closed by default): a compact list of the action
+group summaries (from session history) with step counts, e.g. "cut the intro to the best 4
+seconds · 6 steps", and a line "models used: muse spark 1.3, sam 3.1, muse voice
+transcribe" — good for the hackathon judges.
+48px: footer (same as landing).
+Entrance (when not coming via View Transition): headline lines rise 10px stagger 70ms, player fades
++ scales .98→1 spring.soft, actions stagger 50ms.
+Delight detail: the first time the page opens after a render (flag in sessionStorage), the download
+button shows a 1-cycle subtle sheen sweep (a 30% white-6% band crossing in 900ms) after 1.2s.
+Only once. No confetti.
+OG tags: og:video with the MP4 URL, og:image poster, title = project title, description "made with
+kimo, the ai video editor".
+Acceptance checklist (Phase 9)
+Review triggers (agent and finish button), render-now dialog, review dialog with poster and
+summary.
+Render screen: real progress from mock, frame crossfades, scanline per chunk, stage lines,
+filmstrip, close-tab safety, cancel.
+Completion animation and View Transition to delivery; reduced-motion variants.
+Delivery page player with custom controls and shortcuts; download filename; copy/share; edit
+again; meta; how-kimo-made-it.
+9:16 layout for vertical videos verified.
+Failure path for render with retry.
+Screen recordings of the full approve → render → delivery flow saved in docs/screens/.
+5.
+6.
+7.
+•
+•
+•
+•
+•
+•
+•
+4
+```

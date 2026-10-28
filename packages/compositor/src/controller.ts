@@ -127,6 +127,40 @@ export class CompositorController {
   get current() {
     return this.time;
   }
+  async captureFrame(time = 1) {
+    const priorTime = this.currentTime();
+    const wasPlaying = this.playing;
+    this.pause();
+    this.seek(
+      Math.min(time, Math.max(0, this.project.duration - 1 / this.project.fps)),
+    );
+    const deadline = performance.now() + 3000;
+    try {
+      const [width, height] = this.dimensions();
+      while (
+        !this.renderer.draw(
+          this.project,
+          this.assets,
+          this.time,
+          false,
+          this.rate,
+          width,
+          height,
+          false,
+        )
+      ) {
+        if (this.disposed || performance.now() > deadline)
+          throw new Error('Preview frame is not ready');
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve()),
+        );
+      }
+      return await this.renderer.capture();
+    } finally {
+      this.seek(priorTime);
+      if (wasPlaying) void this.play();
+    }
+  }
   async getFilmstrip(clipId: string, widthPx: number) {
     const clip = this.project.clips[clipId];
     const asset = clip?.assetId

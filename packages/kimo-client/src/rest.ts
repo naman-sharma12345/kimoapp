@@ -115,11 +115,28 @@ export class KimoClient {
       s.opsRequestSchema.parse(body),
     );
   }
-  approve(id: string) {
+  reopenSession(id: string) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(id)}/reopen`,
+      z.undefined(),
+      {},
+    );
+  }
+  cancelRender(id: string) {
+    return this.request(
+      `/v1/renders/${encodeURIComponent(id)}/cancel`,
+      z.undefined(),
+      {},
+    );
+  }
+  renderFrameUrl(id: string, frame: number) {
+    return `${this.baseUrl}/v1/renders/${encodeURIComponent(id)}/frame.jpg?n=${Math.max(0, Math.floor(frame))}`;
+  }
+  approve(id: string, options: z.input<typeof s.approveRequestSchema> = {}) {
     return this.request(
       `/v1/sessions/${encodeURIComponent(id)}/approve`,
       s.approveResponseSchema,
-      {},
+      s.approveRequestSchema.parse(options),
     );
   }
   render(id: string) {

@@ -172,6 +172,9 @@ export class ProjectSync {
     this.queue = work.catch(() => undefined);
     return work;
   }
+  whenIdle() {
+    return this.queue;
+  }
   edit(
     ops: Op[],
     onBefore?: (project: SessionSnapshot['project']) => void,

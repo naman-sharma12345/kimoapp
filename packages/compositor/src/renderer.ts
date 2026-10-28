@@ -514,6 +514,13 @@ export class PixiRenderer {
     if (frameReady) this.app.renderer.render(this.app.stage);
     return frameReady;
   }
+  async capture() {
+    return this.app.renderer.extract.base64({
+      target: this.app.stage,
+      format: 'jpg',
+      quality: 0.85,
+    });
+  }
   destroy() {
     this.generation++;
     this.media.destroy();

@@ -30,7 +30,7 @@ describe('media preparation and session navigation', () => {
         { ...snapshot, status: 'rendering', renderId: 'render' },
         'id',
       ),
-    ).toBe('/render/render');
+    ).toBe('/render/id');
     expect(
       sessionDestination(
         { ...snapshot, status: 'done', videoId: 'video' },

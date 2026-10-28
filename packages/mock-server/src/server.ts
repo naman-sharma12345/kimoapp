@@ -14,6 +14,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { z } from 'zod';
 import {
   applyOps,
+  approveRequestSchema,
+  type KimoProject,
   clientEventSchema,
   serverEventSchema,
   sessionRequestSchema,
@@ -43,11 +45,20 @@ interface Session extends SessionSnapshot {
   records?: Map<string, ScriptAction>;
   active?: { id: string; finish: (stopped?: boolean) => void };
   failInjected?: boolean;
+  renderFailed?: boolean;
+  history?: { summary: string; stepCount: number }[];
+  historyOpen?: boolean;
 }
 interface RenderJob {
   sessionId: string;
   started: number;
   videoId?: string;
+  project: KimoProject;
+  title: string;
+  burnInCaptions: boolean;
+  history: { summary: string; stepCount: number }[];
+  cancelled?: boolean;
+  failed?: boolean;
 }
 export interface MockOptions {
   port?: number;
@@ -61,7 +72,7 @@ export function createMockServer(options: MockOptions = {}) {
     throw new Error('MOCK_SPEED must be positive');
   const sessions = new Map<string, Session>();
   const renders = new Map<string, RenderJob>();
-  const videos = new Map<string, { sessionId: string }>();
+  const videos = new Map<string, RenderJob>();
   const dataDir = resolve(options.dataDir ?? '.mock-data');
   const uploadService = createUploads(dataDir, options.fail);
   const uploads = uploadService.entries;
@@ -69,6 +80,7 @@ export function createMockServer(options: MockOptions = {}) {
   let base = '';
   const emit = (session: Session, event: ServerEvent) => {
     if (event.t === 'agent.status') session.agentState = event.state;
+    if (event.t === 'agent.message') session.historyOpen = false;
     const data = JSON.stringify(serverEventSchema.parse(event));
     for (const socket of session.sockets)
       if (socket.readyState === WebSocket.OPEN) socket.send(data);
@@ -93,6 +105,13 @@ export function createMockServer(options: MockOptions = {}) {
     const id = randomUUID();
     session.records ??= new Map();
     session.records.set(id, item);
+    session.history ??= [];
+    const group = session.history.at(-1);
+    if (session.historyOpen && group) {
+      group.summary = item.title;
+      group.stepCount++;
+    } else session.history.push({ summary: item.title, stepCount: 1 });
+    session.historyOpen = true;
     const first = item.ops[0];
     const clipId = first
       ? 'clipId' in first
@@ -168,6 +187,7 @@ export function createMockServer(options: MockOptions = {}) {
     session.active = { id, finish };
   };
   const interrupt = (session: Session, text: string) => {
+    if (session.status === 'awaiting_review') session.paused = false;
     // Immediate acknowledgement stays inside 400ms even while paused.
     emit(session, {
       t: 'agent.status',
@@ -297,6 +317,8 @@ export function createMockServer(options: MockOptions = {}) {
           'still.png',
           'mask.png',
           'delivery.mp4',
+          'sprite.jpg',
+          'sprite-vertical.jpg',
         ].includes(name)
       ) {
         fail(response, 404, 'not_found', 'Unknown fixture');
@@ -441,7 +463,7 @@ export function createMockServer(options: MockOptions = {}) {
       return;
     }
     const match =
-      /^\/v1\/sessions\/([^/]+)(?:\/(messages|ops|approve|cancel))?$/.exec(
+      /^\/v1\/sessions\/([^/]+)(?:\/(messages|ops|approve|cancel|reopen))?$/.exec(
         path,
       );
     if (match) {
@@ -465,6 +487,15 @@ export function createMockServer(options: MockOptions = {}) {
           agentState: session.agentState,
           createdAt: session.createdAt,
         });
+        return;
+      }
+      if (operation === 'reopen' && method === 'POST') {
+        session.status = 'awaiting_review';
+        session.paused = true;
+        session.renderId = undefined;
+        session.videoId = undefined;
+        session.agentState = 'waiting_user';
+        json(response, 202);
         return;
       }
       if (operation === 'cancel' && method === 'POST') {
@@ -503,7 +534,13 @@ export function createMockServer(options: MockOptions = {}) {
         return;
       }
       if (operation === 'approve' && method === 'POST') {
-        if (session.status !== 'awaiting_review') {
+        if (
+          session.status !== 'awaiting_review' &&
+          !(
+            session.project.duration > 0 &&
+            ['editing', 'failed', 'done'].includes(session.status)
+          )
+        ) {
           fail(
             response,
             409,
@@ -512,11 +549,84 @@ export function createMockServer(options: MockOptions = {}) {
           );
           return;
         }
+        const input = approveRequestSchema.parse(await body(request));
+        session.paused = true;
+        session.active?.finish(true);
+        const previous = Array.from(renders.values()).findLast(
+          (job) => job.sessionId === id,
+        );
         const renderId = randomUUID();
-        renders.set(renderId, { sessionId: id, started: Date.now() });
+        const failed = options.fail === 'render' && !session.renderFailed;
+        if (failed) session.renderFailed = true;
+        renders.set(renderId, {
+          sessionId: id,
+          started: Date.now(),
+          project: structuredClone(session.project),
+          title: input.title ?? previous?.title ?? 'a quieter kind of motion',
+          burnInCaptions:
+            input.burnInCaptions ??
+            previous?.burnInCaptions ??
+            Object.values(session.project.clips).some(
+              (clip) =>
+                Boolean(clip.text?.words?.length) ||
+                Boolean(clip.text?.style.startsWith('caption')),
+            ),
+          history: structuredClone(session.history ?? []),
+          failed,
+        });
         session.status = 'rendering';
         session.renderId = renderId;
         json(response, 200, { renderId });
+        return;
+      }
+    }
+    const renderResource = /^\/v1\/renders\/([^/]+)\/(frame.jpg|cancel)$/.exec(
+      path,
+    );
+    if (renderResource) {
+      const job = renders.get(renderResource[1] ?? '');
+      if (!job) {
+        fail(response, 404, 'not_found', 'Unknown render');
+        return;
+      }
+      if (renderResource[2] === 'cancel' && method === 'POST') {
+        job.cancelled = true;
+        const session = sessions.get(job.sessionId);
+        if (session && session.renderId === renderResource[1]) {
+          session.status = 'awaiting_review';
+          session.paused = true;
+          session.agentState = 'waiting_user';
+          session.renderId = undefined;
+        }
+        json(response, 202);
+        return;
+      }
+      if (renderResource[2] === 'frame.jpg' && method === 'GET') {
+        const n = Number(
+          new URL(request.url ?? '/', base).searchParams.get('n') ?? 0,
+        );
+        if (
+          !Number.isInteger(n) ||
+          n < 0 ||
+          n > Math.ceil(job.project.duration * 30)
+        ) {
+          fail(response, 400, 'invalid_frame', 'Invalid frame');
+          return;
+        }
+        const index = Math.min(
+          8,
+          Math.floor((n / Math.max(1, job.project.duration * 30)) * 8) + 1,
+        );
+        response.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+        await media(
+          request,
+          response,
+          resolve(
+            fixtures,
+            `render-${job.project.width < job.project.height ? 'vertical-' : ''}${String(index).padStart(2, '0')}.jpg`,
+          ),
+          'image/jpeg',
+        );
         return;
       }
     }
@@ -532,20 +642,29 @@ export function createMockServer(options: MockOptions = {}) {
         ((Date.now() - job.started) * speed) / 25000,
       );
       const session = sessions.get(job.sessionId);
-      if (options.fail === 'render') {
-        if (session) session.status = 'failed';
+      const totalFrames = Math.max(1, Math.ceil(job.project.duration * 30));
+      if (job.failed || job.cancelled) {
+        if (session && !job.cancelled) session.status = 'failed';
         json(response, 200, {
-          status: 'failed',
+          status: job.cancelled ? 'cancelled' : 'failed',
+          error: job.failed
+            ? 'the encoder stopped before finishing'
+            : undefined,
+          sessionId: job.sessionId,
+          title: job.title,
+          burnInCaptions: job.burnInCaptions,
+          width: job.project.width,
+          height: job.project.height,
           progress: 0,
           frame: 0,
-          totalFrames: 720,
+          totalFrames,
           etaSec: 0,
         });
         return;
       }
       if (progress === 1 && !job.videoId) {
         job.videoId = randomUUID();
-        videos.set(job.videoId, { sessionId: job.sessionId });
+        videos.set(job.videoId, job);
         if (session) {
           session.status = 'done';
           session.videoId = job.videoId;
@@ -554,14 +673,50 @@ export function createMockServer(options: MockOptions = {}) {
       json(response, 200, {
         status: progress === 1 ? 'done' : 'rendering',
         progress,
-        frame: Math.floor(progress * 720),
-        totalFrames: 720,
+        frame: Math.floor(progress * totalFrames),
+        totalFrames,
+        sessionId: job.sessionId,
+        title: job.title,
+        burnInCaptions: job.burnInCaptions,
+        width: job.project.width,
+        height: job.project.height,
         etaSec: Math.max(
           0,
-          (25000 - (Date.now() - job.started) * speed) / 1000,
+          (25000 / speed - (Date.now() - job.started)) / 1000,
         ),
         videoId: job.videoId,
       });
+      return;
+    }
+    const videoFile = /^\/v1\/videos\/([^/]+)\/file$/.exec(path);
+    if (videoFile && method === 'GET') {
+      const job = videos.get(videoFile[1] ?? '');
+      if (!job) {
+        fail(response, 404, 'not_found', 'Unknown video');
+        return;
+      }
+      const slug =
+        job.title
+          .normalize('NFKD')
+          .toLowerCase()
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') || 'video';
+      response.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${slug}-kimo-1080p.mp4"`,
+      );
+      await media(
+        request,
+        response,
+        resolve(
+          fixtures,
+          job.project.width < job.project.height
+            ? 'delivery-vertical.mp4'
+            : 'delivery-final.mp4',
+        ),
+        'video/mp4',
+      );
       return;
     }
     const videoMatch = /^\/v1\/videos\/([^/]+)$/.exec(path);
@@ -571,15 +726,38 @@ export function createMockServer(options: MockOptions = {}) {
         fail(response, 404, 'not_found', 'Unknown video');
         return;
       }
-      const info = await stat(resolve(fixtures, 'delivery.mp4'));
+      const vertical = video.project.width < video.project.height;
+      const info = await stat(
+        resolve(
+          fixtures,
+          vertical ? 'delivery-vertical.mp4' : 'delivery-final.mp4',
+        ),
+      );
+      const session = sessions.get(video.sessionId);
       json(response, 200, {
-        url: `${base}/fixtures/delivery.mp4`,
-        posterUrl: `${base}/fixtures/still.png`,
+        url: `${base}/v1/videos/${videoMatch[1]}/file`,
+        posterUrl: `${base}/v1/renders/${Array.from(renders).find(([, job]) => job === video)?.[0] ?? ''}/frame.jpg?n=0`,
         durationSec: 24,
-        width: 1920,
-        height: 1080,
+        width: vertical ? 1080 : 1920,
+        height: vertical ? 1920 : 1080,
         sizeBytes: info.size,
-        title: 'a quieter kind of motion',
+        title: video.title,
+        sessionId: video.sessionId,
+        sessionExpiresAt: (session?.createdAt ?? 0) + 86400000,
+        madeInSec: Math.max(
+          0,
+          (video.started - (session?.createdAt ?? video.started)) / 1000,
+        ),
+        fps: 30,
+        sprite: {
+          url: `${base}/fixtures/${vertical ? 'sprite-vertical.jpg' : 'sprite.jpg'}`,
+          tileWidth: 160,
+          tileHeight: 90,
+          columns: 4,
+          intervalSec: 3,
+        },
+        actionGroups: video.history,
+        models: ['muse spark 1.3', 'sam 3.1', 'muse voice transcribe'],
       });
       return;
     }

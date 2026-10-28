@@ -183,3 +183,5 @@ code,
     scroll-behavior: auto !important;
   }
 }
+
+@import '../styles/render.css';

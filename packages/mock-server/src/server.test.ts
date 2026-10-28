@@ -395,6 +395,106 @@ describe('mock backend end-to-end contract', () => {
     expect(stopped.paused).toBe(true);
     ws.socket.close();
   });
+  it('captures a render snapshot, serves preview JPEGs and cancels without losing the edit', async () => {
+    const { client, base } = await setup(undefined, 20);
+    const created = await client.createSession({
+      prompt: 'edit',
+      assetIds: [],
+      aspect: '16:9',
+    });
+    const ws = stream(created.wsUrl);
+    await ws.wait((events) =>
+      events.some(
+        (event) =>
+          event.t === 'agent.action.start' && event.tool === 'import_clip',
+      ),
+    );
+    ws.socket.send(JSON.stringify({ t: 'pause' }));
+    await ws.wait((events) =>
+      events.some(
+        (event) => event.t === 'agent.status' && event.label === 'paused',
+      ),
+    );
+    const before = await client.session(created.sessionId);
+    const approved = await client.approve(created.sessionId, {
+      title: 'Manali Trip!',
+      burnInCaptions: false,
+    });
+    const initial = await client.render(approved.renderId);
+    expect(initial.sessionId).toBe(created.sessionId);
+    expect(initial.totalFrames).toBe(Math.ceil(before.project.duration * 30));
+    const frame = await fetch(client.renderFrameUrl(approved.renderId, 0));
+    expect(frame.headers.get('content-type')).toBe('image/jpeg');
+    expect(new Uint8Array(await frame.arrayBuffer()).slice(0, 2)).toEqual(
+      new Uint8Array([255, 216]),
+    );
+    expect(
+      (await fetch(`${base}/v1/renders/${approved.renderId}/frame.jpg?n=-1`))
+        .status,
+    ).toBe(400);
+    await client.cancelRender(approved.renderId);
+    expect((await client.render(approved.renderId)).status).toBe('cancelled');
+    const restored = await client.session(created.sessionId);
+    expect(restored.project).toEqual(before.project);
+    expect(restored.status).toBe('awaiting_review');
+    expect(restored.renderId).toBeUndefined();
+    ws.socket.close();
+  });
+  it('retries a failed render, delivers portrait metadata/history and reopens the saved edit', async () => {
+    const { client } = await setup('render');
+    const created = await client.createSession({
+      prompt: 'edit',
+      assetIds: [],
+      aspect: '9:16',
+    });
+    const ws = stream(created.wsUrl);
+    await ws.wait((events) =>
+      events.some(
+        (event) => event.t === 'agent.message' && event.kind === 'ask_review',
+      ),
+    );
+    const first = await client.approve(created.sessionId, {
+      title: 'Manali Trip!',
+      burnInCaptions: true,
+    });
+    expect(await client.render(first.renderId)).toMatchObject({
+      status: 'failed',
+      error: 'the encoder stopped before finishing',
+    });
+    const second = await client.approve(created.sessionId, {
+      title: 'Manali Trip!',
+      burnInCaptions: false,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const result = await client.render(second.renderId);
+    if (!result.videoId) throw new Error('Missing delivered video');
+    const video = await client.video(result.videoId);
+    expect(video).toMatchObject({
+      width: 1080,
+      height: 1920,
+      title: 'Manali Trip!',
+      sessionId: created.sessionId,
+      fps: 30,
+    });
+    expect(
+      video.actionGroups?.reduce((sum, group) => sum + group.stepCount, 0),
+    ).toBe(45);
+    expect(video.models).toContain('sam 3.1');
+    const download = await fetch(video.url, {
+      headers: { Range: 'bytes=0-15' },
+    });
+    expect(download.status).toBe(206);
+    expect(download.headers.get('content-disposition')).toContain(
+      'manali-trip-kimo-1080p.mp4',
+    );
+    await client.reopenSession(created.sessionId);
+    expect((await client.session(created.sessionId)).status).toBe(
+      'awaiting_review',
+    );
+    expect((await fetch(video.posterUrl)).status).toBe(200);
+    expect((await client.video(result.videoId)).title).toBe('Manali Trip!');
+    ws.socket.close();
+  });
   it.each(['upload', 'ws', 'render'])(
     'simulates MOCK_FAIL=%s',
     async (failure) => {

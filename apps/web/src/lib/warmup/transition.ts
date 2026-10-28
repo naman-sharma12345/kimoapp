@@ -1,5 +1,6 @@
 'use client';
 import { uiTiming } from '../motion';
+import { guardNavigation } from '../navigation';
 
 let activeTransition: ViewTransition | undefined;
 export function navigateToStudio(
@@ -8,6 +9,7 @@ export function navigateToStudio(
   reduced: boolean,
 ) {
   const url = `/studio/${encodeURIComponent(sessionId)}`;
+  guardNavigation(url, '[data-studio-transition-ready]');
   const root = document.documentElement;
   if (typeof document.startViewTransition === 'function') {
     root.dataset.warmupUnfold = reduced ? 'reduced' : 'native';
@@ -28,10 +30,12 @@ export function navigateToStudio(
             subtree: true,
             attributes: true,
           });
-          const timeout = setTimeout(finish, 5000);
+          const timeout = setTimeout(finish, 2000);
           router.push(url);
         }),
     );
+    void activeTransition.ready.catch(() => undefined);
+    void activeTransition.updateCallbackDone.catch(() => undefined);
     void activeTransition.finished
       .catch(() => undefined)
       .finally(() => {

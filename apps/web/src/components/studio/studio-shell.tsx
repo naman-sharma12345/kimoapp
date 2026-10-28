@@ -71,6 +71,13 @@ import { inverseOps } from './edit-history';
 import { AgentFeed } from '@/lib/agent-feed';
 import { AgentPresence } from './agent-presence';
 import { AgentPanel } from './agent-panel';
+import { ReviewDialog, WatchFirstCut } from '@/components/render/review-dialog';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
+import {
+  navigateRendered,
+  renderTiming,
+  saveRenderContext,
+} from '@/lib/render';
 import { ViewerTextEditor } from './viewer-text-editor';
 import { isTypingTarget } from '@/lib/keyboard';
 
@@ -231,6 +238,11 @@ export function StudioShell({
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [watchReview, setWatchReview] = useState(
+    snapshot?.status === 'awaiting_review',
+  );
+  const [reviewHovered, setReviewHovered] = useState(false);
+  const reducedMotion = useReducedMotion();
   const [note, setNote] = useState('');
   const [seconds, setSeconds] = useState(0);
   const [latency, setLatency] = useState<number | null>(null);
@@ -513,6 +525,7 @@ export function StudioShell({
       if (message.t === 'agent.message' && message.kind === 'ask_review') {
         receivedAgentState = true;
         setAgentState('waiting_user');
+        setWatchReview(true);
       }
     };
     let wasConnected = false;
@@ -1079,6 +1092,18 @@ export function StudioShell({
     project,
     edit,
   ]);
+  const captureReview = useCallback(
+    async () => preview.current?.captureFrame(1),
+    [],
+  );
+  useEffect(() => {
+    if (!watchReview || reviewHovered) return;
+    const timer = setTimeout(
+      () => setWatchReview(false),
+      renderTiming.reviewOverlay,
+    );
+    return () => clearTimeout(timer);
+  }, [watchReview, reviewHovered]);
   const emittedLines = useRef(0);
   useEffect(() => {
     for (const line of systemLines.slice(emittedLines.current))
@@ -1110,11 +1135,26 @@ export function StudioShell({
     '--studio-timeline-size': `${timelineOpen ? clamp(sizes.timeline, 200, height * 0.6) : 36}px`,
   } as CSSProperties;
 
-  const approve = () => {
-    void new KimoClient()
-      .approve(sessionId)
-      .then((result) => router.push(`/render/${result.renderId}`))
-      .catch(() => feed.error('could not start the render · try again'));
+  const approve = async (burnInCaptions: boolean, poster?: string) => {
+    if (agentState === 'acting') send({ t: 'pause' });
+    await syncRef.current?.whenIdle();
+    const result = await new KimoClient().approve(sessionId, {
+      burnInCaptions,
+      title,
+    });
+    saveRenderContext(sessionId, {
+      renderId: result.renderId,
+      poster,
+      title,
+      burnInCaptions,
+    });
+    setFinishOpen(false);
+    navigateRendered(
+      router,
+      `/render/${encodeURIComponent(sessionId)}`,
+      'render',
+      reducedMotion,
+    );
   };
   const agentPanel = project ? (
     <AgentPanel
@@ -1149,7 +1189,7 @@ export function StudioShell({
         } else feed.error('connection lost · try again');
       }}
       onUndo={() => history(false)}
-      onRender={approve}
+      onRender={() => setFinishOpen(true)}
       onShow={(id, mask) => {
         const clip = id ? project.clips[id] : undefined;
         if (!clip) return;
@@ -1337,6 +1377,15 @@ export function StudioShell({
             ref={canvas}
             className="studio-preview-canvas"
             aria-label="live video preview"
+          />
+          <WatchFirstCut
+            visible={watchReview}
+            onHover={setReviewHovered}
+            onPlay={() => {
+              setWatchReview(false);
+              seekPreview(0);
+              void preview.current?.play();
+            }}
           />
           {selected?.text && project ? (
             <ViewerTextEditor
@@ -1982,39 +2031,38 @@ export function StudioShell({
           >
             preview full
           </Button>
-          <Dialog
-            open={finishOpen}
-            onOpenChange={setFinishOpen}
-            trigger={
-              <Button
-                data-review={agentState === 'waiting_user' || undefined}
-                size="sm"
-                variant={actionEnabled ? 'primary' : 'secondary'}
-                disabled={!actionEnabled}
-              >
-                finish
-              </Button>
-            }
-          >
-            <DialogContent
-              title="finish"
-              description="play it through and tell kimo what to change."
-              actions={
-                <div className="agent-button-row">
-                  <DialogClose asChild>
-                    <Button>close</Button>
-                  </DialogClose>
-                  <Button
-                    variant="primary"
-                    disabled={agentState !== 'waiting_user'}
-                    onClick={approve}
-                  >
-                    looks good, render it
-                  </Button>
-                </div>
+          {project ? (
+            <ReviewDialog
+              open={finishOpen}
+              onOpenChange={setFinishOpen}
+              project={project}
+              acting={!paused && agentState === 'acting'}
+              summary={(() => {
+                const state = feed.getSnapshot();
+                const latest = state.entries.findLast(
+                  (entry) => entry.type === 'group',
+                );
+                const latestId =
+                  latest?.type === 'group' ? latest.actions.at(-1) : undefined;
+                return (
+                  state.actions[state.runningId ?? latestId ?? '']?.title ??
+                  'the current edit'
+                );
+              })()}
+              capture={captureReview}
+              onApprove={approve}
+              trigger={
+                <Button
+                  data-review={agentState === 'waiting_user' || undefined}
+                  size="sm"
+                  variant={actionEnabled ? 'primary' : 'secondary'}
+                  disabled={!actionEnabled}
+                >
+                  finish
+                </Button>
               }
             />
-          </Dialog>
+          ) : null}
         </div>
       </header>
       {width < 1024 && banner ? (

@@ -40,5 +40,125 @@
     "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/study-3.mp4",
     "sha256": "508089b396a5cb9503e119578649014752bf42e1a2242fa6316b6d255f8eae49",
     "license": "CC0-1.0"
+  },
+  {
+    "name": "render-01.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-01.jpg",
+    "sha256": "dc7cd9ce74b178d54efab225ee34f69d41b74bf34d2d07d8b592051aec27d5ef",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-02.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-02.jpg",
+    "sha256": "553180a27e06144f02d97803a29b6a7223d4fd6401198fa5b81e9a0ffedd1d44",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-03.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-03.jpg",
+    "sha256": "46b362fce4fff16887d618b1688ffeb75028bf53178de3353182fd82a980fc77",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-04.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-04.jpg",
+    "sha256": "b1494d71e320946814f8b4f9c8b79daa283742291bed3749eec6f93c28dd5773",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-05.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-05.jpg",
+    "sha256": "5ddcbf8fea463201ec6d25ae1e5b96b41273c18861952adab2149308237f21ad",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-06.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-06.jpg",
+    "sha256": "c45f802a3fa6ef812c221ec5f4603c30a9892a3bd108fe9f5fa7d4e7e551cd1d",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-07.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-07.jpg",
+    "sha256": "4deed542677d61592af72c8e30e38ec28f2d357c6fb07c73409097466e4851bc",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-08.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-08.jpg",
+    "sha256": "3d4dc6298139c2ccc312e4f6547304c5b3e73a5d71568122c4b9bf0ab01923ab",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-01.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-01.jpg",
+    "sha256": "ce8640389f8c16f15f066562ce18312005a85e291265840fcf4b828ddc3d4052",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-02.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-02.jpg",
+    "sha256": "16cd6b3f3fcd3ffc1bd821b179a19866d7e74629ddef49120e38fe99b316b351",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-03.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-03.jpg",
+    "sha256": "db89eca9260f9ccc6a0a2482557bb9b9abe2790e0a7d510aaa2f7831d2ed2c5d",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-04.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-04.jpg",
+    "sha256": "f1d633fc932520f4e014d6127185849ddbbd4a62c15119cda844b43d981b8c3d",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-05.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-05.jpg",
+    "sha256": "6e8d2b96e190606d41c3904bd57438a716de48d221c17248bda107cb68cf82f3",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-06.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-06.jpg",
+    "sha256": "34ed73840a16a32746ff3307e55f042a05d53efd1750ea8e5637c6e529a7f441",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-07.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-07.jpg",
+    "sha256": "974f3bba9f0d982fcb7c6a1927a1c0140f61082f0ff8bd68702b59183088ada6",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "render-vertical-08.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/render-vertical-08.jpg",
+    "sha256": "d4641473fb641f1c77b82c61e70efcb36f1461ec82cc8b83a306033e23acf230",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "delivery-final.mp4",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-final.mp4",
+    "sha256": "deaa14375606d3a14bc60e1b2c09f524b7d9d3f048d74a5c7879f71b45b96015",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "delivery-vertical.mp4",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/delivery-vertical.mp4",
+    "sha256": "2078eea96dc9fa6b889a855524a92aca70c3e1a673fe6660d4ca953072a65741",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "sprite.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/sprite.jpg",
+    "sha256": "5fd013d6ed0fbcbde967a8ca993189e808861c87112c4a1770564a866799b40b",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "sprite-vertical.jpg",
+    "url": "https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/packages/mock-server/fixtures/sprite-vertical.jpg",
+    "sha256": "f27e6692efa3cb35029d9f64b466d7d957f830157866f4d150870e3b5a3f2dd3",
+    "license": "CC0-1.0"
   }
 ]

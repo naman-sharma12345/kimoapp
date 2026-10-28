@@ -87,6 +87,7 @@ export function AgentPanel({
   const [uploading, setUploading] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const [sent, setSent] = useState(false);
+  const [askingChanges, setAskingChanges] = useState(false);
   const [notificationChoice, setNotificationChoice] = useState(false);
 
   useEffect(() => {
@@ -130,6 +131,7 @@ export function AgentPanel({
     if (node && (node.innerText ?? '') !== note) node.textContent = note;
   }, [note, composerRef]);
   const focus = () => {
+    setAskingChanges(true);
     onTab('chat');
     requestAnimationFrame(() => composerRef.current?.focus());
   };
@@ -143,6 +145,7 @@ export function AgentPanel({
     if (composerRef.current) composerRef.current.replaceChildren();
     setAttachments([]);
     setSent(true);
+    setAskingChanges(false);
     if (message === '/pause') {
       onControl({ t: 'pause' });
       feed.system('you paused kimo');
@@ -215,7 +218,7 @@ export function AgentPanel({
   }
   const latest = state.entries.at(-1);
   const reviewId =
-    latest?.type === 'agent' && latest.kind === 'ask_review'
+    !state.runningId && latest?.type === 'agent' && latest.kind === 'ask_review'
       ? latest.id
       : undefined;
   const filtered = Object.values(state.actions).filter((action) => {
@@ -521,11 +524,13 @@ export function AgentPanel({
             aria-label="tell kimo what to change"
             className="agent-composer-input"
             data-placeholder={
-              paused
-                ? 'tell kimo what to do next…'
-                : acting
-                  ? 'type to interrupt kimo…'
-                  : 'tell kimo what to change…'
+              askingChanges
+                ? 'what should kimo change?'
+                : paused
+                  ? 'tell kimo what to do next…'
+                  : acting
+                    ? 'type to interrupt kimo…'
+                    : 'tell kimo what to change…'
             }
             suppressContentEditableWarning
             onInput={(event) => onNote(event.currentTarget.innerText)}

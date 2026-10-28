@@ -61,3 +61,7 @@ Phase 7 completion also ran the Impeccable detector over the timeline, main insp
 ## Phase 08
 
 Read emil-design-eng, accessibility-compliance, design-motion-principles (creation workflow and the relevant motion/accessibility references), and design-taste-frontend with its app-screen guidance. Applied purposeful streaming, static reduced-motion states, accessible status announcements and browser verification within the existing fixed composition. The precise phase brief overrides optional art-direction/interview flows and additional libraries. The repository's existing Playwright/Axe harness provides the interaction and visual checks.
+
+## Phase 09
+
+Read the PDF brief using the pdf skill, then emil-design-eng, design-motion-principles with its creation/accessibility/cookbook/gotcha guidance, vercel-react-view-transitions and its implementation audit, frontend-design, and kill-ai-slop. The fixed phase design and supplied logo override optional new art direction, fonts, motion curves and design interviews. The navigation audit limits shared-frame transitions to Studio→render→delivery; the installed stable React runtime requires the existing native-browser fallback. The kill-ai-slop scanner examined all five new render components and reported zero groups/hits. The brief’s explicit horizon, italic delivery title and named sheens remain intentional. Playwright/Axe and screenshots supplement the mechanical scan.
