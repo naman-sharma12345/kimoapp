@@ -1,3 +1,6 @@
+// The app's CSP forbids 'unsafe-eval'; this Pixi build compiles shaders and
+// uniform syncing without eval, so preview and export work under it.
+import 'pixi.js/unsafe-eval';
 import {
   Application,
   BlurFilter,
