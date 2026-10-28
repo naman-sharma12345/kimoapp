@@ -1,3 +1,4 @@
+import { OfflineBanner } from '@/components/offline-banner';
 import { RouteFocus } from '@/components/route-focus';
 import type { Metadata } from 'next';
 
@@ -38,6 +39,7 @@ export default function RootLayout({
           skip to content
         </a>
         <RouteFocus />
+        <OfflineBanner />
         {children}
       </body>
     </html>
