@@ -286,7 +286,11 @@ export default function LegalPage({
       <ReadingProgress progress={scrollProgress} />
       <TopBar onBack={handleBack} />
 
-      <main className="w-full px-[var(--space-20)] sm:px-[var(--space-32)] lg:px-[var(--space-48)] pt-[var(--space-32)] pb-[var(--space-96)]">
+      <main
+        id="main"
+        tabIndex={-1}
+        className="w-full px-[var(--space-20)] sm:px-[var(--space-32)] lg:px-[var(--space-48)] pt-[var(--space-32)] pb-[var(--space-96)]"
+      >
         <div className="mx-auto max-w-[944px] flex flex-col lg:flex-row items-start justify-center lg:gap-[var(--space-64)]">
           {/* Sticky Table of Contents on Desktop (200px wide, top 96px) */}
           <TableOfContents

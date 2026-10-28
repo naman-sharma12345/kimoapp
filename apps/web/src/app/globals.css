@@ -187,3 +187,10 @@ code,
 }
 
 @import '../styles/render.css';
+
+/* The skip link moves focus to #main; the container itself shows no ring. */
+#main:focus:not(:focus-visible),
+#main[tabindex='-1']:focus {
+  outline: none;
+  box-shadow: none;
+}

@@ -140,6 +140,8 @@ export default function AccountPage({
       />
 
       <main
+        id="main"
+        tabIndex={-1}
         className="w-full mx-auto px-[var(--space-24)] pt-[var(--space-48)] pb-[var(--space-96)]"
         style={{ maxWidth: 'var(--w-content)' }}
       >

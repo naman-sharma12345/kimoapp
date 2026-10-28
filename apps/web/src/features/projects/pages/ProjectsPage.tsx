@@ -677,6 +677,8 @@ export default function ProjectsPage({
 
       {/* Content container: max-width 1360 (1600 on 1920), padding 40px 32px 96px */}
       <main
+        id="main"
+        tabIndex={-1}
         style={{
           maxWidth: isWide1920 ? '1600px' : '1360px',
           margin: '0 auto',

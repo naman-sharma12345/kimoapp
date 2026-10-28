@@ -260,6 +260,8 @@ export default function SignInPage({
 
       {/* RIGHT COLUMN: THE DOOR (42% on >=1024px, fills remainder below stage on <1024px) */}
       <motion.main
+        id="main"
+        tabIndex={-1}
         animate={{ opacity: isExitingOnSuccess ? 0 : 1 }}
         transition={{
           duration: prefersReducedMotion ? DUR.dur2 : DUR.dur4,
