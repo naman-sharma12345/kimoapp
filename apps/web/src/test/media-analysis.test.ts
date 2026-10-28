@@ -42,3 +42,26 @@ describe('in-browser clip analysis (numbers only)', () => {
     expect(result?.beats.length).toBeGreaterThan(12);
   });
 });
+
+describe('chunked analysis for long clips', () => {
+  it('matches the one-pass levels and reports progress up to 1', async () => {
+    const { frameLevelsChunked } = await import('@/lib/media-analysis');
+    const samples = join(tone(20, 0.5), tone(2, 0.0005), tone(20, 0.5));
+    const sync = frameLevels(samples, RATE);
+    const seen: number[] = [];
+    let pauses = 0;
+    const chunked = await frameLevelsChunked(
+      samples,
+      RATE,
+      (value) => seen.push(value),
+      async () => {
+        pauses++;
+      },
+    );
+    expect(chunked.levels).toEqual(sync.levels);
+    expect(chunked.peakDb).toBeCloseTo(sync.peakDb, 5);
+    expect(chunked.integratedDb).toBeCloseTo(sync.integratedDb, 5);
+    expect(pauses).toBeGreaterThan(1);
+    expect(seen.at(-1)).toBe(1);
+  });
+});

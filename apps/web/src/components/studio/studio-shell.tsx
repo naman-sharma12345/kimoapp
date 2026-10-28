@@ -48,6 +48,7 @@ import {
   resolveAsset,
   resolveAssets,
   type AiCredentials,
+  type AssetAnalysis,
   type ClientEvent,
   type Clip,
   type Op,
@@ -103,12 +104,24 @@ import {
   missingAssets,
   onLocalMediaChange,
 } from '@/lib/local-media';
-import { analyzeClip } from '@/lib/media-analysis';
+import { analyzeBytes } from '@/lib/media-analysis';
+import { videoPoster } from '@/lib/landing-files';
+import {
+  CLIPS_WAIT_NOTE,
+  firstPromptGate,
+  isPreparing,
+  prepareClip,
+  setClipStage,
+} from '@/lib/clip-prep';
+import { ClipPrepPanel } from './clip-prep-panel';
 import { exportedVersion, setExportJob } from '@/lib/export-job';
 
 /** Clips already measured in this tab, and prompts already run. */
 const analyzed = new Set<string>();
 const promptsRun = new Set<string>();
+const holdNoted = new Set<string>();
+const preparing = new Map<string, Promise<AssetAnalysis | undefined>>();
+let prepQueue: Promise<unknown> = Promise.resolve();
 export const AI_OFF_NOTICE =
   'ai editing isn’t switched on yet. you can still edit by hand, preview and export.';
 function noteError(error: unknown) {
@@ -404,35 +417,74 @@ export function StudioShell({
   const assetKey = (current?.assets ?? [])
     .map((asset) => `${asset.id}:${asset.url}`)
     .join('|');
-  // Measure each clip's sound in the browser (numbers only), then run the
-  // landing prompt as the first AI edit once the clips are here.
+  // Get each clip ready in the browser (read, poster, sound measured as
+  // numbers only), then run the landing prompt as the first AI edit once
+  // every clip is here and ready.
   useEffect(() => {
     const snap = snapshotRef.current;
     if (!snap) return;
     let alive = true;
-    void (async () => {
-      const analyses = [];
-      for (const asset of snap.assets) {
-        if (asset.kind !== 'video' && asset.kind !== 'audio') continue;
-        const file = localFile(asset.id);
-        if (!file || analyzed.has(asset.id)) continue;
-        analyzed.add(asset.id);
-        const result = await analyzeClip(asset.id, file, asset.kind);
-        if (result) analyses.push(result);
+    const started: Promise<AssetAnalysis | undefined>[] = [];
+    const waiting: Promise<unknown>[] = [];
+    for (const asset of snap.assets) {
+      if (asset.kind !== 'video' && asset.kind !== 'audio') continue;
+      const file = localFile(asset.id);
+      if (!file) continue;
+      const running = preparing.get(asset.id);
+      if (running) {
+        waiting.push(running);
+        continue;
       }
+      if (analyzed.has(asset.id)) continue;
+      analyzed.add(asset.id);
+      const kind = asset.kind;
+      const hasPoster =
+        Boolean(asset.thumbUrl) ||
+        uploadManager.store
+          .getState()
+          .items.some(
+            (item) => item.assetId === asset.id && item.meta.thumbBlobUrl,
+          );
+      setClipStage(asset.id, asset.name, 'reading');
+      const job = prepQueue
+        .then(() =>
+          prepareClip({ id: asset.id, name: asset.name, kind }, file, {
+            thumbnail: (picked) =>
+              hasPoster ? Promise.resolve() : videoPoster(picked),
+            analyze: (bytes, onProgress) =>
+              analyzeBytes(asset.id, bytes, kind, onProgress),
+          }),
+        )
+        .finally(() => preparing.delete(asset.id));
+      prepQueue = job.catch(() => undefined);
+      preparing.set(asset.id, job);
+      started.push(job);
+      waiting.push(job);
+    }
+    const gate = () =>
+      firstPromptGate({
+        prompt: snap.pendingPrompt,
+        aiReady: aiAvailable === true || Boolean(userAiRef.current),
+        alreadyRun: promptsRun.has(sessionId),
+        missingClips: missingAssets(snap.assets).length,
+        preparing: preparing.size > 0 || isPreparing(),
+      });
+    if (gate() === 'wait' && !holdNoted.has(sessionId)) {
+      holdNoted.add(sessionId);
+      feed.system(CLIPS_WAIT_NOTE);
+    }
+    void (async () => {
+      // Clips get ready one after another so long ones never pile up in memory.
+      const analyses = (await Promise.all(started)).filter(
+        (result): result is AssetAnalysis => Boolean(result),
+      );
+      await Promise.all(waiting);
       if (analyses.length)
         await new KimoClient()
           .sendAnalysis(sessionId, { analyses })
           .catch(() => undefined);
       const prompt = snap.pendingPrompt;
-      if (
-        !alive ||
-        !prompt ||
-        (aiAvailable !== true && !userAiRef.current) ||
-        promptsRun.has(sessionId) ||
-        missingAssets(snap.assets).length
-      )
-        return;
+      if (!alive || !prompt || gate() !== 'run') return;
       promptsRun.add(sessionId);
       feed.system(`working on: ${prompt}`);
       await new KimoClient()
@@ -1605,6 +1657,7 @@ export function StudioShell({
           hasClips={clipsInTab}
         />
       ) : null}
+      <ClipPrepPanel />
       <div className="studio-viewer-overlay">
         <span>
           {project?.width ?? 1920} × {project?.height ?? 1080} · 30 fps

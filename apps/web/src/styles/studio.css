@@ -1574,3 +1574,62 @@ html[data-warmup-unfold='native'] .studio-timeline-playhead {
   flex: none;
   gap: var(--space-8);
 }
+/* Clips getting ready in this tab: one row per clip and an overall bar. */
+.studio-clip-prep {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: var(--space-12);
+  width: min(420px, calc(100% - var(--space-24)));
+  max-height: calc(100% - var(--space-24));
+  overflow: auto;
+  padding: var(--space-16);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-8);
+  background: var(--ink-2);
+  color: var(--cream-100);
+  font-size: var(--t-12);
+  line-height: 16px;
+}
+.studio-clip-prep header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+.studio-clip-prep p {
+  margin: 0;
+}
+.studio-clip-prep small {
+  display: block;
+  color: var(--cream-60);
+}
+.studio-clip-prep ul {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.studio-clip-prep li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4) var(--space-8);
+}
+.studio-clip-prep li > .ui-progress {
+  grid-column: 1 / -1;
+}
+.studio-clip-prep-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-clip-prep-stage {
+  color: var(--cream-60);
+}
+.studio-clip-prep li[data-stage='ready'] .studio-clip-prep-stage {
+  color: var(--cream-100);
+}

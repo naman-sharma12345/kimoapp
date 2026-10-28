@@ -16,17 +16,6 @@ const round = (value: number) => Math.round(value * 1000) / 1000;
 const db = (value: number) =>
   value > 0 ? Math.max(-120, 20 * Math.log10(value)) : -120;
 
-function mono(buffer: AudioBuffer) {
-  const out = new Float32Array(buffer.length);
-  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-    const data = buffer.getChannelData(channel);
-    for (let index = 0; index < data.length; index++)
-      out[index] =
-        (out[index] ?? 0) + (data[index] ?? 0) / buffer.numberOfChannels;
-  }
-  return out;
-}
-
 /** RMS level per 20 ms frame, in dBFS. */
 export function frameLevels(samples: Float32Array, rate: number) {
   const size = Math.max(1, Math.round(rate * FRAME));
@@ -136,28 +125,110 @@ export function detectBeats(
   return { beats, bpm: Math.round((60 / period) * 10) / 10 };
 }
 
-/** Analyses one clip's audio, or answers undefined when it can't. */
-export async function analyzeClip(
-  assetId: string,
-  file: File,
-  kind: 'video' | 'audio',
-): Promise<AssetAnalysis | undefined> {
-  if (file.size > MAX_BYTES || typeof AudioContext === 'undefined')
-    return undefined;
-  const context = new AudioContext();
+/** Hands the main thread back to the page between chunks of work. */
+export const yieldToPage = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+const CHUNK = 1 << 18;
+
+/** Mono mix in chunks, so a long clip never blocks the tab. */
+async function monoChunked(
+  buffer: AudioBuffer,
+  onProgress: (value: number) => void,
+) {
+  const out = new Float32Array(buffer.length);
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, i) =>
+    buffer.getChannelData(i),
+  );
+  for (let start = 0; start < out.length; start += CHUNK) {
+    const end = Math.min(out.length, start + CHUNK);
+    for (const data of channels)
+      for (let index = start; index < end; index++)
+        out[index] = (out[index] ?? 0) + (data[index] ?? 0) / channels.length;
+    onProgress(end / out.length);
+    await yieldToPage();
+  }
+  return out;
+}
+
+/** The same numbers as frameLevels, worked out in chunks with progress. */
+export async function frameLevelsChunked(
+  samples: Float32Array,
+  rate: number,
+  onProgress: (value: number) => void = () => undefined,
+  pause: () => Promise<void> = yieldToPage,
+) {
+  const size = Math.max(1, Math.round(rate * FRAME));
+  const levels = new Float32Array(Math.ceil(samples.length / size));
+  const step = Math.max(1, Math.floor(CHUNK / size));
+  let peak = 0;
+  let sumSquares = 0;
+  for (let first = 0; first < levels.length; first += step) {
+    const last = Math.min(levels.length, first + step);
+    for (let frame = first; frame < last; frame++) {
+      let sum = 0;
+      const end = Math.min(samples.length, (frame + 1) * size);
+      for (let index = frame * size; index < end; index++) {
+        const value = samples[index] ?? 0;
+        sum += value * value;
+        if (value > peak) peak = value;
+        else if (-value > peak) peak = -value;
+      }
+      sumSquares += sum;
+      levels[frame] = db(Math.sqrt(sum / Math.max(1, end - frame * size)));
+    }
+    onProgress(last / levels.length);
+    await pause();
+  }
+  return {
+    levels,
+    peakDb: db(peak),
+    integratedDb: db(Math.sqrt(sumSquares / Math.max(1, samples.length))),
+  };
+}
+
+/** Decodes at a low rate when the browser allows it: less memory, faster. */
+function audioContext() {
   try {
-    const buffer = await context.decodeAudioData(await file.arrayBuffer());
+    return new AudioContext({ sampleRate: 16000 });
+  } catch {
+    return new AudioContext();
+  }
+}
+
+/**
+ * Analyses one clip's audio from bytes already read, reporting real
+ * progress (decode, then each chunk), or answers undefined when it can't.
+ */
+export async function analyzeBytes(
+  assetId: string,
+  bytes: ArrayBuffer,
+  kind: 'video' | 'audio',
+  onProgress: (value: number) => void = () => undefined,
+): Promise<AssetAnalysis | undefined> {
+  if (bytes.byteLength > MAX_BYTES || typeof AudioContext === 'undefined')
+    return undefined;
+  const context = audioContext();
+  try {
+    onProgress(0);
+    const buffer = await context.decodeAudioData(bytes);
     if (!buffer.duration || buffer.duration > MAX_SECONDS) return undefined;
-    const samples = mono(buffer);
-    const { levels, peakDb, integratedDb } = frameLevels(
+    onProgress(0.3);
+    const samples = await monoChunked(buffer, (value) =>
+      onProgress(0.3 + value * 0.2),
+    );
+    const { levels, peakDb, integratedDb } = await frameLevelsChunked(
       samples,
       buffer.sampleRate,
+      (value) => onProgress(0.5 + value * (kind === 'audio' ? 0.3 : 0.5)),
     );
     const { silences, speech } = silenceRanges(levels, buffer.duration);
-    const music =
-      kind === 'audio'
-        ? detectBeats(samples, buffer.sampleRate, buffer.duration)
-        : undefined;
+    let music: ReturnType<typeof detectBeats>;
+    if (kind === 'audio') {
+      await yieldToPage();
+      music = detectBeats(samples, buffer.sampleRate, buffer.duration);
+    }
+    onProgress(1);
     return {
       assetId,
       silences,
@@ -174,4 +245,14 @@ export async function analyzeClip(
   } finally {
     await context.close().catch(() => undefined);
   }
+}
+
+/** Analyses one clip's audio, or answers undefined when it can't. */
+export async function analyzeClip(
+  assetId: string,
+  file: File,
+  kind: 'video' | 'audio',
+): Promise<AssetAnalysis | undefined> {
+  if (file.size > MAX_BYTES) return undefined;
+  return analyzeBytes(assetId, await file.arrayBuffer(), kind);
 }
