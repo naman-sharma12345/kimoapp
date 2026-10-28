@@ -59,8 +59,9 @@ export function AuthDialog({
               loading={busy}
               onClick={() => {
                 setBusy(true);
+                const next = window.location.pathname + window.location.search;
                 window.location.assign(
-                  new KimoClient().googleSignInUrl(window.location.href),
+                  `/signin?reason=limit&next=${encodeURIComponent(next)}`,
                 );
               }}
             >

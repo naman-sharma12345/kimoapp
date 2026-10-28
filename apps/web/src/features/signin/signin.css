@@ -1,0 +1,256 @@
+/* Sign-in page styles ported from the AI Studio import; scoped to .kimo-signin. */
+.kimo-signin {
+  --danger: #e5534b;
+  --danger-border: rgb(229 83 75 / 0.4);
+  --danger-hover: rgb(229 83 75 / 0.08);
+  --track-video-warm: #4d4134;
+  --track-broll-warm: #433d36;
+  --track-image-warm: #483d38;
+  --cream-16-warm: rgb(255 232 204 / 0.24);
+  --viewer-bg: #0b0b0c;
+  --viewer-hairline: rgb(245 241 231 / 0.06);
+  --caption-scrim: rgb(8 8 9 / 0.72);
+  --horizon-glow: radial-gradient(
+    closest-side,
+    rgb(255 90 36 / 0.1),
+    rgb(255 90 36 / 0.03) 55%,
+    transparent 100%
+  );
+  --font-serif: var(--font-display);
+  --h-24: 24px;
+  --h-28: 28px;
+  --h-32: 32px;
+  --h-40: 40px;
+  --h-48: 48px;
+  min-height: 100dvh;
+  background-color: var(--ink-0);
+  color: var(--cream-100);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Type scale classes */
+.kimo-signin .t-11 {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.kimo-signin .t-12 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-signin .t-13 {
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-signin .t-15 {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+}
+
+.kimo-signin .t-15-regular {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 400;
+}
+
+.kimo-signin .t-17 {
+  font-size: 17px;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+.kimo-signin .t-17-medium {
+  font-size: 17px;
+  line-height: 26px;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.kimo-signin .t-20 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+
+.kimo-signin .t-28 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.kimo-signin .t-display {
+  font-size: clamp(44px, 6.2vw, 88px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 400;
+}
+
+.kimo-signin .font-sans-kimo {
+  font-family: var(--font-sans);
+}
+
+.kimo-signin .font-mono-kimo {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-signin .font-serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Button variants */
+.kimo-signin .kimo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  border-radius: var(--r-8);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
+}
+
+.kimo-signin .kimo-btn:disabled {
+  background-color: var(--ink-4) !important;
+  border-color: transparent !important;
+  color: var(--cream-38) !important;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.kimo-signin .kimo-btn-primary {
+  background-color: var(--orange);
+  color: var(--on-orange);
+  border: 1px solid transparent;
+}
+
+.kimo-signin .kimo-btn-primary:hover:not(:disabled) {
+  background-color: var(--orange-hover);
+  box-shadow:
+    0 0 0 1px rgb(255 122 48 / 0.35),
+    0 8px 28px -6px rgb(255 90 36 / 0.45);
+  transform: translateY(-1px);
+}
+
+.kimo-signin .kimo-btn-primary:active:not(:disabled) {
+  background-color: var(--orange-press);
+  transform: scale(0.98);
+}
+
+.kimo-signin .kimo-btn-secondary {
+  background-color: rgb(245 241 231 / 0.03);
+  border: 1px solid var(--line-strong);
+  color: var(--cream-100);
+}
+
+.kimo-signin .kimo-btn-secondary:hover:not(:disabled) {
+  background-color: var(--ink-2);
+  border-color: rgb(245 241 231 / 0.22);
+  transform: translateY(-1px);
+}
+
+.kimo-signin .kimo-btn-secondary:active:not(:disabled) {
+  background-color: var(--ink-3);
+}
+
+.kimo-signin .kimo-btn-ghost {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--cream-60);
+}
+
+.kimo-signin .kimo-btn-ghost:hover:not(:disabled) {
+  background-color: var(--ink-2);
+  color: var(--cream-100);
+}
+
+.kimo-signin .kimo-btn-ghost:active:not(:disabled) {
+  background-color: var(--ink-3);
+}
+
+.kimo-signin .kimo-btn-danger {
+  background-color: transparent;
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+
+.kimo-signin .kimo-btn-danger:hover:not(:disabled) {
+  background-color: var(--danger-hover);
+}
+
+/* Legal link styling */
+.kimo-signin .kimo-legal-link {
+  color: var(--cream-60);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  border-radius: 2px;
+  transition:
+    color var(--dur-1) var(--ease-out),
+    text-decoration-color var(--dur-1) var(--ease-out);
+}
+
+.kimo-signin .kimo-legal-link:hover {
+  color: var(--cream-100);
+  text-decoration-color: var(--cream-60);
+}
+
+/* Spinner rotation for redirecting state */
+@keyframes kimo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.kimo-signin .kimo-spinner {
+  animation: kimo-spin 800ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-signin .kimo-btn:active:not(:disabled) {
+    transform: none !important;
+  }
+  .kimo-signin .kimo-spinner {
+    animation: none;
+  }
+}
+
+.kimo-signin *:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.kimo-signin [tabindex='-1']:focus,
+.kimo-signin [tabindex='-1']:focus-visible {
+  box-shadow: none;
+}

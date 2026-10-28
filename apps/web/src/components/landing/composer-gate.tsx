@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import {
   startTransition,
   useEffect,
@@ -284,26 +285,10 @@ export function ComposerGate(props: Props) {
   );
 }
 export function SignInGate() {
-  const [Auth, setAuth] =
-    useState<
-      ComponentType<{ open?: boolean; onOpenChange?: (open: boolean) => void }>
-    >();
-  const [open, setOpen] = useState(false);
   return (
-    <>
-      <button
-        className="ui-button ui-button-secondary ui-size-sm"
-        onClick={() => {
-          setOpen(true);
-          void import('@/components/auth-dialog').then((m) =>
-            setAuth(() => m.AuthDialog),
-          );
-        }}
-      >
-        sign in
-      </button>
-      {Auth ? <Auth open={open} onOpenChange={setOpen} /> : null}
-    </>
+    <Link className="ui-button ui-button-secondary ui-size-sm" href="/signin">
+      sign in
+    </Link>
   );
 }
 
