@@ -112,3 +112,21 @@ The delivery title comes from the Studio's current title when approving. Action 
 Native transition readiness is bounded to 2 seconds, and all three transition promises (ready, updateCallbackDone, finished) are observed. If rendering or navigation is slow, content can continue loading without an unhandled browser transition-timeout error. This applies to the existing warm-up handoff as well as the new output handoffs.
 
 A 3-second navigation watchdog also detects an interrupted App Router stream: if the expected screen never mounts, it replaces the same internal URL with a document navigation. A browser Back action, a newer handoff, or an explicit render cancellation cancels that fallback. This preserves the normal shared-frame transition while recovering from the production-only blank Studio response observed in the browser run.
+
+## Phase 10 — user-scoped mock readiness
+
+The user confirmed that no real backend exists. Mock defaults remain, future API/WS domains are commented placeholders, Pages configuration is prepared without deployment, and v1.0.0 is deferred. The GitHub deliverable is a codex branch PR; main and the user's separate Cloudflare workflow are not changed directly.
+
+Use existing tokens for all new controls. Privacy adopts cream-60 for readable small prose, the existing 28/15/11 type scale, and the specified 680px measure. Coach bubbles use ink-3/r-8/shadow-pop and the specified 8px arrow. Versions/compare/search reuse native selects, existing buttons and Radix dialogs. The older composer highlight/resize removals remain intentional. User filenames, technical units and font identifiers are data rather than rewritten voice.
+
+The optional extras extend the typed mock contract; no frontend model call, real Google exchange, detected-beat claim or engine-render parity is fabricated. Review cuts live on this browser, bounded by browser storage capacity; storage failures surface an error. Historical previews cannot mutate live state or consume undo. Comparison reads the same playback clock and disposes its own compositor.
+
+The initial landing renders its static structure on the server. Upload/dialog/media setup loads on interaction; native typing remains in the first textarea until an action needs the full editor. Files, prompt, first action and focus transfer to the loaded composer. The heavy reset helper on the root 404 route also loads only when invoked, since root boundaries otherwise inflate every route's initial JS. Budgets count layout/error/not-found chunks as well as the route.
+
+Fonts remain the supplied Geist, Geist Mono and Instrument Serif outlines/weights. Small OFL web subsets and explicit preload links reduce the cold font payload; extended characters use the original full faces on demand. Matching fallback metrics are retained, and font-display:block avoids a painted fallback swap. No new typeface is introduced. The former next/font manifest on this Windows build contained no font preloads, so explicit self-hosted links are used. Python fonttools is a developer conversion utility, not an application dependency.
+
+Phase 10 explicitly authorizes @next/bundle-analyzer and size-limit; they are development-only. ws is already part of the Phase 0 mock stack and is also declared at root for contract/browser tooling. PostHog uses its capture endpoint with an explicit allowlist and no SDK/autocapture, and Sentry-compatible envelopes omit messages/stack/user data. No production library was added. Wrangler is a deployment CLI, not a frontend dependency.
+
+Cloudflare's current Pages target requires static export. A generated isolated entrypoint preserves normal Next SSR; browser shells load project data and a Pages Function preserves public video metadata. No automatic deployment workflow is added. API/WS/R2 CSP placeholders stay closed until configured. The separate Workers workflow in the user's branch is an alternative requiring coordination at review.
+
+Compositor hardening makes shared GLSL float precision explicit, releases filters/filmstrip bitmaps, and transfers each preloaded video to only one pool. These fixes address real browser findings and retained-resource risk without changing the design or engine repository.

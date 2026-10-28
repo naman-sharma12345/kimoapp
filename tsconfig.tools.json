@@ -1,4 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["e2e/**/*.ts", "playwright.config.ts", "vitest.config.ts"]
+  "include": [
+    "e2e/**/*.ts",
+    "functions/**/*.ts",
+    "packages/kimo-client/*.test.ts",
+    "playwright.config.ts",
+    "vitest.config.ts"
+  ]
 }

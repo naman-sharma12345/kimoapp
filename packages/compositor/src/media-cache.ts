@@ -29,7 +29,11 @@ export function preloadVideoAssets(
   }
 }
 export function getPreloadedVideo(assetId: string) {
-  return cached.get(assetId)?.video;
+  const entry = cached.get(assetId);
+  if (!entry) return undefined;
+  cached.delete(assetId);
+  entry.video.remove();
+  return entry.video;
 }
 export function clearVideoAssets(sessionId: string, keepMatching = false) {
   for (const [id, entry] of cached) {

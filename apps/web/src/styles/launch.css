@@ -1,0 +1,212 @@
+.landing-privacy {
+  margin: var(--space-12) auto 0;
+  max-width: var(--landing-composer-width);
+  color: var(--cream-60);
+  font-size: var(--t-11);
+  text-align: center;
+  text-wrap: pretty;
+}
+.landing-privacy a {
+  color: var(--cream-100);
+  text-decoration: underline;
+}
+.privacy-page {
+  max-width: 680px;
+  margin: auto;
+  padding: var(--space-64) var(--space-24);
+  font-size: var(--t-15);
+  color: var(--cream-60);
+}
+.privacy-page h1 {
+  font-size: var(--t-28);
+  color: var(--cream-100);
+}
+.privacy-page h2 {
+  font-size: var(--t-17);
+  color: var(--cream-100);
+  margin-top: var(--space-32);
+}
+.privacy-page a {
+  text-decoration: underline;
+  color: var(--cream-100);
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+button svg.lucide-play {
+  translate: 1px 0;
+}
+@media (prefers-contrast: more) {
+  :root {
+    --cream-60: var(--cream-100);
+    --line: var(--line-strong);
+  }
+}
+
+.launch-search,
+.launch-select {
+  background: var(--ink-2);
+  color: var(--cream-100);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-6);
+  padding: var(--space-8) var(--space-12);
+  min-width: 0;
+}
+.launch-search {
+  width: 100%;
+}
+.launch-results {
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-top: var(--space-12);
+}
+.launch-results [aria-selected='true'] {
+  background: var(--ink-3);
+}
+.launch-results .ui-button {
+  width: 100%;
+  justify-content: start;
+}
+.launch-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.launch-version-banner,
+.launch-compare-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8);
+  background: var(--ink-3);
+  color: var(--cream-100);
+  font-size: var(--t-11);
+}
+.launch-compare-menu {
+  position: absolute;
+  right: var(--space-12);
+  top: var(--space-48);
+  z-index: 4;
+}
+.launch-compare {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.launch-compare canvas {
+  width: 100%;
+  height: 100%;
+}
+.launch-compare-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--cream-100);
+}
+.launch-compare-controls {
+  position: absolute;
+  bottom: var(--space-32);
+  left: var(--space-8);
+  pointer-events: auto;
+}
+.launch-compare input {
+  position: absolute;
+  bottom: var(--space-8);
+  left: var(--space-16);
+  width: calc(100% - var(--space-32));
+  pointer-events: auto;
+  accent-color: var(--cream-100);
+}
+.launch-coach {
+  position: fixed;
+  z-index: 20;
+  top: var(--space-96);
+  left: var(--space-24);
+  max-width: 280px;
+  padding: var(--space-16);
+  border-radius: var(--r-8);
+  background: var(--ink-3);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-pop);
+}
+.launch-coach::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-8));
+  left: var(--space-24);
+  width: var(--space-16);
+  height: var(--space-8);
+  background: var(--ink-3);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.launch-coach[data-step='1'] {
+  left: 50%;
+  translate: -50% 0;
+}
+.launch-coach[data-step='2'] {
+  left: auto;
+  right: var(--space-24);
+}
+.launch-coach p {
+  margin: 0 0 var(--space-12);
+}
+.launch-coach > div {
+  display: flex;
+  justify-content: end;
+  gap: var(--space-8);
+}
+.launch-export {
+  margin-top: var(--space-16);
+  color: var(--cream-60);
+}
+.launch-export summary {
+  cursor: pointer;
+  padding: var(--space-8) 0;
+}
+.launch-export label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin: var(--space-8) 0;
+}
+@media (max-width: 600px) {
+  .launch-coach {
+    max-width: calc(100vw - var(--space-48));
+  }
+  .studio-top-left .launch-select {
+    max-width: var(--space-96);
+  }
+}
+
+.launch-version-banner {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  margin-top: var(--space-32);
+}
+
+.review-watch span {
+  color: var(--cream-100);
+}
+
+.launch-coach[data-step='0'] {
+  top: auto;
+  bottom: calc(var(--studio-timeline-size, 280px) + var(--space-96));
+}
+.launch-coach[data-step='0']::before {
+  top: auto;
+  bottom: calc(-1 * var(--space-8));
+  rotate: 180deg;
+}
+
+.landing-text-wrap:has(textarea:not(:placeholder-shown)) .landing-placeholder {
+  visibility: hidden;
+}

@@ -1,11 +1,15 @@
 'use client';
+import { useEffect } from 'react';
+import { reportError } from '@/lib/telemetry';
 
 export default function ErrorPage({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => reportError(error.digest), [error.digest]);
   return (
     <main id="main" className="token-page" data-ready="true">
       <h1 className="text-t28">something went wrong</h1>

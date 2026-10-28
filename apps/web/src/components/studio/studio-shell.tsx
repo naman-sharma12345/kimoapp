@@ -9,8 +9,9 @@ import {
   type CSSProperties,
   type PointerEvent,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/app-router';
 import {
+  Activity,
   Grid3X3,
   FolderOpen,
   Link2,
@@ -65,6 +66,16 @@ import { useSessionStore } from '@/stores/session';
 import { useUploads, uploadManager } from '@/lib/uploads/manager';
 import { isUnfolding } from '@/lib/warmup/transition';
 import { assetTransitionName } from '@/components/warmup/warmup-reel';
+import { track, rememberPrompt } from '@/lib/telemetry';
+import {
+  CommandPalette,
+  ComparePreview,
+  StudioCoach,
+  readCuts,
+  restoreCut,
+  type Cut,
+} from './launch-tools';
+import { offlineOutbox } from '@/lib/offline-outbox';
 import { EditingTimeline } from './editing-timeline';
 import { EditingInspector } from './editing-inspector';
 import { inverseOps } from './edit-history';
@@ -294,7 +305,40 @@ export function StudioShell({
   const pingAt = useRef(0);
   const seen = useRef(new Set<string>());
   const breakpoint = useRef<number | null>(null);
-  const project = current?.project;
+  const [cuts, setCuts] = useState<Cut[]>([]);
+  const [viewedCut, setViewedCut] = useState<Cut | null>(null);
+  const viewedRef = useRef(viewedCut);
+  viewedRef.current = viewedCut;
+  const [compareCut, setCompareCut] = useState<Cut | null>(null);
+  const [palette, setPalette] = useState(false);
+  const [beatGrid, setBeatGrid] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const recordCut = useCallback(() => {
+    const next = snapshotRef.current;
+    if (!next) return;
+    setCuts((previous) => {
+      if (previous.at(-1)?.project.version === next.project.version)
+        return previous;
+      const result = [
+        ...previous,
+        {
+          name: `cut ${previous.length + 1}`,
+          project: structuredClone(next.project),
+          assets: structuredClone(next.assets),
+        },
+      ];
+      try {
+        localStorage.setItem(`kimo.cuts.${sessionId}`, JSON.stringify(result));
+      } catch {
+        setEditError('could not keep this cut on this device');
+      }
+      return result;
+    });
+  }, [sessionId]);
+  useEffect(() => {
+    setCuts(readCuts(sessionId));
+  }, [sessionId]);
+  const project = viewedCut?.project ?? current?.project;
   const files = useMemo(
     () =>
       (current?.assets ?? []).filter(
@@ -391,8 +435,28 @@ export function StudioShell({
       sessionId,
       () => snapshotRef.current ?? snapshot,
       (next) => replace(next, true),
+      offlineOutbox,
     );
     syncRef.current = sync;
+    let outstanding = 0;
+    let replaying = false;
+    sync.onPending = (count) => {
+      outstanding = count;
+      setPendingCount(count);
+    };
+    const replayTimer = setInterval(() => {
+      if (!outstanding || !navigator.onLine || replaying) return;
+      replaying = true;
+      void sync
+        .restore()
+        .catch(() => {
+          if (alive)
+            setEditError('changes are kept locally · reconnect to sync');
+        })
+        .finally(() => {
+          replaying = false;
+        });
+    }, 15000);
     sync.onSuggestion = (id, content) =>
       setSuggestion({
         id,
@@ -526,6 +590,11 @@ export function StudioShell({
         receivedAgentState = true;
         setAgentState('waiting_user');
         setWatchReview(true);
+        track('review_shown');
+        void sync
+          .whenIdle()
+          .then(recordCut)
+          .catch(() => undefined);
       }
     };
     let wasConnected = false;
@@ -543,9 +612,13 @@ export function StudioShell({
         }
       },
       true,
+      () => sync.restore(),
     );
     socket.current = connection;
-    connection.start();
+    void sync
+      .restore()
+      .then(() => connection.start())
+      .catch(() => connection.start());
     void client
       .session(sessionId)
       .then((next) => {
@@ -558,18 +631,22 @@ export function StudioShell({
           if (next.paused !== undefined) setPaused(next.paused);
           if (next.agentState) setAgentState(next.agentState);
         }
-        if (next.status === 'awaiting_review') setAgentState('waiting_user');
+        if (next.status === 'awaiting_review') {
+          setAgentState('waiting_user');
+          recordCut();
+        }
       })
       .catch(() => undefined);
     return () => {
       alive = false;
+      clearInterval(replayTimer);
       connection.dispose();
       socket.current = null;
       syncRef.current = null;
       if (overlayTimer.current) clearTimeout(overlayTimer.current);
       cancelAnimationFrame(followFrame.current);
     };
-  }, [sessionId, snapshot, feed]);
+  }, [sessionId, snapshot, feed, recordCut]);
   useEffect(() => {
     if (!canvas.current || !snapshot) return;
     let canceled = false;
@@ -640,13 +717,13 @@ export function StudioShell({
   useEffect(() => {
     if (current && preview.current) {
       preview.current.update(
-        current.project,
-        current.assets,
+        viewedCut?.project ?? current.project,
+        viewedCut?.assets ?? current.assets,
         lastOpReceived.current,
       );
       lastOpReceived.current = undefined;
     }
-  }, [current]);
+  }, [current, viewedCut]);
   useEffect(() => {
     preview.current?.setLoop(
       loop,
@@ -720,12 +797,16 @@ export function StudioShell({
     if (agentOpen) setUnread(false);
   }, [agentOpen]);
   const send = useCallback(
-    (message: ClientEvent) => socket.current?.send(message) ?? false,
+    (message: ClientEvent) =>
+      viewedRef.current && message.t !== 'ping'
+        ? false
+        : (socket.current?.send(message) ?? false),
     [],
   );
   const edit = useCallback((ops: Op[], record = true, onSaved?: () => void) => {
     const sync = syncRef.current;
-    if (!sync || !ops.length) return;
+    if (!sync || !ops.length || viewedRef.current) return;
+    for (const op of ops) track('user_edit', { op: op.op });
     let undo: Op[] = [];
     void sync
       .edit(ops, (project) => {
@@ -749,6 +830,7 @@ export function StudioShell({
   }, []);
   const history = useCallback(
     (redo: boolean) => {
+      if (viewedRef.current) return;
       const source = redo ? redoStack.current : undoStack.current;
       const target = redo ? undoStack.current : redoStack.current;
       const item = source.pop();
@@ -772,6 +854,7 @@ export function StudioShell({
   }, []);
   const messageAgent = useCallback(
     (text: string) => {
+      if (viewedRef.current) return;
       void new KimoClient()
         .message(sessionId, { text })
         .then(() => setSystemLines((lines) => [...lines, text]))
@@ -781,6 +864,7 @@ export function StudioShell({
   );
   const uploadFiles = useCallback(
     async (files: File[]) => {
+      if (viewedRef.current) return;
       setUploadError('');
       try {
         const { localIds, rejected } = uploadManager.add(files);
@@ -928,6 +1012,17 @@ export function StudioShell({
   );
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        setPalette((old) => !old);
+        return;
+      }
+      if (palette) return;
+      if (
+        viewedRef.current &&
+        ![' ', 'Escape', 'j', 'k', 'l', 'f'].includes(event.key.toLowerCase())
+      )
+        return;
       if (event.key === 'Escape' && fullscreen) {
         setFullscreen(false);
         return;
@@ -1087,6 +1182,7 @@ export function StudioShell({
     shortcutsOpen,
     leaveOpen,
     finishOpen,
+    palette,
     fullscreen,
     selection,
     project,
@@ -1135,13 +1231,24 @@ export function StudioShell({
     '--studio-timeline-size': `${timelineOpen ? clamp(sizes.timeline, 200, height * 0.6) : 36}px`,
   } as CSSProperties;
 
-  const approve = async (burnInCaptions: boolean, poster?: string) => {
+  const approve = async (
+    burnInCaptions: boolean,
+    poster?: string,
+    options?: {
+      resolution: '1080p' | '720p';
+      format: 'mp4' | 'webm';
+      alsoVertical: boolean;
+    },
+  ) => {
+    if (viewedRef.current) return;
     if (agentState === 'acting') send({ t: 'pause' });
     await syncRef.current?.whenIdle();
     const result = await new KimoClient().approve(sessionId, {
       burnInCaptions,
       title,
+      ...options,
     });
+    track('render_started');
     saveRenderContext(sessionId, {
       renderId: result.renderId,
       poster,
@@ -1163,7 +1270,8 @@ export function StudioShell({
       assets={current.assets}
       acting={agentState === 'acting'}
       paused={paused}
-      connected={connection}
+      readOnly={Boolean(viewedCut)}
+      connected={connection && !viewedCut}
       tab={agentTab}
       onTab={setAgentTab}
       onCollapse={() => setAgentOpen(false)}
@@ -1171,7 +1279,11 @@ export function StudioShell({
       note={note}
       onNote={setNote}
       onSend={async (text, attachments, interrupt) => {
+        if (viewedRef.current)
+          throw new Error('return to the current cut to edit');
         if (interrupt) {
+          rememberPrompt(text);
+          track('interrupt_sent');
           if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
         } else
           await new KimoClient().message(sessionId, {
@@ -1180,6 +1292,7 @@ export function StudioShell({
           });
       }}
       onControl={(event) => {
+        if (viewedRef.current) return;
         if (send(event)) {
           if (event.t === 'pause') {
             setPaused(true);
@@ -1245,6 +1358,7 @@ export function StudioShell({
     <section
       className="studio-panel studio-inspector"
       aria-label="inspector"
+      inert={Boolean(viewedCut)}
       data-active-target={aiClips[0]}
     >
       <header className="studio-panel-header">
@@ -1366,6 +1480,44 @@ export function StudioShell({
         </div>
       </div>
       {!hasProject ? <div className="studio-loading-line" /> : null}
+      {viewedCut ? (
+        <div className="launch-version-banner">
+          <span>viewing {viewedCut.name} · read-only</span>
+          <Button
+            size="sm"
+            onClick={() => {
+              const cut = viewedCut;
+              setViewedCut(null);
+              viewedRef.current = null;
+              if (current) edit(restoreCut(current.project, cut.project));
+            }}
+          >
+            restore this cut
+          </Button>
+          <Button size="sm" onClick={() => setViewedCut(null)}>
+            back to current cut
+          </Button>
+        </div>
+      ) : null}
+      {cuts.length && !viewedCut ? (
+        <div className="launch-compare-menu">
+          <select
+            className="launch-select"
+            aria-label="compare cuts"
+            value={compareCut?.name ?? ''}
+            onChange={(e) =>
+              setCompareCut(cuts.find((c) => c.name === e.target.value) ?? null)
+            }
+          >
+            <option value="">compare cuts</option>
+            {cuts.map((c) => (
+              <option key={c.name} value={c.name}>
+                compare with {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="studio-frame-area">
         <div
           className="studio-frame"
@@ -1378,6 +1530,17 @@ export function StudioShell({
             className="studio-preview-canvas"
             aria-label="live video preview"
           />
+          {compareCut && !viewedCut ? (
+            <ComparePreview
+              cut={compareCut}
+              source={() => ({
+                time: preview.current?.current ?? playhead,
+                playing: preview.current?.isPlaying ?? false,
+                rate: preview.current?.playbackRate ?? 1,
+              })}
+              onClose={() => setCompareCut(null)}
+            />
+          ) : null}
           <WatchFirstCut
             visible={watchReview}
             onHover={setReviewHovered}
@@ -1387,13 +1550,13 @@ export function StudioShell({
               void preview.current?.play();
             }}
           />
-          {selected?.text && project ? (
+          {selected?.text && project && !viewedCut ? (
             <ViewerTextEditor
               key={selected.id}
               clip={selected}
               project={project}
               onEdit={edit}
-              onDraft={draftClip}
+              onDraft={viewedCut ? () => {} : draftClip}
               onInteraction={interaction}
             />
           ) : null}
@@ -1647,6 +1810,16 @@ export function StudioShell({
             variant="ghost"
             size="sm"
             iconOnly
+            icon={Activity}
+            aria-label="toggle beat grid"
+            tooltip="toggle beat grid"
+            aria-pressed={beatGrid}
+            onClick={() => setBeatGrid(!beatGrid)}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
             icon={Link2}
             aria-label="toggle linked selection"
             tooltip="toggle linked selection"
@@ -1809,6 +1982,8 @@ export function StudioShell({
           ) : null}
           {project && hasProject ? (
             <EditingTimeline
+              readOnly={Boolean(viewedCut)}
+              beatGrid={beatGrid}
               aiClips={aiClips}
               project={project}
               assets={current.assets}
@@ -1823,7 +1998,7 @@ export function StudioShell({
               playhead={playhead}
               onSeek={seekPreview}
               onEdit={edit}
-              onDraft={draftClip}
+              onDraft={viewedCut ? () => {} : draftClip}
               onInteraction={interaction}
               onAsk={(name) => {
                 setNote(`@${name} `);
@@ -1887,6 +2062,96 @@ export function StudioShell({
       data-inspector-open={inspectorOpen}
       style={style}
     >
+      <StudioCoach />
+      {project && current ? (
+        <CommandPalette
+          open={palette}
+          onOpenChange={setPalette}
+          project={project}
+          assets={current.assets}
+          readonly={Boolean(viewedCut)}
+          onClip={(id) => {
+            setSelection(id);
+            seekPreview(project.clips[id]?.start ?? 0);
+            setInspectorOpen(true);
+          }}
+          onPrompt={(text) => {
+            setNote(text);
+            composer.current?.focus();
+          }}
+          onAction={(action) => {
+            if (action === 'render') setFinishOpen(true);
+            if (action === 'toggle captions')
+              for (const t of project.tracks.filter((t) => t.kind === 'text'))
+                edit([
+                  {
+                    op: 'track.update',
+                    id: t.id,
+                    patch: { hidden: !t.hidden },
+                  },
+                ]);
+            if (action === 'split' && selection) {
+              const c = project.clips[selection];
+              if (
+                c &&
+                !c.locked &&
+                playhead > c.start &&
+                playhead < c.start + c.duration
+              )
+                edit([
+                  {
+                    op: 'clip.split',
+                    id: c.id,
+                    at: playhead,
+                    newId: crypto.randomUUID(),
+                  },
+                ]);
+            }
+            if (action === 'add text') {
+              const t = project.tracks.find(
+                (t) => t.kind === 'text' && !t.locked,
+              ) ?? {
+                id: crypto.randomUUID(),
+                kind: 'text' as const,
+                name: 'text',
+                height: 48 as const,
+                hidden: false,
+                muted: false,
+                locked: false,
+              };
+              const id = crypto.randomUUID();
+              edit([
+                ...(project.tracks.some((x) => x.id === t.id)
+                  ? []
+                  : [{ op: 'track.add' as const, track: t }]),
+                {
+                  op: 'clip.add',
+                  clip: {
+                    id,
+                    trackId: t.id,
+                    kind: 'text',
+                    start: playhead,
+                    duration: 3,
+                    in: 0,
+                    speed: 1,
+                    transform: {
+                      x: 0,
+                      y: 0,
+                      scale: 1,
+                      rotation: 0,
+                      opacity: 1,
+                    },
+                    text: { content: 'your text', style: 'caption-clean' },
+                    effects: [],
+                    keyframes: [],
+                  },
+                },
+              ]);
+              setSelection(id);
+            }
+          }}
+        />
+      ) : null}
       <Ready />
       <h1 className="landing-sr-only">{title}</h1>
       {project ? (
@@ -1944,17 +2209,38 @@ export function StudioShell({
           ) : (
             <button
               className="studio-title"
+              disabled={Boolean(viewedCut)}
               onClick={() => {
                 setTitleDraft(title);
                 setEditingTitle(true);
               }}
             >
-              {title}
+              <span className="launch-truncate" title={title}>
+                {title}
+              </span>
               <Pencil size={12} aria-hidden="true" />
             </button>
           )}
+          <select
+            className="launch-select"
+            aria-label="versions"
+            value={viewedCut?.name ?? ''}
+            onChange={(e) => {
+              setViewedCut(cuts.find((c) => c.name === e.target.value) ?? null);
+              setSelection(null);
+            }}
+          >
+            <option value="">current cut</option>
+            {cuts.map((c) => (
+              <option key={c.name}>{c.name}</option>
+            ))}
+          </select>
           <span className="studio-save" data-offline={!online || undefined}>
-            {online ? 'saved' : 'offline · changes kept locally'}
+            {pendingCount
+              ? `${pendingCount} edits kept locally`
+              : online
+                ? 'saved'
+                : 'offline · changes kept locally'}
           </span>
         </div>
         <div className="studio-top-center">
@@ -1978,7 +2264,7 @@ export function StudioShell({
             aria-label={paused ? 'let kimo continue' : 'pause kimo'}
             tooltip={paused ? 'let kimo continue' : 'pause kimo'}
             onClick={togglePause}
-            disabled={!connection}
+            disabled={!connection || Boolean(viewedCut)}
           />
         </div>
         <div className="studio-top-right">
@@ -1989,7 +2275,7 @@ export function StudioShell({
             icon={Undo2}
             aria-label="undo"
             tooltip="undo"
-            disabled={!historyCount}
+            disabled={!historyCount || Boolean(viewedCut)}
             onClick={() => history(false)}
           />
           <Button
@@ -1999,7 +2285,7 @@ export function StudioShell({
             icon={Redo2}
             aria-label="redo"
             tooltip="redo"
-            disabled={!redoStack.current.length}
+            disabled={!redoStack.current.length || Boolean(viewedCut)}
             onClick={() => history(true)}
           />
           <span className="studio-divider" />
@@ -2056,7 +2342,7 @@ export function StudioShell({
                   data-review={agentState === 'waiting_user' || undefined}
                   size="sm"
                   variant={actionEnabled ? 'primary' : 'secondary'}
-                  disabled={!actionEnabled}
+                  disabled={!actionEnabled || Boolean(viewedCut)}
                 >
                   finish
                 </Button>

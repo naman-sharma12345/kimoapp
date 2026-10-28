@@ -16,9 +16,18 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next-perf/types/**/*.ts",
+    ".next-preview/types/**/*.ts",
+    ".next-production/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-preview/types/**/*.ts"
+    ".next-final/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".pages-build",
+    ".next-production",
+    ".next-perf",
+    ".next-final"
+  ]
 }

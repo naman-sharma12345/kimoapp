@@ -1,12 +1,8 @@
-'use client';
-import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-import { Pill } from '@/components/ui/pill';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
-import { LandingComposer } from './landing-composer';
+
+import { ComposerIsland, SignInGate } from './composer-gate';
 import { Ready } from '@/app/dev/tokens/ready';
 
 const how = [
@@ -24,17 +20,9 @@ const how = [
   },
 ] as const;
 export function LandingPage() {
-  const [exiting, setExiting] = useState(false);
-  const [recovering, setRecovering] = useState(false);
   return (
     <>
-      <main
-        id="main"
-        className="landing-page"
-        data-exiting={exiting || undefined}
-        data-recovering={(recovering && !exiting) || undefined}
-        data-ready="false"
-      >
+      <main id="main" className="landing-page" data-ready="false">
         <Ready />
         <div className="landing-grain" aria-hidden="true" />
         <div className="landing-first-fold">
@@ -59,24 +47,17 @@ export function LandingPage() {
                   />
                   <span className="landing-sr-only"> (opens in a new tab)</span>
                 </a>
-                <Dialog trigger={<Button size="sm">sign in</Button>}>
-                  <DialogContent
-                    title="accounts are coming soon."
-                    description="you can use kimo without one."
-                    actions={
-                      <DialogClose asChild>
-                        <Button>ok</Button>
-                      </DialogClose>
-                    }
-                  />
-                </Dialog>
+                <SignInGate />
               </div>
             </nav>
           </header>
           <div className="landing-hero">
             <div className="landing-hero-inner">
               <div className="landing-eyebrow">
-                <Pill variant="live">ai video editor · open source</Pill>
+                <span className="ui-pill" data-variant="live">
+                  <span className="ui-live-dot" aria-hidden="true" />
+                  ai video editor · open source
+                </span>
               </div>
               <h1 className="landing-headline">
                 <span className="landing-line landing-line-one">
@@ -91,13 +72,7 @@ export function LandingPage() {
                 grades and scores it while you watch, and you can step in at any
                 second.
               </p>
-              <LandingComposer
-                onExit={(next) => {
-                  if (!next) setRecovering(true);
-                  setExiting(next);
-                }}
-                exiting={exiting}
-              />
+              <ComposerIsland />
             </div>
           </div>
         </div>

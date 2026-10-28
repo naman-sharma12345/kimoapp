@@ -27,13 +27,24 @@ export function ReviewDialog({
   acting: boolean;
   summary: string;
   capture: () => Promise<string | undefined>;
-  onApprove: (captions: boolean, poster?: string) => Promise<void>;
+  onApprove: (
+    captions: boolean,
+    poster?: string,
+    options?: {
+      resolution: '1080p' | '720p';
+      format: 'mp4' | 'webm';
+      alsoVertical: boolean;
+    },
+  ) => Promise<void>;
 }) {
   const hasCaptions = Object.values(project.clips).some(
     (clip) =>
       Boolean(clip.text?.words?.length) ||
       Boolean(clip.text?.style.startsWith('caption')),
   );
+  const [resolution, setResolution] = useState<'1080p' | '720p'>('1080p');
+  const [format, setFormat] = useState<'mp4' | 'webm'>('mp4');
+  const [alsoVertical, setAlsoVertical] = useState(false);
   const [captions, setCaptions] = useState(hasCaptions);
   const [poster, setPoster] = useState<string>();
   const [captureError, setCaptureError] = useState(false);
@@ -64,7 +75,7 @@ export function ReviewDialog({
     setBusy(true);
     setError('');
     try {
-      await onApprove(captions, poster);
+      await onApprove(captions, poster, { resolution, format, alsoVertical });
     } catch {
       setError('could not start the render · try again');
       setBusy(false);
@@ -84,7 +95,7 @@ export function ReviewDialog({
         description={
           acting
             ? `kimo is still working on: ${summary}. you can render now or let it finish.`
-            : 'review your video before the final 1080p render.'
+            : `review your video before the final ${resolution} render.`
         }
         actions={
           <div className="agent-button-row">
@@ -98,7 +109,7 @@ export function ReviewDialog({
               loading={busy}
               onClick={() => void approve()}
             >
-              {acting ? 'render now' : 'render 1080p'}
+              {acting ? 'render now' : `render ${resolution}`}
             </Button>
           </div>
         }
@@ -125,7 +136,7 @@ export function ReviewDialog({
             <Row label="length" value={videoTime(project.duration)} />
             <Row
               label="format"
-              value={`1080p · ${project.width < project.height ? '9:16' : '16:9'} · ${project.fps} fps · mp4`}
+              value={`${resolution} · ${project.width === project.height ? '1:1' : project.width < project.height ? '9:16' : '16:9'} · ${project.fps} fps · ${format}`}
             />
             <Row label="audio" value="stereo · 48 kHz" />
             <Row
@@ -140,6 +151,48 @@ export function ReviewDialog({
             />
           </>
         ) : null}
+        <details className="launch-export">
+          <summary>more options</summary>
+          <label>
+            resolution
+            <select
+              className="launch-select"
+              aria-label="resolution"
+              value={resolution}
+              disabled={busy}
+              onChange={(e) =>
+                setResolution(e.target.value === '720p' ? '720p' : '1080p')
+              }
+            >
+              <option>1080p</option>
+              <option>720p</option>
+            </select>
+          </label>
+          <label>
+            format
+            <select
+              className="launch-select"
+              aria-label="format"
+              value={format}
+              disabled={busy}
+              onChange={(e) =>
+                setFormat(e.target.value === 'webm' ? 'webm' : 'mp4')
+              }
+            >
+              <option>mp4</option>
+              <option>webm</option>
+            </select>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={alsoVertical}
+              disabled={busy || project.width < project.height}
+              onChange={(e) => setAlsoVertical(e.target.checked)}
+            />
+            also export 9:16 version
+          </label>
+        </details>
         {error ? (
           <p className="render-error-copy" role="alert">
             {error}

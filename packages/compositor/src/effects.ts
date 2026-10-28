@@ -1,6 +1,7 @@
 import { Filter, GlProgram } from 'pixi.js';
 
 const vertex = `
+precision highp float;
 in vec2 aPosition;
 out vec2 vTextureCoord;
 uniform vec4 uInputSize;
@@ -14,6 +15,7 @@ void main(void) {
   vTextureCoord = aPosition * (uOutputFrame.zw * uInputSize.zw);
 }`;
 const fragment = `
+precision highp float;
 in vec2 vTextureCoord;
 out vec4 finalColor;
 uniform sampler2D uTexture;
@@ -48,6 +50,7 @@ export function detailFilter(vignette: number, sharpen: number) {
 }
 
 const gradeFragment = `
+precision highp float;
 in vec2 vTextureCoord;
 out vec4 finalColor;
 uniform sampler2D uTexture;

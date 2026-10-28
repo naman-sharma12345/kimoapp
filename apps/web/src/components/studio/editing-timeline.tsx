@@ -53,6 +53,7 @@ function TrackCanvas({
   scroll,
   width,
   assets,
+  beatGrid,
 }: {
   track: Track;
   clips: Clip[];
@@ -60,6 +61,7 @@ function TrackCanvas({
   scroll: number;
   width: number;
   assets: Asset[];
+  beatGrid: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const pictures = useRef(new Map<string, HTMLImageElement>());
@@ -146,6 +148,21 @@ function TrackCanvas({
       ctx.beginPath();
       ctx.roundRect(left, 4, Math.max(1, size), track.height - 8, 6);
       ctx.fill();
+      if (beatGrid && clip.kind === 'audio') {
+        const source = assets.find((a) => a.id === clip.assetId);
+        ctx.save();
+        ctx.strokeStyle = css.getPropertyValue('--cream-38').trim();
+        for (const beat of source?.beats ?? []) {
+          const t = clip.start + (beat - clip.in) / clip.speed;
+          if (t < clip.start || t > clip.start + clip.duration) continue;
+          const x = t * scale - scroll;
+          ctx.beginPath();
+          ctx.moveTo(x, 4);
+          ctx.lineTo(x, track.height - 4);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
       const frames = clip.assetId ? films.current.get(clip.assetId) : undefined;
       const asset = assets.find((item) => item.id === clip.assetId);
       if (frames?.length) {
@@ -233,7 +250,7 @@ function TrackCanvas({
       }
       ctx.restore();
     }
-  }, [track, clips, scale, scroll, width, mediaVersion, assets]);
+  }, [track, clips, scale, scroll, width, mediaVersion, assets, beatGrid]);
   return (
     <canvas
       ref={ref}
@@ -259,6 +276,8 @@ export function EditingTimeline({
   onAsk,
   onReplace,
   aiClips = [],
+  beatGrid = false,
+  readOnly = false,
 }: {
   project: KimoProject;
   assets: Asset[];
@@ -275,8 +294,20 @@ export function EditingTimeline({
   onAsk: (name: string) => void;
   onReplace: (clipId: string) => void;
   aiClips?: string[];
+  beatGrid?: boolean;
+  readOnly?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
+  useEffect(
+    () => () => {
+      for (const task of filmCache.values())
+        void task
+          .then((frames) => frames.forEach((frame) => frame.close()))
+          .catch(() => undefined);
+      filmCache.clear();
+    },
+    [],
+  );
   const viewport = useRef<HTMLDivElement>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -393,6 +424,15 @@ export function EditingTimeline({
       const target = d.clip.start + delta;
       const candidates = [
         playhead,
+        ...(beatGrid
+          ? clips
+              .filter((c) => c.kind === 'audio')
+              .flatMap((c) =>
+                (assets.find((a) => a.id === c.assetId)?.beats ?? [])
+                  .filter((t) => t >= c.in && t <= c.in + c.duration * c.speed)
+                  .map((t) => c.start + (t - c.in) / c.speed),
+              )
+          : []),
         ...project.markers.map((m) => m.time),
         ...clips
           .filter((c) => c.id !== d.clip.id)
@@ -519,6 +559,7 @@ export function EditingTimeline({
   return (
     <div
       className="editor-timeline-scroll"
+      inert={readOnly}
       ref={viewport}
       onScroll={(e) => {
         const next =
@@ -1062,6 +1103,7 @@ export function EditingTimeline({
                     />
                   ) : null}
                   <TrackCanvas
+                    beatGrid={beatGrid}
                     track={track}
                     assets={assets}
                     clips={row}

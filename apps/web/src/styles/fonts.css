@@ -1,0 +1,79 @@
+@font-face {
+  font-family: 'Geist UI';
+  src: url('/fonts/Geist-UI-full.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Geist Mono UI';
+  src: url('/fonts/GeistMono-UI-full.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Instrument UI';
+  src: url('/fonts/InstrumentSerif-Italic-full.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+/* OFL subsets preserve the supplied glyph outlines and variable font weights. */
+@font-face {
+  font-family: 'Geist UI';
+  src: url('/fonts/Geist-UI.woff2') format('woff2');
+  unicode-range:
+    U+0020-007F, U+00A0, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-201D,
+    U+2026, U+2190-2199, U+2318, U+2325, U+23CE, U+FEFF, U+FFFD;
+  font-weight: 100 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Geist UI Fallback';
+  src: local('Arial');
+  ascent-override: 94.56%;
+  descent-override: 27.76%;
+  line-gap-override: 0%;
+  size-adjust: 106.28%;
+}
+@font-face {
+  font-family: 'Geist Mono UI';
+  src: url('/fonts/GeistMono-UI.woff2') format('woff2');
+  unicode-range:
+    U+0020-007F, U+00A0, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-201D,
+    U+2026, U+2190-2199, U+2318, U+2325, U+23CE, U+FEFF, U+FFFD;
+  font-weight: 100 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Geist Mono UI Fallback';
+  src: local('Arial');
+  ascent-override: 76.43%;
+  descent-override: 22.43%;
+  line-gap-override: 0%;
+  size-adjust: 131.49%;
+}
+@font-face {
+  font-family: 'Instrument UI';
+  src: url('/fonts/InstrumentSerif-Italic.woff2') format('woff2');
+  unicode-range:
+    U+0020-007F, U+00A0, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-201D,
+    U+2026, U+2190-2199, U+2318, U+2325, U+23CE, U+FEFF, U+FFFD;
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Instrument UI Fallback';
+  src: local('Arial');
+  ascent-override: 121.98%;
+  descent-override: 38.19%;
+  line-gap-override: 0%;
+  size-adjust: 81.16%;
+}
+:root {
+  --font-geist-sans: 'Geist UI', 'Geist UI Fallback', sans-serif;
+  --font-geist-mono: 'Geist Mono UI', 'Geist Mono UI Fallback', monospace;
+  --font-instrument-serif: 'Instrument UI', 'Instrument UI Fallback', serif;
+}

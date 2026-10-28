@@ -5,7 +5,7 @@ import {
   type ServerEvent,
 } from '@kimo/client';
 
-export const RECONNECT_DELAYS = [2000, 4000, 8000] as const;
+export const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 15000] as const;
 export class WarmupConnection {
   private socket: WebSocket | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -18,24 +18,39 @@ export class WarmupConnection {
     private readonly onFailure: () => void,
     private readonly onConnection?: (connected: boolean) => void,
     private readonly retryForever = false,
+    private readonly beforeReconnect?: () => Promise<void>,
   ) {}
   start() {
     window.addEventListener('online', this.online);
+    window.addEventListener('offline', this.offline);
     this.open();
   }
   private online = () => {
     if (this.waitingOnline && !this.stopped) {
       this.waitingOnline = false;
+      this.retries = Math.max(1, this.retries);
       this.open();
     }
   };
+  private offline = () => {
+    this.waitingOnline = true;
+    if (this.timer) clearTimeout(this.timer);
+    this.onConnection?.(false);
+    this.socket?.close();
+  };
   private open() {
+    void this.openAsync();
+  }
+  private async openAsync() {
     if (this.stopped) return;
     if (!navigator.onLine) {
       this.waitingOnline = true;
       return;
     }
     try {
+      if (this.retries > 0 && this.beforeReconnect)
+        await this.beforeReconnect();
+      if (this.stopped) return;
       const socket = new WebSocket(this.url);
       this.socket = socket;
       socket.onopen = () => this.onConnection?.(true);
@@ -92,12 +107,26 @@ export class WarmupConnection {
   dispose() {
     this.stopped = true;
     window.removeEventListener('online', this.online);
+    window.removeEventListener('offline', this.offline);
     if (this.timer) clearTimeout(this.timer);
     if (this.socket && this.socket.readyState < WebSocket.CLOSING)
       this.socket.close(1000, 'warmup closed');
   }
 }
 export function sessionSocketUrl(sessionId: string, supplied?: string) {
+  const configured = process.env.NEXT_PUBLIC_KIMO_WS;
+  if (configured) {
+    const url = new URL(configured);
+    if (url.pathname.replace(/\/$/, '') === '/v1/ws')
+      url.searchParams.set('sessionId', sessionId);
+    else
+      url.pathname =
+        url.pathname.replace(/\/$/, '') +
+        '/v1/sessions/' +
+        encodeURIComponent(sessionId) +
+        '/ws';
+    return url.toString();
+  }
   if (supplied) return supplied;
   const url = new URL(
     new URL(

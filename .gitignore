@@ -12,3 +12,15 @@ playwright-report/
 .codex/skills/
 *.tsbuildinfo
 tmp/
+
+.pages-build/
+test-results-soak/
+
+.next-production/
+
+.next-perf/
+test-results-perf/
+
+test-results-matrix/
+
+**/.next-*/**

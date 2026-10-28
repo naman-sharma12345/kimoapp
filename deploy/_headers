@@ -1,0 +1,6 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' blob: data: https://API_HOST.invalid https://R2_HOST.invalid; media-src 'self' blob: https://API_HOST.invalid https://R2_HOST.invalid; connect-src 'self' https://API_HOST.invalid wss://WS_HOST.invalid https://R2_HOST.invalid https://POSTHOG_HOST.invalid https://SENTRY_HOST.invalid; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://API_HOST.invalid

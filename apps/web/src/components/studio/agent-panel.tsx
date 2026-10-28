@@ -31,6 +31,7 @@ export function AgentPanel({
   acting,
   paused,
   connected,
+  readOnly = false,
   tab,
   onTab,
   onCollapse,
@@ -52,6 +53,7 @@ export function AgentPanel({
   acting: boolean;
   paused: boolean;
   connected: boolean;
+  readOnly?: boolean;
   tab: string;
   onTab: (tab: string) => void;
   onCollapse: () => void;
@@ -236,6 +238,7 @@ export function AgentPanel({
     <section
       className="studio-panel studio-agent agent-panel"
       aria-label="agent panel"
+      inert={readOnly}
       data-running-action={state.runningId}
     >
       <header className="studio-panel-header">

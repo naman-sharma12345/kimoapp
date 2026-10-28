@@ -1,0 +1,50 @@
+{
+  "measuredAt": "2026-10-28T13:31:53.874Z",
+  "routes": [
+    {
+      "name": "landing",
+      "limit": "120 KB",
+      "gzipBytes": 118859,
+      "files": [
+        "apps/web/.next/static/chunks/webpack-1a9f5dec9eb52dd4.js",
+        "apps/web/.next/static/chunks/857f5f3a-77a3c7546f69d2d8.js",
+        "apps/web/.next/static/chunks/1629-f892aea6a407c596.js",
+        "apps/web/.next/static/chunks/main-app-36a297426cb8d6f9.js",
+        "apps/web/.next/static/chunks/app/layout-beab1eae6cf5b38f.js",
+        "apps/web/.next/static/chunks/app/not-found-9cde586edb3af4de.js",
+        "apps/web/.next/static/chunks/app/error-901ad7d59bc94a22.js",
+        "apps/web/.next/static/chunks/1133-ce36551d69d3d02a.js",
+        "apps/web/.next/static/chunks/7731-066914fb8fe98d88.js",
+        "apps/web/.next/static/chunks/app/page-bc3c5339f1b46995.js"
+      ]
+    },
+    {
+      "name": "studio",
+      "limit": "450 KB",
+      "gzipBytes": 266587,
+      "files": [
+        "apps/web/.next/static/chunks/webpack-1a9f5dec9eb52dd4.js",
+        "apps/web/.next/static/chunks/857f5f3a-77a3c7546f69d2d8.js",
+        "apps/web/.next/static/chunks/1629-f892aea6a407c596.js",
+        "apps/web/.next/static/chunks/main-app-36a297426cb8d6f9.js",
+        "apps/web/.next/static/chunks/app/layout-beab1eae6cf5b38f.js",
+        "apps/web/.next/static/chunks/app/not-found-9cde586edb3af4de.js",
+        "apps/web/.next/static/chunks/app/error-901ad7d59bc94a22.js",
+        "apps/web/.next/static/chunks/3026-017d771a42803ab4.js",
+        "apps/web/.next/static/chunks/4547-f741a2b12f0f4fb1.js",
+        "apps/web/.next/static/chunks/9870-b1cbf84201da6271.js",
+        "apps/web/.next/static/chunks/1133-ce36551d69d3d02a.js",
+        "apps/web/.next/static/chunks/9878-ccf70aad50700ed6.js",
+        "apps/web/.next/static/chunks/5577-d9c121bfa9f2b5dc.js",
+        "apps/web/.next/static/chunks/6850-06109dfeb3539bcd.js",
+        "apps/web/.next/static/chunks/4190-f092f4e4db7e66fe.js",
+        "apps/web/.next/static/chunks/8256-995a8c09b8d802df.js",
+        "apps/web/.next/static/chunks/1284-8bcb5bfb709dbac9.js",
+        "apps/web/.next/static/chunks/743-085331b095f9f6e6.js",
+        "apps/web/.next/static/chunks/3805-f1bc4664ff08dde5.js",
+        "apps/web/.next/static/chunks/4568-2c126dc94aceea09.js",
+        "apps/web/.next/static/chunks/app/studio/[sessionId]/page-7d84256620b1581f.js"
+      ]
+    }
+  ]
+}

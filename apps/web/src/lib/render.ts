@@ -97,7 +97,7 @@ export function navigateRendered(
     : ready === 'delivery'
       ? 'completion'
       : 'native';
-  if (typeof document.startViewTransition !== 'function') {
+  if (reduced || typeof document.startViewTransition !== 'function') {
     router.push(url);
     setTimeout(() => {
       delete root.dataset.renderTransition;

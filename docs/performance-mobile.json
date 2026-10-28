@@ -1,0 +1,107 @@
+{
+  "profile": "Moto G Power viewport, DevTools Fast 4G (9Mbps/1.5Mbps/60ms targets with emulation adjustments), CPU 4x, cold cache",
+  "browser": "chromium",
+  "lcp": 640,
+  "cls": 0,
+  "interaction": 56,
+  "lcpElement": "landing-placeholder",
+  "shifts": [],
+  "resources": [
+    {
+      "name": "/_next/static/css/83b9a23e8f579df3.css",
+      "start": 212.29999999701977,
+      "duration": 229.1000000089407,
+      "size": 23607
+    },
+    {
+      "name": "/_next/static/chunks/webpack-1a9f5dec9eb52dd4.js",
+      "start": 213.79999999701977,
+      "duration": 197.1000000089407,
+      "size": 2636
+    },
+    {
+      "name": "/_next/static/chunks/857f5f3a-77a3c7546f69d2d8.js",
+      "start": 214.09999999403954,
+      "duration": 351.90000000596046,
+      "size": 54665
+    },
+    {
+      "name": "/_next/static/chunks/1629-f892aea6a407c596.js",
+      "start": 214.40000000596046,
+      "duration": 336.09999999403954,
+      "size": 46568
+    },
+    {
+      "name": "/_next/static/chunks/main-app-36a297426cb8d6f9.js",
+      "start": 215,
+      "duration": 382.40000000596046,
+      "size": 874
+    },
+    {
+      "name": "/_next/static/chunks/app/layout-beab1eae6cf5b38f.js",
+      "start": 215.40000000596046,
+      "duration": 404.59999999403954,
+      "size": 888
+    },
+    {
+      "name": "/_next/static/chunks/app/error-901ad7d59bc94a22.js",
+      "start": 216,
+      "duration": 459.20000000298023,
+      "size": 1778
+    },
+    {
+      "name": "/_next/static/chunks/app/not-found-9cde586edb3af4de.js",
+      "start": 216.20000000298023,
+      "duration": 462,
+      "size": 974
+    },
+    {
+      "name": "/_next/static/chunks/1133-ce36551d69d3d02a.js",
+      "start": 216.40000000596046,
+      "duration": 520.6999999880791,
+      "size": 6195
+    },
+    {
+      "name": "/_next/static/chunks/7731-066914fb8fe98d88.js",
+      "start": 216.70000000298023,
+      "duration": 536.2000000029802,
+      "size": 3564
+    },
+    {
+      "name": "/_next/static/chunks/app/page-bc3c5339f1b46995.js",
+      "start": 217,
+      "duration": 567,
+      "size": 4055
+    },
+    {
+      "name": "/fonts/Geist-UI.woff2",
+      "start": 217.70000000298023,
+      "duration": 285.70000000298023,
+      "size": 24916
+    },
+    {
+      "name": "/fonts/InstrumentSerif-Italic.woff2",
+      "start": 218.90000000596046,
+      "duration": 268.8999999910593,
+      "size": 16860
+    },
+    {
+      "name": "/grain.png",
+      "start": 463.40000000596046,
+      "duration": 429.5,
+      "size": 26133
+    },
+    {
+      "name": "/brand/kimo-mark.svg",
+      "start": 466.20000000298023,
+      "duration": 348.70000000298023,
+      "size": 1238
+    },
+    {
+      "name": "/dev/still.png",
+      "start": 619.0999999940395,
+      "duration": 252.5,
+      "size": 9228
+    }
+  ]
+}

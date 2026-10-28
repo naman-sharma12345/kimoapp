@@ -1,0 +1,5 @@
+name = "kimo-app"
+compatibility_date = "2026-10-28"
+pages_build_output_dir = "apps/web/.pages-build/out"
+# This is a Pages project, with a static Next.js export and browser API calls.
+# No deployment or project creation is performed by the build.

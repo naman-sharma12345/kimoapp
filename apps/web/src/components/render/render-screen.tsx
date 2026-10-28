@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/app-router';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { KimoClient, type RenderSnapshot } from '@kimo/client';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
 import { useReducedMotion } from '@/lib/use-reduced-motion';
+import { track } from '@/lib/telemetry';
 import { cancelNavigationGuard } from '@/lib/navigation';
 import { durations, easings, springs } from '@/lib/motion';
 import {
@@ -41,6 +42,7 @@ export function RenderScreen({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const announcedDone = useRef(false);
+  const renderStarted = useRef(Date.now());
   const frameElement = useRef<HTMLDivElement>(null);
   const [rise, setRise] = useState(240);
   useEffect(() => {
@@ -121,6 +123,7 @@ export function RenderScreen({
     const timer = setTimeout(
       () => {
         announcedDone.current = true;
+        track('render_done', { duration: Date.now() - renderStarted.current });
         try {
           sessionStorage.setItem(`kimo.just-rendered.${videoId}`, 'yes');
         } catch {
