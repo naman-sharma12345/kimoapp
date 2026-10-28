@@ -31,7 +31,8 @@ export const DEFAULT_META_BASE_URL = 'https://api.meta.ai/v1';
 export const DEFAULT_META_MODEL = 'muse-spark-1.3-contributor';
 const MAX_AI_OPS = 150;
 const MAX_REPLY_CHARS = 600;
-const AI_TIMEOUT_MS = 100_000;
+// A full build (captions for every line) can take the model 2 to 3 minutes.
+const AI_TIMEOUT_MS = 200_000;
 
 export class AiEditError extends Error {
   readonly code: 'ai_invalid_edit' | 'ai_upstream' | 'ai_key_rejected';

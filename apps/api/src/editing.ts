@@ -524,8 +524,8 @@ export function createEditing(deps: EditingDeps) {
         };
       }
     };
-    // The browser waits up to 150 s; leave room for the save and events.
-    const deadline = Date.now() + 135_000;
+    // The browser waits up to 330 s for script + build; leave room for events.
+    const deadline = Date.now() + 240_000;
     let first: Awaited<ReturnType<typeof requestAiEdit>> | null = null;
     let feedback: { previous: string; errors: string[] };
     try {

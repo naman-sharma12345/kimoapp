@@ -269,7 +269,7 @@ export class KimoClient {
       s.reviewResponseSchema,
       s.reviewRequestSchema.parse(body),
       ai ? aiHeaders(ai) : undefined,
-      180_000,
+      240_000,
     );
   }
   /** Counts a finished in-browser export toward today's usage. */
