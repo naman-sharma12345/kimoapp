@@ -29,6 +29,12 @@ test('privacy, anonymous limit and mock httpOnly sign-in', async ({
   );
   await page.screenshot({ path: 'docs/screens/phase-10-auth.png' });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  // The dialog hands off to /signin, which offers every provider.
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'sign in' })
+    .click();
+  await page.waitForURL(/\/signin\?reason=limit/);
   await page.getByRole('button', { name: 'continue with github' }).click();
   await page.waitForURL('/');
   expect(
