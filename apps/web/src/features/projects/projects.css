@@ -1,0 +1,360 @@
+/* Styles ported from the AI Studio import; scoped to .kimo-projects. */
+.kimo-projects {
+  --ink-letterbox: #0b0b0c;
+  --line-inset: rgb(245 241 231 / 0.06);
+  --line-drop: rgb(245 241 231 / 0.28);
+  --danger: #e5534b;
+  --danger-border: rgb(229 83 75 / 0.4);
+  --danger-hover-bg: rgb(229 83 75 / 0.08);
+  --scrim-72: rgb(8 8 9 / 0.72);
+  --scrim-82: rgb(8 8 9 / 0.82);
+  --tint-video: #3a3833;
+  --tint-broll: #34383a;
+  --tint-image: #36343a;
+  --tint-music: #33382f;
+  --tint-voice: #3a3530;
+  --tint-sfx: #38353a;
+  --tint-text: #2f3036;
+  --tint-fx: #383338;
+  --font-serif: var(--font-display);
+  min-height: 100dvh;
+  background-color: var(--ink-0);
+  color: var(--cream-100);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-projects *:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.kimo-projects .t-11 {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.kimo-projects .t-12 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-projects .t-13 {
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-projects .t-15 {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+}
+
+.kimo-projects .t-17 {
+  font-size: 17px;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+.kimo-projects .t-20 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+
+.kimo-projects .t-28 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.kimo-projects .t-display {
+  font-size: clamp(44px, 6.2vw, 88px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 400;
+}
+
+.kimo-projects .font-serif-italic {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.kimo-projects .font-mono-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-projects .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus Ring */
+.kimo-projects .kimo-focus:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Buttons */
+.kimo-projects .btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+.kimo-projects .btn-base:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.kimo-projects .btn-base:disabled,
+.kimo-projects .btn-base[aria-disabled='true'] {
+  background-color: var(--ink-4) !important;
+  color: var(--cream-38) !important;
+  border-color: transparent !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.kimo-projects .btn-primary {
+  background-color: var(--orange);
+  color: var(--on-orange);
+  border: 1px solid transparent;
+}
+
+.kimo-projects .btn-primary:hover:not(:disabled) {
+  background-color: var(--orange-hover);
+  box-shadow:
+    0 0 0 1px rgb(255 122 48 / 0.35),
+    0 8px 28px -6px rgb(255 90 36 / 0.45);
+  transform: translateY(-1px);
+}
+
+.kimo-projects .btn-primary:active:not(:disabled) {
+  background-color: var(--orange-press);
+  transform: scale(0.98);
+}
+
+.kimo-projects .btn-secondary {
+  background-color: rgb(245 241 231 / 0.03);
+  border: 1px solid var(--line-strong);
+  color: var(--cream-100);
+}
+
+.kimo-projects .btn-secondary:hover:not(:disabled) {
+  background-color: var(--ink-2);
+  border-color: rgb(245 241 231 / 0.22);
+  transform: translateY(-1px);
+}
+
+.kimo-projects .btn-secondary:active:not(:disabled) {
+  background-color: var(--ink-3);
+}
+
+.kimo-projects .btn-ghost {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--cream-60);
+}
+
+.kimo-projects .btn-ghost:hover:not(:disabled) {
+  background-color: var(--ink-2);
+  color: var(--cream-100);
+}
+
+.kimo-projects .btn-ghost:active:not(:disabled) {
+  background-color: var(--ink-3);
+}
+
+.kimo-projects .btn-danger {
+  background-color: transparent;
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+
+.kimo-projects .btn-danger:hover:not(:disabled) {
+  background-color: var(--danger-hover-bg);
+}
+
+.kimo-projects .btn-danger:active:not(:disabled) {
+  background-color: var(--danger-hover-bg);
+}
+
+/* Control heights */
+.kimo-projects .h-24 {
+  height: 24px;
+  padding: 0 8px;
+}
+.kimo-projects .h-28 {
+  height: 28px;
+  padding: 0 10px;
+}
+.kimo-projects .h-32 {
+  height: 32px;
+  padding: 0 12px;
+}
+.kimo-projects .h-40 {
+  height: 40px;
+  padding: 0 16px;
+}
+.kimo-projects .h-48 {
+  height: 48px;
+  padding: 0 20px;
+}
+
+/* Allowed gradients */
+.kimo-projects .horizon-glow {
+  width: 1400px;
+  height: 520px;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 90 36 / 0.1),
+    rgb(255 90 36 / 0.03) 55%,
+    transparent 100%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes render-sheen-sweep {
+  0% {
+    transform: translateX(-140%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+.kimo-projects .render-sheen {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    105deg,
+    transparent,
+    rgb(245 241 231 / 0.06),
+    transparent
+  );
+  animation: render-sheen-sweep 2.4s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+
+@keyframes orange-dot-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.kimo-projects .pulse-ring {
+  animation: orange-dot-pulse 1.2s var(--ease-out) infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.kimo-projects .skeleton-pulse {
+  animation: skeleton-shimmer 1.4s var(--ease-in-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kimo-projects .render-sheen,
+  .kimo-projects .pulse-ring,
+  .kimo-projects .skeleton-pulse {
+    animation: none !important;
+  }
+}
+
+/* Overflow fade masks for Continue Rail */
+.kimo-projects .rail-mask-both {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 40px,
+    black calc(100% - 40px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 40px,
+    black calc(100% - 40px),
+    transparent 100%
+  );
+}
+
+.kimo-projects .rail-mask-right {
+  mask-image: linear-gradient(
+    to right,
+    black 0px,
+    black calc(100% - 40px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black 0px,
+    black calc(100% - 40px),
+    transparent 100%
+  );
+}
+
+.kimo-projects .rail-mask-left {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 40px,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 40px,
+    black 100%
+  );
+}
+
+/* Hide scrollbars cleanly where horizontal snap scrolling is used */
+.kimo-projects .no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.kimo-projects .no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

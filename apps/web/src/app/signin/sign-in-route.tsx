@@ -18,7 +18,7 @@ const ERROR_KINDS: readonly SignInErrorKind[] = [
 
 /** Only same-origin relative paths are allowed as a post sign-in destination. */
 function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/projects';
   return raw;
 }
 
@@ -70,7 +70,7 @@ export function SignInRoute() {
   const onContinueWithGoogle = useCallback(() => {
     const back = new URL('/signin', window.location.origin);
     back.searchParams.set('state', 'returning');
-    if (next !== '/') back.searchParams.set('next', next);
+    if (next !== '/projects') back.searchParams.set('next', next);
     window.location.assign(client.googleSignInUrl(back.toString()));
     // The page navigates away; keep the redirecting state until it does.
     return new Promise<void>(() => undefined);

@@ -1,0 +1,272 @@
+/* Styles ported from the AI Studio import; scoped to .kimo-account. */
+.kimo-account {
+  --danger: #e5534b;
+  --danger-border: rgb(229 83 75 / 0.4);
+  --danger-hover-bg: rgb(229 83 75 / 0.08);
+  --danger-zone-border: rgb(229 83 75 / 0.28);
+  --backdrop-scrim: rgb(8 8 9 / 0.72);
+  --font-serif: var(--font-display);
+  --h-24: 24px;
+  --h-28: 28px;
+  --h-32: 32px;
+  --h-40: 40px;
+  --h-48: 48px;
+  --h-56: 56px;
+  --w-content: 720px;
+  --w-section-label: 220px;
+  --w-dialog: 420px;
+  --w-storage-bar: 64px;
+  --w-segment: 24px;
+  --h-meter: 6px;
+  --w-switch: 36px;
+  --h-switch: 20px;
+  --size-knob: 16px;
+  min-height: 100dvh;
+  background-color: var(--ink-0);
+  color: var(--cream-100);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account *:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.kimo-account .t-11 {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-12 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-13 {
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-15 {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-17 {
+  font-size: 17px;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-20 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-28 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .t-display {
+  font-size: clamp(44px, 6.2vw, 88px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .font-mono-kimo {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kimo-account .font-serif-kimo {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Wordmark class */
+.kimo-account .kimo-wordmark {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+  color: var(--cream-100);
+}
+
+/* Button base and variants following exact specification */
+.kimo-account .kimo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  border-radius: var(--r-8);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.kimo-account .kimo-btn-sm {
+  height: var(--h-32);
+  padding: 0 var(--space-12);
+  font-size: 13px;
+  line-height: 20px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.kimo-account .kimo-btn-lg {
+  height: var(--h-40);
+  padding: 0 var(--space-16);
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+}
+
+.kimo-account .kimo-btn-hero {
+  height: var(--h-48);
+  padding: 0 var(--space-20);
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.005em;
+  font-weight: 500;
+}
+
+.kimo-account .kimo-btn-primary {
+  background-color: var(--orange);
+  color: var(--on-orange);
+  border: 1px solid transparent;
+}
+
+.kimo-account .kimo-btn-primary:hover:not(:disabled) {
+  background-color: var(--orange-hover);
+}
+
+.kimo-account .kimo-btn-primary:active:not(:disabled) {
+  background-color: var(--orange-press);
+  transform: scale(0.98);
+}
+
+.kimo-account .kimo-btn-secondary {
+  background-color: var(--ink-2);
+  border: 1px solid var(--line);
+  color: var(--cream-100);
+}
+
+.kimo-account .kimo-btn-secondary:hover:not(:disabled) {
+  background-color: var(--ink-3);
+  border-color: var(--line-strong);
+}
+
+.kimo-account .kimo-btn-secondary:active:not(:disabled) {
+  background-color: var(--ink-4);
+}
+
+.kimo-account .kimo-btn-ghost {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--cream-60);
+}
+
+.kimo-account .kimo-btn-ghost:hover:not(:disabled) {
+  background-color: var(--ink-2);
+  color: var(--cream-100);
+}
+
+.kimo-account .kimo-btn-ghost:active:not(:disabled) {
+  background-color: var(--ink-3);
+  color: var(--cream-100);
+}
+
+.kimo-account .kimo-btn-danger {
+  background-color: transparent;
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+
+.kimo-account .kimo-btn-danger:hover:not(:disabled) {
+  background-color: var(--danger-hover-bg);
+}
+
+.kimo-account .kimo-btn-danger:active:not(:disabled) {
+  background-color: var(--danger-hover-bg);
+}
+
+.kimo-account .kimo-btn:disabled {
+  background-color: var(--ink-4);
+  border-color: transparent;
+  color: var(--cream-38);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Input styling */
+.kimo-account .kimo-input {
+  height: var(--h-32);
+  background-color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-8);
+  padding: 0 var(--space-12);
+  color: var(--cream-100);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 20px;
+  width: 100%;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background-color var(--dur-1) var(--ease-out);
+}
+
+.kimo-account .kimo-input::placeholder {
+  color: var(--cream-38);
+}
+
+.kimo-account .kimo-input:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+/* Inline link */
+.kimo-account .kimo-inline-link {
+  color: var(--cream-60);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+  transition: color var(--dur-1) var(--ease-out);
+}
+
+.kimo-account .kimo-inline-link:hover {
+  color: var(--cream-100);
+}

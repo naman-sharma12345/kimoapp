@@ -98,4 +98,19 @@ export default tseslint.config(
     plugins: { kimo: { rules: { 'tokens-only': tokenGuard } } },
     rules: { 'kimo/tokens-only': 'error' },
   },
+  {
+    // Design imports (AI Studio ports): anchors route through handlers that
+    // preventDefault, fixtures index known-length arrays, and avatars/posters
+    // are remote images where next/image adds nothing.
+    files: ['apps/web/src/features/**/*.{ts,tsx}'],
+    rules: {
+      '@next/next/no-html-link-for-pages': 'off',
+      '@next/next/no-img-element': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
 );
