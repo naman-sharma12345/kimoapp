@@ -1,12 +1,8 @@
-import { StudioShell } from '@/components/studio/studio-shell';
-import { loadSession } from '@/lib/load-session';
+import type { Metadata } from 'next';
+import { ClientRoute } from '@/components/pages-route';
 
-export default async function StudioPage({
-  params,
-}: {
-  params: Promise<{ sessionId: string }>;
-}) {
-  const { sessionId } = await params;
-  const snapshot = await loadSession(sessionId, 'studio');
-  return <StudioShell sessionId={sessionId} snapshot={snapshot} />;
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
+export default function Page() {
+  return <ClientRoute kind="studio" />;
 }

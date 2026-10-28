@@ -16,6 +16,15 @@ export interface D1Database {
   batch(statements: D1PreparedStatement[]): Promise<unknown[]>;
 }
 
+/** Minimal slice of a Durable Object namespace binding. */
+export interface DurableObjectStubLike {
+  fetch(input: Request | string, init?: RequestInit): Promise<Response>;
+}
+export interface DurableObjectNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): DurableObjectStubLike;
+}
+
 export interface Env {
   DB: D1Database;
   /** https://app.getkimo.tech */
@@ -28,4 +37,12 @@ export interface Env {
   GITHUB_CLIENT_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  /** SessionRoom Durable Objects (SQLite-backed, Workers Free) for realtime. */
+  ROOMS?: DurableObjectNamespaceLike;
+  /** Meta Model API key, a Worker secret Naman adds in the dashboard. */
+  META_API_KEY?: string;
+  /** OpenAI-compatible base URL, default https://api.meta.ai/v1. */
+  META_API_BASE_URL?: string;
+  /** Model id, default muse-spark-1.3. */
+  META_MODEL?: string;
 }

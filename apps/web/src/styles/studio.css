@@ -1510,3 +1510,34 @@ html[data-warmup-unfold='native'] .studio-timeline-playhead {
 .editor-history-step {
   color: var(--cream-60);
 }
+/* Clips live only in this tab: the reminder and the re-add prompt. */
+.studio-local-notice {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--control-md) + var(--space-8));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  max-width: calc(100% - var(--space-24));
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-8);
+  background: var(--ink-2);
+  color: var(--cream-100);
+  font-size: var(--t-12);
+  line-height: 16px;
+}
+.studio-local-notice p {
+  margin: 0;
+}
+.studio-local-notice small {
+  display: block;
+  color: var(--cream-60);
+}
+.studio-local-notice-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-8);
+}

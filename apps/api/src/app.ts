@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  DAILY_AI_EDIT_LIMIT,
   DAILY_RENDER_MINUTES_LIMIT,
   DAILY_VIDEO_LIMIT,
   authProviderSchema,
@@ -28,6 +29,13 @@ import {
   withSecurityHeaders,
 } from './http.ts';
 import {
+  createEditing,
+  roomBroadcast,
+  sessionIdFrom,
+  type Broadcast,
+} from './editing.ts';
+import { aiConfig } from './ai.ts';
+import {
   authorizeUrl,
   exchangeCode,
   pkceChallenge,
@@ -46,7 +54,7 @@ const BIN_DAYS = 30;
 const DAY_MS = 24 * 60 * 60_000;
 /** Free D1 counters: requests per client per 10-minute window. */
 const RATE_WINDOW_MS = 10 * 60_000;
-const RATE_LIMITS = { auth: 30, write: 300 } as const;
+const RATE_LIMITS = { auth: 30, write: 300, ai: 20 } as const;
 
 export type SignInErrorKind =
   'cancelled' | 'expired' | 'not_allowed' | 'unavailable' | 'rate_limited';
@@ -54,6 +62,7 @@ export type SignInErrorKind =
 export interface AppOptions {
   fetcher?: typeof fetch;
   now?: () => Date;
+  broadcast?: Broadcast;
 }
 
 interface UserRow {
@@ -159,6 +168,11 @@ const PROJECT_COLUMNS =
 export function createApp(options: AppOptions = {}) {
   const fetcher = options.fetcher ?? ((input, init) => fetch(input, init));
   const now = options.now ?? (() => new Date());
+  const editing = createEditing({
+    now,
+    fetcher,
+    broadcast: options.broadcast ?? roomBroadcast,
+  });
 
   const day = () => now().toISOString().slice(0, 10);
   const nextReset = () => {
@@ -188,15 +202,17 @@ export function createApp(options: AppOptions = {}) {
 
   async function usageToday(env: Env, userId: string) {
     const row = await env.DB.prepare(
-      'SELECT videos, render_seconds FROM daily_usage WHERE user_id = ? AND day = ?',
+      'SELECT videos, render_seconds, ai_edits FROM daily_usage WHERE user_id = ? AND day = ?',
     )
       .bind(userId, day())
-      .first<{ videos: number; render_seconds: number }>();
+      .first<{ videos: number; render_seconds: number; ai_edits: number }>();
     return {
       videosToday: row?.videos ?? 0,
       videosLimit: DAILY_VIDEO_LIMIT,
       renderMinutes: Math.round(((row?.render_seconds ?? 0) / 60) * 10) / 10,
       renderMinutesLimit: DAILY_RENDER_MINUTES_LIMIT,
+      aiEditsToday: row?.ai_edits ?? 0,
+      aiEditsLimit: DAILY_AI_EDIT_LIMIT,
       resetsAt: nextReset(),
     };
   }
@@ -249,6 +265,12 @@ export function createApp(options: AppOptions = {}) {
       'DELETE FROM projects WHERE user_id = ? AND deleted_at IS NOT NULL AND deleted_at < ?',
     )
       .bind(userId, new Date(now().getTime() - BIN_DAYS * DAY_MS).toISOString())
+      .run();
+    await env.DB.prepare(
+      `DELETE FROM edit_sessions WHERE user_id = ?
+         AND project_id NOT IN (SELECT id FROM projects WHERE user_id = ?)`,
+    )
+      .bind(userId, userId)
       .run();
   }
 
@@ -630,7 +652,6 @@ export function createApp(options: AppOptions = {}) {
       return json({
         user: toUser(user),
         usage: await usageToday(env, user.id),
-        storage: { bytesUsed: 0 },
         preferences: await readPreferences(env, user.id),
       });
     }
@@ -718,6 +739,10 @@ export function createApp(options: AppOptions = {}) {
       const user = await requireUser(request, env);
       await env.DB.batch(
         [
+          'DELETE FROM asset_analysis WHERE user_id = ?',
+          'DELETE FROM session_mutations WHERE session_id IN (SELECT id FROM edit_sessions WHERE user_id = ?)',
+          'DELETE FROM edit_sessions WHERE user_id = ?',
+          'DELETE FROM assets WHERE user_id = ?',
           'DELETE FROM auth_sessions WHERE user_id = ?',
           'DELETE FROM user_identities WHERE user_id = ?',
           'DELETE FROM projects WHERE user_id = ?',
@@ -762,6 +787,39 @@ export function createApp(options: AppOptions = {}) {
             stamp,
           )
           .run();
+        const timeline = await env.DB.prepare(
+          'SELECT project_json, asset_ids, version FROM edit_sessions WHERE id = ? AND user_id = ?',
+        )
+          .bind(source.session_id, user.id)
+          .first<{
+            project_json: string;
+            asset_ids: string;
+            version: number;
+          }>();
+        const copy = await env.DB.prepare(
+          'SELECT session_id FROM projects WHERE id = ? AND user_id = ?',
+        )
+          .bind(id, user.id)
+          .first<{ session_id: string }>();
+        if (timeline && copy)
+          await env.DB.prepare(
+            `INSERT OR IGNORE INTO edit_sessions (id, user_id, project_id, status, version, project_json, asset_ids, created_at, updated_at)
+             VALUES (?, ?, ?, 'editing', ?, ?, ?, ?, ?)`,
+          )
+            .bind(
+              copy.session_id,
+              user.id,
+              id,
+              timeline.version,
+              JSON.stringify({
+                ...(JSON.parse(timeline.project_json) as object),
+                id: copy.session_id,
+              }),
+              timeline.asset_ids,
+              stamp,
+              stamp,
+            )
+            .run();
       } else {
         await env.DB.prepare(
           `INSERT INTO projects (id, user_id, session_id, title, prompt, status, aspect, created_at, updated_at)
@@ -835,14 +893,54 @@ export function createApp(options: AppOptions = {}) {
       }
     }
 
-    if (
-      /^\/v1\/(sessions|uploads|renders|videos)(\/|$)/.test(path) ||
-      path === '/v1/realtime'
-    )
+    if (path === '/v1/ai/status' && method === 'GET') {
+      const config = aiConfig(env);
+      return json(
+        config
+          ? { available: true, model: config.model }
+          : { available: false },
+      );
+    }
+
+    const socket = /^\/v1\/sessions\/([^/]+)\/ws$/.exec(path);
+    if (socket?.[1] && method === 'GET') {
+      // Browsers always send Origin on WebSocket handshakes; refuse others.
+      if (request.headers.get('Origin') !== env.APP_ORIGIN)
+        throw new HttpError(403, 'forbidden_origin', 'Origin not allowed');
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket')
+        throw new HttpError(426, 'upgrade_required', 'Expected a WebSocket');
+      const user = await requireUser(request, env);
+      const sessionId = sessionIdFrom(socket[1]);
+      const row = await editing.loadSession(env, user.id, sessionId);
+      if (!env.ROOMS)
+        throw new HttpError(503, 'realtime_unavailable', 'Realtime is off');
+      const headers = new Headers(request.headers);
+      headers.set('X-Kimo-User', user.id);
+      headers.set('X-Kimo-Session', sessionId);
+      headers.set('X-Kimo-Version', String(row.version));
+      return env.ROOMS.get(env.ROOMS.idFromName(sessionId)).fetch(
+        new Request('https://room/connect', { headers }),
+      );
+    }
+
+    if (/^\/v1\/(sessions|uploads)(\/|$)/.test(path)) {
+      const user = await requireUser(request, env);
+      if (
+        /^\/v1\/sessions\/[^/]+\/messages$/.test(path) &&
+        method === 'POST' &&
+        (await rateLimited(env, 'ai', user.id))
+      )
+        throw new HttpError(429, 'rate_limited', 'Too many AI edits at once');
+      const handled = await editing.route(request, env, user.id, path, method);
+      if (handled) return handled;
+    }
+
+    // Finished videos are never stored: exports download in the browser.
+    if (/^\/v1\/(renders|videos)(\/|$)/.test(path))
       throw new HttpError(
-        501,
-        'not_available',
-        'Video editing is not available on this server yet',
+        410,
+        'not_stored',
+        'kimo does not store videos; export downloads in your browser',
       );
 
     throw new HttpError(404, 'not_found', 'No such route');
@@ -855,6 +953,8 @@ export function createApp(options: AppOptions = {}) {
       let response: Response;
       try {
         response = await route(request, env);
+        // A WebSocket handshake answer is passed through untouched.
+        if (response.status === 101) return response;
       } catch (error) {
         if (error instanceof HttpError)
           response = errorResponse(error.status, error.code, error.message);

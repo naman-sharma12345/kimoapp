@@ -4,8 +4,9 @@ export const PRIVACY_CONTENT: LegalContent = {
   title: 'privacy',
   updated: 'last updated oct 28, 2026',
   shortVersion: [
-    'we keep only what an account needs: your sign-in id, email, name and avatar, your projects, your preferences and daily usage counts.',
-    "kimo doesn't store uploads or rendered videos yet. we'll update this page before that changes.",
+    'we keep only what an account needs: your sign-in id, email, name and avatar, your projects and their edit timelines, your preferences and daily usage counts.',
+    'your video never leaves your device. clips you add live only in the open browser tab while you edit, and are not uploaded, saved on our servers or kept on your device after you close or refresh the tab. exports are made in your browser and downloaded straight to you.',
+    'only when you ask the ai to edit do we send meta your instruction and the timeline (clip names, lengths and positions), never the video itself.',
     'one essential cookie keeps you signed in. no ads, no trackers, no analytics cookies.',
     'export or delete everything from /account at any time. we never sell your data.',
   ],
@@ -23,7 +24,7 @@ export const PRIVACY_CONTENT: LegalContent = {
       paragraphs: [
         "when you sign in with github or google we receive and keep only four things: the provider's account id, your email address if the provider has verified it, your display name, and your avatar link. github is asked only for your verified email (scope user:email); google only for openid, email and profile. we never see your password.",
         'if you sign in with github and google using the same verified email, both sign-ins open the same kimo account.',
-        'we also keep the projects you create (title, prompt, aspect and status), your editor preferences, and daily counts of videos and render minutes used to enforce the free limits.',
+        "we also keep the projects you create (title, prompt, aspect and status) and each project's edit timeline: where clips sit, trims, text, effects and markers, plus each clip's file name, type, size, length and dimensions so a reopened project can ask you to add the same clips again. we keep your editor preferences and daily counts of exports, export minutes and ai edits used to enforce the free limits.",
         'to stop abuse we count sign-in and write requests per visitor for 10 minutes. the ip address is turned into a one-way hash before it is counted and the counters are deleted within an hour.',
       ],
     },
@@ -38,14 +39,17 @@ export const PRIVACY_CONTENT: LegalContent = {
       id: 'where-it-is-stored',
       heading: 'where it is stored',
       paragraphs: [
-        "your data is stored in a cloudflare d1 database and served by cloudflare workers, so it may be processed on cloudflare's servers outside india. github and google handle the sign-in step under their own privacy policies. we don't use cloudflare r2 or any other file storage yet.",
+        "your account data is stored in a cloudflare d1 database and served by cloudflare workers, with cloudflare durable objects passing live editing updates between your open tabs, so it may be processed on cloudflare's servers outside india. github and google handle the sign-in step under their own privacy policies. we don't use cloudflare r2 or any other file storage, and no video, audio or image file is ever stored by kimo.",
       ],
     },
     {
       id: 'files-and-ai',
-      heading: 'files and ai',
+      heading: 'your video and ai',
       paragraphs: [
-        "video editing isn't live on our servers yet, so kimo doesn't receive or store your uploads, and no prompts or files are sent to ai models. when editing launches we will update this page first and say exactly which models process your files and for how long they are kept.",
+        "your video never leaves your device. when you add clips, the browser keeps them in the memory of that one open tab so you can preview and edit. they are not uploaded to kimo, not sent to any ai model, and not saved to your device's storage. when you close or refresh the tab they are gone, and reopening the project asks you to add the same files again.",
+        'exports are recorded in your browser and downloaded straight to you. kimo does not receive, host or keep a copy of the finished video.',
+        "ai editing is optional. only when you send an edit request, kimo sends meta platforms (through the meta model api) your written instruction and the project timeline: clip names, kinds, lengths, positions, trims, any on-screen text and marker labels. no video, audio, images or thumbnails are ever sent. meta processes this to suggest edits and, under its standard mode terms, does not use it to train its models; meta keeps request data under its own policies. kimo does not keep the ai's raw answer, only the timeline changes you see.",
+        "ai suggestions are checked against kimo's edit format before anything changes, and anything invalid is rejected without touching your project.",
       ],
     },
     {
@@ -54,7 +58,8 @@ export const PRIVACY_CONTENT: LegalContent = {
       paragraphs: [
         'sign-in sessions end after 30 days, or when you sign out. we store only a one-way hash of the session token, never the token itself.',
         'a sign-in attempt that is not finished expires after 10 minutes.',
-        'projects stay until you delete them. a deleted project can be restored for 30 days, then it is removed for good.',
+        'projects and their timelines stay until you delete them. a deleted project can be restored for 30 days, then it is removed for good, along with its timeline.',
+        'clips you add are kept only in the open tab and are gone when it closes or refreshes. finished videos are never kept by kimo.',
         'your account, preferences and usage counts stay until you delete your account.',
       ],
     },
@@ -62,7 +67,7 @@ export const PRIVACY_CONTENT: LegalContent = {
       id: 'cookies',
       heading: 'cookies',
       paragraphs: [
-        "kimo uses only essential cookies, so there is no cookie banner: kimo_session keeps you signed in (http-only, secure, 30 days) and kimo_oauth_state protects the sign-in step from forgery (10 minutes). the app also saves a few settings in your browser's local storage on your own device.",
+        "kimo uses only essential cookies, so there is no cookie banner: kimo_session keeps you signed in (http-only, secure, 30 days) and kimo_oauth_state protects the sign-in step from forgery (10 minutes). the app also saves a few settings in your browser's local storage on your own device, and briefly keeps edits that haven't reached your account yet (timeline changes only, never media) so they are not lost if you go offline.",
         'there are no ad trackers, no marketing pixels, no cross-site cookies and no analytics running on kimo. if we ever add product analytics, they will stay off unless you opt in.',
       ],
     },
@@ -72,7 +77,7 @@ export const PRIVACY_CONTENT: LegalContent = {
       paragraphs: [
         'you can access and download everything we keep about you with "export my data" on /account: your profile, linked sign-ins, active sessions, projects (including the bin), preferences and usage.',
         'you can correct your name, email or avatar by updating them on github or google and signing in again, or by writing to us.',
-        'you can delete your account from /account. that removes your profile, linked sign-ins, sessions, projects, preferences and usage counts from our database straight away.',
+        'you can delete your account from /account. that removes your profile, linked sign-ins, sessions, projects, timelines, clip details, preferences and usage counts from our database straight away.',
         'you can also withdraw consent, ask questions about how your data is processed, or name someone to act for you if you cannot. under the gdpr you can object, restrict processing and complain to your local data protection authority. in india you can complain to the data protection board of india after contacting us.',
       ],
     },
@@ -106,7 +111,8 @@ export const TERMS_CONTENT: LegalContent = {
   shortVersion: [
     'you own what you make in kimo.',
     'kimo is free, within daily fair use limits, and provided as is.',
-    "video editing isn't live on our servers yet; accounts, projects and preferences are.",
+    'your video stays on your device: clips live only in the open tab and exports download straight to you.',
+    'ai editing is optional and sends meta only your instruction and the timeline, never your video.',
     'the core kimo editing engine is open source on github.',
   ],
   sections: [
@@ -122,7 +128,8 @@ export const TERMS_CONTENT: LegalContent = {
       id: 'what-is-live-today',
       heading: "what's live today",
       paragraphs: [
-        "today the hosted service keeps your account, projects and preferences. uploading and rendering video on our servers isn't available yet; we will update these terms and the privacy page before it is.",
+        'the hosted service keeps your account, projects, edit timelines and preferences. you edit, preview and export video in your own browser: clips stay in the open tab and are never uploaded or stored by kimo, so keep your original files and export before you close or refresh the tab. we will update these terms and the privacy page before kimo ever stores video.',
+        "optional ai editing sends your written instruction and the project timeline (never your video) to meta's model api and applies the edits it suggests after checking them. ai suggestions can be wrong; review your cut before you export.",
       ],
     },
     {
@@ -130,7 +137,7 @@ export const TERMS_CONTENT: LegalContent = {
       heading: 'your content stays yours',
       paragraphs: [
         'you keep all rights to the prompts, titles and any footage, audio or images you bring into kimo, and to the videos you make.',
-        'you give us a limited permission to store and process that content only to run kimo for you.',
+        'you give us a limited permission to store and process your project details and timelines, and to send edit requests to our ai provider when you ask, only to run kimo for you. your footage, audio and images stay on your device.',
       ],
     },
     {

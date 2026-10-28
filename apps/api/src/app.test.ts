@@ -284,12 +284,13 @@ describe('kimo api worker', () => {
     expect(users?.n).toBe(0);
   });
 
-  it('says video editing is not available yet', async () => {
+  it('asks for a sign-in before editing, and never stores videos', async () => {
     const { call } = setup();
     const response = await call('/v1/sessions', {
       method: 'POST',
       headers: { Origin: APP },
     });
-    expect(response.status).toBe(501);
+    expect(response.status).toBe(401);
+    expect((await call('/v1/videos/x')).status).toBe(410);
   });
 });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import * as s from './schema.ts';
 import * as a from './account.ts';
+import { resolveAssets } from './local-assets.ts';
 
 export class KimoApiError extends Error {
   readonly status: number;
@@ -182,12 +183,13 @@ export class KimoClient {
       s.uploadCompletionSchema.parse(body),
     );
   }
-  attachAssets(sessionId: string, assetIds: string[]) {
-    return this.request(
+  async attachAssets(sessionId: string, assetIds: string[]) {
+    const result = await this.request(
       `/v1/sessions/${encodeURIComponent(sessionId)}/assets/add`,
       z.object({ assets: z.array(s.assetSchema) }).strict(),
       { assetIds },
     );
+    return { assets: resolveAssets(result.assets) };
   }
   detachAsset(sessionId: string, assetId: string) {
     return this.request(
@@ -196,10 +198,33 @@ export class KimoClient {
       { assetId },
     );
   }
-  session(id: string) {
-    return this.request(
+  async session(id: string) {
+    const snapshot = await this.request(
       `/v1/sessions/${encodeURIComponent(id)}`,
       s.sessionSnapshotSchema,
+    );
+    return { ...snapshot, assets: resolveAssets(snapshot.assets) };
+  }
+  /** Whether AI editing is switched on for this server right now. */
+  aiStatus() {
+    return this.send('GET', '/v1/ai/status', s.aiStatusSchema);
+  }
+  /** Sends numbers measured from clips in this tab (never the media). */
+  sendAnalysis(id: string, body: z.input<typeof s.analysisRequestSchema>) {
+    return this.send(
+      'POST',
+      `/v1/sessions/${encodeURIComponent(id)}/analysis`,
+      z.undefined(),
+      s.analysisRequestSchema.parse(body),
+    );
+  }
+  /** Counts a finished in-browser export toward today's usage. */
+  recordExport(id: string, body: z.input<typeof s.exportRecordSchema>) {
+    return this.send(
+      'POST',
+      `/v1/sessions/${encodeURIComponent(id)}/exports`,
+      z.undefined(),
+      s.exportRecordSchema.parse(body),
     );
   }
   cancelSession(id: string) {

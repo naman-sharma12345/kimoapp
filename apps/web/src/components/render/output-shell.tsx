@@ -1,15 +1,9 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import { KimoLogo } from '@/features/brand/kimo-logo';
 export function OutputBrand({ wordmark = false }: { wordmark?: boolean }) {
   return (
     <Link href="/" className="output-brand" aria-label="kimo home">
-      <Image
-        src="/brand/kimo-mark.svg"
-        alt=""
-        width={20}
-        height={20}
-        unoptimized
-      />
+      <KimoLogo size={20} />
       {wordmark ? <span>kimo</span> : null}
     </Link>
   );

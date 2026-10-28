@@ -9,7 +9,7 @@ describe('app security headers', () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain(
-      "connect-src 'self' https://api.getkimo.tech wss://api.getkimo.tech",
+      "connect-src 'self' blob: https://api.getkimo.tech wss://api.getkimo.tech",
     );
     expect(csp).not.toContain("'unsafe-eval'");
     const names = securityHeaders({}).map((h) => h.key);

@@ -1,4 +1,4 @@
-import type { Asset } from '@kimo/client';
+import { isLocalAssetUrl, type Asset } from '@kimo/client';
 
 const cached = new Map<
   string,
@@ -12,7 +12,7 @@ export function preloadVideoAssets(
   if (typeof document === 'undefined') return;
   clearVideoAssets(sessionId, true);
   for (const asset of assets
-    .filter((item) => item.kind === 'video')
+    .filter((item) => item.kind === 'video' && !isLocalAssetUrl(item.url))
     .slice(0, 3)) {
     if (cached.has(asset.id)) continue;
     const video = document.createElement('video');

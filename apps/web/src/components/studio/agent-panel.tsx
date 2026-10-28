@@ -24,6 +24,9 @@ import {
   UserBubble,
   clipName,
 } from './agent-cards';
+/** A send failure whose message is written for the person, shown as is. */
+export class NoteError extends Error {}
+
 export function AgentPanel({
   feed,
   project,
@@ -46,6 +49,7 @@ export function AgentPanel({
   onRevert,
   onUpload,
   onPlay,
+  notice,
 }: {
   feed: AgentFeed;
   project: KimoProject;
@@ -72,6 +76,8 @@ export function AgentPanel({
   onRevert: (ids: string[]) => void;
   onUpload: (files: File[]) => Promise<Asset[]>;
   onPlay: () => void;
+  /** A calm line above the composer, e.g. when AI editing is off. */
+  notice?: string;
 }) {
   const state = useSyncExternalStore(
     feed.subscribe,
@@ -169,8 +175,12 @@ export function AgentPanel({
     }
     try {
       await onSend(message, currentAttachments, interrupt);
-    } catch {
-      feed.error('could not send your note · try again');
+    } catch (error) {
+      feed.error(
+        error instanceof NoteError
+          ? error.message
+          : 'could not send your note · try again',
+      );
     }
   }
   const mentionQuery = note.match(/(?:^|\s)@([^@\n]*)$/)?.[1];
@@ -497,6 +507,11 @@ export function AgentPanel({
         </TabsContent>
       </Tabs>
       <div className="studio-agent-footer">
+        {notice ? (
+          <p className="agent-notice" role="status">
+            {notice}
+          </p>
+        ) : null}
         <div className="agent-attachment-row">
           {attachments.map((asset) => (
             <AttachmentChip
@@ -515,7 +530,7 @@ export function AgentPanel({
               }
             />
           ))}
-          {uploading ? <span role="status">uploading attachments…</span> : null}
+          {uploading ? <span role="status">adding attachments…</span> : null}
         </div>
         <div className="studio-composer agent-composer">
           <div
@@ -611,7 +626,7 @@ export function AgentPanel({
                   const added = await onUpload(files);
                   setAttachments((items) => [...items, ...added]);
                 } catch {
-                  feed.error('could not upload attachments · try again');
+                  feed.error('could not add attachments · try again');
                 } finally {
                   setUploading(false);
                 }

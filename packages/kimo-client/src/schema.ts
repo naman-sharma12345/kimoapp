@@ -264,7 +264,15 @@ export const uploadRequestSchema = z
     files: z
       .array(
         z
-          .object({ name: id, size: z.number().int().nonnegative(), mime: id })
+          .object({
+            name: id,
+            size: z.number().int().nonnegative(),
+            mime: id,
+            /** Probed in the browser; media itself never leaves the tab. */
+            durationSec: positive.optional(),
+            width: positive.int().optional(),
+            height: positive.int().optional(),
+          })
           .strict(),
       )
       .min(1),
@@ -341,6 +349,8 @@ export const sessionSnapshotSchema = z
       .enum(['thinking', 'acting', 'waiting_user', 'idle'])
       .optional(),
     createdAt: z.number().int().nonnegative().optional(),
+    /** The landing prompt, waiting to run as the first AI edit. */
+    pendingPrompt: z.string().optional(),
   })
   .strict();
 export const messageRequestSchema = z
@@ -543,4 +553,46 @@ export const authSchema = z
     remaining: z.number().int().nonnegative(),
     mock: z.boolean(),
   })
+  .strict();
+
+export const aiStatusSchema = z
+  .object({ available: z.boolean(), model: z.string().optional() })
+  .strict();
+export const exportRecordSchema = z
+  .object({
+    durationSec: positive.max(4 * 60 * 60),
+    width: positive.int().max(4096),
+    height: positive.int().max(4096),
+    format: z.enum(['mp4', 'webm']),
+  })
+  .strict();
+/** Longest note the AI editor accepts, in characters. */
+export const AI_PROMPT_MAX = 2000;
+
+const range = z
+  .tuple([seconds, seconds])
+  .refine(([start, end]) => end >= start, 'range ends before it starts');
+/**
+ * Measured in the browser from a clip's audio; numbers only, never media.
+ * Times are seconds in the clip's source.
+ */
+export const assetAnalysisSchema = z
+  .object({
+    assetId: id,
+    speech: z.array(range).max(500).optional(),
+    silences: z.array(range).max(500).optional(),
+    loudness: z
+      .object({
+        integratedDb: z.number().min(-120).max(10),
+        peakDb: z.number().min(-120).max(10),
+      })
+      .strict()
+      .optional(),
+    beats: z.array(seconds).max(4000).optional(),
+    bpm: z.number().min(30).max(300).optional(),
+  })
+  .strict();
+export type AssetAnalysis = z.infer<typeof assetAnalysisSchema>;
+export const analysisRequestSchema = z
+  .object({ analyses: z.array(assetAnalysisSchema).min(1).max(30) })
   .strict();

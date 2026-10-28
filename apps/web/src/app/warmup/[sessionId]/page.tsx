@@ -1,12 +1,8 @@
-import { WarmupScreen } from '@/components/warmup/warmup-screen';
-import { loadSession } from '@/lib/load-session';
+import type { Metadata } from 'next';
+import { ClientRoute } from '@/components/pages-route';
 
-export default async function WarmupPage({
-  params,
-}: {
-  params: Promise<{ sessionId: string }>;
-}) {
-  const { sessionId } = await params;
-  const snapshot = await loadSession(sessionId, 'warmup');
-  return <WarmupScreen sessionId={sessionId} snapshot={snapshot} />;
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
+export default function Page() {
+  return <ClientRoute kind="warmup" />;
 }

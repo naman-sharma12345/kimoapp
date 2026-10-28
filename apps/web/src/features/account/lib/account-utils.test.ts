@@ -3,8 +3,6 @@ import assert from 'node:assert/strict';
 import {
   computeUsageMeter,
   formatResetCountdown,
-  formatStorageGigabytes,
-  computeStorageBarRatio,
   getUserInitials,
   isDeleteConfirmationValid,
 } from './account-utils';
@@ -35,16 +33,6 @@ test('formatResetCountdown formats hours and minutes cleanly', () => {
 
   const pastReset = new Date('2026-10-28T10:00:00.000Z').toISOString();
   assert.equal(formatResetCountdown(pastReset, baseNow), 'resets in 0h 0m');
-});
-
-test('formatStorageGigabytes formats bytes to 1.2 GB', () => {
-  assert.equal(formatStorageGigabytes(1_200_000_000), '1.2 GB');
-  assert.equal(formatStorageGigabytes(0), '0.0 GB');
-});
-
-test('computeStorageBarRatio returns clamped ratio', () => {
-  assert.equal(computeStorageBarRatio(1_200_000_000, 5_000_000_000), 0.24);
-  assert.equal(computeStorageBarRatio(9_000_000_000, 5_000_000_000), 1);
 });
 
 test('getUserInitials returns two lowercase characters', () => {

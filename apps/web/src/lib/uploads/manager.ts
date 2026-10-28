@@ -4,6 +4,7 @@ import { useStore } from 'zustand';
 import {
   KimoClient,
   KimoApiError,
+  isLocalAssetUrl,
   putUploadPart,
   uploadParts,
   type UploadTarget,
@@ -11,6 +12,7 @@ import {
 import { fileKind, uploadMime, validateFiles } from '../landing-files';
 import { useSessionStore } from '../../stores/session';
 import { readMedia, saveMedia, deleteMedia } from './cache';
+import { registerLocalFile } from '../local-media';
 import { probeMedia, prepareTimeline } from './probe';
 import type { MediaCache, MediaMeta, UploadItem } from './types';
 
@@ -158,11 +160,22 @@ export class UploadManager {
           if (!this.store.getState().online) await this.whenOnline();
           try {
             const response = await this.deps.api.uploads({
-              files: missing.map(({ file }) => ({
-                name: file.name,
-                size: file.size,
-                mime: uploadMime(file),
-              })),
+              files: missing.map(({ file, localId }) => {
+                const meta = this.item(localId)?.meta ?? {};
+                const whole = (value?: number) =>
+                  value && value > 0 ? Math.round(value) : undefined;
+                return {
+                  name: file.name,
+                  size: file.size,
+                  mime: uploadMime(file),
+                  durationSec:
+                    meta.durationSec && meta.durationSec > 0
+                      ? meta.durationSec
+                      : undefined,
+                  width: whole(meta.width),
+                  height: whole(meta.height),
+                };
+              }),
             });
             if (response.uploads.length !== missing.length)
               throw new Error('Upload registration mismatch');
@@ -289,10 +302,9 @@ export class UploadManager {
       for (const localId of localIds) {
         if (this.item(localId)) continue;
         const cached = await this.deps.cache.read(localId);
-        if (!cached?.file) {
-          this.store.setState({ cacheError: true });
-          continue;
-        }
+        // Clips live only in the tab that picked them; after a refresh the
+        // studio asks for them again, so a missing file is expected here.
+        if (!cached?.file) continue;
         if (cached.target) this.targets.set(localId, cached.target);
         this.completed.set(
           localId,
@@ -384,6 +396,19 @@ export class UploadManager {
     const target = this.targets.get(localId);
     if (!target) return;
     this.prepare(item);
+    if ('putUrl' in target && isLocalAssetUrl(target.putUrl)) {
+      // The clip stays in this tab: nothing is sent anywhere.
+      registerLocalFile(target.assetId, file);
+      if (this.item(localId)?.status === 'canceled') return;
+      this.update(localId, {
+        status: 'done',
+        progress: 1,
+        bytesSent: file.size,
+        error: undefined,
+      });
+      await this.save(localId, { done: true });
+      return;
+    }
     const complete = this.completed.get(localId) ?? new Map<number, string>();
     this.completed.set(localId, complete);
     const parts =

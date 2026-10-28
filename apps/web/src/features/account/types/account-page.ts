@@ -24,10 +24,6 @@ export interface AccountUsage {
   resetsAt: string;
 }
 
-export interface AccountStorage {
-  bytesUsed: number;
-}
-
 export interface AccountPreferences {
   defaultAspect: DefaultAspect;
   captionsDefault: boolean;
@@ -41,7 +37,6 @@ export type PreferenceKey = keyof AccountPreferences;
 export interface AccountPageProps {
   user: AccountUser | null;
   usage: AccountUsage;
-  storage: AccountStorage;
   preferences: AccountPreferences;
   onUpdatePreference: <K extends PreferenceKey>(
     key: K,

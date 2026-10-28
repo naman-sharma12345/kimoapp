@@ -264,8 +264,9 @@ export function ComposerGate(props: Props) {
         ))}
       </div>
       <p className="landing-privacy">
-        by sending, you agree that your files are processed by ai models. don’t
-        upload anything private. <a href="/privacy">privacy</a>
+        your clips stay in this tab and are never uploaded. only your words and
+        the timeline go to ai when you ask it to edit.{' '}
+        <a href="/privacy">privacy</a>
       </p>
       {error ? (
         <p role="alert">

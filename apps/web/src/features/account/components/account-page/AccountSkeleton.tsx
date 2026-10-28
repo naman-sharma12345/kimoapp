@@ -1,7 +1,6 @@
 const SKELETON_SECTIONS = [
   { id: 'profile', lines: 2 },
   { id: 'usage', lines: 2 },
-  { id: 'storage', lines: 3 },
   { id: 'preferences', lines: 5 },
   { id: 'export', lines: 1 },
   { id: 'danger', lines: 2 },

@@ -5,14 +5,14 @@ import type { ReactNode } from 'react';
 
 const copy = {
   upload: {
-    title: 'some files didn’t upload',
+    title: 'some clips couldn’t be added',
     body: 'check your connection and try again. nothing you made is lost.',
-    primary: 'retry uploads',
+    primary: 'try again',
     secondary: 'back',
   },
   session: {
     title: 'kimo couldn’t start this edit',
-    body: 'the editor hit a problem before it began. your files are saved for 24 hours.',
+    body: 'the editor hit a problem before it began. your clips are still in this tab.',
     primary: 'try again',
     secondary: 'start over',
   },

@@ -1,4 +1,9 @@
-import type { Asset, Clip, KimoProject } from '@kimo/client';
+import {
+  isLocalAssetUrl,
+  type Asset,
+  type Clip,
+  type KimoProject,
+} from '@kimo/client';
 
 type AudioClip = {
   source: AudioBufferSourceNode;
@@ -70,6 +75,18 @@ export class AudioEngine {
     }
     await this.context.resume();
   }
+  /**
+   * Taps the mix for an in-browser export. With `silent`, the speakers are
+   * disconnected so the export does not play out loud.
+   */
+  async captureStream(silent = true): Promise<MediaStream | undefined> {
+    await this.resume();
+    if (!this.context || !this.master) return undefined;
+    const destination = this.context.createMediaStreamDestination();
+    this.master.connect(destination);
+    if (silent) this.analyser?.disconnect();
+    return destination.stream;
+  }
   get time() {
     return this.context?.state === 'running' && !this.muted
       ? this.context.currentTime
@@ -88,6 +105,7 @@ export class AudioEngine {
   async prepare(asset: Asset) {
     if (
       !this.context ||
+      isLocalAssetUrl(asset.proxyUrl ?? asset.url) ||
       this.buffers.has(asset.id) ||
       this.loading.has(asset.id)
     )

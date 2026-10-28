@@ -22,7 +22,8 @@
     "build:pages": "node scripts/pages-build.mjs",
     "test:contract": "vitest run packages/kimo-client/contract.test.ts",
     "budgets": "node scripts/bundle-budgets.mjs && size-limit",
-    "analyze": "node scripts/analyze.mjs"
+    "analyze": "node scripts/analyze.mjs",
+    "ai:knowledge": "node scripts/ai-knowledge.mjs && prettier --write apps/api/src/ai/knowledge.generated.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

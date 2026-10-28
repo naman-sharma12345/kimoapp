@@ -1,48 +1,40 @@
-import { cache } from 'react';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { KimoApiError, KimoClient } from '@kimo/client';
-import { DeliveryPage } from '@/components/render/delivery-page';
-const loadVideo = cache(async (id: string) => {
-  try {
-    return await new KimoClient().video(id);
-  } catch (error) {
-    if (error instanceof KimoApiError && error.status === 404) notFound();
-    throw error;
-  }
-});
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ videoId: string }>;
-}): Promise<Metadata> {
-  const { videoId } = await params;
-  const video = await loadVideo(videoId);
-  return {
-    title: video.title,
-    description: 'made with kimo, the ai video editor',
-    robots: { index: false, follow: false },
-    openGraph: {
-      type: 'video.other',
-      title: video.title,
-      description: 'made with kimo, the ai video editor',
-      images: [{ url: video.posterUrl }],
-      videos: [
-        {
-          url: video.url,
-          type: 'video/mp4',
-          width: video.width,
-          height: video.height,
-        },
-      ],
-    },
-  };
-}
-export default async function VideoPage({
-  params,
-}: {
-  params: Promise<{ videoId: string }>;
-}) {
-  const { videoId } = await params;
-  return <DeliveryPage videoId={videoId} video={await loadVideo(videoId)} />;
+import Link from 'next/link';
+import {
+  OutputAtmosphere,
+  OutputBrand,
+} from '@/components/render/output-shell';
+
+export const metadata: Metadata = {
+  title: 'kimo doesn’t keep videos',
+  robots: { index: false, follow: false },
+};
+
+/** Old share links land here: kimo no longer stores or hosts videos. */
+export default function VideoPage() {
+  return (
+    <main id="main" className="output-page render-page" data-ready="true">
+      <OutputAtmosphere />
+      <header className="output-nav">
+        <OutputBrand />
+      </header>
+      <section className="render-content" aria-label="video">
+        <div className="render-failure" role="status">
+          <h1>kimo doesn’t keep videos</h1>
+          <p>
+            videos are made and downloaded in your browser, so there’s nothing
+            stored here to watch. open your project to export it again.
+          </p>
+          <div className="agent-button-row">
+            <Link
+              className="ui-button ui-button-primary ui-size-md"
+              href="/projects"
+            >
+              <span className="ui-button-label">your projects</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }

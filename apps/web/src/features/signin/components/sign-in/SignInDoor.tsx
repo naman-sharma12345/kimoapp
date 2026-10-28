@@ -40,7 +40,7 @@ export interface SignInDoorProps {
 const BENEFITS = [
   {
     icon: FolderOpen,
-    label: 'every project saved for 30 days',
+    label: 'your edits saved to your projects',
   },
   {
     icon: InfinityIcon,

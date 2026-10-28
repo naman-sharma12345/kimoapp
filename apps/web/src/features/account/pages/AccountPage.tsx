@@ -17,7 +17,6 @@ import { TopBar } from '../components/account-page/TopBar';
 import { SectionRow } from '../components/account-page/SectionRow';
 import { ProfileSection } from '../components/account-page/ProfileSection';
 import { UsageSection } from '../components/account-page/UsageSection';
-import { StorageSection } from '../components/account-page/StorageSection';
 import { PreferencesSection } from '../components/account-page/PreferencesSection';
 import { ExportSection } from '../components/account-page/ExportSection';
 import { DangerZoneSection } from '../components/account-page/DangerZoneSection';
@@ -30,7 +29,6 @@ import { providerLabel } from '@/lib/auth-provider';
 export default function AccountPage({
   user,
   usage,
-  storage,
   preferences,
   onUpdatePreference,
   onSignOut,
@@ -201,17 +199,8 @@ export default function AccountPage({
                 />
               </SectionRow>
 
-              {/* 3. storage */}
-              <SectionRow
-                index={2}
-                title="storage"
-                description="what kimo keeps, and for how long"
-              >
-                <StorageSection storage={storage} />
-              </SectionRow>
-
               {/* 4. preferences */}
-              <SectionRow index={3} title="preferences">
+              <SectionRow index={2} title="preferences">
                 <PreferencesSection
                   preferences={preferences}
                   onUpdatePreference={onUpdatePreference}
@@ -222,7 +211,7 @@ export default function AccountPage({
 
               {/* 5. export your data */}
               <SectionRow
-                index={4}
+                index={3}
                 title="export your data"
                 description="everything kimo has about you"
               >
@@ -234,7 +223,7 @@ export default function AccountPage({
 
               {/* 6. danger zone */}
               <SectionRow
-                index={5}
+                index={4}
                 title="danger zone"
                 onAnimationComplete={() => setIsReady(true)}
               >

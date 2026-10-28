@@ -717,8 +717,9 @@ export function LandingComposer({
         ))}
       </div>
       <p className="landing-privacy">
-        by sending, you agree that your files are processed by ai models. don’t
-        upload anything private. <a href="/privacy">privacy</a>
+        your clips stay in this tab and are never uploaded. only your words and
+        the timeline go to ai when you ask it to edit.{' '}
+        <a href="/privacy">privacy</a>
       </p>
       <span className="landing-sr-only" role="status" aria-live="polite">
         {dragging ? 'drop to add to your video' : ''}

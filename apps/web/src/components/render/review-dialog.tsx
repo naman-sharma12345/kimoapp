@@ -44,7 +44,6 @@ export function ReviewDialog({
   );
   const [resolution, setResolution] = useState<'1080p' | '720p'>('1080p');
   const [format, setFormat] = useState<'mp4' | 'webm'>('mp4');
-  const [alsoVertical, setAlsoVertical] = useState(false);
   const [captions, setCaptions] = useState(hasCaptions);
   const [poster, setPoster] = useState<string>();
   const [captureError, setCaptureError] = useState(false);
@@ -75,7 +74,11 @@ export function ReviewDialog({
     setBusy(true);
     setError('');
     try {
-      await onApprove(captions, poster, { resolution, format, alsoVertical });
+      await onApprove(captions, poster, {
+        resolution,
+        format,
+        alsoVertical: false,
+      });
     } catch {
       setError('could not start the render · try again');
       setBusy(false);
@@ -182,15 +185,6 @@ export function ReviewDialog({
               <option>mp4</option>
               <option>webm</option>
             </select>
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={alsoVertical}
-              disabled={busy || project.width < project.height}
-              onChange={(e) => setAlsoVertical(e.target.checked)}
-            />
-            also export 9:16 version
           </label>
         </details>
         {error ? (

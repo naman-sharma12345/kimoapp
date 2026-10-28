@@ -127,6 +127,8 @@ export const usageSchema = z
     videosLimit: z.number().int().nonnegative(),
     renderMinutes: z.number().nonnegative(),
     renderMinutesLimit: z.number().nonnegative(),
+    aiEditsToday: z.number().int().nonnegative().optional(),
+    aiEditsLimit: z.number().int().nonnegative().optional(),
     resetsAt: z.string().min(1),
   })
   .strict();
@@ -135,7 +137,6 @@ export const meSchema = z
   .object({
     user: meUserSchema,
     usage: usageSchema,
-    storage: z.object({ bytesUsed: z.number().nonnegative() }).strict(),
     preferences: preferencesSchema,
   })
   .strict();
@@ -203,3 +204,5 @@ export type AccountExport = z.infer<typeof exportSchema>;
 /** Daily limits for a signed-in account (free plan). */
 export const DAILY_VIDEO_LIMIT = 10;
 export const DAILY_RENDER_MINUTES_LIMIT = 30;
+/** AI edits each account may ask for per UTC day (free plan). */
+export const DAILY_AI_EDIT_LIMIT = 40;

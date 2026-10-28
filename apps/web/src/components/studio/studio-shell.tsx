@@ -42,8 +42,11 @@ import {
 } from 'lucide-react';
 import type { CompositorController, PreviewMetrics } from '@kimo/compositor';
 import {
+  KimoApiError,
   KimoClient,
   ProjectSync,
+  resolveAsset,
+  resolveAssets,
   type ClientEvent,
   type Clip,
   type Op,
@@ -90,6 +93,35 @@ import {
   saveRenderContext,
 } from '@/lib/render';
 import { ViewerTextEditor } from './viewer-text-editor';
+import { LocalClipsNotice } from './local-clips-notice';
+import { NoteError } from './agent-panel';
+import {
+  hasLocalMedia,
+  localFile,
+  missingAssets,
+  onLocalMediaChange,
+} from '@/lib/local-media';
+import { analyzeClip } from '@/lib/media-analysis';
+import { exportedVersion, setExportJob } from '@/lib/export-job';
+
+/** Clips already measured in this tab, and prompts already run. */
+const analyzed = new Set<string>();
+const promptsRun = new Set<string>();
+export const AI_OFF_NOTICE =
+  'ai editing isn’t switched on yet. you can still edit by hand, preview and export.';
+function noteError(error: unknown) {
+  if (!(error instanceof KimoApiError)) return error;
+  const copy: Record<string, string> = {
+    ai_unavailable: AI_OFF_NOTICE,
+    ai_quota: 'you’ve used today’s ai edits. manual editing still works.',
+    ai_invalid_edit:
+      'kimo couldn’t turn that into a safe edit, so nothing changed. try saying it another way.',
+    ai_upstream: 'the ai editor didn’t answer. try again in a moment.',
+    rate_limited: 'that’s a lot of notes at once. give it a minute.',
+    too_large: 'that note is too long. try a shorter one.',
+  };
+  return copy[error.code] ? new NoteError(copy[error.code]) : error;
+}
 import { isTypingTarget } from '@/lib/keyboard';
 
 type AgentState = 'thinking' | 'acting' | 'waiting_user' | 'idle';
@@ -313,6 +345,93 @@ export function StudioShell({
   const [palette, setPalette] = useState(false);
   const [beatGrid, setBeatGrid] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [aiAvailable, setAiAvailable] = useState<boolean>();
+  const [clipsInTab, setClipsInTab] = useState(hasLocalMedia);
+  useEffect(() => {
+    let alive = true;
+    void new KimoClient()
+      .aiStatus()
+      .then((status) => {
+        if (alive) setAiAvailable(status.available);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  // Clips added (or added again) in this tab swap in their object URLs.
+  useEffect(
+    () =>
+      onLocalMediaChange(() => {
+        setClipsInTab(hasLocalMedia());
+        const old = snapshotRef.current;
+        if (!old) return;
+        const next = { ...old, assets: resolveAssets(old.assets) };
+        snapshotRef.current = next;
+        setCurrent(next);
+      }),
+    [],
+  );
+  // Leaving with clips in the tab and an unexported cut loses the clips.
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      const version = snapshotRef.current?.project.version;
+      if (!hasLocalMedia() || version === exportedVersion(sessionId)) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [sessionId]);
+  const assetKey = (current?.assets ?? [])
+    .map((asset) => `${asset.id}:${asset.url}`)
+    .join('|');
+  // Measure each clip's sound in the browser (numbers only), then run the
+  // landing prompt as the first AI edit once the clips are here.
+  useEffect(() => {
+    const snap = snapshotRef.current;
+    if (!snap) return;
+    let alive = true;
+    void (async () => {
+      const analyses = [];
+      for (const asset of snap.assets) {
+        if (asset.kind !== 'video' && asset.kind !== 'audio') continue;
+        const file = localFile(asset.id);
+        if (!file || analyzed.has(asset.id)) continue;
+        analyzed.add(asset.id);
+        const result = await analyzeClip(asset.id, file, asset.kind);
+        if (result) analyses.push(result);
+      }
+      if (analyses.length)
+        await new KimoClient()
+          .sendAnalysis(sessionId, { analyses })
+          .catch(() => undefined);
+      const prompt = snap.pendingPrompt;
+      if (
+        !alive ||
+        !prompt ||
+        aiAvailable !== true ||
+        promptsRun.has(sessionId) ||
+        missingAssets(snap.assets).length
+      )
+        return;
+      promptsRun.add(sessionId);
+      feed.system(`working on: ${prompt}`);
+      await new KimoClient()
+        .message(sessionId, { text: prompt })
+        .catch((error: unknown) => {
+          const friendly = noteError(error);
+          feed.error(
+            friendly instanceof NoteError
+              ? friendly.message
+              : 'could not run your first note · send it again',
+          );
+        });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [assetKey, aiAvailable, sessionId, feed]);
   const recordCut = useCallback(() => {
     const next = snapshotRef.current;
     if (!next) return;
@@ -484,7 +603,7 @@ export function StudioShell({
           ...existing,
           assets: [
             ...existing.assets.filter((asset) => asset.id !== message.asset.id),
-            message.asset,
+            resolveAsset(message.asset),
           ],
         });
       }
@@ -883,7 +1002,7 @@ export function StudioShell({
               )
             ) {
               unsubscribe();
-              reject(new Error('upload failed · try again'));
+              reject(new Error('couldn’t add those clips · try again'));
             } else if (
               items.length === localIds.length &&
               items.every((item) => item.status === 'done')
@@ -927,7 +1046,9 @@ export function StudioShell({
         setAssetsOpen(true);
       } catch (error) {
         setUploadError(
-          error instanceof Error ? error.message : 'upload failed · try again',
+          error instanceof Error
+            ? error.message
+            : 'couldn’t add those clips · try again',
         );
       }
     },
@@ -1243,14 +1364,23 @@ export function StudioShell({
     if (viewedRef.current) return;
     if (agentState === 'acting') send({ t: 'pause' });
     await syncRef.current?.whenIdle();
-    const result = await new KimoClient().approve(sessionId, {
-      burnInCaptions,
+    const latest = snapshotRef.current;
+    if (!latest) throw new Error('nothing to export yet');
+    if (missingAssets(latest.assets).length)
+      throw new Error('add your clips again before exporting');
+    // Exported in this tab: nothing is sent to a server to render.
+    setExportJob({
+      sessionId,
+      project: latest.project,
+      assets: latest.assets,
       title,
-      ...options,
+      burnInCaptions,
+      resolution: options?.resolution ?? '1080p',
+      format: options?.format ?? 'mp4',
     });
     track('render_started');
     saveRenderContext(sessionId, {
-      renderId: result.renderId,
+      renderId: 'local',
       poster,
       title,
       burnInCaptions,
@@ -1286,10 +1416,14 @@ export function StudioShell({
           track('interrupt_sent');
           if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
         } else
-          await new KimoClient().message(sessionId, {
-            text,
-            attachments: attachments.map((asset) => asset.id),
-          });
+          await new KimoClient()
+            .message(sessionId, {
+              text,
+              attachments: attachments.map((asset) => asset.id),
+            })
+            .catch((error: unknown) => {
+              throw noteError(error);
+            });
       }}
       onControl={(event) => {
         if (viewedRef.current) return;
@@ -1352,6 +1486,7 @@ export function StudioShell({
         seekPreview(0);
         void preview.current?.play();
       }}
+      notice={aiAvailable === false ? AI_OFF_NOTICE : undefined}
     />
   ) : null;
   const inspector = (
@@ -1428,6 +1563,13 @@ export function StudioShell({
       data-fullscreen={fullscreen || undefined}
       data-controls-visible={fullscreenControls || undefined}
     >
+      {current ? (
+        <LocalClipsNotice
+          sessionId={sessionId}
+          assets={current.assets}
+          hasClips={clipsInTab}
+        />
+      ) : null}
       <div className="studio-viewer-overlay">
         <span>
           {project?.width ?? 1920} × {project?.height ?? 1080} · 30 fps
@@ -1858,7 +2000,7 @@ export function StudioShell({
             type="file"
             multiple
             hidden
-            aria-label="upload more files"
+            aria-label="add more clips"
             onChange={(event) => {
               void uploadFiles(Array.from(event.target.files ?? []));
               event.target.value = '';
@@ -1883,7 +2025,7 @@ export function StudioShell({
               </div>
               <div className="editor-assets-grid">
                 <button onClick={() => filePicker.current?.click()}>
-                  <span>+</span>upload more
+                  <span>+</span>add clips
                 </button>
                 {current.assets
                   .filter(
@@ -2168,7 +2310,7 @@ export function StudioShell({
           >
             <DialogContent
               title="leave the studio?"
-              description="your edit keeps its place for 24 hours."
+              description="your edits are saved to your account. your clips only live in this tab, so export before you go."
               actions={
                 <>
                   <Button variant="danger" onClick={() => router.push('/')}>

@@ -1,43 +1,20 @@
-import type { Asset, Clip } from '@kimo/client';
+import { isLocalAssetUrl, type Asset, type Clip } from '@kimo/client';
 
 type CachedMedia = {
   target?: { assetId: string };
   filmstrip?: Blob[];
   timelineWaveform?: Float32Array;
 };
+/**
+ * Derived previews (filmstrip frames, waveform) for clips added in this tab.
+ * Kept in memory only, never in IndexedDB or on disk, and gone on refresh.
+ */
+const derived = new Map<string, CachedMedia>();
+export function rememberDerivedMedia(assetId: string, media: CachedMedia) {
+  derived.set(assetId, { ...derived.get(assetId), ...media });
+}
 async function cachedFile(assetId: string): Promise<CachedMedia | undefined> {
-  if (typeof indexedDB === 'undefined') return undefined;
-  return new Promise((resolve) => {
-    const request = indexedDB.open('kimo-media', 1);
-    request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains('media'))
-        request.result.createObjectStore('media', { keyPath: 'localId' });
-    };
-    request.onerror = () => resolve(undefined);
-    request.onsuccess = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains('media')) {
-        db.close();
-        resolve(undefined);
-        return;
-      }
-      const read = db
-        .transaction('media', 'readonly')
-        .objectStore('media')
-        .getAll();
-      read.onerror = () => {
-        db.close();
-        resolve(undefined);
-      };
-      read.onsuccess = () => {
-        const result = (read.result as CachedMedia[]).find(
-          (item) => item.target?.assetId === assetId,
-        );
-        db.close();
-        resolve(result);
-      };
-    };
-  });
+  return derived.get(assetId);
 }
 export async function filmstripFor(
   clip: Clip,
@@ -46,7 +23,12 @@ export async function filmstripFor(
 ): Promise<Blob[]> {
   const cached = await cachedFile(asset.id);
   if (cached?.filmstrip?.length) return cached.filmstrip;
-  if (asset.kind !== 'video' || typeof document === 'undefined') return [];
+  if (
+    asset.kind !== 'video' ||
+    typeof document === 'undefined' ||
+    isLocalAssetUrl(asset.url)
+  )
+    return [];
   const video = document.createElement('video');
   video.crossOrigin = 'anonymous';
   video.muted = true;
@@ -110,6 +92,7 @@ export async function cachedWaveform(asset: Asset) {
   if (stored || (asset.kind !== 'audio' && asset.kind !== 'video'))
     return stored;
   if (asset.durationSec && asset.durationSec > 600) return undefined;
+  if (isLocalAssetUrl(asset.proxyUrl ?? asset.url)) return undefined;
   const context = new AudioContext();
   try {
     const response = await fetch(asset.proxyUrl ?? asset.url);

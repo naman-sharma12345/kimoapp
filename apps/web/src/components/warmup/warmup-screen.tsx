@@ -42,7 +42,7 @@ const fallbacks = [
   'looking for the best moments…',
 ] as const;
 const labels = [
-  { active: 'uploading your files', done: 'files uploaded' },
+  { active: 'reading your clips', done: 'clips ready' },
   { active: 'watching your footage', done: 'footage watched' },
   { active: 'planning the edit', done: 'plan ready' },
   { active: 'opening the studio', done: 'opening the studio' },
@@ -405,7 +405,7 @@ export function WarmupScreen({
         >
           <DialogContent
             title="stop this edit?"
-            description="your files stay uploaded for 24 hours."
+            description="your clips stay in this tab until you close it."
             actions={
               <>
                 <Button

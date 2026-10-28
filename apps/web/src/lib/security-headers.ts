@@ -21,6 +21,8 @@ export function contentSecurityPolicy(env: {
   const ws = api?.replace(/^http/, 'ws') ?? null;
   const connect = [
     "'self'",
+    // Clips are read from in-tab object URLs (waveforms, audio decode).
+    'blob:',
     api,
     ws,
     origin(env.posthogHost),

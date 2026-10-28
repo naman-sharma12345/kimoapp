@@ -11,3 +11,4 @@ export interface Compositor {
   draw(project: KimoProject, timeSec: number): void;
   dispose(): void;
 }
+export * from './export.ts';

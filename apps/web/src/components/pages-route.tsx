@@ -3,12 +3,9 @@ import { useEffect, useState } from 'react';
 import { UploadsProvider } from '@/components/uploads/uploads-provider';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import {
-  KimoClient,
-  type DeliveredVideo,
-  type RenderSnapshot,
-  type SessionSnapshot,
-} from '@kimo/client';
+import { KimoApiError, KimoClient, type SessionSnapshot } from '@kimo/client';
+import { sessionDestination } from '@/lib/session-routing';
+import { useRouter } from '@/lib/app-router';
 const Studio = dynamic(
   () => import('./studio/studio-shell').then((m) => m.StudioShell),
   { ssr: false },
@@ -18,84 +15,97 @@ const Warmup = dynamic(
   { ssr: false },
 );
 const Render = dynamic(
-  () => import('./render/render-screen').then((m) => m.RenderScreen),
+  () => import('./render/local-render-screen').then((m) => m.LocalRenderScreen),
   { ssr: false },
 );
-const Delivery = dynamic(
-  () => import('./render/delivery-page').then((m) => m.DeliveryPage),
-  { ssr: false },
-);
-type Loaded = {
-  id: string;
-  session?: SessionSnapshot;
-  video?: DeliveredVideo;
-  render?: RenderSnapshot;
-  renderId?: string;
-};
-function RemoteRoute({ kind }: { kind: 'studio' | 'warmup' | 'render' | 'v' }) {
+type Loaded = { id: string; session?: SessionSnapshot };
+/**
+ * Loads a session in the browser, with the user's sign-in cookie, so the
+ * studio, warm-up and export screens never depend on a server-side fetch.
+ */
+export function ClientRoute({
+  kind,
+}: {
+  kind: 'studio' | 'warmup' | 'render';
+}) {
   const [loaded, setLoaded] = useState<Loaded>();
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<'missing' | 'signin' | 'failed'>();
+  const router = useRouter();
   useEffect(() => {
     let alive = true;
     const id = decodeURIComponent(
       location.pathname.split('/').filter(Boolean)[1] ?? '',
     );
     const client = new KimoClient();
-    void (async () => {
-      if (kind === 'v') return { id, video: await client.video(id) };
-      const session = await client.session(id);
-      if (kind !== 'render') return { id, session };
-      if (!session.renderId) {
-        location.replace(`/studio/${encodeURIComponent(id)}`);
-        return undefined;
-      }
-      const render = await client.render(session.renderId);
-      return { id, session, render, renderId: session.renderId };
-    })()
-      .then((value) => {
-        if (alive) setLoaded(value);
+    void client
+      .session(id)
+      .then((session) => {
+        if (!alive) return;
+        const destination = sessionDestination(session, id);
+        const here = `/${kind}/${encodeURIComponent(id)}`;
+        if (
+          kind !== 'render' &&
+          destination &&
+          destination !== here &&
+          destination.startsWith('/studio/')
+        ) {
+          // Soft navigation: the clips picked in this tab stay in memory.
+          router.replace(destination);
+          return;
+        }
+        setLoaded({ id, session });
       })
-      .catch(() => {
-        if (alive) setError(true);
+      .catch((caught: unknown) => {
+        if (!alive) return;
+        if (caught instanceof KimoApiError && caught.status === 401) {
+          location.replace(
+            `/signin?next=${encodeURIComponent(location.pathname)}`,
+          );
+          setError('signin');
+        } else if (caught instanceof KimoApiError && caught.status === 404)
+          setError('missing');
+        else setError('failed');
       });
     return () => {
       alive = false;
     };
-  }, [kind]);
+  }, [kind, router]);
   if (error)
     return (
       <main id="main" className="privacy-page">
-        <h1>could not load this {kind === 'v' ? 'video' : 'session'}</h1>
-        <p>it may have expired, or the connection is unavailable.</p>
+        <h1>
+          {error === 'missing'
+            ? 'we couldn’t find this project'
+            : error === 'signin'
+              ? 'sign in to open this project'
+              : 'could not load this project'}
+        </h1>
+        <p>
+          {error === 'missing'
+            ? 'it may have been deleted, or it belongs to another account.'
+            : 'check your connection and try again.'}
+        </p>
         <button onClick={() => location.reload()}>try again</button>{' '}
-        <Link href="/">start a new video</Link>
+        <Link href="/projects">your projects</Link>
       </main>
     );
   if (!loaded)
     return (
       <main id="main" className="privacy-page" aria-busy="true">
-        <h1>opening {kind === 'v' ? 'your video' : kind}…</h1>
+        <h1>opening your project…</h1>
       </main>
     );
-  if (kind === 'v' && loaded.video)
-    return <Delivery videoId={loaded.id} video={loaded.video} />;
-  if (kind === 'render' && loaded.render && loaded.renderId)
-    return (
-      <Render
-        sessionId={loaded.id}
-        initial={loaded.render}
-        initialRenderId={loaded.renderId}
-      />
-    );
+  if (kind === 'render')
+    return <Render sessionId={loaded.id} snapshot={loaded.session ?? null} />;
   if (kind === 'warmup')
     return <Warmup sessionId={loaded.id} snapshot={loaded.session ?? null} />;
   return <Studio sessionId={loaded.id} snapshot={loaded.session ?? null} />;
 }
 
-export function PagesRoute(props: React.ComponentProps<typeof RemoteRoute>) {
+export function PagesRoute(props: React.ComponentProps<typeof ClientRoute>) {
   return (
     <UploadsProvider>
-      <RemoteRoute {...props} />
+      <ClientRoute {...props} />
     </UploadsProvider>
   );
 }

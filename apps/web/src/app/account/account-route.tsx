@@ -8,14 +8,12 @@ import {
   fakeDeleteAccount,
   fakeExportData,
   mockInitialPreferences,
-  mockStorage,
   mockUsageLoaded,
   mockUser,
 } from '@/features/account/mock/account-page';
 import type {
   AccountPageState,
   AccountPreferences,
-  AccountStorage,
   AccountUsage,
   AccountUser,
   PreferenceKey,
@@ -63,7 +61,6 @@ export function AccountRoute() {
     ...mockUsageLoaded,
     resetsAt: createMockResetIso(),
   }));
-  const [storage, setStorage] = useState<AccountStorage>(mockStorage);
   const preferencesRef = useRef(preferences);
   preferencesRef.current = preferences;
 
@@ -90,7 +87,6 @@ export function AccountRoute() {
           provider: me.user.provider,
         });
         setUsage(me.usage);
-        setStorage(me.storage);
         setPreferences(me.preferences);
         setState(
           me.usage.videosToday >= me.usage.videosLimit
@@ -144,7 +140,6 @@ export function AccountRoute() {
     <AccountPage
       user={state === 'signed-out' ? null : user}
       usage={usage}
-      storage={storage}
       preferences={preferences}
       onUpdatePreference={onUpdatePreference}
       onSignOut={onSignOut}

@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'apps/api/**'
-      - 'packages/kimo-client/src/account.ts'
+      - 'packages/kimo-client/src/**'
       - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
 

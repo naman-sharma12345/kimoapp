@@ -1,6 +1,5 @@
 import type {
   AccountPreferences,
-  AccountStorage,
   AccountUsage,
   AccountUser,
   PreferenceKey,
@@ -34,10 +33,6 @@ export const mockUsageLimitReached: AccountUsage = {
   renderMinutes: 30,
   renderMinutesLimit: 30,
   resetsAt: createMockResetIso(),
-};
-
-export const mockStorage: AccountStorage = {
-  bytesUsed: 1_200_000_000, // 1.2 GB
 };
 
 export const mockInitialPreferences: AccountPreferences = {

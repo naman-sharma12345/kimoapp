@@ -1,6 +1,3 @@
-const BYTES_PER_GB = 1_000_000_000;
-const DEFAULT_STORAGE_CAP_BYTES = 5 * BYTES_PER_GB;
-
 export interface UsageMeterCalculations {
   clampedUsed: number;
   safeLimit: number;
@@ -47,27 +44,6 @@ export function formatResetCountdown(
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `resets in ${hours}h ${minutes}m`;
-}
-
-/**
- * Formats byte count to gigabytes with one decimal place (e.g. "1.2 GB").
- */
-export function formatStorageGigabytes(bytesUsed: number): string {
-  const safeBytes = Math.max(0, bytesUsed);
-  const gb = safeBytes / BYTES_PER_GB;
-  return `${gb.toFixed(1)} GB`;
-}
-
-/**
- * Computes fill ratio [0, 1] for the 64px storage indicator bar.
- */
-export function computeStorageBarRatio(
-  bytesUsed: number,
-  capacityBytes: number = DEFAULT_STORAGE_CAP_BYTES,
-): number {
-  const safeCap = Math.max(1, capacityBytes);
-  const safeUsed = Math.max(0, Math.min(bytesUsed, safeCap));
-  return safeUsed / safeCap;
 }
 
 /**

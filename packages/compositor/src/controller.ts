@@ -38,12 +38,17 @@ export class CompositorController {
   private lastReport = 0;
   private disposed = false;
   private scrubbing = false;
+  /** Fixed output size (export); preview sizes itself from the canvas. */
+  private readonly size: [number, number] | undefined;
   constructor(
     canvas: HTMLCanvasElement,
     project: KimoProject,
     assets: readonly Asset[],
     private readonly report: (metrics: PreviewMetrics) => void,
+    options: { size?: [number, number] } = {},
   ) {
+    this.size = options.size;
+    if (this.size) this.lowQuality = false;
     this.canvas = canvas;
     this.project = project;
     this.assets = assets;
@@ -186,7 +191,16 @@ export class CompositorController {
       ? this.baseTime + (this.clock() - this.baseClock) * this.rate
       : this.time;
   }
+  /** The project's mixed audio as a stream, for MediaRecorder exports. */
+  audioStream() {
+    return this.audio.captureStream(true);
+  }
+  /** A JPEG data URL of the current frame. */
+  snapshot() {
+    return this.renderer.capture();
+  }
   private dimensions(): [number, number] {
+    if (this.size) return this.size;
     const ratio = this.project.width / this.project.height;
     const maxWidth = this.lowQuality
       ? ratio < 1
@@ -276,7 +290,7 @@ export class CompositorController {
       this.sampleStart = now;
       if (this.playing && this.fps < 40) {
         if (!this.slowSince) this.slowSince = now;
-        if (now - this.slowSince >= 2000 && !this.lowQuality) {
+        if (now - this.slowSince >= 2000 && !this.lowQuality && !this.size) {
           this.lowQuality = true;
           this.dirty = true;
         }

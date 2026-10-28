@@ -498,7 +498,7 @@ export function InspectorDetails({
             replace image
           </Button>
           <Button size="sm" onClick={onUpload}>
-            upload my own
+            use my own file
           </Button>
         </details>
       ) : null}

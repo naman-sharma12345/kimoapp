@@ -1,9 +1,10 @@
 import { Texture } from 'pixi.js';
-import type { Asset } from '@kimo/client';
+import { isLocalAssetUrl, type Asset } from '@kimo/client';
 import { getPreloadedVideo } from './media-cache.ts';
 
 type VideoEntry = {
   assetId: string;
+  url: string;
   element: HTMLVideoElement;
   texture?: Texture;
   used: number;
@@ -11,6 +12,7 @@ type VideoEntry = {
 };
 type ImageEntry = {
   assetId: string;
+  url: string;
   element: HTMLImageElement;
   texture?: Texture;
 };
@@ -39,7 +41,12 @@ export class MediaPool {
     scrubbing = false,
   ): VideoEntry {
     let entry = this.videos.get(clipId);
-    if (entry && entry.assetId !== asset.id) {
+    // A clip re-added in this tab gets a new object URL: reload it.
+    if (
+      entry &&
+      (entry.assetId !== asset.id ||
+        entry.url !== (asset.proxyUrl ?? asset.url))
+    ) {
       this.removeVideo(clipId);
       entry = undefined;
     }
@@ -63,11 +70,17 @@ export class MediaPool {
       element.crossOrigin = 'anonymous';
       element.playsInline = true;
       element.preload = 'auto';
-      if (!warmed) {
+      // A clip not added in this tab yet has no source to load.
+      if (!warmed && !isLocalAssetUrl(asset.proxyUrl ?? asset.url)) {
         element.src = asset.proxyUrl ?? asset.url;
         element.load();
       }
-      entry = { assetId: asset.id, element, used: ++this.sequence };
+      entry = {
+        assetId: asset.id,
+        url: asset.proxyUrl ?? asset.url,
+        element,
+        used: ++this.sequence,
+      };
       const current = entry;
       element.addEventListener('loadeddata', () => {
         if (this.videos.get(clipId) !== current) return;
@@ -122,16 +135,22 @@ export class MediaPool {
 
   image(asset: Asset): ImageEntry {
     const previous = this.images.get(asset.id);
-    if (previous) return previous;
+    if (previous && previous.url === (asset.proxyUrl ?? asset.url))
+      return previous;
     const element = new Image();
     element.crossOrigin = 'anonymous';
-    const entry: ImageEntry = { assetId: asset.id, element };
+    const entry: ImageEntry = {
+      assetId: asset.id,
+      url: asset.proxyUrl ?? asset.url,
+      element,
+    };
     element.onload = () => {
       entry.texture = Texture.from(element);
       this.invalidate();
     };
     element.onerror = () => this.invalidate();
-    element.src = asset.proxyUrl ?? asset.url;
+    if (!isLocalAssetUrl(asset.proxyUrl ?? asset.url))
+      element.src = asset.proxyUrl ?? asset.url;
     this.images.set(asset.id, entry);
     return entry;
   }
