@@ -560,9 +560,36 @@ function normaliseEffect(value: unknown) {
  * for a clip's kind, numbers sent as strings). It never invents content:
  * whatever comes out still has to pass the strict contract.
  */
+/**
+ * Flattens the tool-call shapes models like to use into a plain op:
+ * {"name"|"tool"|"function": "clip.add", "args"|"arguments"|"params"|"input": {...}}
+ * and {"clip.add": {...}}.
+ */
+function flattenOp(raw: Record<string, unknown>): Record<string, unknown> {
+  if (typeof raw.op === 'string') return raw;
+  const fn = isRecord(raw.function) ? raw.function : undefined;
+  const name = raw.name ?? raw.tool ?? raw.function_name ?? fn?.name;
+  let args =
+    raw.args ?? raw.arguments ?? raw.params ?? raw.input ?? fn?.arguments;
+  if (typeof args === 'string')
+    try {
+      args = JSON.parse(args) as unknown;
+    } catch {
+      args = undefined;
+    }
+  if (typeof name === 'string' && /^[a-z]+[._][a-z]+$/i.test(name))
+    return { ...(isRecord(args) ? args : {}), op: name };
+  const keys = Object.keys(raw);
+  const only = keys.length === 1 ? keys[0] : undefined;
+  if (only && /^[a-z]+[._][a-z]+$/i.test(only) && isRecord(raw[only]))
+    return { ...(raw[only] as Record<string, unknown>), op: only };
+  if (isRecord(raw.op) && typeof raw.op.op === 'string') return raw.op;
+  return raw;
+}
+
 export function normaliseOp(raw: unknown, project: KimoProject): unknown {
   if (!isRecord(raw)) return raw;
-  const op = coerceNumbers(raw) as Record<string, unknown>;
+  const op = coerceNumbers(flattenOp(raw)) as Record<string, unknown>;
   if (typeof op.op !== 'string') {
     const name = op.type ?? op.action ?? op.kind;
     if (typeof name === 'string') {
@@ -738,13 +765,26 @@ export function validateAiOps(
   const ops: Op[] = [];
   let next = project;
   (raw as unknown[]).forEach((item, index) => {
-    const label = `${index + 1} ${safeName(isRecord(item) ? (item.op ?? item.type) : undefined)}`;
+    const flat = isRecord(item) ? flattenOp(item) : undefined;
+    const label = `${index + 1} ${safeName(flat ? (flat.op ?? flat.type) : undefined)}`;
     const skip = (why: string) => {
       skipped.push(`${label}: ${why}`);
     };
     if (ops.length >= MAX_AI_OPS) return skip('too many ops in one edit');
-    const parsed = parseOp(normaliseOp(item, next));
-    if (!parsed.success) return skip(zodReason(parsed.error));
+    const normalised = normaliseOp(item, next);
+    const parsed = parseOp(normalised);
+    if (!parsed.success) {
+      const why = zodReason(parsed.error);
+      // For an unknown op, name its keys (never values) so the model and
+      // the logs can see the shape it used.
+      const keys = isRecord(item)
+        ? Object.keys(item)
+            .filter((key) => /^\w{1,30}$/.test(key))
+            .slice(0, 6)
+            .join(',')
+        : typeof item;
+      return skip(why === 'unknown op' ? `unknown op (keys: ${keys})` : why);
+    }
     const op = parsed.data;
     const lockedTracks = new Set(
       next.tracks.filter((track) => track.locked).map((track) => track.id),

@@ -598,6 +598,8 @@ describe('robust AI edits', () => {
         },
         { op: 'clip.remove', id: 'does-not-exist' },
         { op: 'marker.add', time: 1, label: 'hook' },
+        { name: 'marker.add', arguments: '{"time":3,"label":"beat"}' },
+        { 'marker.add': { time: 5, label: 'end' } },
       ],
     };
     // The retry with feedback answers worse, so the first answer is kept.
@@ -619,7 +621,11 @@ describe('robust AI edits', () => {
     expect(clips.filter((item) => item.assetId === clip.assetId)).toHaveLength(
       2,
     );
-    expect(after.project.markers[0]?.label).toBe('hook');
+    expect(after.project.markers.map((m) => m.label)).toEqual([
+      'hook',
+      'beat',
+      'end',
+    ]);
     const said = ctx.events
       .flatMap((item) => item.events)
       .find((event) => event.t === 'agent.message');
