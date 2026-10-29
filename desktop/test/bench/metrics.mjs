@@ -221,6 +221,47 @@ export function duckDepthDb(musicWindows) {
     .map((w) => w.rmsDb);
   return voice.length && gaps.length ? mean(gaps) - mean(voice) : null;
 }
+/** EDL-only fallback when no isolated stem is retained. Source dynamics are unknown. */
+export function estimateDuckDepth(events, words, duration) {
+  const music = events.filter(
+    (e) => (e.kind === 'music' || e.music) && !e.muted,
+  );
+  if (!music.length || !words.length) return null;
+  const valueAt = (curve, time) => {
+    if (typeof curve === 'number') return curve;
+    const keys = (curve?.keys ?? [])
+      .map((k) => ({
+        t: Number(k.time ?? k.t ?? k[0]),
+        v: Number(k.value ?? k.v ?? k[1]),
+      }))
+      .filter((k) => Number.isFinite(k.t) && Number.isFinite(k.v))
+      .sort((a, b) => a.t - b.t);
+    if (!keys.length) return Number(curve?.base ?? 1);
+    if (time <= keys[0].t) return keys[0].v;
+    const i = keys.findIndex((k) => k.t > time);
+    if (i < 0) return keys.at(-1).v;
+    const a = keys[i - 1],
+      b = keys[i];
+    return a.v + ((b.v - a.v) * (time - a.t)) / (b.t - a.t);
+  };
+  const windows = [];
+  for (let time = 0.05; time < duration; time += 0.1) {
+    let power = 0;
+    for (const event of music.filter((e) => time >= e.start && time < e.end)) {
+      const local = time - event.start;
+      const audio = event.raw?.audio ?? {};
+      const gain =
+        valueAt(audio.volume, local) * valueAt(audio.duck_gain, local);
+      power += gain * gain;
+    }
+    if (power > 0)
+      windows.push({
+        voice: words.some((w) => w.start < time + 0.05 && w.end > time - 0.05),
+        rmsDb: 10 * Math.log10(power),
+      });
+  }
+  return duckDepthDb(windows);
+}
 export const sfxPerMinute = (events, duration) =>
   duration > 0
     ? (events.filter((e) => e.kind === 'sfx').length * 60) / duration

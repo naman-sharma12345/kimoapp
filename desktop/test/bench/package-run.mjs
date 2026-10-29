@@ -20,10 +20,12 @@ const names = [
   'metrics.json',
   'words.json',
   'sheet.jpg',
+  'hook.jpg',
   'strip.mp4',
   'review.html',
   'pipeline.json',
   'run.json',
+  'analysis.json',
   'failure.json',
 ];
 async function copy(source, relative) {
@@ -43,6 +45,7 @@ for (const aspect of ['9x16', '16x9'])
 await copy(join(DATA_ROOT, 'clips/media'), 'data/clips/media');
 await copy(join(ROOT, 'cache'), 'repo/cache');
 await copy(join(ROOT, 'RESULTS.md'), 'repo/RESULTS.md');
+await copy(join(ROOT, 'CREDITS.md'), 'repo/CREDITS.md');
 await copy(
   join(DATA_ROOT, 'out', label, 'proxy-status.json'),
   join('data/out', label, 'proxy-status.json'),

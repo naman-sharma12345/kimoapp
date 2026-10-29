@@ -7,6 +7,23 @@ import { ProxyCache, CacheMiss } from './cache.mjs';
 import { sha256 } from './io.mjs';
 import { downloadVerified } from './fetch-clips.mjs';
 import { escapeHtml, reviewHtml } from './report.mjs';
+import { relocatePaths } from './portable.mjs';
+
+test('downloaded project paths relocate without changing identifiers or sibling prefixes', () => {
+  const project = {
+    assets: [{ path: 'D:\\runner\\data\\clips\\1.mp4', id: 'asset-1' }],
+    output: 'D:/runner/data/out/final.mp4',
+    unrelated: 'D:/runner/database/file',
+    text: 'saved in D:/runner/data',
+  };
+  const moved = relocatePaths(project, 'D:/runner/data', 'C:\\local\\bench');
+  assert.equal(moved.assets[0].path, 'C:/local/bench/clips/1.mp4');
+  assert.equal(moved.output, 'C:/local/bench/out/final.mp4');
+  assert.equal(moved.assets[0].id, 'asset-1');
+  assert.equal(moved.unrelated, project.unrelated);
+  assert.equal(moved.text, project.text);
+  assert.equal(project.assets[0].path, 'D:\\runner\\data\\clips\\1.mp4');
+});
 
 const url = 'https://api.getkimo.tech/v1/desktop/ai';
 const init = (text = 'make a cut') => ({

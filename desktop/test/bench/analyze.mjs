@@ -41,6 +41,13 @@ export function projectEdl(project) {
         speed: c.speed ?? 1,
         zoom,
         raw: c,
+        muted: Boolean(track.muted || c.audio?.mute),
+        music:
+          kind === 'music' ||
+          /music|soundtrack|score|bed/i.test(track.name ?? '') ||
+          (c.audio?.duck_gain?.keys ?? []).some(
+            (k) => Number(k.value ?? k.v ?? k[1]) < 0.95,
+          ),
       };
       if (source.type === 'text') {
         const size = Number(source.size) || 48;
@@ -368,7 +375,7 @@ export async function sampledColour(ffmpeg, path, duration, events) {
           h: (y1 - y0 + 1) / H,
         },
       });
-    const clip = events.find(
+    const clip = events.findLast(
       (e) => e.kind === 'cut' && t >= e.start && t < e.end,
     );
     if (clip && n) {
@@ -461,7 +468,7 @@ export async function measureRun({
     lra: a.lra,
     duck_depth_db: musicStem
       ? await metric.measureDuckDepth(ffmpeg, musicStem, words)
-      : null,
+      : metric.estimateDuckDepth(events, words, a.info.duration),
     sfx_count_per_min: metric.sfxPerMinute(events, a.info.duration),
     clip_delta_e: colour.clip_delta_e,
     clipped_pct: colour.clipped_pct,
@@ -475,15 +482,19 @@ export async function measureRun({
   const spec = await readJson(join(ROOT, 'creator-spec.json'));
   const checks = metric.assessMetrics(values, spec, {
     speech,
-    music: events.some((e) => e.kind === 'music'),
+    music: events.some((e) => e.kind === 'music' || e.music),
   });
+  if (!musicStem) {
+    const duck = checks.find((check) => check.name === 'duck_depth_db');
+    if (duck) duck.estimated = true;
+  }
   return {
     version: 1,
     values,
     checks,
     creator: metric.creatorScore(values, weights, {
       speech,
-      music: events.some((e) => e.kind === 'music'),
+      music: events.some((e) => e.kind === 'music' || e.music),
     }),
     evidence: {
       speech:
@@ -492,7 +503,9 @@ export async function measureRun({
         'Engine editorial caption ids; conservative font envelopes; skin/centre subject heuristic at 1 fps. Not face-detector certification.',
       colour:
         'CIEDE2000 on per-clip sampled midtone RGB means; full-frame full-range luma clipping.',
-      duck: 'RMS music-stem level in speech vs gaps; unavailable when no isolated music stem is retained.',
+      duck: musicStem
+        ? 'RMS music-stem level under speech versus gaps.'
+        : 'Estimated from saved music/background-audio volume and duck-gain envelopes; source dynamics are unknown. Unavailable if no bed or speech/gap windows exist.',
       frame:
         '108x192 grey MAD +/-3 source frames, EDL cuts excluded. Animated mappings explicitly reduce coverage; source/output fps must match.',
       delivery:

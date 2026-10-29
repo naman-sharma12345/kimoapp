@@ -8,10 +8,10 @@ on:
         required: true
         type: string
       mode:
-        description: 'Record once, then replay with no AI network calls'
+        description: 'Record, replay without network, or remeasure existing output'
         default: record
         type: choice
-        options: [record, replay]
+        options: [record, replay, analyze]
       aspect:
         description: 'Canvas aspects'
         default: both
@@ -33,7 +33,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: phase01-manual-baseline
+  group: phase01-${{ inputs.mode == 'record' && 'record-budget' || format('replay-{0}-{1}', inputs.clips, inputs.aspect) }}
   cancel-in-progress: false
 jobs:
   bench:
@@ -90,6 +90,7 @@ jobs:
         run: |
           $benchArgs = @('desktop/test/bench/run.mjs','--clips','TH-1','--aspect',$env:BENCH_ASPECT,'--label',$env:BENCH_LABEL,'--max-usd','5.49','--max-requests','200')
           if ($env:BENCH_MODE -eq 'record') { $benchArgs += '--record-cache' } else { $benchArgs += '--replay-cache' }
+          if ($env:BENCH_MODE -eq 'analyze') { $benchArgs += '--analyze-existing' }
           & node @benchArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package TH-1
@@ -108,6 +109,7 @@ jobs:
         run: |
           $benchArgs = @('desktop/test/bench/run.mjs','--clips','TH-2','--aspect',$env:BENCH_ASPECT,'--label',$env:BENCH_LABEL,'--max-usd','5.49','--max-requests','200')
           if ($env:BENCH_MODE -eq 'record') { $benchArgs += '--record-cache' } else { $benchArgs += '--replay-cache' }
+          if ($env:BENCH_MODE -eq 'analyze') { $benchArgs += '--analyze-existing' }
           & node @benchArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package TH-2
@@ -126,6 +128,7 @@ jobs:
         run: |
           $benchArgs = @('desktop/test/bench/run.mjs','--clips','TUT-1','--aspect',$env:BENCH_ASPECT,'--label',$env:BENCH_LABEL,'--max-usd','5.49','--max-requests','200')
           if ($env:BENCH_MODE -eq 'record') { $benchArgs += '--record-cache' } else { $benchArgs += '--replay-cache' }
+          if ($env:BENCH_MODE -eq 'analyze') { $benchArgs += '--analyze-existing' }
           & node @benchArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package TUT-1
@@ -144,6 +147,7 @@ jobs:
         run: |
           $benchArgs = @('desktop/test/bench/run.mjs','--clips','VLOG-1','--aspect',$env:BENCH_ASPECT,'--label',$env:BENCH_LABEL,'--max-usd','5.49','--max-requests','200')
           if ($env:BENCH_MODE -eq 'record') { $benchArgs += '--record-cache' } else { $benchArgs += '--replay-cache' }
+          if ($env:BENCH_MODE -eq 'analyze') { $benchArgs += '--analyze-existing' }
           & node @benchArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package VLOG-1
@@ -162,6 +166,7 @@ jobs:
         run: |
           $benchArgs = @('desktop/test/bench/run.mjs','--clips','POD-1','--aspect',$env:BENCH_ASPECT,'--label',$env:BENCH_LABEL,'--max-usd','5.49','--max-requests','200')
           if ($env:BENCH_MODE -eq 'record') { $benchArgs += '--record-cache' } else { $benchArgs += '--replay-cache' }
+          if ($env:BENCH_MODE -eq 'analyze') { $benchArgs += '--analyze-existing' }
           & node @benchArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package POD-1
@@ -180,6 +185,7 @@ jobs:
         run: |
           $benchArgs = @('desktop/test/bench/run.mjs','--clips','MUSIC-1','--aspect',$env:BENCH_ASPECT,'--label',$env:BENCH_LABEL,'--max-usd','5.49','--max-requests','200')
           if ($env:BENCH_MODE -eq 'record') { $benchArgs += '--record-cache' } else { $benchArgs += '--replay-cache' }
+          if ($env:BENCH_MODE -eq 'analyze') { $benchArgs += '--analyze-existing' }
           & node @benchArgs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package MUSIC-1

@@ -24,6 +24,7 @@ import { ProxyCache } from './cache.mjs';
 import { measureRun, retainFinal, transcribe } from './analyze.mjs';
 import { reviewMedia, writeReview, summaryTable } from './report.mjs';
 import { acquireExclusive, lowerPriority } from '../../resources.cjs';
+import { relocatePaths } from './portable.mjs';
 
 export function toolPaths() {
   const suffix = process.platform === 'win32' ? '.exe' : '';
@@ -198,6 +199,7 @@ async function runExclusive(args, signal) {
         const fingerprints = await Promise.all(paths.map(hashFile));
         cache.directory = join(ROOT, 'cache', sha256(fingerprints.join('\n')));
         let result;
+        let recordedRoot;
         if (args['analyze-existing']) {
           const recorded = await readJson(join(dir, 'run.json'));
           if (
@@ -206,6 +208,12 @@ async function runExclusive(args, signal) {
           )
             throw new Error('Source bytes changed since render');
           result = await readJson(join(dir, 'pipeline.json'));
+          recordedRoot =
+            recorded.dataRoot ??
+            (await readJson(join(dir, 'record-root.json')).catch(() => ({})))
+              .dataRoot;
+          result.output = join(dir, 'final.mp4');
+          result.projectFile = join(dir, 'project.kimo.json');
         } else {
           // v0.3.2 has no creator template data yet: named bench aliases use its existing styles.
           await writeFile(join(dir, 'ops.jsonl'), '');
@@ -243,6 +251,7 @@ async function runExclusive(args, signal) {
               sam: await hashFile(join(ROOT, '../../sam.mjs')),
             },
             sourceHashes: fingerprints,
+            dataRoot: DATA_ROOT,
             at: new Date().toISOString(),
             cacheComplete: !cache.failures.length,
             cache: {
@@ -256,7 +265,10 @@ async function runExclusive(args, signal) {
         await retainFinal(result.output, output);
         if (!result.projectFile || !existsSync(result.projectFile))
           throw new Error('Pipeline did not save a project');
-        const project = await readJson(result.projectFile);
+        const savedProject = await readJson(result.projectFile);
+        const project = recordedRoot
+          ? relocatePaths(savedProject, recordedRoot, DATA_ROOT)
+          : savedProject;
         const words = clip.speech
           ? await transcribe({
               ...tools,
@@ -277,6 +289,18 @@ async function runExclusive(args, signal) {
           jitter,
         });
         await writeJson(join(dir, 'metrics.json'), row.metrics);
+        await writeJson(join(dir, 'analysis.json'), {
+          measuredAt: new Date().toISOString(),
+          measurementCommit: (
+            await command('git', ['rev-parse', 'HEAD'])
+          ).stdout
+            .toString()
+            .trim(),
+          finalSha256: await hashFile(output),
+          projectSha256: await hashFile(result.projectFile),
+          analysisOnly: Boolean(args['analyze-existing']),
+          networkRequests: cache.requests,
+        });
         await reviewMedia({
           ffmpeg: tools.ffmpeg,
           output,

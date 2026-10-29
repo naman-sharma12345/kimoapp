@@ -127,6 +127,41 @@ test('duck depth needs music stem levels in both speech and gaps', () => {
   assert.equal(m.duckDepthDb([]), null);
   assert.equal(m.sfxPerMinute([{ kind: 'sfx' }, { kind: 'cut' }], 30), 2);
 });
+test('missing-stem fallback estimates the saved music envelope and ignores muted beds', () => {
+  const events = [
+    {
+      kind: 'music',
+      start: 0,
+      end: 2,
+      raw: {
+        audio: {
+          volume: { base: 1 },
+          duck_gain: {
+            keys: [
+              { t: 0, v: 0.1 },
+              { t: 0.99, v: 0.1 },
+              { t: 1, v: 1 },
+              { t: 2, v: 1 },
+            ],
+          },
+        },
+      },
+    },
+  ];
+  assert.ok(
+    Math.abs(m.estimateDuckDepth(events, [{ start: 0, end: 0.99 }], 2) - 20) <
+      0.1,
+  );
+  assert.equal(
+    m.estimateDuckDepth(
+      [{ ...events[0], muted: true }],
+      [{ start: 0, end: 1 }],
+      2,
+    ),
+    null,
+  );
+  assert.equal(m.estimateDuckDepth(events, [], 2), null);
+});
 test('CIEDE2000 matches published Sharma reference pairs', () => {
   for (const [a, b, expected] of [
     [[50, 2.6772, -79.7751], [50, 0, -82.7485], 2.0425],
