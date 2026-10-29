@@ -1,3 +1,17 @@
+kimo for Windows 0.3.2: a new studio-design window and live tool calls, on top of the 0.3.1 smoothness work.
+
+**New desktop UI**
+- The window is rebuilt on the kimo studio design system: the same fonts, colours and panels as the web studio
+- Library, live editor feed and timeline stay side by side down to the 1080 px minimum window
+
+**Live tool calls fixed**
+- Each tool call (trim, grade, captions, render, QA...) now shows in the feed the moment it starts, with its timer, and ticks off when it finishes. Before, a tool call's own id replaced the project id on live events, so steps only appeared after the edit
+
+**Included from 0.3.1**
+- Smooth, gimbal-like camera: sub-pixel follow-reframe, eased punch-ins, the footage's own frame rate with no repeated or dropped frames
+- Cleaner text-behind-the-subject titles with soft, steady mask edges
+- Camera smoothness check in the quality panel
+
 kimo for Windows 0.3.1: smooth, gimbal-like camera moves and a cleaner text-behind look.
 
 **Smooth camera (no more jitter)**

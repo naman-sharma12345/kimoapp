@@ -86,7 +86,7 @@ flowchart LR
 
 ## 🚀 Quick start
 
-1. Download **`kimo-Setup-0.2.0.exe`** from the [latest release](https://github.com/naman-sharma12345/kimoapp/releases/latest).
+1. Download **`kimo-Setup-0.3.2.exe`** from the [latest release](https://github.com/naman-sharma12345/kimoapp/releases/latest).
 2. The installer isn't code-signed yet, so SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**.
 3. Drag in a video, pick a style, describe the edit and hit go. kimo updates itself from GitHub Releases and asks before restarting.
 
