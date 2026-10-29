@@ -1554,15 +1554,16 @@ export function StudioShell({
           track('interrupt_sent');
           if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
         } else {
+          // Attachments are clips already in this session, so the engine
+          // job (every session clip) covers them.
           if (
-            !attachments.length &&
-            (await editWithRealKimo({
+            await editWithRealKimo({
               sessionId,
               note: text,
               snapshot: snapshotRef.current,
               ai: userAiRef.current,
               say: (line) => feed.system(line),
-            }))
+            })
           )
             return;
           await perceiveClips(
