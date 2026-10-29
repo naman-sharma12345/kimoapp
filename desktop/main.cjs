@@ -221,7 +221,22 @@ async function status() {
 
 // ---------- headless smoke test (CI): kimo.exe --smoke <clip> --smoke-out <json> ----------
 async function smoke(clip, outPath) {
-  const report = { started: new Date().toISOString() };
+  const report = { started: new Date().toISOString(), stage: 'start' };
+  const flush = () => {
+    try {
+      fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
+    } catch {
+      /* ignore */
+    }
+  };
+  // watchdog: a stuck stage still leaves a report and a clean exit
+  const limit = Number(process.env.KIMO_SMOKE_MINUTES || 40);
+  setTimeout(() => {
+    report.ok = report.ok ?? false;
+    report.error = `${report.error ?? ''} watchdog: stage "${report.stage}" still running after ${limit} min`.trim();
+    flush();
+    app.exit(report.render?.bytes > 1000 ? 0 : 1);
+  }, limit * 60_000).unref();
   try {
     const p = paths();
     const e = await loadEngine();
@@ -235,11 +250,15 @@ async function smoke(clip, outPath) {
     report.kimo = { server: s.server, tools: s.tools.length };
     const files = await expand([clip]);
     const ops = [];
+    report.stage = 'captions';
+    flush();
     const live = { timeline: 0, preview: 0, progress: 0 };
     const r = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, note: '', preset: 'square', mode: 'captions', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => (ev.t === 'op' && ops.push(ev), ev.t in live && live[ev.t]++) });
     report.render = { output: r.output, bytes: fs.statSync(r.output).size, duration: r.duration, live, quality: r.quality, projectFile: Boolean(r.projectFile), ops: ops.filter((o) => o.phase === 'end').map((o) => `${o.ok ? 'ok' : 'ERR'} ${o.ms}ms ${o.error || ''}`) };
     // timeline editor path: trim the first clip on the saved project and re-render
     const first = r.timeline?.tracks_bottom_to_top?.[0]?.clips?.[0];
+    report.stage = 'manual';
+    flush();
     if (first && r.projectFile) {
       const r3 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, preset: 'square', mode: 'manual', projectFile: r.projectFile, ops: [{ tool: 'trim_clip', args: { clip_id: first.id, duration: Math.max(1, (first.end - first.start) - 1) } }], ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: () => undefined });
       report.manual = { duration: r3.duration, expected: Math.max(1, (first.end - first.start) - 1) };
@@ -247,6 +266,9 @@ async function smoke(clip, outPath) {
     report.captions = r.history.filter((h) => h.startsWith('auto_captions')).map((h) => h.slice(0, 600));
     report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000);
     if (process.argv.includes('--smoke-ai')) {
+      report.stage = 'ai';
+      report.ai = { events: [] };
+      flush();
       const ai = [];
       try {
       const aiAt = process.argv.indexOf('--smoke-ai-clip');
@@ -255,7 +277,13 @@ async function smoke(clip, outPath) {
       const style = styleAt > 0 ? process.argv[styleAt + 1] : 'podcast';
       const counts = { timeline: 0, preview: 0, progress: 0 };
       const t0 = Date.now();
-      const r2 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke-ai'), files: aiFiles, note: 'turn this into a tight youtube video: strong hook, cut the pauses, captions with keyword highlights, clean grade', preset: 'youtube', style, mode: 'ai', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => (ev.t in counts ? counts[ev.t]++ : ai.push(ev)) });
+      const r2 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke-ai'), files: aiFiles, note: 'turn this into a tight youtube video: strong hook, cut the pauses, captions with keyword highlights, clean grade', preset: 'youtube', style, mode: 'ai', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => {
+        if (ev.t in counts) return counts[ev.t]++;
+        ai.push(ev);
+        report.ai.events.push(ev.t === 'op' ? (ev.phase === 'start' ? `> ${ev.title}` : `  ${ev.ok ? 'ok' : 'ERR ' + ev.error} ${ev.ms}ms`) : `${ev.t}: ${String(ev.text ?? '').slice(0, 300)}`);
+        report.ai.seconds = Math.round((Date.now() - t0) / 1000);
+        flush();
+      } });
       report.ai = { style, seconds: Math.round((Date.now() - t0) / 1000), bytes: fs.statSync(r2.output).size, duration: r2.duration, live: counts, quality: r2.quality, youtube: r2.youtube, events: ai.map((x) => x.t === 'op' ? (x.phase === 'start' ? `> ${x.title}` : `  ${x.ok ? 'ok' : 'ERR ' + x.error} ${x.ms}ms`) : `${x.t}: ${x.text ?? (x.checks ? x.checks.map((c) => `${c.id}=${c.ok ? 'ok' : 'FAIL'}(${c.value})`).join(' ') : '')}`) };
       const outDir = join(outPath, '..');
       for (const [f, n] of [[r2.output, 'ai-final.mp4'], [r2.youtube?.thumbnail, 'ai-thumbnail.jpg'], [join(data(), 'smoke-ai', 'sheet_a.jpg'), 'ai-sheet-a.jpg'], [join(data(), 'smoke-ai', 'sheet_b.jpg'), 'ai-sheet-b.jpg']])
@@ -268,7 +296,8 @@ async function smoke(clip, outPath) {
     report.ok = false;
     report.error = String(err.stack || err);
   }
-  fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
+  report.stage = 'done';
+  flush();
   app.exit(report.ok ? 0 : 1);
 }
 

@@ -84,11 +84,16 @@ jobs:
             $s2.SetOutputToWaveFile("$PWD\talk.wav")
             $ssml = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">So, um, here is the thing nobody tells you about editing videos.<break time="1500ms"/>Most creators spend hours cutting silence by hand.<break time="2000ms"/>Uh, that is, that is a lot of time.<break time="1200ms"/>With kimo, the cuts, the captions and the colour happen in minutes, right on your own computer.<break time="1800ms"/>Stick around, because the last tip changes everything.<break time="1000ms"/>Okay. Let us go.</speak>'
             $s2.SpeakSsml($ssml); $s2.Dispose()
-            & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'gradients=s=1920x1080:r=30:speed=0.015:n=5,noise=alls=10:allf=t,eq=saturation=0.8' -i talk.wav -map 0:v -map 1:a -shortest -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 talk.mp4
+            & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'gradients=s=1920x1080:r=30:speed=0.015:n=5,noise=alls=3:allf=t,eq=saturation=0.8' -i talk.wav -map 0:v -map 1:a -shortest -t 40 -c:v libx264 -preset veryfast -b:v 10M -maxrate 12M -bufsize 20M -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 talk.mp4
             "ai sample: $([math]::Round((Get-Item talk.mp4).Length/1MB,1)) MB" | Tee-Object -FilePath smoke-summary.txt -Append
             $smokeArgs += @('--smoke-ai', '--smoke-ai-clip', "$PWD\talk.mp4", '--smoke-style', 'podcast')
           }
-          $p = Start-Process $exe -ArgumentList $smokeArgs -Wait -PassThru
+          # wait for kimo.exe itself (not every helper it spawned), with a hard limit
+          $p = Start-Process $exe -ArgumentList $smokeArgs -PassThru
+          $null = $p.Handle  # keeps ExitCode readable after WaitForExit
+          if (-not $p.WaitForExit(50 * 60 * 1000)) { & taskkill /pid $p.Id /T /F | Out-Null; Get-Content smoke.json -ErrorAction SilentlyContinue; throw 'smoke test timed out' }
+          Start-Sleep -Seconds 2
+          Get-Process kimo-mcp, ffmpeg, whisper-cli -ErrorAction SilentlyContinue | ForEach-Object { "left running after exit: $($_.Name) $($_.Id)"; Stop-Process -Id $_.Id -Force }
           Get-Content smoke.json
           if ($p.ExitCode -ne 0) { throw "smoke test failed ($($p.ExitCode))" }
       - uses: actions/upload-artifact@v4

@@ -104,6 +104,14 @@ export class Mcp {
     return reply.result ?? { content: [] };
   }
   kill() {
+    // kimo-mcp may run helpers (FFmpeg, whisper); on Windows kill the whole tree
+    // so nothing is left behind when an edit ends or is stopped
+    if (process.platform === 'win32' && this.child.pid && !this.dead)
+      try {
+        execFile('taskkill', ['/pid', String(this.child.pid), '/T', '/F'], { windowsHide: true }, () => undefined);
+      } catch {
+        /* fall through */
+      }
     try {
       this.child.kill('SIGKILL');
     } catch {
@@ -208,7 +216,7 @@ export function deliveryEncode({ ffmpeg, input, output, encoder, mbps, onProgres
     ? ['-c:v', encoder, '-b:v', `${mbps}M`, '-maxrate', `${Math.round(mbps * 1.5)}M`, '-bufsize', `${mbps * 2}M`]
     : ['-c:v', 'libx264', '-preset', 'medium', '-b:v', `${mbps}M`, '-maxrate', `${Math.round(mbps * 1.5)}M`, '-bufsize', `${mbps * 2}M`];
   return new Promise((done, fail) => {
-    const child = spawn(ffmpeg, ['-hide_banner', '-y', '-i', input, ...v, '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output], { windowsHide: true });
+    const child = spawn(ffmpeg, ['-nostdin', '-hide_banner', '-y', '-i', input, ...v, '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     signal?.addEventListener('abort', () => child.kill('SIGKILL'));
     child.stdout.on('data', (d) => {
       const m = /out_time_us=(\d+)/.exec(d.toString());
@@ -299,7 +307,7 @@ export function recommendedMbps(width, height, fps = 30) {
 
 const runTool = (bin, args, onLine) =>
   new Promise((done) => {
-    const child = spawn(bin, args, { windowsHide: true });
+    const child = spawn(bin, bin.includes('ffmpeg') ? ['-nostdin', ...args] : args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
     child.stdout.on('data', (d) => {
@@ -416,7 +424,7 @@ export function youtubeMaster({ ffmpeg, input, output, P, m, signal, onProgress 
   ];
   const t0 = Date.now();
   return new Promise((done, fail) => {
-    const child = spawn(ffmpeg, args, { windowsHide: true });
+    const child = spawn(ffmpeg, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     signal?.addEventListener('abort', () => child.kill('SIGKILL'));
     child.stdout.on('data', (d) => {
       const x = /out_time_us=(\d+)/.exec(d.toString());
