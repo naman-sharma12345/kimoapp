@@ -3,10 +3,10 @@
 // kimo AI proxy (api.getkimo.tech); SAM effects also send a downscaled copy of
 // the clip segment they process (see sam.mjs).
 import { spawn, execFile } from 'node:child_process';
-import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { samEffect, SAM_EFFECTS } from './sam.mjs';
+import { samEffect, SAM_EFFECTS, motionJitter } from './sam.mjs';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -365,6 +365,11 @@ export async function measure(ffmpeg, ffprobe, path) {
     else if (open != null) m.silences.push([open, +x[2]]), (open = null);
   }
   if (open != null) m.silences.push([open, m.duration]);
+  // camera smoothness: residual frame-to-frame shake and judder (repeated frames)
+  if (v.width) {
+    const mo = await motionJitter(ffmpeg, path).catch(() => null);
+    if (mo) Object.assign(m, { jitter: mo.jitter, jitterP95: mo.p95, dupFrames: mo.dup, frames: mo.frames });
+  }
   const ln = /\{\s*"input_i"[\s\S]*?\}/.exec(r.err);
   if (ln)
     try {
@@ -380,6 +385,24 @@ export async function measure(ffmpeg, ffprobe, path) {
 }
 
 /** Pass/fail checks for a measured render against the preset and YouTube specs. */
+/** Shake limit for the measured camera-smoothness check (px per frame at 1080 px). */
+export const JITTER_MAX = 2;
+
+/** Most common source frame rate, snapped to a standard rate (the canvas runs at it so nothing is duplicated). */
+export function canvasFps(files) {
+  const std = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60];
+  const counts = new Map();
+  for (const f of files ?? []) {
+    if (f?.kind !== 'video' || !(f.fps >= 23) || f.fps > 61) continue;
+    const s = std.reduce((b, x) => (Math.abs(x - f.fps) < Math.abs(b - f.fps) ? x : b));
+    counts.set(s, (counts.get(s) ?? 0) + (f.duration || 1));
+  }
+  let best = 30;
+  let w = 0;
+  for (const [k, v] of counts) if (v > w) [best, w] = [k, v];
+  return best;
+}
+
 export function qualityChecks(m, P, { final = false, sourceAudio = false } = {}) {
   const rec = recommendedMbps(P.width, P.height, m.fps);
   const c = [];
@@ -399,6 +422,12 @@ export function qualityChecks(m, P, { final = false, sourceAudio = false } = {})
     add('lufs', 'loudness', Math.abs(m.lufs + 14) <= 1, `${m.lufs} LUFS`, '-14 ± 1 LUFS');
     add('tp', 'true peak', m.truePeak <= -1, `${m.truePeak} dBTP`, '≤ -1 dBTP');
   } else if (!m.acodec) add('lufs', 'loudness', true, 'no audio', '-', true);
+  if (m.jitter != null) {
+    // px/frame against a 1080 px short side; a tripod or gimbal shot measures < 0.5
+    const dupMax = Math.max(2, Math.round((m.frames || 0) * 0.01));
+    const ok = m.jitter <= JITTER_MAX && m.dupFrames <= dupMax;
+    add('motion', 'camera smoothness', ok, `${m.jitter} px/frame shake${m.dupFrames ? ` · ${m.dupFrames} repeated frames` : ''}`, `≤ ${JITTER_MAX} px/frame, no judder`, ok && m.jitter > JITTER_MAX / 2);
+  }
   const black = m.black.filter(([s, e]) => e - s >= 0.2);
   add('black', 'black frames', !black.length, black.length ? black.map(([s, e]) => `${s.toFixed(1)}-${e.toFixed(1)} s`).join(', ') : 'none', 'none');
   const hookGap = m.silences.find(([s, e]) => s < 2.5 && e - s >= 0.7);
@@ -633,11 +662,28 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     return null;
   };
+  /**
+   * SAM-only edits: kimo only finishes the audio, so the picture is taken frame for frame from
+   * the SAM render (kimo's own re-render repeats ~5 of every 32 frames, which reads as judder).
+   */
+  const samPassthrough = async () => {
+    const stage = mode === 'sam' && files.length === 1 && files[0].sam ? files[0].path : null;
+    if (!stage || !existsSync(stage)) return;
+    const tmp = join(dir, 'master-av.mp4');
+    const id = randomUUID().slice(0, 8);
+    emit({ t: 'op', id, phase: 'start', tool: 'frame_exact', title: 'frame_exact picture from the SAM render + kimo\'s finished audio', at: Date.now() });
+    const t0 = Date.now();
+    const r = await runTool(ffmpeg, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-y', '-i', stage, '-i', out, '-map', '0:v:0', '-map', '1:a:0?', '-c', 'copy', '-shortest', '-movflags', '+faststart', tmp]);
+    const ok = r.code === 0 && existsSync(tmp) && statSync(tmp).size > 1000;
+    if (ok) renameSync(tmp, out);
+    emit({ t: 'op', id, phase: 'end', ok, ms: Date.now() - t0, ...(ok ? { result: 'every frame kept (no repeats)' } : { error: String(r.err || 'remux failed').slice(-200) }) });
+  };
   /** Export + measure + sample frames for the review. */
   const check = async (pass) => {
     emit({ t: 'status', text: `rendering with the real kimo engine (pass ${pass})` });
     await call('export', { path: out, crf: 16 });
     if (!existsSync(out)) throw new Error(`export failed: ${history.at(-1)?.slice(-300)}`);
+    await samPassthrough();
     emit({ t: 'status', text: 'measuring loudness, true peak, black frames and dead air' });
     let m = await measure(ffmpeg, ffprobe, out);
     if (!m.acodec && files.some((f) => f.audio)) {
@@ -687,7 +733,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       const planned = parseCalls(answer.calls);
       if (planned.length) emit({ t: 'think', text: `next: ${planned.map((c) => c.name).join(' → ')}` });
       for (const c of planned) {
-        if (c.name === 'project_set') Object.assign(c.args, { width: P.width, height: P.height });
+        if (c.name === 'project_set') Object.assign(c.args, { width: P.width, height: P.height, fps: canvasFps(files) });
         // kimo can file speech it doesn't classify as dialogue under "ambience" and mute it;
         // keep the sound unless the edit laid real b-roll over the talking track
         if (c.name === 'finish_audio' && c.args.keep_ambience == null && !history.some((h) => h.startsWith('place_broll'))) c.args.keep_ambience = true;
@@ -706,7 +752,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       if (!target) throw new Error('SAM effects need a video file');
       emit({ t: 'status', text: `SAM 3.1: ${sam.effect.replace('_', ' ')} on "${sam.prompt || 'person'}"` });
       const r = await runSam(target, sam);
-      files = files.map((f) => (f === target ? { ...f, path: r.output, duration: r.duration, width: r.width, height: r.height, sam: { effect: r.effect, source: target.path } } : f));
+      files = files.map((f) => (f === target ? { ...f, path: r.output, duration: r.duration, width: r.width, height: r.height, fps: r.fps, sam: { effect: r.effect, source: target.path } } : f));
       emit({ t: 'say', text: `SAM 3.1 ${r.effect.replace('_', ' ')} done · ${r.width}x${r.height} · tracked "${r.prompt}" on ${r.tracks.seen}/${r.tracks.frames} frames` });
     }
     const fileLines = files.map((f) => `- ${f.path} (${f.kind}${f.duration ? `, ${Number(f.duration).toFixed(1)} s` : ''})`).join('\n');
@@ -716,12 +762,13 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
 
 
     if (mode === 'captions' || mode === 'sam') {
-      await call('project_set', { width: P.width, height: P.height, fps: 30 });
+      // the canvas runs at the footage's own rate: a 24 fps clip on a 30 fps canvas repeats every 4th frame (judder)
+      await call('project_set', { width: P.width, height: P.height, fps: canvasFps(files) });
       const assets = [];
       for (const f of files) {
         const r = await call('import_media', { path: f.path });
         const j = resultJson(r);
-        if (j.asset_id) assets.push({ id: j.asset_id, duration: Number(j.duration) || 0, kind: f.kind });
+        if (j.asset_id) assets.push({ id: j.asset_id, duration: Number(j.duration) || 0, fps: Number(j.fps) || 0, kind: f.kind });
       }
       if (!assets.length) throw new Error('none of the files could be imported');
       const track = resultJson(await call('add_track', {})).track_id;
@@ -756,7 +803,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         ]
         : [
           `user's note: ${note || 'make a great video from these'}`,
-          `canvas: ${P.width}x${P.height} at 30 fps (${P.label}). job folder: ${dir}`,
+          `canvas: ${P.width}x${P.height} at ${canvasFps(files)} fps (${P.label}; the footage's own rate, keep it). job folder: ${dir}`,
           `files:\n${fileLines}`,
           expertGuide(P, S, files),
           `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
@@ -867,13 +914,19 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
 /** ffprobe: duration + kind for a local file. */
 export function probe(ffprobe, path) {
   return new Promise((done) =>
-    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height', '-of', 'json', path],
+    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate,avg_frame_rate', '-of', 'json', path],
       { windowsHide: true, timeout: 30_000 }, (err, stdout) => {
         try {
           const j = JSON.parse(stdout);
           const v = j.streams?.find((s) => s.codec_type === 'video');
           const isImage = /\.(png|jpe?g|webp)$/i.test(path);
-          done({ path, audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          const rate = (x) => {
+            const [a, b] = String(x ?? '').split('/').map(Number);
+            return a && b ? a / b : 0;
+          };
+          const fr = rate(v?.r_frame_rate);
+          const avg = rate(v?.avg_frame_rate);
+          done({ path, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }

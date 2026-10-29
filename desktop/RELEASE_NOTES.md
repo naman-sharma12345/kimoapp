@@ -1,3 +1,20 @@
+kimo for Windows 0.3.1: smooth, gimbal-like camera moves and a cleaner text-behind look.
+
+**Smooth camera (no more jitter)**
+- The follow-reframe and punch-ins are cut with sub-pixel precision (bicubic, every frame its own exact float window) instead of whole/even-pixel crops that stepped 3-7 px at a time
+- The subject path is smoothed like a gimbal: outlier filter, dead zone (the camera holds still while the subject moves a little), speed limit, and heavy zero-phase easing; the 12 fps track is interpolated with a smooth spline
+- Punch-ins ease in and out (0.45 s) instead of jumping
+- Videos keep the footage's own frame rate (a 24 fps clip is no longer put on a 30 fps canvas, which repeated every 4th frame), constant frame rate, no duplicated or dropped frames
+- SAM-only edits take the picture frame for frame from the SAM render, with kimo's finished audio
+
+**Text behind the subject**
+- The title is placed from the subject's matte, so the head overlaps the lower part of the letters and the word stays readable
+- Mask edges are softened in space and across neighbouring frames, so cut-out edges don't shimmer
+- Big upscales from small footage get a light sharpen after the lanczos scale
+
+**Measured**
+- New *camera smoothness* check in the quality panel and the op log: residual shake in px per frame (at 1080 px) and repeated frames; a SAM render that shakes is re-rendered once with stronger smoothing
+
 kimo for Windows 0.3.0: Meta SAM 3.1 (Segment Anything) inside kimo. Name a subject, and kimo tracks it through your clip.
 
 **Subject tracking + smart reframe**

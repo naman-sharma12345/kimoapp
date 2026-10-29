@@ -297,7 +297,10 @@ async function smoke(clip, outPath) {
         fs.copyFileSync(r4.output, join(outPath, '..', 'sam-final.mp4'));
         const samOut = join(data(), 'smoke-sam', 'sam', 'sam-text_behind.mp4');
         if (fs.existsSync(samOut)) fs.copyFileSync(samOut, join(outPath, '..', 'sam-text_behind.mp4'));
-        report.sam.ok = r4.duration > 1;
+        // camera smoothness is measured on the render: shake px/frame and repeated frames must pass
+        const motion = r4.quality?.checks?.find((c) => c.id === 'motion');
+        report.sam.motion = motion ? `${motion.ok ? 'ok' : 'FAIL'} ${motion.value}` : 'not measured';
+        report.sam.ok = r4.duration > 1 && Boolean(motion?.ok);
       } catch (err) {
         report.sam.error = String(err.stack || err);
         for (const f of ['sam-graph.txt', 'sam-font-used.txt']) {
