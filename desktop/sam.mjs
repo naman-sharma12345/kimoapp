@@ -5,7 +5,7 @@
 // Meta key); masks come back and every pixel of the real render is made here
 // with the bundled FFmpeg.
 import { spawn, execFile } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { decodeMaskToRaster, parseImageStream, parseVideoStream } from '@meta-sam/parser';
@@ -17,16 +17,20 @@ export const SAM_MAX_SECONDS = 60;
 export const SAM_EFFECTS = ['reframe', 'text_behind', 'bg_blur', 'bg_color', 'bg_image', 'cutout', 'redact'];
 const ASPECTS = { '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '16:9': [1920, 1080] };
 
-const run = (bin, args, { timeout = 15 * 60_000, signal } = {}) =>
+const run = (bin, args, { timeout = 15 * 60_000, signal, cwd } = {}) =>
   new Promise((done, fail) => {
-    const child = spawn(bin, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], cwd });
     signal?.addEventListener('abort', () => child.kill('SIGKILL'));
     let err = '';
-    child.stderr.on('data', (d) => (err = (err + d).slice(-2000)));
+    let first = '';
+    child.stderr.on('data', (d) => {
+      err = (err + d).slice(-2000);
+      if (!first) first = String(d).split(/\r?\n/).find((l) => /error|invalid|no such|unable|cannot|not found/i.test(l) && !/Task finished|Terminating thread/.test(l)) ?? '';
+    });
     const timer = setTimeout(() => child.kill('SIGKILL'), timeout);
     child.on('exit', (code) => {
       clearTimeout(timer);
-      code === 0 ? done() : fail(new Error(`ffmpeg: ${err.trim().split('\n').slice(-3).join(' ')}`));
+      code === 0 ? done() : fail(new Error(`ffmpeg: ${first ? `${first.trim()} · ` : ''}${err.trim().split('\n').slice(-2).join(' ')}`.slice(0, 600)));
     });
   });
 const probeJson = (ffprobe, path) =>
@@ -231,7 +235,6 @@ export function writeMaskVideo({ ffmpeg, tracks, ids, out, dilate = 0, signal })
   });
 }
 
-const esc = (p) => `'${String(p).replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, '')}'`;
 export function fontFor(fontsDir) {
   return [fontsDir && join(fontsDir, 'Anton-Regular.ttf'), fontsDir && join(fontsDir, 'BebasNeue-Regular.ttf'), 'C:/Windows/Fonts/impact.ttf', 'C:/Windows/Fonts/arialbd.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']
     .find((p) => p && existsSync(p));
@@ -318,12 +321,13 @@ export async function samEffect({ ffmpeg, ffprobe, input, dir, opts, fontsDir, s
     const font = fontFor(fontsDir);
     const text = String(opts.text || 'KIMO').toUpperCase().slice(0, 40);
     writeFileSync(join(dir, 'sam-text.txt'), text);
+    if (font) copyFileSync(font, join(dir, 'sam-font.ttf'));
     const fs = Math.round(Math.min(OH * 0.26, (OW * 0.9) / (0.58 * Math.max(3, text.length))));
     const ty = Math.round(OH * (Number(opts.text_y) || 0.16));
     const a = Number(opts.text_start) || 0;
     const b = Number(opts.text_end) || duration;
     g.push('[v]split[v1][v2]');
-    g.push(`[v1]drawtext=textfile=${esc(join(dir, 'sam-text.txt'))}${font ? `:fontfile=${esc(font)}` : ''}:fontsize=${fs}:fontcolor=${opts.color || 'white'}:x=(w-text_w)/2:y=${ty}:shadowcolor=black@0.35:shadowx=0:shadowy=${Math.round(fs / 30)}:alpha='min(1,max(0,(t-${a})/0.35))':enable='between(t,${a},${b})'[bg]`);
+    g.push(`[v1]drawtext=textfile=sam-text.txt${font ? ':fontfile=sam-font.ttf' : ''}:fontsize=${fs}:fontcolor=${opts.color || 'white'}:x=(w-text_w)/2:y=${ty}:shadowcolor=black@0.35:shadowx=0:shadowy=${Math.round(fs / 30)}:alpha='min(1,max(0,(t-${a})/0.35))':enable='between(t,${a},${b})'[bg]`);
     g.push('[v2][m]alphamerge[fg]', '[bg][fg]overlay=format=auto,format=yuv420p[out]');
     outLabel = '[out]';
   } else if (effect === 'bg_blur' || effect === 'bg_color' || effect === 'bg_image') {
@@ -352,7 +356,7 @@ export async function samEffect({ ffmpeg, ffprobe, input, dir, opts, fontsDir, s
     ? ['-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le']
     : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart'];
   await step('sam_render', `${effect.replace('_', ' ')} · ${OW}x${OH}${punches.length ? ` · ${punches.length} punch-in${punches.length === 1 ? '' : 's'}` : ''}`, () =>
-    run(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', ...inputs, ...extra, '-/filter_complex', script, '-map', outLabel, '-map', '0:a?', ...enc, '-c:a', alpha ? 'pcm_s16le' : 'aac', '-b:a', '192k', '-shortest', out], { signal }),
+    run(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', ...inputs, ...extra, '-/filter_complex', script, '-map', outLabel, '-map', '0:a?', ...enc, '-c:a', alpha ? 'pcm_s16le' : 'aac', '-b:a', '192k', '-shortest', out], { signal, cwd: dir }),
   () => `${(statSync(out).size / 1e6).toFixed(1)} MB`);
   return { output: out, width: OW, height: OH, duration, effect, prompt, tracks: { objects: tracks.objects.size, main: tracks.main, seen: path.seen, frames: tracks.frames, fps: tracks.fps }, billedFrames: tracks.cached ? 0 : tracks.billedFrames, punches, proxy: { width: proxy.width, height: proxy.height, bytes: proxy.bytes } };
 }
