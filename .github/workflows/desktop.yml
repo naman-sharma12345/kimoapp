@@ -11,6 +11,10 @@ on:
         description: 'also run one AI edit end to end (uses the kimo AI budget)'
         type: boolean
         default: false
+      sam:
+        description: 'also run one SAM 3.1 effect end to end (5 s clip, ~$0.03 of the kimo AI budget)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -77,6 +81,7 @@ jobs:
           $s.SetOutputToWaveFile("$PWD\speech.wav"); $s.Speak('Welcome to kimo. This is a five second test of the real engine.'); $s.Dispose()
           & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=1280x720:r=30:d=5' -i speech.wav -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest clip.mp4
           $smokeArgs = @('--smoke', "$PWD\clip.mp4", '--smoke-out', "$PWD\smoke.json")
+          if ('${{ inputs.sam }}' -eq 'true') { $smokeArgs += @('--smoke-sam', "$PWD\test\sam-person.mp4") }
           if ('${{ inputs.ai }}' -eq 'true') {
             # ~25 s talking sample (Windows TTS) with pauses and fillers for the rough cut, over moving grainy gradients
             $s2 = New-Object System.Speech.Synthesis.SpeechSynthesizer
@@ -107,6 +112,8 @@ jobs:
             desktop/smoke-summary.txt
             desktop/ai-*.jpg
             desktop/ai-final.mp4
+            desktop/sam-final.mp4
+            desktop/sam-text_behind.mp4
           retention-days: 7
       - name: read version
         id: ver

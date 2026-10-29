@@ -39,7 +39,9 @@ are fine).
 
 Media never leaves your PC. AI edit sends only the prompt, text results from the engine
 and two contact sheets + two frames + measured audio numbers per check to `api.getkimo.tech` (no API key is
-in the app). See `THIRD_PARTY_NOTICES.md` for bundled licenses.
+in the app). SAM features (subject tracking, 9:16 follow-reframe, text behind subject,
+background blur/replace, object blur) upload a downscaled (~720p, silent) copy of only the
+clip segment being processed to Meta via the same proxy, and delete it after. See `THIRD_PARTY_NOTICES.md` for bundled licenses.
 
 ## Build
 

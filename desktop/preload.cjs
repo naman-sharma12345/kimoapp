@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('kimo', {
   reveal: (file) => ipcRenderer.invoke('reveal', file),
   downloadModel: () => ipcRenderer.invoke('model:download'),
   openLog: () => ipcRenderer.invoke('openLog'),
+  samPreview: (opts) => ipcRenderer.invoke('sam:preview', opts),
+  pickImage: () => ipcRenderer.invoke('pickImage'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   onProject: on('project'),
   onEvent: on('event'),

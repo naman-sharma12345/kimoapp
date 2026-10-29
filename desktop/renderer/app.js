@@ -108,13 +108,49 @@ $('go').onclick = guard(async () => {
   localStorage.preset = $('preset').value;
   localStorage.style = $('style').value;
   localStorage.mode = $('mode').value;
-  const made = await kimo.create({ files: staged, note: $('note').value.trim(), preset: $('preset').value, style: $('style').value, mode: $('mode').value, batch: $('batch').checked && staged.length > 1 });
+  const sam = samChoice();
+  if ($('mode').value === 'sam' && !sam) return toast('Pick a subject effect first');
+  if (sam?.effect === 'bg_image' && !sam.image) return toast('Choose a background image first');
+  const made = await kimo.create({ files: staged, note: $('note').value.trim(), preset: $('preset').value, style: $('style').value, mode: $('mode').value, batch: $('batch').checked && staged.length > 1, sam });
   library.unshift(...made);
   staged = [];
   $('note').value = '';
   renderFiles();
   if (made.length > 1) toast(`${made.length} videos queued; kimo edits them one after another`);
   openProject(made[0].id);
+});
+
+// ---------- manual SAM 3.1: type an object, see its masks, pick an effect ----------
+let samImagePath = null;
+function samChoice() {
+  const effect = $('samEffect').value;
+  if (!effect) return undefined;
+  return { effect, prompt: $('samPrompt').value.trim() || 'person', text: $('samText').value.trim(), color: $('samColor').value, image: samImagePath, punch: $('samPunch').checked };
+}
+$('samEffect').onchange = () => {
+  const e = $('samEffect').value;
+  $('samTextL').classList.toggle('hidden', e !== 'text_behind');
+  $('samColorL').classList.toggle('hidden', e !== 'bg_color' && e !== 'text_behind');
+  $('samImage').classList.toggle('hidden', e !== 'bg_image');
+  if (e && $('mode').value === 'captions') toast('The SAM effect runs first, then captions');
+};
+$('samImage').onclick = guard(async () => {
+  samImagePath = await kimo.pickImage();
+  $('samImage').textContent = samImagePath ? samImagePath.split(/[\\/]/).pop() : 'Choose image';
+});
+$('samFind').onclick = guard(async () => {
+  const video = staged.find((f) => f.kind === 'video');
+  if (!video) return toast('Add a video first');
+  $('samFind').disabled = true;
+  $('samInfo').textContent = 'SAM 3.1 is looking…';
+  $('samPreview').classList.remove('hidden');
+  try {
+    const r = await kimo.samPreview({ file: video.path, prompt: $('samPrompt').value.trim() || 'person', time: Math.min(1, (video.duration || 2) / 2) });
+    $('samImg').src = r.image;
+    $('samInfo').textContent = r.objects ? `${r.objects} match${r.objects === 1 ? '' : 'es'} for "${$('samPrompt').value.trim() || 'person'}" (tinted). The largest, most central one is the subject.` : 'No match on this frame; try another word.';
+  } finally {
+    $('samFind').disabled = false;
+  }
 });
 
 // ---------- live stage: preview frames crossfade over the player ----------
@@ -560,7 +596,7 @@ function renderProject() {
   if (!p) return showCompose();
   $('pname').textContent = p.name;
   const total = p.files.reduce((a, f) => a + (f.duration || 0), 0);
-  $('pmeta').textContent = `${p.files.length} file${p.files.length > 1 ? 's' : ''} · ${fmtTime(total)} source · ${presets[p.preset]?.label ?? p.preset} · ${p.mode === 'captions' ? 'captions only (offline)' : `AI edit · ${styles[p.style] ?? 'Auto'}`}${p.note ? ` · “${p.note.slice(0, 90)}”` : ''}`;
+  $('pmeta').textContent = `${p.files.length} file${p.files.length > 1 ? 's' : ''} · ${fmtTime(total)} source · ${presets[p.preset]?.label ?? p.preset} · ${p.mode === 'captions' ? 'captions only (offline)' : p.mode === 'sam' ? 'SAM effect' : `AI edit · ${styles[p.style] ?? 'Auto'}`}${p.sam ? ` · SAM 3.1 ${p.sam.effect.replace('_', ' ')} on “${p.sam.prompt || 'person'}”` : ''}${p.note ? ` · “${p.note.slice(0, 90)}”` : ''}`;
   const chip = $('pstatus');
   chip.className = `chip ${p.status}`;
   chip.textContent = p.status === 'failed' ? `failed: ${p.error?.slice(0, 80)}` : STATUS[p.status];

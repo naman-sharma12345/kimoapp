@@ -38,6 +38,8 @@ const engineEnv = () => {
 
 let engine; // engine.mjs (ESM)
 const loadEngine = async () => (engine ??= await import(pathToFileURL(join(__dirname, 'engine.mjs')).href));
+let samMod;
+const loadSam = async () => (samMod ??= await import(pathToFileURL(join(__dirname, 'sam.mjs')).href));
 const logFile = () => join(data(), 'kimo.log');
 const log = (...a) => {
   try {
@@ -132,7 +134,7 @@ async function pump() {
   try {
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile,
+      preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile, sam: next.sam,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
@@ -165,14 +167,23 @@ async function pump() {
   }
 }
 
-function newProject({ files, note, preset, mode, name, style }) {
+function newProject({ files, note, preset, mode, name, style, sam }) {
   const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const p = {
     id, name: name || basename(files[0].path, extname(files[0].path)), created: Date.now(), updated: Date.now(),
     files, note: note || '', preset: preset || 'shorts', style: style || 'auto', mode: mode || 'ai', status: 'queued', log: [], turns: [],
+    sam: cleanSam(sam),
   };
   library.unshift(p);
   return p;
+}
+
+const SAM_EFFECTS = ['reframe', 'text_behind', 'bg_blur', 'bg_color', 'bg_image', 'cutout', 'redact'];
+/** Only known fields of the manual SAM choice reach the engine. */
+function cleanSam(sam) {
+  if (!sam || !SAM_EFFECTS.includes(sam.effect)) return undefined;
+  const str = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined);
+  return { effect: sam.effect, prompt: str(sam.prompt, 80), text: str(sam.text, 40), color: str(sam.color, 9), image: str(sam.image, 600), punch: sam.punch === true };
 }
 
 // ---------- first-run model download (only when not bundled) ----------
@@ -265,6 +276,35 @@ async function smoke(clip, outPath) {
     }
     report.captions = r.history.filter((h) => h.startsWith('auto_captions')).map((h) => h.slice(0, 600));
     report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000);
+    const samAt = process.argv.indexOf('--smoke-sam');
+    if (samAt > 0) {
+      // SAM 3.1 end to end on Windows: proxy upload → track → 9:16 follow reframe + text behind the subject → kimo render
+      report.stage = 'sam';
+      report.sam = { events: [] };
+      flush();
+      try {
+        const t0 = Date.now();
+        const samFiles = await expand([process.argv[samAt + 1]]);
+        const r4 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke-sam'), files: samFiles, note: '', preset: 'shorts', mode: 'sam', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe,
+          sam: { effect: 'text_behind', prompt: 'person', text: 'KIMO', punch: true },
+          emit: (ev) => {
+            if (ev.t === 'op') report.sam.events.push(ev.phase === 'start' ? `> ${ev.title}` : `  ${ev.ok ? 'ok' : 'ERR ' + ev.error} ${ev.ms}ms ${ev.result ?? ''}`);
+            if (ev.t === 'preview') report.sam.previews = (report.sam.previews ?? 0) + 1;
+            if (ev.t === 'progress' && ev.phase === 'sam') report.sam.trackProgress = ev.f;
+            flush();
+          } });
+        Object.assign(report.sam, { seconds: Math.round((Date.now() - t0) / 1000), bytes: fs.statSync(r4.output).size, duration: r4.duration, quality: r4.quality?.checks?.map((c) => `${c.id}=${c.ok ? 'ok' : 'FAIL'}(${c.value})`) });
+        fs.copyFileSync(r4.output, join(outPath, '..', 'sam-final.mp4'));
+        const samOut = join(data(), 'smoke-sam', 'sam', 'sam-text_behind.mp4');
+        if (fs.existsSync(samOut)) fs.copyFileSync(samOut, join(outPath, '..', 'sam-text_behind.mp4'));
+        report.sam.ok = r4.duration > 1;
+      } catch (err) {
+        report.sam.error = String(err.stack || err);
+        report.sam.ok = false;
+      }
+      report.ok = report.ok && report.sam.ok;
+      flush();
+    }
     if (process.argv.includes('--smoke-ai')) {
       report.stage = 'ai';
       report.ai = { events: [] };
@@ -341,17 +381,17 @@ app.whenReady().then(async () => {
     const r = await dialog.showOpenDialog(win, { properties: folders ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'], filters: folders ? [] : [{ name: 'Media', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mp3', 'wav', 'm4a', 'png', 'jpg', 'jpeg'] }] });
     return r.canceled ? [] : expand(r.filePaths);
   });
-  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style }) => {
+  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style, sam }) => {
     if (!files?.length) throw new Error('add a video first');
-    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style })) : [newProject({ files, note, preset, mode, style })];
+    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style, sam })) : [newProject({ files, note, preset, mode, style, sam })];
     saveLibrary();
     pump();
     return made.map(publicProject);
   });
-  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style }) => {
+  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style, sam }) => {
     const p = library.find((x) => x.id === id);
     if (!p || p.status === 'running') return null;
-    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, status: 'queued', error: undefined, job: undefined });
+    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, sam: sam === undefined ? p.sam : cleanSam(sam), status: 'queued', error: undefined, job: undefined });
     p.history = [...(p.history ?? []), { at: Date.now(), note: p.note, preset: p.preset, mode: p.mode }].slice(-30);
     update(p);
     pump();
@@ -396,6 +436,15 @@ app.whenReady().then(async () => {
     if (r.canceled || !r.filePath) return null;
     await fs.promises.copyFile(src, r.filePath);
     return r.filePath;
+  });
+  // manual SAM: segment one frame and show the masks on the preview (one image, ~$0.0025)
+  ipcMain.handle('sam:preview', async (_e, { file, prompt, time }) => {
+    const s = await loadSam();
+    return s.maskPreview({ ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, input: String(file), time: Number(time) || 1, prompt: String(prompt || 'person').slice(0, 80), dir: join(data(), 'sam-preview') });
+  });
+  ipcMain.handle('pickImage', async () => {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+    return r.canceled ? null : r.filePaths[0];
   });
   ipcMain.handle('copy', (_e, text) => clipboard.writeText(String(text ?? '')));
   ipcMain.handle('stop', (_e, id) => {

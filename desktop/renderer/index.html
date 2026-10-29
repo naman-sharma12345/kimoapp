@@ -35,9 +35,36 @@
               <select id="mode">
                 <option value="ai">AI edit (script → build live → check 18 frames → fix)</option>
                 <option value="captions">Captions only (fully offline)</option>
+                <option value="sam">SAM effect only (below)</option>
               </select>
             </label>
             <label class="check"><input type="checkbox" id="batch" /> Batch: edit each file separately</label>
+          </div>
+          <details id="samBox" class="sam">
+            <summary>Subject effects · Meta SAM 3.1 <span class="muted">— uploads a downscaled copy of the clip segment to Meta via kimo</span></summary>
+            <div class="row wrap">
+              <label>Object <input id="samPrompt" placeholder="person, dog, face, license plate…" value="person" maxlength="80" /></label>
+              <label>Effect
+                <select id="samEffect">
+                  <option value="">None</option>
+                  <option value="reframe">Follow subject (smart reframe to the format)</option>
+                  <option value="text_behind">Text behind subject</option>
+                  <option value="bg_blur">Background blur</option>
+                  <option value="bg_color">Background colour</option>
+                  <option value="bg_image">Background image</option>
+                  <option value="cutout">Subject cutout (transparent .mov)</option>
+                  <option value="redact">Blur object (faces, plates, logos)</option>
+                </select>
+              </label>
+              <label id="samTextL" class="hidden">Text <input id="samText" maxlength="40" placeholder="ONE WORD" /></label>
+              <label id="samColorL" class="hidden">Colour <input id="samColor" type="color" value="#111111" /></label>
+              <button id="samImage" class="hidden">Choose image</button>
+              <label class="check"><input type="checkbox" id="samPunch" /> Punch-ins on the subject</label>
+              <button id="samFind">Show masks</button>
+            </div>
+            <div id="samPreview" class="sampre hidden"><img id="samImg" alt="SAM masks" /><span id="samInfo" class="muted"></span></div>
+          </details>
+          <div class="row wrap">
             <span class="grow"></span>
             <button id="go" class="primary" disabled>Edit with kimo</button>
           </div>

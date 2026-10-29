@@ -1,10 +1,12 @@
 // kimo desktop engine: drives the real kimo v6 engine (kimo-mcp over stdio)
-// on the user's own PC. Media never leaves the machine; only the edit prompt
-// and a few sampled frames go to the kimo AI proxy (api.getkimo.tech).
+// on the user's own PC. Only the edit prompt and a few sampled frames go to the
+// kimo AI proxy (api.getkimo.tech); SAM effects also send a downscaled copy of
+// the clip segment they process (see sam.mjs).
 import { spawn, execFile } from 'node:child_process';
 import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { samEffect, SAM_EFFECTS } from './sam.mjs';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -20,6 +22,14 @@ export const ENGINE_TOOLS = [
   'add_clip', 'trim_clip', 'move_clip', 'delete_clip', 'set_property', 'set_audio',
   'add_smart_punch', 'add_punch_ins', 'auto_reframe', 'stabilize', 'place_broll', 'undo',
 ];
+
+/** SAM 3.1 tools the planner may call; each renders a new media file and imports it. */
+export const SAM_TOOLS = ['sam_reframe', 'sam_text_behind', 'sam_background', 'sam_redact'];
+const SAM_TOOL_TEXT = `sam_reframe(file*:string, prompt:string, punch_ins:array) — Meta SAM 3.1 tracks the subject (default "person"; or a noun like "dog") and renders the clip at the canvas aspect with a smoothed crop that follows it; punch_ins [{start,end,zoom 1.1-1.5}] zoom in centred on the subject (true = automatic). returns a NEW asset_id: add_clip it instead of the original (fit cover). use it instead of auto_reframe when the canvas aspect differs from the footage and the subject moves.
+sam_text_behind(file*:string, text*:string, prompt:string, text_start:number, text_end:number, color:string) — big title placed BEHIND the subject (SAM matte), reframed to the canvas. 1-2 words. returns a NEW asset_id to add_clip instead of the original.
+sam_background(file*:string, mode*(blur|color|image), color:string(#rrggbb), image:string(path), prompt:string) — keeps the subject sharp and blurs/replaces the background. returns a NEW asset_id.
+sam_redact(file*:string, prompt*:string) — blurs every matching object (e.g. "face", "license plate", "logo"). returns a NEW asset_id.
+sam_* tools are slow-ish (upload + track): call each at most once per file, before captions, and only when the note or the footage calls for it. file = one of the file paths above.`;
 
 /** Export presets: canvas + delivery bitrate for the optional GPU encode. */
 export const PRESETS = {
@@ -167,7 +177,7 @@ function parseCalls(raw) {
       args: item?.args && typeof item.args === 'object' && !Array.isArray(item.args) ? item.args : {},
       why: typeof item?.why === 'string' ? item.why.slice(0, 160) : undefined,
     }))
-    .filter((c) => ENGINE_TOOLS.includes(c.name))
+    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name))
     .slice(0, 8);
 }
 function argsLine(args) {
@@ -474,7 +484,7 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, ops, speed }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, ops, speed, sam }) {
   mkdirSync(dir, { recursive: true });
   const P = PRESETS[preset] ?? PRESETS.shorts;
   const S = STYLES[style] ?? STYLES.auto;
@@ -540,7 +550,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         emit({ t: 'progress', phase: 'render', label: 'rendering with kimo', f, eta: Math.max(1, (est - el) / 1000), bytes, estimated: true });
       }, 500);
     }
-    const result = await mcp.call(name, args).finally(() => clearInterval(ticker));
+    const result = await (SAM_TOOLS.includes(name) ? samTool(name, args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
     const failed = Boolean(result?.isError);
     const text = resultText(result);
     history.push(`${name}(${JSON.stringify(args).slice(0, 400)}) => ${failed ? 'ERROR ' : ''}${text}`);
@@ -562,6 +572,52 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       if (image) emit({ t: 'frame', time: args.time, image });
     }
     return result;
+  };
+  // ---------- SAM 3.1: every step is a live op with progress + a preview ----------
+  const samStep = async (tool, title, fn, summary) => {
+    const id = randomUUID().slice(0, 8);
+    emit({ t: 'op', id, phase: 'start', tool, title: `${tool} ${title}`, at: Date.now() });
+    const t0 = Date.now();
+    try {
+      const r = await fn((f) => emit({ t: 'progress', phase: 'sam', label: 'SAM 3.1 tracking', f }));
+      const text = summary ? summary(r) : '';
+      history.push(`${tool} ${title} => ${text}`);
+      emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: text.slice(0, 160) });
+      return r;
+    } catch (err) {
+      emit({ t: 'op', id, phase: 'end', ok: false, ms: Date.now() - t0, error: String(err.message).slice(0, 240) });
+      throw err;
+    }
+  };
+  const framePreview = async (path, at, after) => {
+    const jpg = join(dir, 'sam-live.jpg');
+    await runTool(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-ss', String(at), '-i', path, '-frames:v', '1', '-vf', 'scale=-2:640', '-q:v', '5', jpg]);
+    try {
+      emit({ t: 'preview', time: at, image: `data:image/jpeg;base64,${readFileSync(jpg).toString('base64')}`, after });
+    } catch {
+      /* no preview */
+    }
+  };
+  const runSam = async (file, opts) => {
+    const r = await samEffect({ ffmpeg, ffprobe, input: file.path, dir: join(dir, 'sam'), opts: { size: [P.width, P.height], ...opts }, fontsDir: env?.KIMO_FONTS, signal, step: samStep });
+    await framePreview(r.output, Math.min(r.duration * 0.45, 3), `sam_${r.effect}`);
+    return r;
+  };
+  const samTool = async (name, args) => {
+    const file = files.find((f) => f.path === args.file) ?? files.find((f) => f.kind === 'video' && String(args.file ?? '').endsWith(f.path.split(/[\\/]/).pop()));
+    if (!file || file.kind !== 'video') return { isError: true, content: [{ type: 'text', text: 'file must be one of the video file paths listed' }] };
+    const opts = name === 'sam_reframe' ? { effect: 'reframe', prompt: args.prompt, punch: args.punch_ins }
+      : name === 'sam_text_behind' ? { effect: 'text_behind', prompt: args.prompt, text: args.text, text_start: args.text_start, text_end: args.text_end, color: args.color }
+        : name === 'sam_background' ? { effect: args.mode === 'color' ? 'bg_color' : args.mode === 'image' ? 'bg_image' : 'bg_blur', prompt: args.prompt, color: args.color, image: args.image }
+          : { effect: 'redact', prompt: args.prompt || 'face' };
+    try {
+      const r = await runSam(file, opts);
+      const imp = resultJson(await mcp.call('import_media', { path: r.output }));
+      return { content: [{ type: 'text', text: JSON.stringify({ asset_id: imp.asset_id, path: r.output, duration: r.duration, width: r.width, height: r.height, effect: r.effect, tracked: r.tracks, note: 'add_clip this asset (fit cover) in place of the original clip' }) }] };
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      return { isError: true, content: [{ type: 'text', text: `SAM: ${err.message}` }] };
+    }
   };
   const jpeg = async (png, w) => {
     const target = png.replace(/\.png$/, '.jpg');
@@ -644,12 +700,22 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     emit({ t: 'status', text: 'starting the kimo engine' });
     const { tools } = await mcp.start();
     const toolText = compactTools(tools);
+    // manual SAM effect chosen in the app: render it first, then edit that file
+    if (sam?.effect && SAM_EFFECTS.includes(sam.effect) && mode !== 'followup' && mode !== 'manual') {
+      const target = files.find((f) => f.kind === 'video');
+      if (!target) throw new Error('SAM effects need a video file');
+      emit({ t: 'status', text: `SAM 3.1: ${sam.effect.replace('_', ' ')} on "${sam.prompt || 'person'}"` });
+      const r = await runSam(target, sam);
+      files = files.map((f) => (f === target ? { ...f, path: r.output, duration: r.duration, width: r.width, height: r.height, sam: { effect: r.effect, source: target.path } } : f));
+      emit({ t: 'say', text: `SAM 3.1 ${r.effect.replace('_', ' ')} done · ${r.width}x${r.height} · tracked "${r.prompt}" on ${r.tracks.seen}/${r.tracks.frames} frames` });
+    }
     const fileLines = files.map((f) => `- ${f.path} (${f.kind}${f.duration ? `, ${Number(f.duration).toFixed(1)} s` : ''})`).join('\n');
     const loaded = (mode === 'followup' || mode === 'manual') && projectFile && existsSync(projectFile);
     if ((mode === 'followup' || mode === 'manual') && !loaded) throw new Error('this edit has no saved project yet; re-run it first');
     if (loaded) await call('load_project', { path: projectFile });
 
-    if (mode === 'captions') {
+
+    if (mode === 'captions' || mode === 'sam') {
       await call('project_set', { width: P.width, height: P.height, fps: 30 });
       const assets = [];
       for (const f of files) {
@@ -666,10 +732,15 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         if (j.clip_id) clipIds.push(j.clip_id);
         at += a.duration;
       }
+      if (mode === 'sam') {
+        await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+        await check(1);
+      } else {
       emit({ t: 'status', text: 'captions with whisper, on this PC' });
       await call('auto_captions', { ...(clipIds.length ? { clip_ids: clipIds } : {}), style: S.captions.style, max_words_per_line: S.captions.max_words_per_line, keywords: true });
       await call('finish_audio', { target_lufs: -14, keep_ambience: true });
       await check(1);
+      }
     } else if (mode === 'manual') {
       for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
@@ -681,14 +752,14 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `current timeline: ${JSON.stringify(timeline ?? {}).slice(0, 6000)}`,
           `canvas: ${P.width}x${P.height}. files:\n${fileLines}`,
           expertGuide(P, S, files),
-          `tools (* = required):\n${toolText}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
         ]
         : [
           `user's note: ${note || 'make a great video from these'}`,
           `canvas: ${P.width}x${P.height} at 30 fps (${P.label}). job folder: ${dir}`,
           `files:\n${fileLines}`,
           expertGuide(P, S, files),
-          `tools (* = required):\n${toolText}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
         ];
       await buildRounds(mode === 'followup' ? 4 : MAX_ROUNDS, context);
       for (let pass = 1; pass <= MAX_PASSES; pass++) {

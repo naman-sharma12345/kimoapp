@@ -19,3 +19,15 @@ Privacy: your videos, audio and renders stay on this PC. When you use AI edit, k
 the edit prompt, the engine's text results, three small JPEG frames and an audio-level
 report per check to api.getkimo.tech, which forwards them to Meta's model API. Captions-only
 mode is fully offline. Details: https://app.getkimo.tech/privacy
+
+## @meta-sam/parser 0.1.0
+
+Parses Segment Anything Model (SAM 3.1) responses. Copyright (c) Meta Platforms, Inc. and affiliates.
+Licensed under the SAM License (https://github.com/meta-models/meta-sam, LICENSE). SAM 3.1 itself runs on
+Meta Model API (https://dev.meta.ai); kimo calls it through api.getkimo.tech.
+
+SAM effects: when you use subject tracking, reframe, text behind subject, background or cutout effects or
+object blur, kimo uploads a downscaled copy (≤720p, no sound) of only the clip segment being processed to Meta
+through api.getkimo.tech and deletes it afterwards.
+
+Test media (CI only, not installed): *Tears of Steel* (c) Blender Foundation | mango.blender.org, CC BY 3.0.

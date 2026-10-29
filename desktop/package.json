@@ -1,7 +1,7 @@
 {
   "name": "kimo-desktop",
   "productName": "kimo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "kimo video editor for Windows: the real kimo v6 engine, FFmpeg and whisper on your PC",
   "author": "kimo <hello@getkimo.tech>",
   "homepage": "https://getkimo.tech",
@@ -13,6 +13,7 @@
     "dist": "electron-builder --win nsis --publish never"
   },
   "dependencies": {
+    "@meta-sam/parser": "0.1.0",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
@@ -23,12 +24,28 @@
     "appId": "tech.getkimo.desktop",
     "productName": "kimo",
     "artifactName": "kimo-Setup-${version}.${ext}",
-    "files": ["main.cjs", "preload.cjs", "engine.mjs", "renderer/**", "package.json"],
-    "extraResources": [
-      { "from": "vendor", "to": "vendor" },
-      { "from": "THIRD_PARTY_NOTICES.md", "to": "THIRD_PARTY_NOTICES.md" }
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "engine.mjs",
+      "sam.mjs",
+      "renderer/**",
+      "package.json"
     ],
-    "win": { "target": "nsis", "icon": "build/icon.png" },
+    "extraResources": [
+      {
+        "from": "vendor",
+        "to": "vendor"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
@@ -36,6 +53,13 @@
       "createDesktopShortcut": true,
       "shortcutName": "kimo"
     },
-    "publish": [{ "provider": "github", "owner": "naman-sharma12345", "repo": "kimoapp", "releaseType": "release" }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "naman-sharma12345",
+        "repo": "kimoapp",
+        "releaseType": "release"
+      }
+    ]
   }
 }
