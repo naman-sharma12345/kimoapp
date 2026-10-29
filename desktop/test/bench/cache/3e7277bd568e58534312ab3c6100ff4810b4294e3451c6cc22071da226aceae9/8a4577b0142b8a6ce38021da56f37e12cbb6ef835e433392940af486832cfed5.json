@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "8a4577b0142b8a6ce38021da56f37e12cbb6ef835e433392940af486832cfed5",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"\",\"say\":\"hook, mix, and check\",\"calls\":[{\"tool\":\"add_title\",\"args\":{\"style\":\"hook_box\",\"text\":\"Cultures Vanish When This Disappears\",\"start\":0,\"duration\":2.5,\"track_id\":\"track83\"},\"why\":\"hook on top track in first 2.5s\"},{\"tool\":\"finish_audio\",\"args\":{\"target_lufs\":-14,\"music_under_speech_db\":-16},\"why\":\"final mix last before lint\"},{\"tool\":\"lint_edit\",\"args\":{\"platform\":\"shorts\",\"target_lufs\":-14},\"why\":\"check before export\"}],\"done\":false}}",
+  "responseSha256": "149018913484009f6cb5396d80b4443c9cc81daedc94d2774f63bed33afc1467"
+}

@@ -1,0 +1,6 @@
+{
+  "reservedUsd": 0.49,
+  "networkRequests": 7,
+  "requestCountIsMinimum": true,
+  "note": "Interrupted legacy recorder did not flush its in-memory ledger. Conservatively reserve the entire phase allowance; this is not actual billed spend. Saved build responses count only successful recorded requests."
+}

@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "sources": {
+    "interview": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/db/David_Montgomery%2C_The_Green_Interview.webm?download=1",
+      "sha256": "3fcff4e6210409ba02dbb9a273ab747a035200ffe818fe631cdd5057e1d2ad7a",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "The Green Interview",
+      "title": "David Montgomery, The Green Interview",
+      "page": "https://commons.wikimedia.org/wiki/File:David_Montgomery%2C_The_Green_Interview.webm"
+    },
+    "wikimania": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c7/Wikimania_2014_Interview_-_Part_One_%28CC-BY-SA%29.webm?download=1",
+      "sha256": "e2756e2dd916ed086da70d4a316603036e6d671cc9780fd77f0126c4040ede78",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "Nkansah Rexford",
+      "title": "Wikimania 2014 Interview - Part One (CC-BY-SA)",
+      "page": "https://commons.wikimedia.org/wiki/File:Wikimania_2014_Interview_-_Part_One_%28CC-BY-SA%29.webm"
+    },
+    "screen": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Extrude_-_Blender_2.80_Fundamentals.webm?download=1",
+      "sha256": "2aa5cd83ce3e0915d55db4649cc1a7eb8629f0dc78c22daea78a267034c163c9",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "Blender Foundation",
+      "title": "Extrude - Blender 2.80 Fundamentals",
+      "page": "https://commons.wikimedia.org/wiki/File:Extrude_-_Blender_2.80_Fundamentals.webm"
+    },
+    "nature": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/46/4K_Nature_Cinematography_recorded_with_Nikon_D5300.webm",
+      "sha256": "3e236e2fc38fff689aea2cd4c3ca18dd233e78176060c82fd990ec783f53f45f",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "Aliioss Film",
+      "title": "4K Nature Cinematography recorded with Nikon D5300",
+      "page": "https://commons.wikimedia.org/wiki/File:4K_Nature_Cinematography_recorded_with_Nikon_D5300.webm"
+    }
+  },
+  "clips": [
+    {
+      "id": "TH-1",
+      "name": "Indoor talking-head interview",
+      "duration": 60,
+      "speech": true,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Natural interview, source is 640x360. Two speakers alternate; not a pristine single-camera creator recording.",
+      "segments": [
+        {
+          "source": "interview",
+          "start": 25,
+          "duration": 60
+        }
+      ]
+    },
+    {
+      "id": "TH-2",
+      "name": "Event interview",
+      "duration": 40,
+      "speech": true,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Closest licensed speech sample: event interview, not a verified outdoor walk-and-talk; wind and walking coverage remain a dataset gap.",
+      "segments": [
+        {
+          "source": "wikimania",
+          "start": 40,
+          "duration": 40
+        }
+      ]
+    },
+    {
+      "id": "TUT-1",
+      "name": "Extrude tutorial",
+      "duration": 75,
+      "speech": true,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Real narrated Blender screen tutorial; no face camera.",
+      "segments": [
+        {
+          "source": "screen",
+          "start": 10,
+          "duration": 75
+        }
+      ]
+    },
+    {
+      "id": "VLOG-1",
+      "name": "Mixed speech and b-roll",
+      "duration": 64,
+      "speech": true,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Constructed eight-clip 64s vlog proxy from interviews and nature footage; no single original vlog.",
+      "segments": [
+        {
+          "source": "wikimania",
+          "start": 80,
+          "duration": 8
+        },
+        {
+          "source": "nature",
+          "start": 10,
+          "duration": 8
+        },
+        {
+          "source": "wikimania",
+          "start": 100,
+          "duration": 8
+        },
+        {
+          "source": "nature",
+          "start": 30,
+          "duration": 8
+        },
+        {
+          "source": "interview",
+          "start": 100,
+          "duration": 8
+        },
+        {
+          "source": "nature",
+          "start": 50,
+          "duration": 8
+        },
+        {
+          "source": "interview",
+          "start": 120,
+          "duration": 8
+        },
+        {
+          "source": "nature",
+          "start": 70,
+          "duration": 8
+        }
+      ]
+    },
+    {
+      "id": "POD-1",
+      "name": "Two-speaker conversation",
+      "duration": 60,
+      "speech": true,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Two-person interview with alternating framings, closest licensed podcast proxy.",
+      "segments": [
+        {
+          "source": "interview",
+          "start": 120,
+          "duration": 60
+        }
+      ]
+    },
+    {
+      "id": "MUSIC-1",
+      "name": "Nature b-roll and score",
+      "duration": 30,
+      "speech": false,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Pre-edited music/nature montage, not raw uncut camera footage; useful for motion/delivery, weaker for beat-edit decisions.",
+      "segments": [
+        {
+          "source": "nature",
+          "start": 20,
+          "duration": 30
+        }
+      ]
+    }
+  ]
+}

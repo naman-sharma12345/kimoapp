@@ -4,7 +4,7 @@
 // the clip segment being processed goes to the kimo proxy (which holds the
 // Meta key); masks come back and every pixel of the real render is made here
 // with the bundled FFmpeg.
-import { spawn, execFile } from 'node:child_process';
+import { spawnBackground as spawn, execFileBackground as execFile } from './resources.cjs';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';

@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, clipboard } =
 const { join, extname, basename } = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
-const { execFile } = require('node:child_process');
+const { execFileBackground: execFile } = require('./resources.cjs');
 const https = require('node:https');
 
 const MEDIA = /\.(mp4|mov|m4v|mkv|webm|avi|mp3|wav|m4a|aac|flac|png|jpe?g|webp)$/i;
@@ -119,7 +119,6 @@ async function pump() {
   if (running) return;
   const next = library.find((p) => p.status === 'queued');
   if (!next) return;
-  const e = await loadEngine();
   const controller = new AbortController();
   running = { id: next.id, controller };
   next.status = 'running';
@@ -132,6 +131,7 @@ async function pump() {
   update(next);
   const dir = projectDir(next.id);
   try {
+    const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
       preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile, sam: next.sam,

@@ -9,6 +9,9 @@
   "private": true,
   "main": "main.cjs",
   "scripts": {
+    "test": "node --test --test-concurrency=1 test/bench/cache.test.mjs test/bench/metrics.test.mjs test/bench/resources.test.mjs test/bench/encoding.test.mjs",
+    "bench:fetch": "node test/bench/fetch-clips.mjs",
+    "bench": "node test/bench/run.mjs",
     "start": "electron .",
     "build:renderer": "vite build --config renderer/vite.config.mjs",
     "dev:renderer": "vite --config renderer/vite.config.mjs",
@@ -40,6 +43,8 @@
       "main.cjs",
       "preload.cjs",
       "engine.mjs",
+      "encoding.mjs",
+      "resources.cjs",
       "sam.mjs",
       "renderer/**",
       "!renderer/src/**",

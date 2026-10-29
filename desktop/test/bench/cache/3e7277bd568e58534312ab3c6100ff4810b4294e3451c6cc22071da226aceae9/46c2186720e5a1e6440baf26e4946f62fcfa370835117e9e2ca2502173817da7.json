@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "46c2186720e5a1e6440baf26e4946f62fcfa370835117e9e2ca2502173817da7",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"hook first 2s striking speech no dead air titles hook_box top track rough cut max pause 0.3 punch alternate captions pop middle grade finish -14 lufs\",\"say\":\"\",\"calls\":[{\"tool\":\"auto_rough_cut\",\"args\":{\"asset_ids\":[\"asset1\"],\"max_pause\":0.3,\"pad\":0.05},\"why\":\"story rough cut remove dead air\"}],\"done\":false}}",
+  "responseSha256": "e9a789e38b6aff162d6907969c37e91b7ef3e83827a4a9ffc3e6312ccb5b42f3"
+}

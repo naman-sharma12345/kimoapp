@@ -27,3 +27,8 @@ test-results-matrix/
 desktop/vendor/
 desktop/dist/
 desktop/node_modules/
+desktop/test/bench/out/
+desktop/test/bench/transcripts/
+desktop/test/bench/clips/.sources/
+desktop/test/bench/clips/media/
+desktop/test/bench/cache/*.tmp

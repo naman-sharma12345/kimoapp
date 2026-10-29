@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "7a6a72379614e353bbda0e24f9d95c042d0096e3b069f46276d2e226362f0ebf",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"\",\"say\":\"checking timeline then building captions and hook\",\"calls\":[{\"tool\":\"timeline_summary\",\"args\":{},\"why\":\"confirm tracks and rough-cut clips\"},{\"tool\":\"auto_captions\",\"args\":{\"clip_ids\":[\"clip5\",\"clip6\",\"clip7\",\"clip8\",\"clip9\",\"clip10\",\"clip11\",\"clip12\"],\"highlight\":true,\"keywords\":true,\"max_words_per_line\":3,\"position\":\"middle\",\"style\":\"pop\"},\"why\":\"pop captions for speech\"}],\"done\":false}}",
+  "responseSha256": "8a942c05d6fcb2754a32e03f1bbe008d9b1b0fb7cacf7f93f07dee231196f65a"
+}

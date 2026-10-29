@@ -1,0 +1,11 @@
+{
+  "hook": 10,
+  "dead_air": 15,
+  "filler": 10,
+  "cadence": 10,
+  "framing": 10,
+  "motion": 15,
+  "captions": 15,
+  "sound": 10,
+  "colour": 5
+}

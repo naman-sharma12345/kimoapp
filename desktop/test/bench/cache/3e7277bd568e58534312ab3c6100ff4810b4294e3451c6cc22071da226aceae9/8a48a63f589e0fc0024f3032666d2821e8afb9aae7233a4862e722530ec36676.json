@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "8a48a63f589e0fc0024f3032666d2821e8afb9aae7233a4862e722530ec36676",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"hook first 2s striking speech moment no dead air\\nstory order single talking clip trimmed tight\\nrough cut max pause 0.3 pad 0.05 drop filler\\npunch ins alternate 1.15 face focus energy\\npop captions 3 words per line middle safe\\nhook box top track 3-6 words curiosity\\nvertical 9:16 cover face centered\\nclean grade natural skin exposure fix\\naudio dialogue clean lufs -14 true peak -1\\nlint shorts fix then summary done\",\"say\":\"starting your vertical edit — setting up canvas and importing footage.\",\"calls\":[{\"tool\":\"project_set\",\"args\":{\"width\":1080,\"height\":1920,\"fps\":29.97,\"name\":\"TH-1-9x16\"},\"why\":\"set 9:16 canvas first\"},{\"tool\":\"import_media\",\"args\":{\"path\":\"@SOURCE-TH-1-1@\"},\"why\":\"import only footage\"},{\"tool\":\"add_track\",\"args\":{},\"why\":\"main talking track\"},{\"tool\":\"add_track\",\"args\":{},\"why\":\"top track for hook\"}]}}",
+  "responseSha256": "069163a451deec9cc4403579aba92b879c354ddfa283f6b4ff0118f57dd9c898"
+}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "b72e97df324e07a59b2b9512fd56a6d397e1235480d8921dc3dbd654469c94cd",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"\",\"say\":\"checking lint details to fix overlap and framing\",\"calls\":[{\"tool\":\"lint_edit\",\"args\":{\"platform\":\"shorts\",\"target_lufs\":-14},\"why\":\"get full problem list after truncated report\"},{\"tool\":\"timeline_summary\",\"args\":{},\"why\":\"confirm tracks and caption overlap\"}],\"done\":false}}",
+  "responseSha256": "25f1a4315cd2b47e23f6803e819e4c4278e0b6b71a9667fbabff6c52cfa1f6ac"
+}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "2e42ca9ca511ac051de86b2c58df6a5958419fa9db7231583d73eb99bb6c69f4",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"\",\"say\":\"moving hook clear of captions then final checks\",\"calls\":[{\"tool\":\"set_property\",\"args\":{\"clip_id\":\"clip91\",\"property\":\"y\",\"value\":-650},\"why\":\"lift hook box to top safe area clear of middle captions\"},{\"tool\":\"set_property\",\"args\":{\"clip_id\":\"clip92\",\"property\":\"y\",\"value\":-650},\"why\":\"lift hook text with its box to stop overlap\"},{\"tool\":\"lint_edit\",\"args\":{\"platform\":\"shorts\",\"target_lufs\":-14},\"why\":\"verify text overlap fixed\"},{\"tool\":\"timeline_summary\",\"args\":{},\"why\":\"confirm final timeline before done\"}],\"done\":true}}",
+  "responseSha256": "2559bcff2155cc8e76acbab99ab99d01342191efb99f8796ac083ee560afa79c"
+}

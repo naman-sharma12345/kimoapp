@@ -1,0 +1,416 @@
+{
+  "version": 1,
+  "values": {
+    "aspect": "9:16",
+    "duration_s": 5.333333,
+    "first_speech_s": 0,
+    "hook_text": true,
+    "dead_air_ratio": 0,
+    "filler_count": 0,
+    "repeat_takes": 0,
+    "median_shot_s": 2.6666665,
+    "max_static_s": 5,
+    "edl_boundaries": [0, 5],
+    "scene_cuts": [5],
+    "framing_variety": 1,
+    "jitter_px": 0.24,
+    "repeated_frames": 0,
+    "skipped_frames": 0,
+    "frame_match_coverage": 0.937007874015748,
+    "frame_match": [
+      {
+        "id": "clip3",
+        "repeated_frames": 0,
+        "skipped_frames": 0,
+        "compared": 119,
+        "total": 120,
+        "coverage": 1,
+        "mean_mad": 4.7533801922582315
+      }
+    ],
+    "caption_min_word_s": 0.5890000000000001,
+    "caption_safe": false,
+    "caption_face_overlap": 0,
+    "lufs": -14.1,
+    "true_peak": -1.8,
+    "lra": 1.2,
+    "duck_depth_db": null,
+    "sfx_count_per_min": 0,
+    "clip_delta_e": null,
+    "clipped_pct": 7.292886145367648,
+    "closed_gop": true,
+    "cfr_ok": true,
+    "delivery_ok": false
+  },
+  "checks": [
+    {
+      "name": "first_speech_s",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.4,
+        "unit": "s",
+        "speechOnly": true
+      },
+      "estimated": false
+    },
+    {
+      "name": "hook_text",
+      "value": true,
+      "status": "pass",
+      "target": {
+        "equals": true,
+        "description": "Title or caption visible in 0-3s with at most six words"
+      },
+      "estimated": false
+    },
+    {
+      "name": "dead_air_ratio",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.03,
+        "speechOnly": true
+      },
+      "estimated": false
+    },
+    {
+      "name": "filler_count",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "repeat_takes",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "median_shot_s",
+      "value": 2.6666665,
+      "status": "pass",
+      "target": {
+        "min": 1.5,
+        "max": 4,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "max_static_s",
+      "value": 5,
+      "status": "pass",
+      "target": {
+        "max": 6,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "framing_variety",
+      "value": 1,
+      "status": "fail",
+      "target": {
+        "min": 3,
+        "unit": "buckets/30s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "jitter_px",
+      "value": 0.24,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.5,
+        "unit": "px/frame at 1080 short side"
+      },
+      "estimated": false
+    },
+    {
+      "name": "repeated_frames",
+      "value": 0,
+      "status": "unavailable",
+      "target": {
+        "equals": 0,
+        "requiresCoverage": 0.95
+      },
+      "estimated": false
+    },
+    {
+      "name": "skipped_frames",
+      "value": 0,
+      "status": "unavailable",
+      "target": {
+        "equals": 0,
+        "requiresCoverage": 0.95
+      },
+      "estimated": false
+    },
+    {
+      "name": "caption_min_word_s",
+      "value": 0.5890000000000001,
+      "status": "pass",
+      "target": {
+        "min": 0.18,
+        "speechOnly": true,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "caption_safe",
+      "value": false,
+      "status": "fail",
+      "target": {
+        "equals": true,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "caption_face_overlap",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 2,
+        "speechOnly": true,
+        "unit": "%"
+      },
+      "estimated": true
+    },
+    {
+      "name": "lufs",
+      "value": -14.1,
+      "status": "pass",
+      "target": {
+        "min": -15,
+        "max": -13,
+        "unit": "LUFS"
+      },
+      "estimated": false
+    },
+    {
+      "name": "true_peak",
+      "value": -1.8,
+      "status": "pass",
+      "target": {
+        "max": -1,
+        "unit": "dBTP"
+      },
+      "estimated": false
+    },
+    {
+      "name": "lra",
+      "value": 1.2,
+      "status": "fail",
+      "target": {
+        "min": 4,
+        "max": 9,
+        "unit": "LU"
+      },
+      "estimated": false
+    },
+    {
+      "name": "duck_depth_db",
+      "value": null,
+      "status": "not applicable",
+      "target": {
+        "min": 12,
+        "max": 20,
+        "speechOnly": true,
+        "musicOnly": true,
+        "unit": "dB"
+      },
+      "estimated": false
+    },
+    {
+      "name": "sfx_count_per_min",
+      "value": 0,
+      "status": "fail",
+      "target": {
+        "min": 6,
+        "max": 20,
+        "landscapeMin": 3,
+        "landscapeMax": 10
+      },
+      "estimated": false
+    },
+    {
+      "name": "clip_delta_e",
+      "value": null,
+      "status": "unavailable",
+      "target": {
+        "maxExclusive": 4,
+        "unit": "CIEDE2000"
+      },
+      "estimated": true
+    },
+    {
+      "name": "clipped_pct",
+      "value": 7.292886145367648,
+      "status": "fail",
+      "target": {
+        "maxExclusive": 0.5,
+        "unit": "%"
+      },
+      "estimated": false
+    },
+    {
+      "name": "delivery_ok",
+      "value": false,
+      "status": "fail",
+      "target": {
+        "equals": true
+      },
+      "estimated": false
+    }
+  ],
+  "creator": {
+    "score": 74.1,
+    "groups": {
+      "hook": 1,
+      "dead_air": 1,
+      "filler": 1,
+      "cadence": 1,
+      "framing": 0.3333333333333333,
+      "motion": 0.5,
+      "captions": 0.6666666666666666,
+      "sound": 0.7528571428571429,
+      "colour": 0.14247967655959748
+    },
+    "missing": ["duck_depth_db", "clip_delta_e"],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "evidence": {
+    "speech": "Whisper full token timestamps on FINAL audio; token join and filler context are estimates",
+    "captions": "Engine editorial caption ids; conservative font envelopes; skin/centre subject heuristic at 1 fps. Not face-detector certification.",
+    "colour": "CIEDE2000 on per-clip sampled midtone RGB means; full-frame full-range luma clipping.",
+    "duck": "RMS music-stem level in speech vs gaps; unavailable when no isolated music stem is retained.",
+    "frame": "108x192 grey MAD +/-3 source frames, EDL cuts excluded. Animated mappings explicitly reduce coverage; source/output fps must match.",
+    "delivery": "qualityChecks plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR."
+  },
+  "events": [
+    {
+      "id": "clip3",
+      "track": "track2",
+      "kind": "cut",
+      "start": 0,
+      "end": 5,
+      "path": "desktop/test/sam-person.mp4",
+      "sourceFps": 24,
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1
+    },
+    {
+      "id": "clip5",
+      "track": "track4",
+      "kind": "caption",
+      "start": 0.616,
+      "end": 1.205,
+      "text": "Why don't you",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "box": {
+        "x": 0.033564814814814825,
+        "y": 0.6593098958333333,
+        "w": 0.9328703703703703,
+        "h": 0.08138020833333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip6",
+      "track": "track4",
+      "kind": "caption",
+      "start": 1.205,
+      "end": 2,
+      "text": "just admit that",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "box": {
+        "x": 0.004861111111111094,
+        "y": 0.6625651041666666,
+        "w": 0.9902777777777778,
+        "h": 0.07486979166666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip7",
+      "track": "track4",
+      "kind": "caption",
+      "start": 2,
+      "end": 2.965,
+      "text": "you're freaked",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "box": {
+        "x": 0.021796296296296258,
+        "y": 0.6612630208333333,
+        "w": 0.9564074074074075,
+        "h": 0.07747395833333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip8",
+      "track": "track4",
+      "kind": "caption",
+      "start": 2.965,
+      "end": 3.6350000000000002,
+      "text": "out by my",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "box": {
+        "x": 0.16416666666666668,
+        "y": 0.6576822916666666,
+        "w": 0.6716666666666666,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip9",
+      "track": "track4",
+      "kind": "caption",
+      "start": 3.6350000000000002,
+      "end": 5.33,
+      "text": "robot hand?",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    }
+  ],
+  "analysis": {
+    "frozen": [5],
+    "silences": []
+  },
+  "provenance": {
+    "kind": "supplemental existing five-second smoke, not a golden baseline",
+    "pipeline": "real runEdit, captions mode, shorts preset, auto style",
+    "sourceCommit": "b0c90974257e8795c292622c4c30defef1457db1",
+    "timing": "before resource/GPU master changes",
+    "source": "desktop/test/sam-person.mp4"
+  }
+}

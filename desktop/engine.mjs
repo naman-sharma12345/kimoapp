@@ -2,11 +2,12 @@
 // on the user's own PC. Only the edit prompt and a few sampled frames go to the
 // kimo AI proxy (api.getkimo.tech); SAM effects also send a downscaled copy of
 // the clip segment they process (see sam.mjs).
-import { spawn, execFile } from 'node:child_process';
+import { spawnBackground as spawn, execFileBackground as execFile, acquireExclusive } from './resources.cjs';
 import { existsSync, mkdirSync, statSync, readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter } from './sam.mjs';
+import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -442,40 +443,139 @@ export function qualityChecks(m, P, { final = false, sourceAudio = false } = {})
  * 2 B-frames, BT.709, YouTube's recommended bitrate, AAC-LC 384 kbps 48 kHz,
  * faststart, and loudness pulled to -14 LUFS / -1.5 dBTP when it is off.
  */
-export function youtubeMaster({ ffmpeg, input, output, P, m, signal, onProgress }) {
+const masterGpu = new Map();
+export async function youtubeMaster({
+  ffmpeg,
+  input,
+  output,
+  P,
+  m,
+  signal,
+  onProgress,
+  encoder,
+  onFallback,
+}) {
+  if (signal?.aborted) throw new Error('cancelled');
+  if (encoder === undefined) {
+    if (!masterGpu.has(ffmpeg))
+      masterGpu.set(
+        ffmpeg,
+        detectGpu(ffmpeg).catch(() => null),
+      );
+    encoder = await masterGpu.get(ffmpeg);
+  }
   const fps = m.fps || 30;
   const rec = recommendedMbps(P.width, P.height, fps);
   const gop = Math.max(1, Math.round(fps / 2));
   const L = m.loudnorm;
   const fix = L && (Math.abs(m.lufs + 14) > 0.5 || m.truePeak > -1.5);
   const af = fix
-    ? ['-af', `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${L.input_i}:measured_TP=${L.input_tp}:measured_LRA=${L.input_lra}:measured_thresh=${L.input_thresh}:offset=${L.target_offset}:linear=true,aresample=48000`]
+    ? [
+        '-af',
+        `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${L.input_i}:measured_TP=${L.input_tp}:measured_LRA=${L.input_lra}:measured_thresh=${L.input_thresh}:offset=${L.target_offset}:linear=true,aresample=48000`,
+      ]
     : [];
-  const args = [
-    '-hide_banner', '-y', '-i', input, ...af,
-    '-c:v', 'libx264', '-preset', m.duration > 600 ? 'medium' : 'slow',
-    '-b:v', `${rec}M`, '-maxrate', `${Math.round(rec * 1.5)}M`, '-bufsize', `${rec * 2}M`,
-    '-profile:v', 'high', '-level:v', Math.max(P.width, P.height) >= 3840 ? '5.1' : '4.2', '-pix_fmt', 'yuv420p',
-    '-g', String(gop), '-keyint_min', String(gop), '-sc_threshold', '0', '-bf', '2', '-flags', '+cgop',
-    '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
-    ...(m.acodec ? ['-c:a', 'aac', '-b:a', '384k', '-ar', '48000', '-ac', '2'] : []),
-    '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output,
-  ];
-  const t0 = Date.now();
-  return new Promise((done, fail) => {
-    const child = spawn(ffmpeg, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    signal?.addEventListener('abort', () => child.kill('SIGKILL'));
-    child.stdout.on('data', (d) => {
-      const x = /out_time_us=(\d+)/.exec(d.toString());
-      if (x && m.duration) {
-        const f = Math.min(1, Number(x[1]) / 1e6 / m.duration);
-        const el = (Date.now() - t0) / 1000;
-        onProgress?.(f, f > 0.02 ? Math.max(0, el / f - el) : null);
-      }
+  const attempt = ({ encoder: selected, hardwareDecode }) => {
+    const args = [
+      '-hide_banner',
+      '-y',
+      ...(hardwareDecode
+        ? ['-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda']
+        : []),
+      '-i',
+      input,
+      ...af,
+      ...videoEncoderArgs(selected, m.duration),
+      '-b:v',
+      `${rec}M`,
+      '-maxrate',
+      `${Math.round(rec * 1.5)}M`,
+      '-bufsize',
+      `${rec * 2}M`,
+      '-profile:v',
+      'high',
+      '-level:v',
+      Math.max(P.width, P.height) >= 3840 ? (fps > 30 ? '5.2' : '5.1') : '4.2',
+      ...(hardwareDecode
+        ? ['-vf', 'scale_cuda=format=nv12', '-pix_fmt', 'cuda']
+        : ['-pix_fmt', 'yuv420p']),
+      '-g',
+      String(gop),
+      '-keyint_min',
+      String(gop),
+      '-sc_threshold',
+      '0',
+      '-bf',
+      '2',
+      '-flags',
+      '+cgop',
+      '-colorspace',
+      'bt709',
+      '-color_primaries',
+      'bt709',
+      '-color_trc',
+      'bt709',
+      ...(m.acodec
+        ? ['-c:a', 'aac', '-b:a', '384k', '-ar', '48000', '-ac', '2']
+        : []),
+      '-movflags',
+      '+faststart',
+      '-progress',
+      'pipe:1',
+      '-nostats',
+      output,
+    ];
+    const t0 = Date.now();
+    return new Promise((done, fail) => {
+      const child = spawn(ffmpeg, ['-nostdin', ...args], {
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      const abort = () => child.kill('SIGKILL');
+      signal?.addEventListener('abort', abort, { once: true });
+      const cleanup = () => signal?.removeEventListener('abort', abort);
+      child.on('error', (error) => {
+        cleanup();
+        fail(error);
+      });
+      child.stdout.on('data', (d) => {
+        const x = /out_time_us=(\d+)/.exec(d.toString());
+        if (x && m.duration) {
+          const f = Math.min(1, Number(x[1]) / 1e6 / m.duration);
+          const el = (Date.now() - t0) / 1000;
+          onProgress?.(f, f > 0.02 ? Math.max(0, el / f - el) : null);
+        }
+      });
+      let err = '';
+      child.stderr.on('data', (d) => (err = (err + d).slice(-16000)));
+      child.on('exit', (code) => {
+        cleanup();
+        code === 0
+          ? done({ output, loudnessFixed: Boolean(fix), mbps: rec })
+          : fail(
+              new Error(
+                `master encode failed: ${
+                  err
+                    .split(/\r?\n/)
+                    .filter((line) =>
+                      /error|failed|unsupported|invalid|impossible|requires|incompatible/i.test(
+                        line,
+                      ),
+                    )
+                    .join(' ')
+                    .slice(-2000) || err.slice(-1000)
+                }`,
+              ),
+            );
+      });
     });
-    let err = '';
-    child.stderr.on('data', (d) => (err = (err + d).slice(-1500)));
-    child.on('exit', (code) => (code === 0 ? done({ output, loudnessFixed: Boolean(fix), mbps: rec }) : fail(new Error(`master encode failed: ${err.split('\n').slice(-3).join(' ')}`))));
+  };
+  return encodeWithFallback({
+    preferred: encoder,
+    measured: m,
+    attempt,
+    signal,
+    onFallback,
   });
 }
 
@@ -515,9 +615,12 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  */
 export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, ops, speed, sam }) {
   mkdirSync(dir, { recursive: true });
+  if (signal?.aborted) throw new Error('cancelled');
   const P = PRESETS[preset] ?? PRESETS.shorts;
   const S = STYLES[style] ?? STYLES.auto;
-  const mcp = new Mcp(bin, dir, env);
+  const release = acquireExclusive('render');
+  let mcp;
+  try { mcp = new Mcp(bin, dir, env); } catch (e) { release(); throw e; }
   signal?.addEventListener('abort', () => mcp.kill());
   const history = [];
   const out = join(dir, 'master.mp4');
@@ -858,8 +961,8 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     const t0 = Date.now();
     let master;
     try {
-      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }) });
-      emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: master.loudnessFixed ? 'loudness corrected to -14 LUFS' : 'loudness already on target' });
+      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
+      emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: `${master.encoder} · ${master.loudnessFixed ? 'loudness corrected to -14 LUFS' : 'loudness already on target'}` });
     } catch (err) {
       if (signal?.aborted) throw err;
       emit({ t: 'op', id, phase: 'end', ok: false, ms: Date.now() - t0, error: String(err.message).slice(0, 240) });
@@ -907,7 +1010,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     return { output, master: out, duration: mf.duration || duration, history, timeline, quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec };
   } finally {
-    mcp.kill();
+    try { mcp.kill(); } finally { release(); }
   }
 }
 

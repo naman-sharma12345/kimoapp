@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "key": "b9dfc9178be894176755f840c1df181a37bd1fd034f7bf38b95895f499c835d7",
+  "endpoint": "/v1/desktop/ai",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"record\":{\"script\":\"\",\"say\":\"checking timeline then adding hook track, punch rhythm and grade\",\"calls\":[{\"tool\":\"timeline_summary\",\"args\":{},\"why\":\"confirm track and clip ids for reframe and hook\"},{\"tool\":\"add_track\",\"args\":{},\"why\":\"top track for hook_box title\"},{\"tool\":\"auto_grade\",\"args\":{\"clip_ids\":[\"clip5\",\"clip6\",\"clip7\",\"clip8\",\"clip9\",\"clip10\",\"clip11\",\"clip12\"],\"strength\":0.8},\"why\":\"fix exposure and colour cast per clip\"},{\"tool\":\"add_punch_ins\",\"args\":{\"clip_ids\":[\"clip5\",\"clip6\",\"clip7\",\"clip8\",\"clip9\",\"clip10\",\"clip11\",\"clip12\"],\"pattern\":\"alternate\",\"scale\":1.15},\"why\":\"jump-cut rhythm on talking track\"}],\"done\":false}}",
+  "responseSha256": "bdd9697bceaf8e7350c763306f6b3f5a937afb8d2d7d2dd63a7437bfb8236665"
+}

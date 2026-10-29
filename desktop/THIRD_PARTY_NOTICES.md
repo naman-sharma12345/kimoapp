@@ -31,3 +31,10 @@ object blur, kimo uploads a downscaled copy (≤720p, no sound) of only the clip
 through api.getkimo.tech and deletes it afterwards.
 
 Test media (CI only, not installed): *Tears of Steel* (c) Blender Foundation | mango.blender.org, CC BY 3.0.
+
+Creator benchmark media (downloaded locally, not installed): The Green Interview's
+"David Montgomery, The Green Interview"; Nkansah Rexford's "Wikimania 2014 Interview -
+Part One"; Blender Foundation's "Extrude - Blender 2.80 Fundamentals"; Aliioss Film's
+"4K Nature Cinematography recorded with Nikon D5300". Each source is CC BY 3.0
+(https://creativecommons.org/licenses/by/3.0/). Exact sources, attribution and
+modifications are in test/bench/CREDITS.md and test/bench/clips/clips.json.

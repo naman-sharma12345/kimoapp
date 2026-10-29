@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "description": "Creator targets. Phase 1 observes v0.3.2 behavior without enforcing targets in editing.",
+  "metrics": {
+    "first_speech_s": { "maxExclusive": 0.4, "unit": "s", "speechOnly": true },
+    "hook_text": {
+      "equals": true,
+      "description": "Title or caption visible in 0-3s with at most six words"
+    },
+    "dead_air_ratio": { "maxExclusive": 0.03, "speechOnly": true },
+    "filler_count": { "equals": 0, "speechOnly": true },
+    "repeat_takes": { "equals": 0, "speechOnly": true },
+    "median_shot_s": { "min": 1.5, "max": 4, "unit": "s" },
+    "max_static_s": { "max": 6, "unit": "s" },
+    "framing_variety": { "min": 3, "unit": "buckets/30s" },
+    "jitter_px": { "maxExclusive": 0.5, "unit": "px/frame at 1080 short side" },
+    "repeated_frames": { "equals": 0, "requiresCoverage": 0.95 },
+    "skipped_frames": { "equals": 0, "requiresCoverage": 0.95 },
+    "caption_min_word_s": { "min": 0.18, "speechOnly": true, "unit": "s" },
+    "caption_safe": { "equals": true, "speechOnly": true },
+    "caption_face_overlap": {
+      "maxExclusive": 2,
+      "speechOnly": true,
+      "unit": "%"
+    },
+    "lufs": { "min": -15, "max": -13, "unit": "LUFS" },
+    "true_peak": { "max": -1, "unit": "dBTP" },
+    "lra": { "min": 4, "max": 9, "unit": "LU" },
+    "duck_depth_db": {
+      "min": 12,
+      "max": 20,
+      "speechOnly": true,
+      "musicOnly": true,
+      "unit": "dB"
+    },
+    "sfx_count_per_min": {
+      "min": 6,
+      "max": 20,
+      "landscapeMin": 3,
+      "landscapeMax": 10
+    },
+    "clip_delta_e": { "maxExclusive": 4, "unit": "CIEDE2000" },
+    "clipped_pct": { "maxExclusive": 0.5, "unit": "%" },
+    "delivery_ok": { "equals": true }
+  },
+  "editorial": {
+    "hook_title_deadline_s": 0.3,
+    "maximum_pause_s": 0.35,
+    "framing": {
+      "wide": 1,
+      "medium": [1.1, 1.2],
+      "tight": [1.25, 1.35],
+      "ease_frames": [6, 10],
+      "eye_line": "upper third"
+    },
+    "captions": {
+      "shorts_max_words_per_line": 3,
+      "landscape_max_words_per_line": 7,
+      "accent_keywords": 1,
+      "pop_ms": [80, 120],
+      "shorts_safe_top": 0.12,
+      "shorts_reserved_bottom": 0.22,
+      "shorts_reserved_right": 0.15
+    },
+    "audio": {
+      "voice_chain": ["highpass", "deess", "compression", "eq"],
+      "music_under_voice_db": [-20, -16],
+      "sfx_cut_coverage": [0.4, 0.7]
+    },
+    "delivery": {
+      "video": "H.264 High",
+      "closed_gop": true,
+      "color": "bt709",
+      "audio": "AAC",
+      "sample_rate": 48000,
+      "audio_min_kbps": 320
+    }
+  }
+}
