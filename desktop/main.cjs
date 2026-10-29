@@ -300,6 +300,13 @@ async function smoke(clip, outPath) {
         report.sam.ok = r4.duration > 1;
       } catch (err) {
         report.sam.error = String(err.stack || err);
+        for (const f of ['sam-graph.txt', 'sam-font-used.txt']) {
+          try {
+            report.sam[f] = fs.readFileSync(join(data(), 'smoke-sam', 'sam', f), 'utf8').slice(0, 4000);
+          } catch {
+            /* not written */
+          }
+        }
         report.sam.ok = false;
       }
       report.ok = report.ok && report.sam.ok;

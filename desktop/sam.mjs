@@ -22,15 +22,11 @@ const run = (bin, args, { timeout = 15 * 60_000, signal, cwd } = {}) =>
     const child = spawn(bin, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], cwd });
     signal?.addEventListener('abort', () => child.kill('SIGKILL'));
     let err = '';
-    let first = '';
-    child.stderr.on('data', (d) => {
-      err = (err + d).slice(-2000);
-      if (!first) first = String(d).split(/\r?\n/).find((l) => /error|invalid|no such|unable|cannot|not found/i.test(l) && !/Task finished|Terminating thread/.test(l)) ?? '';
-    });
+    child.stderr.on('data', (d) => (err = (err + d).slice(-3000)));
     const timer = setTimeout(() => child.kill('SIGKILL'), timeout);
     child.on('exit', (code) => {
       clearTimeout(timer);
-      code === 0 ? done() : fail(new Error(`ffmpeg: ${first ? `${first.trim()} · ` : ''}${err.trim().split('\n').slice(-2).join(' ')}`.slice(0, 600)));
+      code === 0 ? done() : fail(new Error(`ffmpeg: ${err.split(/\r?\n/).filter((l) => l.trim() && !/Task finished|Terminating thread|Nothing was written|received no packets/.test(l)).join(' | ')}`.slice(0, 900)));
     });
   });
 const probeJson = (ffprobe, path) =>
@@ -355,6 +351,7 @@ export async function samEffect({ ffmpeg, ffprobe, input, dir, opts, fontsDir, s
   const enc = alpha
     ? ['-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le']
     : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart'];
+  if (effect === 'text_behind') writeFileSync(join(dir, 'sam-font-used.txt'), String(fontFor(fontsDir) ?? 'none (fontconfig default)'));
   await step('sam_render', `${effect.replace('_', ' ')} · ${OW}x${OH}${punches.length ? ` · ${punches.length} punch-in${punches.length === 1 ? '' : 's'}` : ''}`, () =>
     run(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', ...inputs, ...extra, '-/filter_complex', script, '-map', outLabel, '-map', '0:a?', ...enc, '-c:a', alpha ? 'pcm_s16le' : 'aac', '-b:a', '192k', '-shortest', out], { signal, cwd: dir }),
   () => `${(statSync(out).size / 1e6).toFixed(1)} MB`);
