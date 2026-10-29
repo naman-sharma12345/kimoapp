@@ -140,7 +140,9 @@ async function pump() {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
         if (ev.t === 'timeline') next.timeline = ev.timeline;
         if (ev.t === 'say' && ev.kind === 'script') next.script = ev.text;
-        send('event', { id: next.id, ...ev });
+        // keep the project id; a tool call's own id travels as opId
+        const { id: opId, ...rest } = ev;
+        send('event', opId === undefined ? { ...rest, id: next.id } : { ...rest, id: next.id, opId });
       },
     });
     next.status = 'done';

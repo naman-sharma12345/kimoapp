@@ -129,8 +129,8 @@
       emit('event', { id: 'p1', t: 'preview', image: M + 'y4.jpg', after: 'grade', time: 12.4 });
       emit('event', { id: 'p1', t: 'progress', label: 'rendering preview', f: 0.62, eta: 48, estimated: true });
       emit('event', { id: 'p1', t: 'timeline', timeline: tl(3) });
-      emit('event', { id: 'p1', t: 'op', id: 'o6', ok: true, ms: 2600 });
-      emit('event', { id: 'p1', t: 'op', phase: 'start', id: 'o7', tool: 'render', title: 'render the 1080p preview', why: 'NVENC, 2 passes' });
+      emit('event', { id: 'p1', t: 'op', opId: 'o6', ok: true, ms: 2600 });
+      emit('event', { id: 'p1', t: 'op', phase: 'start', opId: 'o7', tool: 'render', title: 'render the 1080p preview', why: 'NVENC, 2 passes' });
     },
     update() { emit('update', { version: '0.3.2' }); },
   };

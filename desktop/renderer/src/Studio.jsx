@@ -9,8 +9,6 @@ import { Timeline } from './Timeline.jsx';
 
 /* ------------------------------------------------------------------ feed model */
 function useFeed(project) {
-  const running = useRef(false);
-  running.current = project.status === 'running';
   const [feed, setFeed] = useState({ entries: [], script: '', frames: [], live: null, progress: null, quality: null, youtube: null, timeline: null, tick: 0 });
   const ref = useRef(feed);
   const apply = useCallback((ev, replay) => {
@@ -19,14 +17,17 @@ function useFeed(project) {
     const next = { ...f };
     const push = (e) => (next.entries = [...entries, e]);
     switch (ev.t) {
-      case 'op':
-        if (ev.phase === 'start') push({ type: 'op', id: ev.id, title: ev.title, why: ev.why, tool: ev.tool, status: 'running', t0: replay ? 0 : Date.now() });
+      case 'op': {
+        // live events carry the tool-call id as opId; the saved log keeps it as id
+        const opId = ev.opId ?? ev.id;
+        if (ev.phase === 'start') push({ type: 'op', id: opId, title: ev.title, why: ev.why, tool: ev.tool, status: 'running', t0: replay ? 0 : Date.now() });
         else
           next.entries = entries.map((e) =>
-            e.type === 'op' && e.id === ev.id ? { ...e, status: ev.ok ? 'done' : 'failed', ms: ev.ms, error: ev.error, result: !replay && ev.result ? String(ev.result).slice(0, 140) : e.result, t0: 0 } : e,
+            e.type === 'op' && e.id === opId ? { ...e, status: ev.ok ? 'done' : 'failed', ms: ev.ms, error: ev.error, result: !replay && ev.result ? String(ev.result).slice(0, 140) : e.result, t0: 0 } : e,
           );
         if (ev.phase === 'start' && !replay) next.liveTool = ev.tool;
         break;
+      }
       case 'frame':
         next.frames = [...f.frames, { image: ev.image, time: ev.time }].slice(-6);
         break;
@@ -77,10 +78,7 @@ function useFeed(project) {
       if (!alive) return;
       for (const ev of log) apply(ev, true);
     })();
-    // main.cjs sends { id: projectId, ...ev }, so an op event's own id replaces the
-    // project id. Only one project edits at a time, so op events while this one is
-    // running belong to it.
-    const off = kimo.onEvent((ev) => (ev.id === project.id || (ev.t === 'op' && running.current)) && apply(ev, false));
+    const off = kimo.onEvent((ev) => ev.id === project.id && apply(ev, false));
     return () => {
       alive = false;
       off?.();
