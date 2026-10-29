@@ -83,3 +83,10 @@ pnpm build:pages
 The prepared hosting target is a new **Cloudflare Pages `kimo-app`** project at **app.getkimo.tech**. The Pages build exports static route shells and a small public metadata Function; local Next SSR remains available. PR artifacts use the mock. No deployment command or DNS change is performed. Follow [DEPLOY.md](docs/DEPLOY.md) when publishing is authorized, and coordinate with the separate Workers workflow branch before choosing one hosting path. Marketing remains a separate repository; its handoff is [MARKETING_LINK.md](docs/MARKETING_LINK.md).
 
 Read [DESIGN.md](docs/DESIGN.md), [DECISIONS.md](docs/DECISIONS.md), [STATES.md](docs/STATES.md), [PHASE_LOG.md](docs/PHASE_LOG.md) and the [three-minute demo script](docs/DEMO_SCRIPT.md). The supplied logo and fixed visual tokens remain authoritative. Media licenses/checksums are in [fixture sources](packages/mock-server/fixtures/SOURCES.md); OFL font licenses remain under apps/web/src/assets/fonts.
+
+## Real kimo engine (free, on Naman's PC)
+
+When the real kimo v6 engine is running on Naman's PC (free Cloudflare Tunnel
+`engine.getkimo.tech`), AI edits in the studio drive the real kimo tools and download a
+real kimo render; when it is offline the studio falls back to the browser editor. Setup
+is one command on Windows or Linux: see [deploy/kimo-engine/README.md](deploy/kimo-engine/README.md).

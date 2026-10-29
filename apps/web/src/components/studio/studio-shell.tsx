@@ -108,6 +108,7 @@ import { analyzeBytes } from '@/lib/media-analysis';
 import { videoPoster } from '@/lib/landing-files';
 import { PERCEIVE_NOTE, perceiveClips } from '@/lib/perceive';
 import { checkCut } from '@/lib/render-check';
+import { editWithRealKimo } from '@/lib/real-engine';
 import {
   CLIPS_WAIT_NOTE,
   firstPromptGate,
@@ -489,6 +490,17 @@ export function StudioShell({
       if (!alive || !prompt || gate() !== 'run') return;
       promptsRun.add(sessionId);
       feed.system(`working on: ${prompt}`);
+      if (
+        await editWithRealKimo({
+          sessionId,
+          note: prompt,
+          snapshot: snapshotRef.current,
+          ai: userAiRef.current,
+          say: (line) => feed.system(line),
+        })
+      )
+        return;
+      if (!alive) return;
       await perceiveClips(sessionId, snap.assets, userAiRef.current, () =>
         feed.system(PERCEIVE_NOTE),
       );
@@ -1072,28 +1084,34 @@ export function StudioShell({
   const messageAgent = useCallback(
     (text: string) => {
       if (viewedRef.current) return;
-      void perceiveClips(
-        sessionId,
-        snapshotRef.current?.assets ?? [],
-        userAiRef.current,
-        () => feed.system(PERCEIVE_NOTE),
-      )
-        .then(() =>
-          new KimoClient().message(sessionId, { text }, userAiRef.current),
-        )
-        .then(() => {
-          void checkCut({
-            sessionId,
-            note: text,
-            snapshot: () => snapshotRef.current,
-            ai: userAiRef.current,
-            say: (line) => feed.system(line),
-          }).catch(() =>
-            feed.error(
-              'the render check could not finish · the cut is ready to review',
-            ),
-          );
-        })
+      void (async () => {
+        const real = await editWithRealKimo({
+          sessionId,
+          note: text,
+          snapshot: snapshotRef.current,
+          ai: userAiRef.current,
+          say: (line) => feed.system(line),
+        });
+        if (real) return;
+        await perceiveClips(
+          sessionId,
+          snapshotRef.current?.assets ?? [],
+          userAiRef.current,
+          () => feed.system(PERCEIVE_NOTE),
+        );
+        await new KimoClient().message(sessionId, { text }, userAiRef.current);
+        void checkCut({
+          sessionId,
+          note: text,
+          snapshot: () => snapshotRef.current,
+          ai: userAiRef.current,
+          say: (line) => feed.system(line),
+        }).catch(() =>
+          feed.error(
+            'the render check could not finish · the cut is ready to review',
+          ),
+        );
+      })()
         .then(() => setSystemLines((lines) => [...lines, text]))
         .catch(() => setEditError('could not send message · try again'));
     },
@@ -1536,6 +1554,17 @@ export function StudioShell({
           track('interrupt_sent');
           if (!send({ t: 'interrupt', text })) throw new Error('Disconnected');
         } else {
+          if (
+            !attachments.length &&
+            (await editWithRealKimo({
+              sessionId,
+              note: text,
+              snapshot: snapshotRef.current,
+              ai: userAiRef.current,
+              say: (line) => feed.system(line),
+            }))
+          )
+            return;
           await perceiveClips(
             sessionId,
             snapshotRef.current?.assets ?? [],

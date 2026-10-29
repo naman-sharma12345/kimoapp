@@ -1013,7 +1013,7 @@ export async function requestPerception(
 
 /* ---------- script, live build and render checks ---------- */
 
-async function chatJson(
+export async function chatJson(
   config: AiConfig,
   fetcher: typeof fetch,
   system: string,

@@ -259,6 +259,82 @@ export class KimoClient {
     );
   }
   /** One render check of the current cut: frames go to the model, fixes apply live. */
+  /** Whether the real kimo engine (Naman's PC, via Cloudflare Tunnel) answers. */
+  engineStatus() {
+    return this.send(
+      'GET',
+      '/v1/engine',
+      z.object({ online: z.boolean(), busy: z.boolean().optional() }),
+    );
+  }
+  engineStart(id: string) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(id)}/engine`,
+      z.object({ job: z.string() }),
+      {},
+      undefined,
+      60_000,
+    );
+  }
+  /** Streams one clip to the engine job (deleted with the job). */
+  async engineUpload(id: string, job: string, name: string, file: Blob) {
+    const response = await this.fetcher(
+      `${this.baseUrl}/v1/sessions/${encodeURIComponent(id)}/engine/${job}/media/${name}`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+        signal: AbortSignal.timeout(600_000),
+      },
+    );
+    if (!response.ok)
+      throw new KimoApiError(response.status, 'engine_upload', 'upload failed');
+  }
+  engineStep(
+    id: string,
+    job: string,
+    body: {
+      note: string;
+      aspect: string;
+      files: {
+        name: string;
+        kind: string;
+        label?: string;
+        duration?: number;
+      }[];
+    },
+    ai?: s.AiCredentials | null,
+  ) {
+    return this.request(
+      `/v1/sessions/${encodeURIComponent(id)}/engine/${job}/step`,
+      z.object({
+        done: z.boolean(),
+        phase: z.string(),
+        round: z.number(),
+        pass: z.number(),
+      }),
+      body,
+      ai ? aiHeaders(ai) : undefined,
+      240_000,
+    );
+  }
+  async engineOutput(id: string, job: string) {
+    const response = await this.fetcher(
+      `${this.baseUrl}/v1/sessions/${encodeURIComponent(id)}/engine/${job}/output`,
+      { credentials: 'include', signal: AbortSignal.timeout(600_000) },
+    );
+    if (!response.ok)
+      throw new KimoApiError(response.status, 'no_output', 'no render');
+    return response.blob();
+  }
+  engineStop(id: string, job: string) {
+    return this.send(
+      'DELETE',
+      `/v1/sessions/${encodeURIComponent(id)}/engine/${job}`,
+      z.unknown(),
+    );
+  }
   review(
     id: string,
     body: z.input<typeof s.reviewRequestSchema>,

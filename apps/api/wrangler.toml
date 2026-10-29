@@ -21,9 +21,10 @@ META_MODEL = "muse-spark-1.3-contributor"
 META_MEDIA_MODEL = "muse-spark-1.3-contributor"
 # Total USD cap for kimo's own Meta key (BYOK not counted).
 AI_BUDGET_USD = "10"
-# The kimo v6 engine bridge (deploy/kimo-engine); empty until it is hosted. Secrets:
-# KIMO_ENGINE_TOKEN, KIMO_ENGINE_HF_TOKEN.
-KIMO_ENGINE_URL = ""
+# The real kimo v6 engine (deploy/kimo-engine) on Naman's own PC, reached through
+# the free Cloudflare Tunnel "kimo-engine". Online only while his PC runs it; the
+# studio falls back to the browser editor otherwise. Secret: KIMO_ENGINE_TOKEN.
+KIMO_ENGINE_URL = "https://engine.getkimo.tech"
 
 [[d1_databases]]
 binding = "DB"

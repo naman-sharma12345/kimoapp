@@ -16,11 +16,23 @@ import {
   existsSync,
 } from 'node:fs';
 import { timingSafeEqual } from 'node:crypto';
-import { resolve, join } from 'node:path';
+import { resolve, join, isAbsolute, sep } from 'node:path';
+import { tmpdir } from 'node:os';
 
 const PORT = Number(process.env.PORT || 7860);
 const TOKEN = process.env.ENGINE_TOKEN || '';
-const ROOT = '/tmp/kimo-jobs';
+const ROOT = process.env.KIMO_JOBS_DIR || join(tmpdir(), 'kimo-jobs');
+const KIMO_MCP = process.env.KIMO_MCP_BIN || 'kimo-mcp';
+// A tool call answers within WAIT_MS or reports {pending}; the caller polls
+// GET /jobs/<id>/calls/<cid>. Keeps every hop under Cloudflare's 100 s limit.
+const WAIT_MS = Number(process.env.KIMO_WAIT_MS || 80_000);
+const SHARED = [
+  process.env.KIMO_FONTS,
+  process.env.KIMO_MODELS,
+  '/usr/local/share/kimo',
+]
+  .filter(Boolean)
+  .map((dir) => resolve(dir));
 const JOB_TTL_MS = Number(process.env.JOB_TTL_MS || 30 * 60_000);
 const MAX_UPLOAD = 300 * 1024 ** 2;
 const MAX_JOBS = 3;
@@ -66,9 +78,10 @@ class Mcp {
     this.next = 1;
     this.pending = new Map();
     this.buffer = '';
-    this.child = spawn('kimo-mcp', [], {
+    this.child = spawn(KIMO_MCP, [], {
       cwd: dir,
-      env: { ...process.env, HOME: dir, TMPDIR: dir },
+      env: { ...process.env, HOME: dir, TMPDIR: dir, TEMP: dir, TMP: dir },
+      windowsHide: true,
       stdio: ['pipe', 'pipe', 'ignore'],
     });
     this.child.stdout.on('data', (data) => {
@@ -141,25 +154,44 @@ function dropJob(id, why) {
 function pathsInside(value, dir) {
   if (typeof value === 'string') {
     if (value.includes('://')) return false;
-    if (
-      value.startsWith('/') ||
+    const looksLikePath =
+      isAbsolute(value) ||
       value.startsWith('..') ||
-      value.includes('/../')
-    ) {
-      const full = resolve(value);
-      return (
-        full === dir ||
-        full.startsWith(dir + '/') ||
-        full.startsWith('/usr/local/share/kimo/')
-      );
-    }
-    return true;
+      /[\\/]\.\.([\\/]|$)/.test(value);
+    if (!looksLikePath) return true;
+    const full = resolve(dir, value);
+    return (
+      full === dir ||
+      full.startsWith(dir + sep) ||
+      SHARED.some((root) => full.startsWith(root + sep))
+    );
   }
   if (Array.isArray(value))
     return value.every((item) => pathsInside(item, dir));
   if (value && typeof value === 'object')
     return Object.values(value).every((item) => pathsInside(item, dir));
   return true;
+}
+
+/** Waits up to WAIT_MS for a running call; undefined while it still runs. */
+function waitCall(call) {
+  return Promise.race([
+    call.promise,
+    new Promise((done) => setTimeout(() => done(undefined), WAIT_MS)),
+  ]);
+}
+function toolReply(reply) {
+  if (reply.error)
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: String(reply.error.message || 'tool failed').slice(0, 2000),
+        },
+      ],
+    };
+  return reply.result ?? { content: [] };
 }
 
 const server = createServer(async (req, res) => {
@@ -179,7 +211,7 @@ const server = createServer(async (req, res) => {
       const body = await readJson(req);
       if (!ID.test(String(body.id))) return send(res, 400, { error: 'bad_id' });
       if (jobs.size >= MAX_JOBS) return send(res, 503, { error: 'busy' });
-      const dir = join(ROOT, body.id);
+      const dir = resolve(ROOT, body.id);
       rmSync(dir, { recursive: true, force: true });
       mkdirSync(dir, { recursive: true });
       const mcp = new Mcp(dir);
@@ -258,28 +290,35 @@ const server = createServer(async (req, res) => {
           content: [{ type: 'text', text: `paths must be inside ${job.dir}` }],
         });
       const started = Date.now();
-      const reply = await job.mcp.request('tools/call', {
-        name,
-        arguments: args,
-      });
-      log({
-        job: id,
-        event: 'tool',
-        name,
-        ms: Date.now() - started,
-        ok: !reply.error && !reply.result?.isError,
-      });
-      if (reply.error)
-        return send(res, 200, {
-          isError: true,
-          content: [
-            {
-              type: 'text',
-              text: String(reply.error.message || 'tool failed').slice(0, 2000),
-            },
-          ],
-        });
-      return send(res, 200, reply.result ?? { content: [] });
+      const cid = `c${(job.nextCall = (job.nextCall || 0) + 1)}`;
+      const call = {
+        promise: job.mcp
+          .request('tools/call', { name, arguments: args })
+          .then((reply) => {
+            log({
+              job: id,
+              event: 'tool',
+              name,
+              ms: Date.now() - started,
+              ok: !reply.error && !reply.result?.isError,
+            });
+            return toolReply(reply);
+          }),
+      };
+      job.calls = job.calls || new Map();
+      job.calls.set(cid, call);
+      const result = await waitCall(call);
+      if (result === undefined) return send(res, 202, { pending: cid });
+      job.calls.delete(cid);
+      return send(res, 200, result);
+    }
+    if (action === 'calls' && req.method === 'GET') {
+      const call = job.calls?.get(parts[3] || '');
+      if (!call) return send(res, 404, { error: 'no_call' });
+      const result = await waitCall(call);
+      if (result === undefined) return send(res, 202, { pending: parts[3] });
+      job.calls.delete(parts[3]);
+      return send(res, 200, result);
     }
     if (action === 'state') {
       const file = join(job.dir, '.agent-state.json');
@@ -307,7 +346,9 @@ const server = createServer(async (req, res) => {
         return send(res, 404, { error: 'no_output' });
       }
       res.writeHead(200, {
-        'Content-Type': 'video/mp4',
+        'Content-Type': parts[3].endsWith('.mp4')
+          ? 'video/mp4'
+          : 'application/octet-stream',
         'Content-Length': stat.size,
         'Cache-Control': 'no-store',
       });

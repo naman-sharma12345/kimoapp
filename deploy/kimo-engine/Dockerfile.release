@@ -1,0 +1,30 @@
+# kimo engine from the prebuilt kimo v6 release (x86_64): no Rust build, ready in a few
+# minutes. Used by setup.ps1 / setup.sh when Docker is available on Naman's PC.
+FROM ubuntu:24.04
+ARG KIMO_VERSION=6.0.0
+ARG WHISPER_BUILD=b5454
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg nodejs ca-certificates curl libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /opt/kimo /usr/local/share/kimo/models/bin \
+ && curl -fsSL "https://github.com/naman-sharma12345/kimo/releases/download/v${KIMO_VERSION}/kimo-v${KIMO_VERSION}-linux-x86_64-glibc.tar.gz" \
+    | tar xz -C /opt/kimo --strip-components=1 \
+ && cp /opt/kimo/bin/kimo-mcp /usr/local/bin/kimo-mcp \
+ && mkdir -p /usr/local/share/kimo/fonts && cp /opt/kimo/fonts/*.tt* /opt/kimo/fonts/*.otf /usr/local/share/kimo/fonts/ 2>/dev/null || true
+RUN curl -fsSL "https://github.com/ggml-org/whisper.cpp/releases/download/${WHISPER_BUILD}/whisper-bin-ubuntu-x64.tar.gz" -o /tmp/w.tgz \
+ && mkdir -p /tmp/w && tar xzf /tmp/w.tgz -C /tmp/w \
+ && cp "$(find /tmp/w -type f -name whisper-cli | head -1)" /usr/local/share/kimo/models/bin/whisper-cli \
+ && find /tmp/w -name '*.so*' -exec cp {} /usr/local/lib/ \; ; ldconfig; rm -rf /tmp/w /tmp/w.tgz \
+ && curl -fsSL -o /usr/local/share/kimo/models/ggml-small-q5_1.bin \
+    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
+COPY server.mjs /app/server.mjs
+ENV KIMO_FONTS=/usr/local/share/kimo/fonts \
+    KIMO_MODELS=/usr/local/share/kimo/models \
+    KIMO_WHISPER_BIN=/usr/local/share/kimo/models/bin/whisper-cli \
+    KIMO_WHISPER_MODEL=/usr/local/share/kimo/models/ggml-small-q5_1.bin \
+    KIMO_SPECTATOR=off \
+    KIMO_TOOLS=director \
+    PORT=7860
+RUN useradd -m -u 1001 kimo || true
+USER 1001
+EXPOSE 7860
+CMD ["node", "/app/server.mjs"]

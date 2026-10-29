@@ -41,6 +41,7 @@ import {
 import { userAiConfig } from './ai-providers.ts';
 import { assertBudget, recordUsage, usageOf } from './ai-budget.ts';
 import { LIMITS, checkProjectLimits } from './limits.ts';
+import { createEngine } from './engine.ts';
 
 /**
  * Editing sessions on the free plan. The server keeps only edit metadata:
@@ -838,6 +839,31 @@ export function createEditing(deps: EditingDeps) {
     }
   }
 
+  const engine = createEngine({
+    fetcher: deps.fetcher,
+    loadSession,
+    broadcast: async (env, sessionId, events) => {
+      const row = await env.DB.prepare(
+        'SELECT version FROM edit_sessions WHERE id = ?',
+      )
+        .bind(sessionId)
+        .first<{ version: number }>()
+        .catch(() => null);
+      await deps.broadcast(env, sessionId, row?.version ?? 0, events);
+    },
+    config: async (request, env) => {
+      const base = userAiConfig(request.headers) ?? aiConfig(env);
+      if (!base)
+        throw new HttpError(
+          503,
+          'ai_unavailable',
+          "AI editing isn't switched on yet",
+        );
+      if (base.source === 'kimo') await assertBudget(env);
+      return base.source === 'kimo' ? meteredConfig(env, base) : base;
+    },
+  });
+
   async function route(
     request: Request,
     env: Env,
@@ -845,6 +871,8 @@ export function createEditing(deps: EditingDeps) {
     path: string,
     method: string,
   ): Promise<Response | null> {
+    if (path === '/v1/engine' && method === 'GET')
+      return json(await engine.status(env));
     if (path === '/v1/uploads' && method === 'POST')
       return json(await registerUploads(env, userId, await readJson(request)));
 
@@ -929,6 +957,19 @@ export function createEditing(deps: EditingDeps) {
       return json(
         await snapshot(env, await loadSession(env, userId, sessionId)),
       );
+
+    if (action === 'engine' || action.startsWith('engine/')) {
+      const handled = await engine.route(
+        request,
+        env,
+        userId,
+        sessionId,
+        action,
+        method,
+      );
+      if (handled) return handled;
+      throw new HttpError(404, 'not_found', 'Not found');
+    }
 
     if (method !== 'POST') return null;
 
