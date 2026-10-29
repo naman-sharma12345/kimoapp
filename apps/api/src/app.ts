@@ -654,7 +654,7 @@ export function createApp(options: AppOptions = {}) {
           ]),
         ]
       : body.text;
-    const { record } = await chatJson(
+    const answer = await chatJson(
       review
         ? {
             ...config,
@@ -667,8 +667,15 @@ export function createApp(options: AppOptions = {}) {
         : BUILD_PROMPT,
       content,
       review ? 4_000 : 6_000,
-    );
-    return json({ record });
+    ).catch((error: unknown) => {
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(
+        502,
+        'ai_upstream',
+        'kimo AI could not answer; try again',
+      );
+    });
+    return json({ record: answer.record });
   }
 
   async function route(request: Request, env: Env): Promise<Response> {

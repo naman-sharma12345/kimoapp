@@ -329,9 +329,17 @@ export async function runEdit({ bin, env, dir, files, note, preset, mode, signal
       emit({ t: 'say', text: `exporting · check ${pass} of ${MAX_PASSES}` });
       await check();
       emit({ t: 'status', text: `checking ${frames.length} frames + audio (pass ${pass})` });
-      const review = await ai('review',
+      let review;
+      try {
+        review = await ai('review',
         `check pass ${pass}. user's note: ${note}\nexport duration: ${duration ?? '?'} s\naudio report: ${audio || 'none'}\nhistory:\n${history.slice(-24).join('\n')}`,
         frames.map((f) => ({ label: `frame at ${Number(f.t).toFixed(2)} s`, url: f.image })), signal);
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        // The render is already good to use; a failed check never loses it.
+        emit({ t: 'say', kind: 'check', text: `check ${pass} couldn't run (${err.message}); keeping this render` });
+        break;
+      }
       const faults = (Array.isArray(review.faults) ? review.faults : []).filter((x) => typeof x === 'string').slice(0, 8);
       const fixes = parseCalls(review.calls);
       const clean = review.verdict === 'clean' || (!faults.length && !fixes.length);

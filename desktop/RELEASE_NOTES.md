@@ -1,3 +1,5 @@
+0.1.1: a render check that cannot reach the AI no longer fails the edit; the finished render is kept.
+
 First Windows release of kimo: one installer with the real kimo v6 engine, FFmpeg and whisper running on your PC.
 
 - Drag in files or folders; local library with history, edit script and live op log
