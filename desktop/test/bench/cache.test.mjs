@@ -88,6 +88,36 @@ test('portable cache keys normalize nested Windows histories and object key orde
     await rm(dir, { recursive: true, force: true });
   }
 });
+test('cached tool arguments preserve the order used in subsequent planner history', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-history-'));
+  try {
+    const payload = {
+      record: {
+        calls: [
+          {
+            tool: 'set_property',
+            args: { clip_id: 'clip1', property: 'scale', value: 1.2 },
+          },
+        ],
+      },
+    };
+    const record = new ProxyCache({
+      directory: dir,
+      replay: false,
+      maxRequests: 1,
+      upstream: async () => Response.json(payload),
+    });
+    const original = await (await record.fetch(url, init())).json();
+    const replay = new ProxyCache({ directory: dir });
+    const restored = await (await replay.fetch(url, init())).json();
+    assert.equal(
+      JSON.stringify(restored.record.calls[0].args),
+      JSON.stringify(original.record.calls[0].args),
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 test('verified contributor pricing, SAM frame reservations and pre-send accounting', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'kimo-budget-'));
   try {

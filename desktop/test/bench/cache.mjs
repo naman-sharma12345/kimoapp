@@ -30,24 +30,28 @@ export class ProxyCache {
     this.failures = [];
     this.bindings = new Map();
   }
-  normalize(text) {
+  normalize(text, sortKeys = true) {
     try {
       return JSON.stringify(
-        this.mapJson(JSON.parse(text), (value) => this.normalizeString(value)),
+        this.mapJson(
+          JSON.parse(text),
+          (value) => this.normalizeString(value),
+          sortKeys,
+        ),
       );
     } catch {
       return this.normalizeString(text);
     }
   }
-  mapJson(value, transform) {
+  mapJson(value, transform, sortKeys = true) {
     if (typeof value === 'string') return transform(value);
     if (Array.isArray(value))
-      return value.map((item) => this.mapJson(item, transform));
+      return value.map((item) => this.mapJson(item, transform, sortKeys));
     if (value && typeof value === 'object')
       return Object.fromEntries(
-        Object.keys(value)
-          .sort()
-          .map((key) => [key, this.mapJson(value[key], transform)]),
+        (sortKeys ? Object.keys(value).sort() : Object.keys(value)).map(
+          (key) => [key, this.mapJson(value[key], transform, sortKeys)],
+        ),
       );
     return value;
   }
@@ -77,7 +81,11 @@ export class ProxyCache {
   restore(text) {
     try {
       return JSON.stringify(
-        this.mapJson(JSON.parse(text), (value) => this.restoreString(value)),
+        this.mapJson(
+          JSON.parse(text),
+          (value) => this.restoreString(value),
+          false,
+        ),
       );
     } catch {
       return this.restoreString(text);
@@ -175,7 +183,7 @@ export class ProxyCache {
       const raw = await response.text();
       if (!response.ok)
         throw new Error(`Proxy ${response.status}: ${raw.slice(0, 300)}`);
-      const stored = this.normalize(raw);
+      const stored = this.normalize(raw, false);
       const entry = {
         version: 2,
         key,
