@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: kimo-media:; media-src kimo-media:; style-src 'self'; script-src 'self'" />
+    <title>kimo</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <aside id="side">
+      <div class="brand"><span class="dot"></span>kimo <small id="ver"></small></div>
+      <button id="new" class="primary wide">+ New edit</button>
+      <div class="label">Library</div>
+      <ul id="lib"></ul>
+      <div id="health" class="health"></div>
+    </aside>
+    <main id="main">
+      <section id="compose" class="view">
+        <div id="drop" class="drop" tabindex="0">
+          <div class="big">Drop videos or folders</div>
+          <div class="muted">Long videos and 4K are fine — everything stays on this PC.</div>
+          <div class="row">
+            <button id="pickFiles">Choose files</button>
+            <button id="pickFolder">Choose folder</button>
+          </div>
+        </div>
+        <ul id="files" class="files"></ul>
+        <div class="controls">
+          <textarea id="note" rows="3" placeholder="What should kimo make? e.g. a punchy 30 s short with a hook title, word captions and a clean grade"></textarea>
+          <div class="row wrap">
+            <label>Format <select id="preset"></select></label>
+            <label>Mode
+              <select id="mode">
+                <option value="ai">AI edit (script → build → check frames → fix)</option>
+                <option value="captions">Captions only (fully offline)</option>
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" id="batch" /> Batch: edit each file separately</label>
+            <span class="grow"></span>
+            <button id="go" class="primary" disabled>Edit with kimo</button>
+          </div>
+        </div>
+      </section>
+      <section id="project" class="view hidden">
+        <header class="phead">
+          <div>
+            <h1 id="pname"></h1>
+            <div id="pmeta" class="muted"></div>
+          </div>
+          <div class="row">
+            <span id="pstatus" class="chip"></span>
+            <button id="stop">Stop</button>
+            <button id="del" class="ghost">Delete</button>
+          </div>
+        </header>
+        <div class="grid">
+          <div class="left">
+            <div class="player"><video id="video" controls preload="metadata"></video><div id="noout" class="empty">The render appears here when kimo finishes.</div></div>
+            <div id="bar" class="progress hidden"><div></div><span></span></div>
+            <div class="row wrap">
+              <button id="save" class="primary" disabled>Save MP4</button>
+              <button id="compress" disabled>Save compressed for upload</button>
+              <button id="reveal" class="ghost" disabled>Show file</button>
+            </div>
+            <div id="frames" class="frames"></div>
+            <div class="controls">
+              <textarea id="renote" rows="2" placeholder="Ask for changes, then re-run (e.g. bigger captions, cut the intro)"></textarea>
+              <div class="row wrap">
+                <label>Format <select id="represet"></select></label>
+                <span class="grow"></span>
+                <button id="rerun">Re-run edit</button>
+              </div>
+            </div>
+          </div>
+          <div class="right">
+            <div class="label">Edit script</div>
+            <pre id="script" class="script muted">Written before any tool runs.</pre>
+            <div class="label">Live op log <span id="opcount" class="muted"></span></div>
+            <ol id="ops" class="ops"></ol>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div id="toast" class="toast hidden"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

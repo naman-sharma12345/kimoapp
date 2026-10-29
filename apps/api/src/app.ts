@@ -30,11 +30,14 @@ import {
 } from './http.ts';
 import {
   createEditing,
+  meteredConfig,
   roomBroadcast,
   sessionIdFrom,
   type Broadcast,
 } from './editing.ts';
-import { aiConfig } from './ai.ts';
+import { aiConfig, chatJson } from './ai.ts';
+import { BUILD_PROMPT, REVIEW_PROMPT } from './engine.ts';
+import { assertBudget } from './ai-budget.ts';
 import {
   AI_HEADERS,
   listModels,
@@ -59,8 +62,31 @@ const MAX_SESSIONS = 10;
 const BIN_DAYS = 30;
 const DAY_MS = 24 * 60 * 60_000;
 /** Free D1 counters: requests per client per 10-minute window. */
+const desktopAiSchema = z.object({
+  kind: z.enum(['build', 'review']),
+  text: z.string().max(60_000),
+  images: z
+    .array(
+      z.object({
+        label: z.string().max(80),
+        url: z
+          .string()
+          .max(400_000)
+          .regex(/^data:image\/(jpeg|png);base64,/),
+      }),
+    )
+    .max(4)
+    .default([]),
+});
+
 const RATE_WINDOW_MS = 10 * 60_000;
-const RATE_LIMITS = { auth: 30, write: 300, ai: 20, models: 30 } as const;
+const RATE_LIMITS = {
+  auth: 30,
+  write: 300,
+  ai: 20,
+  models: 30,
+  desktop: 80,
+} as const;
 
 export type SignInErrorKind =
   'cancelled' | 'expired' | 'not_allowed' | 'unavailable' | 'rate_limited';
@@ -592,10 +618,66 @@ export function createApp(options: AppOptions = {}) {
     ]);
   }
 
+  /**
+   * AI proxy for the kimo desktop app (apps/desktop). The app runs kimo-mcp,
+   * FFmpeg and whisper on the user's PC; only the edit prompt and sampled
+   * frames reach this route, never the media. The system prompts live here
+   * so the route only answers kimo edit and render-check requests, the Meta
+   * key never ships in the app, and the shared AI budget still applies.
+   */
+  async function desktopAi(request: Request, env: Env): Promise<Response> {
+    if (request.headers.get('X-Kimo-Desktop') !== '1')
+      throw new HttpError(403, 'forbidden_origin', 'Desktop app only');
+    if (await rateLimited(env, 'desktop', clientKey(request)))
+      throw new HttpError(
+        429,
+        'rate_limited',
+        'Too many AI steps; wait a few minutes',
+      );
+    const body = desktopAiSchema.parse(await request.json());
+    const base = aiConfig(env);
+    if (!base)
+      throw new HttpError(
+        503,
+        'ai_unavailable',
+        "AI editing isn't switched on yet",
+      );
+    await assertBudget(env);
+    const config = meteredConfig(env, base);
+    const review = body.kind === 'review';
+    const content: string | Record<string, unknown>[] = review
+      ? [
+          { type: 'text', text: `${REVIEW_PROMPT}\n${body.text}` },
+          ...body.images.flatMap((image) => [
+            { type: 'text', text: image.label },
+            { type: 'image_url', image_url: { url: image.url } },
+          ]),
+        ]
+      : body.text;
+    const { record } = await chatJson(
+      review
+        ? {
+            ...config,
+            model: (env.META_MEDIA_MODEL ?? '').trim() || config.model,
+          }
+        : config,
+      fetcher,
+      review
+        ? 'you are kimo, a world-class video editor checking your own render.'
+        : BUILD_PROMPT,
+      content,
+      review ? 4_000 : 6_000,
+    );
+    return json({ record });
+  }
+
   async function route(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const method = request.method;
+
+    if (path === '/v1/desktop/ai' && method === 'POST')
+      return desktopAi(request, env);
 
     // CSRF: every write must come from the app itself. A missing Origin is
     // refused too, so forms or scripts on other sites (or sibling

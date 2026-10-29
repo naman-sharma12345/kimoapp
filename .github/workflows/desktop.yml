@@ -1,0 +1,104 @@
+name: desktop (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'publish the GitHub Release when the smoke test passes'
+        type: boolean
+        default: true
+      ai:
+        description: 'also run one AI edit end to end (uses the kimo AI budget)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: cache bundled tools
+        id: vendor
+        uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - name: download kimo, FFmpeg, whisper and the model
+        if: steps.vendor.outputs.cache-hit != 'true'
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          New-Item -ItemType Directory -Force vendor, vendor/models, vendor/whisper, vendor/ffmpeg, t | Out-Null
+          Invoke-WebRequest https://github.com/naman-sharma12345/kimo/releases/download/v6.0.0/kimo-6.0.0-windows-x86_64.zip -OutFile t/kimo.zip
+          Expand-Archive t/kimo.zip t/kimo
+          $root = Get-ChildItem t/kimo -Directory | Select-Object -First 1
+          if (Test-Path (Join-Path $root.FullName 'bin')) { Move-Item $root.FullName vendor/kimo } else { Move-Item t/kimo vendor/kimo }
+          Get-ChildItem vendor/kimo -Recurse -Filter kimo-mcp.exe | Select-Object -First 1 | ForEach-Object { if ($_.DirectoryName -ne (Resolve-Path vendor/kimo/bin -ErrorAction SilentlyContinue)) { New-Item -ItemType Directory -Force vendor/kimo/bin | Out-Null; Copy-Item $_.FullName vendor/kimo/bin/ } }
+          Invoke-WebRequest https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip -OutFile t/ffmpeg.zip
+          Expand-Archive t/ffmpeg.zip t/ffmpeg
+          $ff = Get-ChildItem t/ffmpeg -Directory | Select-Object -First 1
+          Copy-Item (Join-Path $ff.FullName 'bin/*') vendor/ffmpeg/
+          Copy-Item (Join-Path $ff.FullName 'LICENSE.txt') vendor/ffmpeg/LICENSE.txt
+          Invoke-WebRequest https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-x64.zip -OutFile t/whisper.zip
+          Expand-Archive t/whisper.zip t/whisper
+          $cli = Get-ChildItem t/whisper -Recurse -Filter whisper-cli.exe | Select-Object -First 1
+          Copy-Item (Join-Path $cli.DirectoryName '*') vendor/whisper/ -Recurse
+          Invoke-WebRequest https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin -OutFile vendor/models/ggml-small-q5_1.bin
+          Remove-Item t -Recurse -Force
+          Get-ChildItem vendor -Recurse -File | Measure-Object Length -Sum | ForEach-Object { "vendor: $([math]::Round($_.Sum/1MB)) MB" }
+          if (-not (Test-Path vendor/kimo/bin/kimo-mcp.exe)) { Get-ChildItem vendor/kimo -Recurse | Select-Object -First 40 FullName; throw 'kimo-mcp.exe not found' }
+      - run: npm ci
+      - name: build installer
+        run: npx electron-builder --win nsis --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: install and smoke test
+        run: |
+          $setup = Get-ChildItem dist -Filter 'kimo-Setup-*.exe' | Select-Object -First 1
+          "installer: $($setup.Name) $([math]::Round($setup.Length/1MB,1)) MB" | Tee-Object -FilePath smoke-summary.txt
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\kimo\kimo.exe'
+          if (-not (Test-Path $exe)) { throw "not installed at $exe" }
+          # 5 s test clip with real speech (Windows TTS) so whisper has words to caption
+          Add-Type -AssemblyName System.Speech
+          $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+          $s.SetOutputToWaveFile("$PWD\speech.wav"); $s.Speak('Welcome to kimo. This is a five second test of the real engine.'); $s.Dispose()
+          & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=1280x720:r=30:d=5' -i speech.wav -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest clip.mp4
+          $smokeArgs = @('--smoke', "$PWD\clip.mp4", '--smoke-out', "$PWD\smoke.json")
+          if ('${{ inputs.ai }}' -eq 'true') { $smokeArgs += '--smoke-ai' }
+          $p = Start-Process $exe -ArgumentList $smokeArgs -Wait -PassThru
+          Get-Content smoke.json
+          if ($p.ExitCode -ne 0) { throw "smoke test failed ($($p.ExitCode))" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kimo-windows
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/latest.yml
+            desktop/smoke.json
+            desktop/smoke-summary.txt
+          retention-days: 7
+      - name: publish release
+        if: inputs.release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.0
+          name: kimo for Windows 0.1.0
+          body_path: desktop/RELEASE_NOTES.md
+          files: |
+            desktop/dist/kimo-Setup-*.exe
+            desktop/dist/kimo-Setup-*.exe.blockmap
+            desktop/dist/latest.yml

@@ -32,6 +32,7 @@ export const tokenGuard = {
 export default tseslint.config(
   {
     ignores: [
+      'desktop/**',
       '**/node_modules/**',
       '**/.next/**',
       '**/.next-*/**',

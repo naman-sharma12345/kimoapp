@@ -24,3 +24,6 @@ test-results-perf/
 test-results-matrix/
 
 **/.next-*/**
+desktop/vendor/
+desktop/dist/
+desktop/node_modules/
