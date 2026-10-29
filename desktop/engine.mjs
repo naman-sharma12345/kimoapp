@@ -317,7 +317,7 @@ export function recommendedMbps(width, height, fps = 30) {
 
 const runTool = (bin, args, onLine) =>
   new Promise((done) => {
-    const child = spawn(bin, bin.includes('ffmpeg') ? ['-nostdin', ...args] : args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, /ffmpeg(\.exe)?$/i.test(bin) ? ['-nostdin', ...args] : args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     let err = '';
     child.stdout.on('data', (d) => {
