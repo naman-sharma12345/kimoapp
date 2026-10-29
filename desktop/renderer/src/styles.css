@@ -1,0 +1,2 @@
+/* desktop-only styles; the studio's CSS is imported from apps/web in main.jsx */
+@import './desktop.css';
