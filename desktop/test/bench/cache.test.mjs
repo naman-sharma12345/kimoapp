@@ -46,8 +46,72 @@ test('record/replay preserves JSON escapes and remaps machine paths without netw
     assert.equal(requests, 1);
     assert.equal(replay.requests, 0);
     assert.equal(replay.hits, 1);
-    assert.equal(body.record.calls[0].args.path, b);
+    assert.equal(body.record.calls[0].args.path, b.replaceAll('\\', '/'));
     assert.equal(body.record.message, 'line one\nline two');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+test('portable cache keys normalize nested Windows histories and object key order', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-portable-'));
+  try {
+    const a = 'D:\\a\\record\\clip.mp4',
+      b = 'C:\\other\\replay\\clip.mp4';
+    const record = new ProxyCache({
+      directory: dir,
+      replay: false,
+      maxRequests: 1,
+      aliases: [[a, '@SOURCE@']],
+      upstream: async () => Response.json({ record: { done: true } }),
+    });
+    const history = (p) =>
+      JSON.stringify({
+        kind: 'build',
+        images: [],
+        text: `import_media(${JSON.stringify({ path: p })})`,
+      });
+    await record.fetch(url, { method: 'POST', body: history(a) });
+    const replay = new ProxyCache({
+      directory: dir,
+      aliases: [[b, '@SOURCE@']],
+      upstream: () => {
+        throw Error('NETWORK');
+      },
+    });
+    await replay.fetch(url, {
+      method: 'POST',
+      body: history(b.replaceAll('\\', '/')),
+    });
+    assert.equal(replay.hits, 1);
+    assert.equal(replay.requests, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+test('verified contributor pricing, SAM frame reservations and pre-send accounting', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-budget-'));
+  try {
+    const reservations = [];
+    const cache = new ProxyCache({
+      directory: dir,
+      replay: false,
+      maxRequests: 4,
+      buildModel: 'muse-spark-1.3-contributor',
+      onReserve: (n) => reservations.push(n),
+      upstream: async () => Response.json({ record: {} }),
+    });
+    await cache.fetch(url, init());
+    assert.ok(reservations[0] < 0.01);
+    await cache.fetch('https://api.getkimo.tech/v1/desktop/sam/file', {
+      method: 'POST',
+      body: Buffer.from('unique proxy'),
+    });
+    await cache.fetch('https://api.getkimo.tech/v1/desktop/sam', {
+      method: 'POST',
+      body: JSON.stringify({ file_id: 'f1', frames: 300 }),
+    });
+    assert.equal(reservations[1], 0);
+    assert.ok(Math.abs(reservations[2] - 0.06) < 1e-10);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -27,24 +27,39 @@ export async function downloadVerified(source, directory, fetcher = fetch) {
     );
   }
   const temporary = path + '.part';
-  try {
-    const response = await fetcher(source.url, {
-      headers: { 'User-Agent': 'kimo-benchmark/1.0 (licensed test media)' },
-      signal: AbortSignal.timeout(15 * 60_000),
-    });
-    if (!response.ok)
-      throw new Error(`Download ${response.status}: ${source.url}`);
-    await pipeline(
-      Readable.fromWeb(response.body),
-      createWriteStream(temporary),
-    );
-    if ((await hashFile(temporary)) !== source.sha256)
-      throw new Error(`SHA256 mismatch: ${source.url}`);
-    await rename(temporary, path);
-    return path;
-  } finally {
-    await rm(temporary, { force: true });
-  }
+  for (let attempt = 0; attempt < 2; attempt++)
+    try {
+      const url = new URL(source.url);
+      if (attempt) url.searchParams.set('kimo_retry', '1');
+      const response = await fetcher(String(url), {
+        headers: { 'User-Agent': 'kimo-benchmark/1.0 (licensed test media)' },
+        signal: AbortSignal.timeout(15 * 60_000),
+      });
+      if (!response.ok) {
+        const error = new Error(`Download ${response.status}: ${source.url}`);
+        error.retryable = response.status === 429 || response.status >= 500;
+        throw error;
+      }
+      await pipeline(
+        Readable.fromWeb(response.body),
+        createWriteStream(temporary),
+      );
+      if ((await hashFile(temporary)) !== source.sha256)
+        throw new Error(`SHA256 mismatch: ${source.url}`);
+      await rename(temporary, path);
+      return path;
+    } catch (error) {
+      if (
+        attempt ||
+        error.retryable === false ||
+        /SHA256 mismatch/.test(error.message)
+      )
+        throw error;
+      console.log(`Download delayed; one retry for pinned source`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    } finally {
+      await rm(temporary, { force: true });
+    }
 }
 
 export async function fetchClips({

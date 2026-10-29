@@ -14,6 +14,7 @@ export class ProxyCache {
     maxRequests = 0,
     maxEstimatedUsd = 0.49,
     onReserve,
+    buildModel,
   }) {
     this.directory = directory;
     this.replay = replay;
@@ -22,6 +23,7 @@ export class ProxyCache {
     this.maxRequests = maxRequests;
     this.maxEstimatedUsd = maxEstimatedUsd;
     this.onReserve = onReserve;
+    this.buildModel = buildModel;
     this.requests = 0;
     this.hits = 0;
     this.estimatedUsd = 0;
@@ -29,13 +31,36 @@ export class ProxyCache {
     this.bindings = new Map();
   }
   normalize(text) {
+    try {
+      return JSON.stringify(
+        this.mapJson(JSON.parse(text), (value) => this.normalizeString(value)),
+      );
+    } catch {
+      return this.normalizeString(text);
+    }
+  }
+  mapJson(value, transform) {
+    if (typeof value === 'string') return transform(value);
+    if (Array.isArray(value))
+      return value.map((item) => this.mapJson(item, transform));
+    if (value && typeof value === 'object')
+      return Object.fromEntries(
+        Object.keys(value)
+          .sort()
+          .map((key) => [key, this.mapJson(value[key], transform)]),
+      );
+    return value;
+  }
+  normalizeString(text) {
     let result = text;
     for (const [path, alias] of this.aliases) {
-      for (const form of [
-        JSON.stringify(path).slice(1, -1),
-        path,
-        path.replaceAll('\\', '/'),
-      ])
+      const forms = new Set([path, path.replaceAll('\\', '/')]);
+      let escaped = path;
+      for (let depth = 0; depth < 4; depth++) {
+        escaped = JSON.stringify(escaped).slice(1, -1);
+        forms.add(escaped);
+      }
+      for (const form of [...forms].sort((a, b) => b.length - a.length))
         result = result.split(form).join(alias);
     }
     // UUIDs arise in engine render history. Preserve relationships, not machine randomness.
@@ -50,9 +75,18 @@ export class ProxyCache {
     return result;
   }
   restore(text) {
+    try {
+      return JSON.stringify(
+        this.mapJson(JSON.parse(text), (value) => this.restoreString(value)),
+      );
+    } catch {
+      return this.restoreString(text);
+    }
+  }
+  restoreString(text) {
     let result = text;
     for (const [path, alias] of this.aliases)
-      result = result.split(alias).join(JSON.stringify(path).slice(1, -1));
+      result = result.split(alias).join(path.replaceAll('\\', '/'));
     for (const [id, alias] of this.bindings)
       result = result.split(alias).join(id);
     for (const alias of new Set(result.match(/@UUID\d+@/g) ?? [])) {
@@ -79,7 +113,7 @@ export class ProxyCache {
             ? `sha256:${sha256(init.body)}`
             : '';
       const request = {
-        version: 1,
+        version: 2,
         url: String(url),
         method: init.method ?? 'GET',
         body,
@@ -105,21 +139,28 @@ export class ProxyCache {
         throw new CacheMiss(
           `Replay cache miss ${key}. No network request was sent.`,
         );
-      // Upper-bound reservation: 1 UTF-8 byte/token, full 6000 output tokens;
-      // image review reserves 16384 input tokens/image at the full model price.
-      // SAM video costs exceed this phase budget: record those separately, then replay.
-      if (target.pathname.includes('/sam'))
-        throw new Error(
-          'SAM recording disabled by the phase budget; supply a previously recorded cache',
-        );
-      const json = JSON.parse(init.body);
-      const reserve =
-        ((Buffer.byteLength(json.text) +
-          4096 +
-          (json.images?.length ?? 0) * 16384) *
-          1.25 +
-          6000 * 4.25) /
-        1e6;
+      // Reserve before sending. A live status response can verify the build
+      // model; reviews retain full-model rates because their override is hidden.
+      const json = typeof init.body === 'string' ? JSON.parse(init.body) : {};
+      const sam = target.pathname.includes('/sam');
+      const contributor =
+        !sam &&
+        json.kind !== 'review' &&
+        /^muse-spark-1\.[23]-contributor$/.test(this.buildModel ?? '');
+      const reserve = sam
+        ? target.pathname.endsWith('/file') ||
+          target.pathname.endsWith('/delete')
+          ? 0
+          : json.image
+            ? 0.0025
+            : Math.max(50, Number(json.frames) || 50) * 0.0002
+        : ((Buffer.byteLength(json.text) +
+            4096 +
+            (json.images?.length ?? 0) * 16384) *
+            (contributor ? 0.1 : 1.25) +
+            (json.kind === 'review' ? 4000 : 6000) *
+              (contributor ? 0.2 : 4.25)) /
+          1e6;
       if (
         this.requests >= this.maxRequests ||
         this.estimatedUsd + reserve > this.maxEstimatedUsd
@@ -136,7 +177,7 @@ export class ProxyCache {
         throw new Error(`Proxy ${response.status}: ${raw.slice(0, 300)}`);
       const stored = this.normalize(raw);
       const entry = {
-        version: 1,
+        version: 2,
         key,
         endpoint: target.pathname,
         status: response.status,
@@ -146,6 +187,16 @@ export class ProxyCache {
         },
         body: stored,
         responseSha256: sha256(stored),
+        reservationUsd: reserve,
+        requestEvidence: sam
+          ? { bodyHash: sha256(body) }
+          : {
+              ...JSON.parse(body),
+              images: (json.images ?? []).map((item) => ({
+                label: item.label,
+                sha256: sha256(item.url),
+              })),
+            },
       };
       await mkdir(this.directory, { recursive: true });
       await writeFile(path + '.tmp', JSON.stringify(entry, null, 2) + '\n');

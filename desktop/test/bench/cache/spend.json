@@ -2,5 +2,11 @@
   "reservedUsd": 0.49,
   "networkRequests": 7,
   "requestCountIsMinimum": true,
-  "note": "Interrupted legacy recorder did not flush its in-memory ledger. Conservatively reserve the entire phase allowance; this is not actual billed spend. Saved build responses count only successful recorded requests."
+  "note": "Interrupted legacy recorder did not flush its in-memory ledger. Conservatively reserve the entire phase allowance; this is not actual billed spend. Saved build responses count only successful recorded requests.",
+  "authorizedUsd": 5.49,
+  "authorization": {
+    "additionalUsd": 5,
+    "date": "2026-10-29",
+    "source": "User explicitly approved up to USD 5 additional AI spending to finish Phase 1."
+  }
 }

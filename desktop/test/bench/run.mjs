@@ -129,13 +129,30 @@ async function runExclusive(args, signal) {
     if (e.code === 'ENOENT') return { reservedUsd: 0, networkRequests: 0 };
     throw e;
   });
-  const maxUsd = Number(args['max-usd'] ?? 0.49);
-  if (!(maxUsd > 0 && maxUsd <= 0.49))
-    throw new Error('--max-usd must be >0 and <=0.49 for Phase 1');
-  const maxRequests = Number(args['max-requests'] ?? 20);
+  const maxUsd = Number(args['max-usd'] ?? ledger.authorizedUsd ?? 0.49);
+  const authorizedUsd = Number(ledger.authorizedUsd ?? 0.49);
+  if (!(maxUsd > 0 && maxUsd <= authorizedUsd))
+    throw new Error(
+      `--max-usd must be >0 and <=${authorizedUsd}, the recorded user authorization`,
+    );
+  const maxRequests = Number(args['max-requests'] ?? 200);
   if (!Number.isInteger(maxRequests) || maxRequests < 0)
     throw new Error('Invalid --max-requests');
   const rows = [];
+  let buildModel;
+  if (args['record-cache']) {
+    const response = await fetch('https://api.getkimo.tech/v1/ai/status', {
+      signal,
+    });
+    if (!response.ok) throw new Error(`AI status ${response.status}`);
+    const status = await response.json();
+    if (!status.available) throw new Error('AI proxy unavailable');
+    buildModel = status.model;
+    await writeJson(join(directory, 'proxy-status.json'), {
+      ...status,
+      checkedAt: new Date().toISOString(),
+    });
+  }
   clipsLoop: for (const clip of manifest.clips.filter((c) =>
     ids.includes(c.id),
   ))
@@ -160,6 +177,7 @@ async function runExclusive(args, signal) {
         ],
         maxRequests: Math.max(0, maxRequests - ledger.networkRequests),
         maxEstimatedUsd: Math.max(0, maxUsd - ledger.reservedUsd),
+        buildModel,
         onReserve: async (reserve) => {
           ledger.reservedUsd += reserve;
           ledger.networkRequests++;
