@@ -43,6 +43,8 @@ export interface Env {
   META_API_KEY?: string;
   /** OpenAI-compatible base URL, default https://api.meta.ai/v1. */
   META_API_BASE_URL?: string;
+  /** Segmentation model for the desktop app, default sam-3.1. */
+  META_SAM_MODEL?: string;
   /** Model id, default muse-spark-1.3-contributor. */
   META_MODEL?: string;
   /** Multimodal model for the look-and-listen pass, default muse-spark-1.2-contributor. */

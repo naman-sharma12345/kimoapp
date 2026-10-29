@@ -39,6 +39,13 @@ import { aiConfig, chatJson } from './ai.ts';
 import { BUILD_PROMPT, REVIEW_PROMPT } from './engine.ts';
 import { assertBudget } from './ai-budget.ts';
 import {
+  samDelete,
+  samDeleteSchema,
+  samSchema,
+  samSegment,
+  samUpload,
+} from './sam.ts';
+import {
   AI_HEADERS,
   listModels,
   redact,
@@ -86,6 +93,7 @@ const RATE_LIMITS = {
   ai: 20,
   models: 30,
   desktop: 80,
+  sam: 60,
 } as const;
 
 export type SignInErrorKind =
@@ -678,6 +686,45 @@ export function createApp(options: AppOptions = {}) {
     return json({ record: answer.record });
   }
 
+  /**
+   * SAM 3.1 for the desktop app: /v1/desktop/sam/file uploads a downscaled
+   * clip segment, /v1/desktop/sam streams one segmentation back, and
+   * /v1/desktop/sam/file/delete removes the upload. Same key, rate limit
+   * family and shared AI budget as /v1/desktop/ai.
+   */
+  async function desktopSam(
+    request: Request,
+    env: Env,
+    path: string,
+  ): Promise<Response> {
+    if (request.headers.get('X-Kimo-Desktop') !== '1')
+      throw new HttpError(403, 'forbidden_origin', 'Desktop app only');
+    if (await rateLimited(env, 'sam', clientKey(request)))
+      throw new HttpError(
+        429,
+        'rate_limited',
+        'Too many SAM steps; wait a few minutes',
+      );
+    const base = aiConfig(env);
+    if (!base)
+      throw new HttpError(
+        503,
+        'ai_unavailable',
+        "AI editing isn't switched on yet",
+      );
+    if (path === '/v1/desktop/sam/file/delete') {
+      const body = samDeleteSchema.parse(await request.json());
+      return json(await samDelete(base, fetcher, body.file_id));
+    }
+    await assertBudget(env);
+    if (path === '/v1/desktop/sam/file')
+      return json(await samUpload(request, base, fetcher));
+    if (path !== '/v1/desktop/sam')
+      throw new HttpError(404, 'not_found', 'Not found');
+    const body = samSchema.parse(await request.json());
+    return samSegment(env, base, fetcher, body);
+  }
+
   async function route(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -685,6 +732,8 @@ export function createApp(options: AppOptions = {}) {
 
     if (path === '/v1/desktop/ai' && method === 'POST')
       return desktopAi(request, env);
+    if (path.startsWith('/v1/desktop/sam') && method === 'POST')
+      return desktopSam(request, env, path);
 
     // CSRF: every write must come from the app itself. A missing Origin is
     // refused too, so forms or scripts on other sites (or sibling
