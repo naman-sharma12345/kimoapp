@@ -43,7 +43,6 @@ jobs:
       run:
         shell: pwsh
     env:
-      KIMO_BENCH_DATA: ${{ runner.temp }}/kimo-bench-data
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
       KIMO_WORKER_THREADS: '2'
       KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
@@ -53,6 +52,8 @@ jobs:
       BENCH_LABEL: ${{ inputs.label }}
     steps:
       - uses: actions/checkout@v4
+      - name: Use runner-local media storage
+        run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
       - uses: actions/setup-node@v4
         with:
           node-version: 20
