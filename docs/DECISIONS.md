@@ -141,10 +141,22 @@ Compositor hardening makes shared GLSL float precision explicit, releases filter
 - Clip prep panel (Oct 29 2026): `.studio-clip-prep` reuses the `.studio-local-notice` surface (`--ink-2`, `--line-strong`, `--r-8`, `--t-12`) and the cream `Progress` bar (not orange: getting clips ready is not the AI acting). Width caps at 420px, the same cap as other studio popovers. Reduced motion uses the existing `Progress` reduced variant (no width transition). Audio analysis decodes at 16 kHz where the browser allows it and runs in chunks that yield to the page (no Web Worker: `decodeAudioData` is not available in workers), so long screen recordings never freeze the tab.
 
 ## 2026-10-29 · look-and-listen pass (kimo engine in the browser)
+
 - Free hosts with ≥1 GB RAM and no card don't exist (HF free blocks Docker and Gradio Spaces, Modal needs a payment method, Koyeb/Cloud Run need a card, Render/Railway free cap at 512 MB). kimo v6's render pipeline shells out to ffmpeg (55 call sites), ffprobe and whisper, so it cannot run as wasm as-is; the browser compositor stays the renderer.
 - The quality jump comes from giving the AI eyes and ears: before the first AI edit of each clip the browser grabs up to 12 frames (512 px, JPEG 0.7) and the clip's sound (16 kHz mono WAV, ≤300 s) and POSTs them to /v1/sessions/:id/perceive. The Worker passes them straight to Meta (META_PERCEIVE_MODEL, default muse-spark-1.2-contributor, full audio support) and stores only the text it gets back (summary, scenes[], words[]) in asset_analysis. Nothing media is written anywhere.
 - New chat line: "kimo is watching and listening to your clips" (system line, no new tokens). Privacy and terms updated to disclose that frames and sound go to Meta's contributor model, which may train on them.
 
 ## 2026-10-29 · script → live build → render check loop
+
 - Every AI edit now runs: (1) look-and-listen per clip, (2) an edit script (hook, beats, cuts, titles, captions, effects, music/sfx cues with times) posted to the chat as "edit script", (3) the build from that script with each op saved and broadcast on its own with a readable line ("cutting 4.2s–5.1s", "adding kinetic title …", "grading …", "punching in …") and a 350 ms beat so the timeline and preview change live, (4) up to 3 render checks: the browser renders up to 14 frames of the cut (every text clip, every cut, an even spread) with the same compositor as export, measures brightness, and /v1/sessions/:id/review asks the model for a verdict + fix ops; verdicts, faults and fixes post live and fixes apply op by op. Stops at the first clean check or when nothing could be fixed.
 - Each model call stays on muse-spark-1.3-contributor (perception on 1.2-contributor) under the AI_BUDGET_USD guard; a full edit is about 3 to 6 calls.
+
+## Desktop creator benchmark (29 October 2026)
+
+The user's attached Phase 1 brief targets desktop/, overriding the historical web-only phase scope in AGENTS.md for this task. Keep engine binaries read-only and web runtime behavior unchanged. This phase adds only a headless bench, offline reports, synthetic tests and CI; no new runtime libraries or creator-editing behavior.
+
+Benchmark aliases default/shorts-punchy map to the existing auto/energetic styles; no later-phase templates are invented. Missing measurements remain unavailable and lower applicable category scores. Caption/subject geometry and colour estimates are labeled as estimates. A conservative USD 0.49 recording ledger and fail-closed replay enforce the supplied small-spend intent; no deployment or release is part of this phase.
+
+The existing Windows test alias was normalized in vitest.config.ts. Existing Markdown formatting was repaired for lint. These changes do not alter the web application.
+
+User follow-up scope: after reporting PC lag, the user explicitly asked to reduce lag and find a high-quality render path with minimum CPU use. Stopped both local full benchmarks and their helper processes, then added cross-process edit/bench locks, lower worker priority, bounded app-owned thread pools and analysis buffers, graceful benchmark cancellation and a queue race fix. The upload master now prefers hardware encoding, with a tested NVDEC/CUDA/NVENC path on the local RTX 4050 and bounded CPU fallback. GPU quality settings and remaining CPU compositor limitations are in desktop/PERFORMANCE.md. Large generated bench data now lives outside OneDrive in LocalAppData. No full baseline was restarted; the incomplete acceptance items remain visible.
