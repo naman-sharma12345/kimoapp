@@ -42,11 +42,10 @@ export async function editWithRealKimo(options: {
   const snap = options.snapshot;
   const clips = (snap?.assets ?? [])
     .filter((asset) => asset.kind !== 'doc')
-    .map((asset) => ({ asset, file: localFile(asset.id) }))
-    .filter(
-      (item): item is { asset: typeof item.asset; file: File } =>
-        Boolean(item.file) && item.file!.size <= MAX_UPLOAD,
-    )
+    .flatMap((asset) => {
+      const file = localFile(asset.id);
+      return file && file.size <= MAX_UPLOAD ? [{ asset, file }] : [];
+    })
     .slice(0, 12);
   if (!snap || !clips.length) {
     options.say(ENGINE_OFFLINE_NOTE);

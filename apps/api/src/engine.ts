@@ -131,7 +131,7 @@ async function jobPrefix(sessionId: string, userId: string) {
 /** Short readable text for one MCP result (images left out). */
 function resultText(result: unknown, max = 700) {
   const content = (result as { content?: unknown[] })?.content ?? [];
-  const text = content
+  let text = content
     .map((item) =>
       (item as { type?: string }).type === 'text'
         ? String((item as { text?: unknown }).text ?? '')
@@ -140,6 +140,9 @@ function resultText(result: unknown, max = 700) {
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
+  const hint = (result as { structuredContent?: { hint?: unknown } })
+    ?.structuredContent?.hint;
+  if (typeof hint === 'string' && hint) text = `${text} (hint: ${hint})`;
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 function resultImages(result: unknown) {
@@ -490,7 +493,7 @@ export function createEngine(deps: EngineDeps) {
           if (clean || !fixes.length) {
             state.phase = 'done';
           } else if (state.pass >= MAX_PASSES) {
-            state.queue = [...fixes, checkQueue()[0]!];
+            state.queue = [...fixes, ...checkQueue().slice(0, 1)];
             state.pass++;
             state.phase = 'done';
             await say(
@@ -500,8 +503,8 @@ export function createEngine(deps: EngineDeps) {
               state.queue.length &&
               Date.now() - started < STEP_BUDGET_MS
             ) {
-              const call = state.queue.shift()!;
-              if (!(await runCall(call))) break;
+              const call = state.queue.shift();
+              if (!call || !(await runCall(call))) break;
             }
             if (state.queue.length || state.waiting) state.phase = 'check';
           } else {
@@ -626,14 +629,13 @@ export function createEngine(deps: EngineDeps) {
       });
       if (!response.ok || !response.body)
         throw new HttpError(404, 'no_output', 'No render yet');
+      const length = response.headers.get('Content-Length');
       return new Response(response.body, {
         headers: {
           'Content-Type': 'video/mp4',
           'Content-Disposition': 'attachment; filename="kimo.mp4"',
           'Cache-Control': 'no-store',
-          ...(response.headers.get('Content-Length')
-            ? { 'Content-Length': response.headers.get('Content-Length')! }
-            : {}),
+          ...(length ? { 'Content-Length': length } : {}),
         },
       });
     }
