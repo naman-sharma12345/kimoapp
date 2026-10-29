@@ -6,12 +6,12 @@ The six requested golden baselines are **pending**. The live TH-1 AI run and its
 
 This completed captions-only render predates resource/GPU changes. It is a technical/visual smoke check, not a creator benchmark replacement.
 
-1. The first frame starts directly with dialogue, which is stronger than leading silence.
-2. It opens in the middle of a sentence; speech onset alone does not prove a good hook.
+1. Whisper places speech onset at zero; this measures timing rather than the strength of the opening.
+2. The opening portrait crop cuts off both speakers before the woman moves farther into frame.
 3. There is no independently authored hook title; the early text is dialogue captioning.
 4. Large uppercase captions are legible against the footage.
-5. Their near-top placement falls outside the reserved Shorts safe region.
-6. The contact sheet visibly confirms this placement, supporting the estimated safe-area failure.
+5. Captions sit in the lower third. The conservative text envelopes cross the reserved right-side Shorts region.
+6. The widest visible lines extend into that right-side region; exact raster bounds still require a more precise detector.
 7. Keyword yellow is present, but this is the existing engine style rather than the future creator caption system.
 8. Caption placement is repetitive rather than editorially composed shot by shot.
 9. The single wide framing has no deliberate medium/tight alternation.
@@ -25,4 +25,4 @@ This completed captions-only render predates resource/GPU changes. It is a techn
 
 Opening the local review confirmed video playback, timeline seeking, offline operation and the corrected mobile layout. Review media lives in out/scratch/bench-smoke; the small contact sheet and metrics are committed under baselines/smoke-v0.3.2.
 
-No real-footage before/after critique of the resource controls or NVENC master is claimed. That requires a complete controlled render after the user is ready to run the heavier workload.
+No real-footage before/after critique of the resource controls or NVENC master is claimed. Full golden recordings now run remotely; they do not establish local sustained responsiveness or GPU perceptual-quality sign-off.

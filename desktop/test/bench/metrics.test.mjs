@@ -106,6 +106,15 @@ test('caption lifetime, safe area, known face boxes, missing evidence', () => {
     100,
   );
   assert.equal(m.captionFaceOverlap([caption], []), null);
+  assert.equal(m.captionSafe([{ ...caption, box: null }]), null);
+  assert.equal(m.captionSafe([caption, { ...caption, box: null }]), null);
+  assert.equal(
+    m.captionFaceOverlap(
+      [caption, { ...caption, box: null }],
+      [{ start: 0, end: 1, box: caption.box }],
+    ),
+    null,
+  );
 });
 test('EBU summary is final measurement, not intermediate log', () => {
   assert.deepEqual(

@@ -175,7 +175,8 @@ export function captionMinWord(elements) {
 }
 export function captionSafe(elements, aspect = '9:16') {
   if (!elements.length) return false;
-  return elements.every(
+  const known = elements.filter((e) => e.box);
+  const safe = known.every(
     (e) =>
       e.box &&
       e.box.x >= 0 &&
@@ -183,11 +184,14 @@ export function captionSafe(elements, aspect = '9:16') {
       e.box.x + e.box.w <= (aspect === '9:16' ? 0.85 : 0.95) &&
       e.box.y + e.box.h <= (aspect === '9:16' ? 0.78 : 0.95),
   );
+  if (!safe) return false;
+  return known.length === elements.length ? true : null;
 }
 const intersects = (a, b) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 export function captionFaceOverlap(elements, subjects, fps = 30) {
-  if (!elements.length || !subjects.length) return null;
+  if (!elements.length || !subjects.length || elements.some((e) => !e.box))
+    return null;
   let overlap = 0,
     total = 0;
   for (const e of elements)

@@ -1,5 +1,5 @@
 import { cp, mkdir, readdir, stat } from 'node:fs/promises';
-import { resolve, join, sep } from 'node:path';
+import { resolve, join, sep, relative } from 'node:path';
 import {
   ROOT,
   DATA_ROOT,
@@ -36,12 +36,26 @@ async function copy(source, relative) {
   await mkdir(resolve(target, '..'), { recursive: true });
   await cp(source, target, { recursive: true });
 }
-for (const aspect of ['9x16', '16x9'])
+for (const aspect of ['9x16', '16x9']) {
   for (const file of names)
     await copy(
       join(DATA_ROOT, 'out', label, `${clip}-${aspect}`, file),
       join('data/out', label, `${clip}-${aspect}`, file),
     );
+  const project = await readJson(
+    join(DATA_ROOT, 'out', label, `${clip}-${aspect}`, 'project.kimo.json'),
+  ).catch((error) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  // Keep derived SAM/audio assets that are referenced by the saved project.
+  for (const asset of Object.values(project?.assets ?? {})) {
+    if (!asset.path) continue;
+    const source = resolve(asset.path);
+    if (source.startsWith(DATA_ROOT + sep))
+      await copy(source, join('data', relative(DATA_ROOT, source)));
+  }
+}
 await copy(join(DATA_ROOT, 'clips/media'), 'data/clips/media');
 await copy(join(ROOT, 'cache'), 'repo/cache');
 await copy(join(ROOT, 'RESULTS.md'), 'repo/RESULTS.md');
