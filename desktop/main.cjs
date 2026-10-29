@@ -209,8 +209,12 @@ async function smoke(clip, outPath) {
     report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000);
     if (process.argv.includes('--smoke-ai')) {
       const ai = [];
+      try {
       const r2 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke-ai'), files, note: 'tight 1:1 social cut with a short hook title and captions', preset: 'square', mode: 'ai', emit: (ev) => ev.t !== 'frame' && ai.push(ev) });
       report.ai = { bytes: fs.statSync(r2.output).size, duration: r2.duration, events: ai.map((x) => x.t === 'op' ? (x.phase === 'start' ? `> ${x.title}` : `  ${x.ok ? 'ok' : 'ERR ' + x.error}`) : `${x.t}: ${x.text}`) };
+      } catch (err) {
+        report.ai = { error: String(err.message || err), events: ai.map((x) => `${x.t}: ${x.title || x.text || x.error || ''}`) };
+      }
     }
   } catch (err) {
     report.ok = false;
