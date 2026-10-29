@@ -25,6 +25,15 @@ const studioCss = {
       .replace(/url\((['"]?)\/grain\.png/g, `url($1${web}/public/grain.png`);
   },
 };
+// One classic deferred script instead of an ES module: loads from file:// in any
+// Chromium without CORS rules for module scripts.
+const classicScript = {
+  name: 'kimo-classic-script',
+  enforce: 'post',
+  transformIndexHtml(html) {
+    return html.replace(/<script type="module" crossorigin/g, '<script defer').replace(/<link rel="stylesheet" crossorigin/g, '<link rel="stylesheet"');
+  },
+};
 const cleanAssets = {
   name: 'kimo-clean-assets',
   buildStart() {
@@ -45,7 +54,7 @@ const fromDesktop = {
 export default defineConfig({
   root: resolve(here, 'src'),
   base: './',
-  plugins: [cleanAssets, fromDesktop, studioCss, react()],
+  plugins: [cleanAssets, fromDesktop, studioCss, react(), classicScript],
   resolve: {
     alias: [
       { find: '@web', replacement: resolve(web, 'src') },
@@ -62,5 +71,7 @@ export default defineConfig({
     target: 'chrome128',
     sourcemap: false,
     chunkSizeWarningLimit: 900,
+    cssCodeSplit: false,
+    rollupOptions: { output: { format: 'iife', inlineDynamicImports: true } },
   },
 });

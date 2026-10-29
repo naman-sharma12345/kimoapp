@@ -673,6 +673,7 @@ button {
 }
 .desk-stream {
   padding: var(--space-12);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--space-16));
 }
 .desk-feed-empty {
   display: grid;
@@ -1434,10 +1435,33 @@ button {
   line-height: 18px;
 }
 
+/* the desktop window is >= 1080 px wide: keep all three studio panels in the grid
+   instead of the web studio's floating inspector below 1280 px */
+@media (max-width: 1279px) {
+  .desk-shell .desk-upper {
+    position: static;
+    grid-template-columns: var(--studio-agent-width) var(--space-8) minmax(0, 1fr) var(--space-8) var(--studio-inspector-width);
+  }
+  .desk-shell .desk-inspector {
+    position: static;
+    width: auto;
+    box-shadow: none;
+  }
+  .desk-shell .studio-top-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+@media (max-height: 820px) {
+  .desk-script pre {
+    max-height: 64px;
+  }
+}
 @media (max-width: 1180px) {
   :root {
-    --studio-agent-width: 300px;
-    --studio-inspector-width: 280px;
+    --studio-agent-width: 284px;
+    --studio-inspector-width: 268px;
     --desk-library: 232px;
   }
   .desk-effects {
