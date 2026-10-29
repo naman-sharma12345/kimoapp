@@ -60,13 +60,13 @@ with FFmpeg, local Whisper and fonts bundled in one installer.
 
 <img alt="SAM 3.1 text behind the subject, six frames" src="docs/readme/sheet-9x16.jpg" width="100%">
 
-| Effect | What it does |
-| --- | --- |
-| 🎯 **Subject reframe** | 9:16, 1:1 and 4:5 exports follow the subject with a smoothed virtual camera instead of a centre crop |
-| 🔎 **Punch-ins** | Zooms centred on the subject, automatic or placed by the AI editor |
-| 🅰️ **Text behind subject** | Big titles sit between the background and the person |
-| 🌫️ **Background** | Blur, solid colour or your own image, subject kept sharp; or a transparent ProRes 4444 cutout |
-| 🙈 **Blur by prompt** | Blur every "face", "license plate", "logo" or anything you name |
+| Effect                     | What it does                                                                                         |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 🎯 **Subject reframe**     | 9:16, 1:1 and 4:5 exports follow the subject with a smoothed virtual camera instead of a centre crop |
+| 🔎 **Punch-ins**           | Zooms centred on the subject, automatic or placed by the AI editor                                   |
+| 🅰️ **Text behind subject** | Big titles sit between the background and the person                                                 |
+| 🌫️ **Background**          | Blur, solid colour or your own image, subject kept sharp; or a transparent ProRes 4444 cutout        |
+| 🙈 **Blur by prompt**      | Blur every "face", "license plate", "logo" or anything you name                                      |
 
 Type any subject ("dog", "red car"), preview the masks, then run the effect alone or as part of a full AI edit. These ship in the next release (0.3.0); see [release notes](desktop/RELEASE_NOTES.md).
 
@@ -87,7 +87,7 @@ flowchart LR
 ## 🚀 Quick start
 
 1. Download **`kimo-Setup-0.3.2.exe`** from the [latest release](https://github.com/naman-sharma12345/kimoapp/releases/latest).
-2. The installer isn't code-signed yet, so SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**.
+2. The installer isn't code-signed yet, so SmartScreen may say _"Windows protected your PC"_. Click **More info → Run anyway**.
 3. Drag in a video, pick a style, describe the edit and hit go. kimo updates itself from GitHub Releases and asks before restarting.
 
 No Docker, no separate engine, no size or length caps: long videos and 4K are fine.
@@ -122,14 +122,14 @@ CI (`windows-latest`) builds the installer, installs it on the runner, runs `kim
 <details>
 <summary><b>Repo layout</b></summary>
 
-| Path | What's there |
-| --- | --- |
-| `desktop/` | Windows app (Electron), engine + SAM bridge, installer config |
-| `apps/web` | Next.js / React browser studio |
-| `apps/api` | Cloudflare Worker API: AI proxy, SAM, editing sessions |
-| `packages/` | typed client, PixiJS compositor, mock server |
-| `deploy/` | hosting config and the [self-hosted engine setup](deploy/kimo-engine/README.md) |
-| `docs/` | design, contracts, QA and decision records |
+| Path        | What's there                                                                    |
+| ----------- | ------------------------------------------------------------------------------- |
+| `desktop/`  | Windows app (Electron), engine + SAM bridge, installer config                   |
+| `apps/web`  | Next.js / React browser studio                                                  |
+| `apps/api`  | Cloudflare Worker API: AI proxy, SAM, editing sessions                          |
+| `packages/` | typed client, PixiJS compositor, mock server                                    |
+| `deploy/`   | hosting config and the [self-hosted engine setup](deploy/kimo-engine/README.md) |
+| `docs/`     | design, contracts, QA and decision records                                      |
 
 Web dev: Node 22 + pnpm 9.15.9, then `pnpm install --frozen-lockfile && pnpm dev:mock` (web on :3000, mock API on :8787). Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm e2e`.
 
@@ -137,7 +137,7 @@ Web dev: Node 22 + pnpm 9.15.9, then `pnpm install --frozen-lockfile && pnpm dev
 
 ## 🙏 Credits & notices
 
-- Demo footage (9:16 clip): *Tears of Steel* © Blender Foundation | [mango.blender.org](https://mango.blender.org), licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- Demo footage (9:16 clip): _Tears of Steel_ © Blender Foundation | [mango.blender.org](https://mango.blender.org), licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 - Subject effects use Meta **SAM 3.1** (Segment Anything). Bundled FFmpeg, whisper.cpp and font licenses are in [THIRD_PARTY_NOTICES.md](desktop/THIRD_PARTY_NOTICES.md).
 
 <div align="center">

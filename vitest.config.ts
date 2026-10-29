@@ -5,7 +5,10 @@ export default defineConfig({
   esbuild: { jsx: 'automatic' },
   resolve: {
     alias: {
-      '@/': fileURLToPath(new URL('./apps/web/src/', import.meta.url)),
+      '@': fileURLToPath(new URL('./apps/web/src', import.meta.url)).replaceAll(
+        '\\',
+        '/',
+      ),
     },
   },
   test: {
