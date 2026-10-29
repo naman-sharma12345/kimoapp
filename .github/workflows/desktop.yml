@@ -18,7 +18,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         shell: pwsh
@@ -77,7 +77,17 @@ jobs:
           $s.SetOutputToWaveFile("$PWD\speech.wav"); $s.Speak('Welcome to kimo. This is a five second test of the real engine.'); $s.Dispose()
           & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=1280x720:r=30:d=5' -i speech.wav -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest clip.mp4
           $smokeArgs = @('--smoke', "$PWD\clip.mp4", '--smoke-out', "$PWD\smoke.json")
-          if ('${{ inputs.ai }}' -eq 'true') { $smokeArgs += '--smoke-ai' }
+          if ('${{ inputs.ai }}' -eq 'true') {
+            # ~25 s talking sample (Windows TTS) with pauses and fillers for the rough cut, over moving grainy gradients
+            $s2 = New-Object System.Speech.Synthesis.SpeechSynthesizer
+            $s2.Rate = 0
+            $s2.SetOutputToWaveFile("$PWD\talk.wav")
+            $ssml = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">So, um, here is the thing nobody tells you about editing videos.<break time="1500ms"/>Most creators spend hours cutting silence by hand.<break time="2000ms"/>Uh, that is, that is a lot of time.<break time="1200ms"/>With kimo, the cuts, the captions and the colour happen in minutes, right on your own computer.<break time="1800ms"/>Stick around, because the last tip changes everything.<break time="1000ms"/>Okay. Let us go.</speak>'
+            $s2.SpeakSsml($ssml); $s2.Dispose()
+            & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'gradients=s=1920x1080:r=30:speed=0.015:n=5,noise=alls=10:allf=t,eq=saturation=0.8' -i talk.wav -map 0:v -map 1:a -shortest -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 talk.mp4
+            "ai sample: $([math]::Round((Get-Item talk.mp4).Length/1MB,1)) MB" | Tee-Object -FilePath smoke-summary.txt -Append
+            $smokeArgs += @('--smoke-ai', '--smoke-ai-clip', "$PWD\talk.mp4", '--smoke-style', 'podcast')
+          }
           $p = Start-Process $exe -ArgumentList $smokeArgs -Wait -PassThru
           Get-Content smoke.json
           if ($p.ExitCode -ne 0) { throw "smoke test failed ($($p.ExitCode))" }
@@ -90,6 +100,8 @@ jobs:
             desktop/dist/latest.yml
             desktop/smoke.json
             desktop/smoke-summary.txt
+            desktop/ai-*.jpg
+            desktop/ai-final.mp4
           retention-days: 7
       - name: read version
         id: ver

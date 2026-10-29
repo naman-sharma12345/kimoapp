@@ -1,7 +1,7 @@
 {
   "name": "kimo-desktop",
   "productName": "kimo",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "kimo video editor for Windows: the real kimo v6 engine, FFmpeg and whisper on your PC",
   "author": "kimo <hello@getkimo.tech>",
   "homepage": "https://getkimo.tech",

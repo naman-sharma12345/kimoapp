@@ -1,7 +1,7 @@
 // kimo desktop (Windows): the real kimo v6 engine, FFmpeg and whisper bundled
 // and run on this PC. Media stays local; only prompts and sampled frames go
 // to the kimo AI proxy at api.getkimo.tech.
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, clipboard } = require('electron');
 const { join, extname, basename } = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
@@ -66,7 +66,24 @@ const saveLibrary = () => {
   fs.renameSync(`${libPath()}.tmp`, libPath());
 };
 const projectDir = (id) => join(data(), 'projects', id);
-const publicProject = (p) => ({ ...p, log: undefined, logCount: p.log?.length ?? 0 });
+const publicProject = (p) => ({ ...p, log: undefined, job: undefined, logCount: p.log?.length ?? 0 });
+// learned render speed (ms per second of 1080p timeline) for honest ETAs
+const settingsPath = () => join(data(), 'settings.json');
+const settings = () => {
+  try {
+    return JSON.parse(fs.readFileSync(settingsPath(), 'utf8'));
+  } catch {
+    return {};
+  }
+};
+const saveSettings = (patch) => {
+  try {
+    fs.writeFileSync(settingsPath(), JSON.stringify({ ...settings(), ...patch }));
+  } catch {
+    /* ignore */
+  }
+};
+const LIVE_ONLY = new Set(['progress', 'preview', 'timeline', 'frame']);
 
 let win;
 const send = (channel, payload) => win && !win.isDestroyed() && win.webContents.send(channel, payload);
@@ -105,40 +122,54 @@ async function pump() {
   running = { id: next.id, controller };
   next.status = 'running';
   next.error = undefined;
-  next.log = [];
-  next.pass = 0;
+  const job = next.job ?? { mode: next.mode, note: next.note };
+  // a follow-up or timeline edit continues the log; a fresh edit starts it over
+  next.log = job.mode === 'followup' || job.mode === 'manual' ? (next.log ?? []).slice(-300) : [];
+  next.log.push({ t: 'run', mode: job.mode, text: job.mode === 'followup' ? job.note : job.mode === 'manual' ? `${job.ops.length} timeline edit${job.ops.length === 1 ? '' : 's'}` : next.note, at: Date.now() });
+  next.started = Date.now();
   update(next);
   const dir = projectDir(next.id);
   try {
     const result = await e.runEdit({
-      bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: next.note,
-      preset: next.preset, mode: next.mode, signal: controller.signal,
+      bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
+      preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile,
+      signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
-        if (ev.t !== 'frame') next.log.push({ ...ev, at: Date.now() });
+        if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
+        if (ev.t === 'timeline') next.timeline = ev.timeline;
         if (ev.t === 'say' && ev.kind === 'script') next.script = ev.text;
         send('event', { id: next.id, ...ev });
       },
     });
     next.status = 'done';
     next.output = result.output;
+    next.master = result.master;
     next.duration = result.duration;
+    next.quality = result.quality;
+    if (result.youtube) next.youtube = result.youtube;
+    if (result.timeline) next.timeline = result.timeline;
+    if (result.projectFile) next.projectFile = result.projectFile;
+    next.renders = (next.renders ?? 0) + 1;
+    next.took = Date.now() - next.started;
+    if (result.speed) saveSettings({ speed: result.speed });
   } catch (err) {
     next.status = controller.signal.aborted ? 'stopped' : 'failed';
     next.error = controller.signal.aborted ? 'stopped' : String(err.message || err).slice(0, 600);
     log('edit failed', next.id, err.stack || err);
   } finally {
-    next.log = next.log.slice(-400);
+    next.log = next.log.slice(-500);
+    next.job = undefined;
     running = null;
     update(next);
     pump();
   }
 }
 
-function newProject({ files, note, preset, mode, name }) {
+function newProject({ files, note, preset, mode, name, style }) {
   const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const p = {
     id, name: name || basename(files[0].path, extname(files[0].path)), created: Date.now(), updated: Date.now(),
-    files, note: note || '', preset: preset || 'shorts', mode: mode || 'ai', status: 'queued', log: [],
+    files, note: note || '', preset: preset || 'shorts', style: style || 'auto', mode: mode || 'ai', status: 'queued', log: [], turns: [],
   };
   library.unshift(p);
   return p;
@@ -184,6 +215,7 @@ async function status() {
     model: fs.existsSync(p.model),
     gpu,
     presets: e.PRESETS,
+    styles: Object.fromEntries(Object.entries(e.STYLES).map(([k, v]) => [k, v.label])),
   };
 }
 
@@ -203,15 +235,31 @@ async function smoke(clip, outPath) {
     report.kimo = { server: s.server, tools: s.tools.length };
     const files = await expand([clip]);
     const ops = [];
-    const r = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, note: '', preset: 'square', mode: 'captions', emit: (ev) => ev.t === 'op' && ops.push(ev) });
-    report.render = { output: r.output, bytes: fs.statSync(r.output).size, duration: r.duration, ops: ops.filter((o) => o.phase === 'end').map((o) => `${o.ok ? 'ok' : 'ERR'} ${o.ms}ms ${o.error || ''}`) };
+    const live = { timeline: 0, preview: 0, progress: 0 };
+    const r = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, note: '', preset: 'square', mode: 'captions', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => (ev.t === 'op' && ops.push(ev), ev.t in live && live[ev.t]++) });
+    report.render = { output: r.output, bytes: fs.statSync(r.output).size, duration: r.duration, live, quality: r.quality, projectFile: Boolean(r.projectFile), ops: ops.filter((o) => o.phase === 'end').map((o) => `${o.ok ? 'ok' : 'ERR'} ${o.ms}ms ${o.error || ''}`) };
+    // timeline editor path: trim the first clip on the saved project and re-render
+    const first = r.timeline?.tracks_bottom_to_top?.[0]?.clips?.[0];
+    if (first && r.projectFile) {
+      const r3 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, preset: 'square', mode: 'manual', projectFile: r.projectFile, ops: [{ tool: 'trim_clip', args: { clip_id: first.id, duration: Math.max(1, (first.end - first.start) - 1) } }], ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: () => undefined });
+      report.manual = { duration: r3.duration, expected: Math.max(1, (first.end - first.start) - 1) };
+    }
     report.captions = r.history.filter((h) => h.startsWith('auto_captions')).map((h) => h.slice(0, 600));
     report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000);
     if (process.argv.includes('--smoke-ai')) {
       const ai = [];
       try {
-      const r2 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke-ai'), files, note: 'tight 1:1 social cut with a short hook title and captions', preset: 'square', mode: 'ai', emit: (ev) => ev.t !== 'frame' && ai.push(ev) });
-      report.ai = { bytes: fs.statSync(r2.output).size, duration: r2.duration, events: ai.map((x) => x.t === 'op' ? (x.phase === 'start' ? `> ${x.title}` : `  ${x.ok ? 'ok' : 'ERR ' + x.error}`) : `${x.t}: ${x.text}`) };
+      const aiAt = process.argv.indexOf('--smoke-ai-clip');
+      const aiFiles = aiAt > 0 ? await expand([process.argv[aiAt + 1]]) : files;
+      const styleAt = process.argv.indexOf('--smoke-style');
+      const style = styleAt > 0 ? process.argv[styleAt + 1] : 'podcast';
+      const counts = { timeline: 0, preview: 0, progress: 0 };
+      const t0 = Date.now();
+      const r2 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke-ai'), files: aiFiles, note: 'turn this into a tight youtube video: strong hook, cut the pauses, captions with keyword highlights, clean grade', preset: 'youtube', style, mode: 'ai', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => (ev.t in counts ? counts[ev.t]++ : ai.push(ev)) });
+      report.ai = { style, seconds: Math.round((Date.now() - t0) / 1000), bytes: fs.statSync(r2.output).size, duration: r2.duration, live: counts, quality: r2.quality, youtube: r2.youtube, events: ai.map((x) => x.t === 'op' ? (x.phase === 'start' ? `> ${x.title}` : `  ${x.ok ? 'ok' : 'ERR ' + x.error} ${x.ms}ms`) : `${x.t}: ${x.text ?? (x.checks ? x.checks.map((c) => `${c.id}=${c.ok ? 'ok' : 'FAIL'}(${c.value})`).join(' ') : '')}`) };
+      const outDir = join(outPath, '..');
+      for (const [f, n] of [[r2.output, 'ai-final.mp4'], [r2.youtube?.thumbnail, 'ai-thumbnail.jpg'], [join(data(), 'smoke-ai', 'sheet_a.jpg'), 'ai-sheet-a.jpg'], [join(data(), 'smoke-ai', 'sheet_b.jpg'), 'ai-sheet-b.jpg']])
+        if (f && fs.existsSync(f)) fs.copyFileSync(f, join(outDir, n));
       } catch (err) {
         report.ai = { error: String(err.message || err), events: ai.map((x) => `${x.t}: ${x.title || x.text || x.error || ''}`) };
       }
@@ -264,22 +312,63 @@ app.whenReady().then(async () => {
     const r = await dialog.showOpenDialog(win, { properties: folders ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'], filters: folders ? [] : [{ name: 'Media', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mp3', 'wav', 'm4a', 'png', 'jpg', 'jpeg'] }] });
     return r.canceled ? [] : expand(r.filePaths);
   });
-  ipcMain.handle('create', (_e, { files, note, preset, mode, batch }) => {
+  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style }) => {
     if (!files?.length) throw new Error('add a video first');
-    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode })) : [newProject({ files, note, preset, mode })];
+    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style })) : [newProject({ files, note, preset, mode, style })];
     saveLibrary();
     pump();
     return made.map(publicProject);
   });
-  ipcMain.handle('rerun', (_e, { id, note, preset, mode }) => {
+  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style }) => {
     const p = library.find((x) => x.id === id);
     if (!p || p.status === 'running') return null;
-    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, status: 'queued', error: undefined });
+    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, status: 'queued', error: undefined, job: undefined });
     p.history = [...(p.history ?? []), { at: Date.now(), note: p.note, preset: p.preset, mode: p.mode }].slice(-30);
     update(p);
     pump();
     return publicProject(p);
   });
+  // chat-style follow-up: applied on top of the saved project
+  ipcMain.handle('followup', (_e, { id, text }) => {
+    const p = library.find((x) => x.id === id);
+    const note = String(text ?? '').trim().slice(0, 1000);
+    if (!p || !note || ['running', 'queued'].includes(p.status)) return null;
+    if (!p.projectFile || !fs.existsSync(p.projectFile)) throw new Error('re-run this edit once first (it was made before follow-ups existed)');
+    p.turns = [...(p.turns ?? []), { at: Date.now(), text: note }].slice(-50);
+    Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'followup', note } });
+    update(p);
+    pump();
+    return publicProject(p);
+  });
+  // timeline editor: validated move/trim/delete/caption ops, then re-render
+  ipcMain.handle('apply', async (_e, { id, ops }) => {
+    const p = library.find((x) => x.id === id);
+    if (!p || ['running', 'queued'].includes(p.status)) return null;
+    if (!p.projectFile || !fs.existsSync(p.projectFile)) throw new Error('re-run this edit once first');
+    const e = await loadEngine();
+    const num = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 86400;
+    const clean = (Array.isArray(ops) ? ops : []).slice(0, 200).filter((o) => e.MANUAL_TOOLS.includes(o?.tool) && typeof o.args?.clip_id === 'string').map((o) => {
+      const a = { clip_id: o.args.clip_id.slice(0, 40) };
+      for (const k of ['start', 'duration', 'in_point']) if (num(o.args[k])) a[k] = +o.args[k].toFixed(3);
+      if (typeof o.args.text === 'string') a.text = o.args.text.slice(0, 300);
+      return { tool: o.tool, args: a };
+    });
+    if (!clean.length) return null;
+    Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'manual', ops: clean, note: p.note } });
+    update(p);
+    pump();
+    return publicProject(p);
+  });
+  ipcMain.handle('saveThumb', async (_e, id) => {
+    const p = library.find((x) => x.id === id);
+    const src = p?.youtube?.thumbnail;
+    if (!src || !fs.existsSync(src)) return null;
+    const r = await dialog.showSaveDialog(win, { defaultPath: `${p.name}-thumbnail.jpg`, filters: [{ name: 'JPEG', extensions: ['jpg'] }] });
+    if (r.canceled || !r.filePath) return null;
+    await fs.promises.copyFile(src, r.filePath);
+    return r.filePath;
+  });
+  ipcMain.handle('copy', (_e, text) => clipboard.writeText(String(text ?? '')));
   ipcMain.handle('stop', (_e, id) => {
     if (running?.id === id) running.controller.abort();
     const p = library.find((x) => x.id === id);
@@ -302,7 +391,7 @@ app.whenReady().then(async () => {
       const e = await loadEngine();
       const preset = e.PRESETS[p.preset] ?? e.PRESETS.shorts;
       gpu ??= await e.detectGpu(paths().ffmpeg).catch(() => null);
-      await e.deliveryEncode({ ffmpeg: paths().ffmpeg, input: p.output, output: r.filePath, encoder: gpu, mbps: preset.mbps, duration: p.duration, onProgress: (f) => send('progress', { id, label: `encoding${gpu ? ` on GPU (${gpu})` : ''}`, f }) });
+      await e.deliveryEncode({ ffmpeg: paths().ffmpeg, input: p.output, output: r.filePath, encoder: gpu, mbps: preset.mbps, duration: p.duration, onProgress: (f) => send('event', { id, t: 'progress', phase: 'save', label: `small copy${gpu ? ` on GPU (${gpu})` : ''}`, f }) });
     }
     shell.showItemInFolder(r.filePath);
     return r.filePath;
