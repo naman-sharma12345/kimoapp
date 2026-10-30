@@ -25,7 +25,11 @@ const ledger = await readFile(ledgerPath);
 const dir = join(DATA_ROOT, 'raw-v2-candidates', source.id);
 await mkdir(dir, { recursive: true });
 const original = join(dir, 'source.media');
-const allowed = new Set(['upload.wikimedia.org', 'studio.blender.org']);
+const allowed = new Set([
+  'upload.wikimedia.org',
+  'studio.blender.org',
+  'videos.pexels.com',
+]);
 if (!existsSync(original)) {
   const response = await fetch(source.url, {
     headers: {
@@ -153,12 +157,14 @@ await command(tools.ffmpeg, [
   '+faststart',
   preview,
 ]);
-const words = await transcribe({
-  ...tools,
-  input: preview,
-  directory: join(dir, 'transcripts'),
-});
-await writeJson(join(dir, 'candidate-words.json'), words);
+if (source.speech !== false) {
+  const words = await transcribe({
+    ...tools,
+    input: preview,
+    directory: join(dir, 'transcripts'),
+  });
+  await writeJson(join(dir, 'candidate-words.json'), words);
+}
 if (!ledger.equals(await readFile(ledgerPath)))
   throw new Error('Spending ledger changed');
 console.log(

@@ -46,11 +46,32 @@
       "pending": "Official free CC-BY screencast with embedded facecam actually visible. Full selected-interval and audio checks remain pending.",
       "sha256": "868fde1baadb813be1142435abb6be6b82f82e72bbe72cf8f560ed7c179a148c",
       "reviewStatus": "provisional: visual source fit, full interval and audio review pending"
+    },
+    {
+      "id": "MUSIC-1",
+      "title": "Waves Rushing And Splashing To The Shore",
+      "page": "https://www.pexels.com/video/waves-rushing-and-splashing-to-the-shore-1409899/",
+      "url": "https://videos.pexels.com/video-files/1409899/1409899-uhd_3840_2160_25fps.mp4",
+      "licence": "Pexels licence",
+      "licenceUrl": "https://www.pexels.com/license/",
+      "credit": "Michal Marek / Pexels",
+      "start": 0,
+      "duration": 20,
+      "speech": false,
+      "pending": "Inspect the actual continuous aerial shot and verify no speech. A separately attributed CC0 composer track is acquired alongside the video; final music timing/mix and render comparison are still required.",
+      "music": {
+        "title": "5 Chiptunes (Action)",
+        "page": "https://opengameart.org/content/5-chiptunes-action",
+        "url": "https://opengameart.org/sites/default/files/5%20Action%20Chiptunes%20By%20Juhani%20Junkala.zip",
+        "licence": "CC0 1.0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "credit": "Juhani Junkala / SubspaceAudio"
+      }
     }
   ],
   "missing": [
     "TH-2: raw outdoor handheld walk-and-talk, 30–60 seconds, real speech/wind",
     "VLOG-1: 6–12 distinct raw clips with speech and b-roll, 40–80 seconds total",
-    "MUSIC-1: raw b-roll plus a separately licensed CC0 music bed, 20–40 seconds, no speech"
+    "MUSIC-1: candidate exists; original hash, selected CC0 track and actual review pending"
   ]
 }

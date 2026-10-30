@@ -30,7 +30,7 @@ SAM effects: when you use subject tracking, reframe, text behind subject, backgr
 object blur, kimo uploads a downscaled copy (≤720p, no sound) of only the clip segment being processed to Meta
 through api.getkimo.tech and deletes it afterwards.
 
-Test media (CI only, not installed): *Tears of Steel* (c) Blender Foundation | mango.blender.org, CC BY 3.0.
+Test media (CI only, not installed): _Tears of Steel_ (c) Blender Foundation | mango.blender.org, CC BY 3.0.
 
 Creator benchmark media (downloaded locally, not installed): The Green Interview's
 "David Montgomery, The Green Interview"; Nkansah Rexford's "Wikimania 2014 Interview -
@@ -38,3 +38,16 @@ Part One"; Blender Foundation's "Extrude - Blender 2.80 Fundamentals"; Aliioss F
 "4K Nature Cinematography recorded with Nikon D5300". Each source is CC BY 3.0
 (https://creativecommons.org/licenses/by/3.0/). Exact sources, attribution and
 modifications are in test/bench/CREDITS.md and test/bench/clips/clips.json.
+
+Replacement raw benchmark candidates (test acquisition only, not installed):
+
+- Michal Marek / Pexels, "Waves Rushing And Splashing To The Shore", video 1409899.
+  Source: https://www.pexels.com/video/waves-rushing-and-splashing-to-the-shore-1409899/
+  Pexels licence: https://www.pexels.com/license/
+- Juhani Junkala / SubspaceAudio, "5 Chiptunes (Action)" music pack.
+  Source: https://opengameart.org/content/5-chiptunes-action
+  CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+  The selected archive entry and original/downloaded SHA256 values are recorded
+  in the hosted candidate's music-provenance.json before final dataset adoption.
+- Other inspected sources and resized review images are credited in
+  test/bench/clips/raw-v2/REVIEW.md. Provisional and rejected candidates are marked.

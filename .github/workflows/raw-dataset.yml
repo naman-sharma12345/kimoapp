@@ -52,6 +52,27 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/kimo-bench-data/raw-v2-candidates/${{ matrix.clip }}
       - run: node desktop/test/bench/acquire-raw.mjs
+      - name: Acquire the separately licensed CC0 music source
+        if: matrix.clip == 'MUSIC-1'
+        run: |
+          $musicRoot = [IO.Path]::GetFullPath("$env:KIMO_BENCH_DATA/raw-v2-candidates/MUSIC-1")
+          $musicManifest = Get-Content desktop/test/bench/clips/raw-v2/candidates.json -Raw | ConvertFrom-Json
+          $musicSource = ($musicManifest.candidates | Where-Object id -eq 'MUSIC-1').music
+          $musicZip = Join-Path $musicRoot 'music-source.zip'
+          Invoke-WebRequest -Uri $musicSource.url -OutFile $musicZip -TimeoutSec 300
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $musicArchive = [IO.Compression.ZipFile]::OpenRead($musicZip)
+          try {
+            $musicTracks = @($musicArchive.Entries | Where-Object FullName -match '\.(wav|ogg|mp3)$' | Sort-Object FullName)
+            if ($musicTracks.Count -eq 0) { throw 'Composer archive contains no audio tracks' }
+            $musicTrack = $musicTracks | Where-Object FullName -match 'Ending' | Select-Object -First 1
+            if (-not $musicTrack) { $musicTrack = $musicTracks[0] }
+            $musicOut = Join-Path $musicRoot ('music-bed' + [IO.Path]::GetExtension($musicTrack.FullName))
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($musicTrack, $musicOut, $true)
+            $musicProbe = & $env:KIMO_FFPROBE -v error -show_streams -show_format -of json $musicOut | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot probe music bed' }
+            @{ source = $musicSource; zipSha256 = (Get-FileHash -LiteralPath $musicZip -Algorithm SHA256).Hash.ToLowerInvariant(); archiveEntry = $musicTrack.FullName; file = [IO.Path]::GetFileName($musicOut); sha256 = (Get-FileHash -LiteralPath $musicOut -Algorithm SHA256).Hash.ToLowerInvariant(); tracks = @($musicTracks.FullName); metadata = $musicProbe; accepted = $false } | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $musicRoot 'music-provenance.json') -Encoding utf8
+          } finally { $musicArchive.Dispose() }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
