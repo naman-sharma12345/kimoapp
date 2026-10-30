@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { runEdit, PRESETS, probe } from '../engine.mjs';
 import { command } from './bench/io.mjs';
 import { toolPaths } from './bench/run.mjs';
+import { applyEdits } from '../edl.mjs';
 const tools = toolPaths();
 test('legacy picture rendering cannot be enabled from a normal app call', async () => {
   const previous = process.env.KIMO_BENCH_LEGACY;
@@ -65,7 +66,7 @@ test(
         input,
       ]);
       const file = await probe(tools.ffprobe, input);
-      let saved;
+      let saved, savedEdl;
       for (const mode of ['captions', 'ai', 'manual', 'followup', 'sam']) {
         const runDir = join(dir, mode),
           log = join(dir, mode + '-tools.jsonl'),
@@ -81,11 +82,27 @@ test(
           preset: 'fixture',
           mode,
           projectFile: saved,
+          edl:
+            mode === 'manual'
+              ? applyEdits(JSON.parse(await readFile(savedEdl, 'utf8')), [
+                  {
+                    tool: 'trim_clip',
+                    args: { clip_id: 'clip1', duration: 0.8 },
+                  },
+                ])
+              : undefined,
           ffmpeg: tools.ffmpeg,
           ffprobe: tools.ffprobe,
           emit: (e) => events.push(e),
         });
         saved = result.projectFile;
+        savedEdl = result.edlFile;
+        if (mode === 'manual')
+          assert.equal(
+            result.edl.video[0].clips[0].out,
+            0.8,
+            'manual EDL is the render source of truth',
+          );
         assert.equal(result.edl.edl_version, 1, mode);
         assert.ok(result.timeline.edl, mode);
         assert.ok(

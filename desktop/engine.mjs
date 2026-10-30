@@ -1043,7 +1043,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
 /** ffprobe: duration + kind for a local file. */
 export function probe(ffprobe, path) {
   return new Promise((done) =>
-    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate,avg_frame_rate', '-of', 'json', path],
+    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_space,color_transfer,color_primaries:stream_tags=rotate:stream_side_data=rotation', '-of', 'json', path],
       { windowsHide: true, timeout: 30_000 }, (err, stdout) => {
         try {
           const j = JSON.parse(stdout);
@@ -1055,7 +1055,9 @@ export function probe(ffprobe, path) {
           };
           const fr = rate(v?.r_frame_rate);
           const avg = rate(v?.avg_frame_rate);
-          done({ path, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
+          const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
+          done({ path, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }

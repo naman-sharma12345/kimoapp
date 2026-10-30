@@ -19,6 +19,75 @@ const W = 192,
   top = 60;
 
 test(
+  'external audio assets resolve duration and gain without a source entry',
+  { timeout: 30000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-audio-asset-'));
+    try {
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-f',
+        'lavfi',
+        '-i',
+        'sine=frequency=1000:sample_rate=48000:duration=1',
+        '-c:a',
+        'pcm_s16le',
+        join(dir, 'tone.wav'),
+      ]);
+      const e = {
+        edl_version: 1,
+        canvas: { w: W, h: H, fps: 25 },
+        sources: [],
+        video: [],
+        overlays: [],
+        audio: [
+          { track: 'SFX', clips: [{ asset: 'tone.wav', at: 0, gain_db: -6 }] },
+        ],
+      };
+      const output = join(dir, 'sound.mkv');
+      await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output,
+        dir: join(dir, 'work'),
+        assetRoot: dir,
+      });
+      const info = await probeFile(ffprobe, output);
+      assert.ok(Math.abs(Number(info.format.duration) - 1) < 0.01);
+      const { stdout } = await command(ffmpeg, [
+        '-v',
+        'error',
+        '-i',
+        output,
+        '-vn',
+        '-ac',
+        '1',
+        '-f',
+        's16le',
+        'pipe:1',
+      ]);
+      assert.ok(Math.abs(stdout.readInt16LE(12012 * 2) / 32768) < 0.07);
+      assert.ok(Math.abs(stdout.readInt16LE(12012 * 2) / 32768) > 0.04);
+      assert.equal(
+        e.audio[0].clips[0].dur,
+        undefined,
+        'caller EDL is not mutated',
+      );
+      e.audio[0].clips[0].asset = 'missing.wav';
+      await assert.rejects(
+        compose({ edl: e, ffmpeg, ffprobe, output, assetRoot: dir }),
+        /EDL audio.*missing asset/,
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
   'image overlays retain alpha and exact on/off frames in both strategies',
   { timeout: 90000 },
   async () => {
@@ -100,6 +169,57 @@ test(
         assert.ok(pixel(5, 96, 64)[0] > 230, strategy + ' first graphic frame');
         assert.ok(pixel(14, 96, 64)[0] > 230, strategy + ' last graphic frame');
         assert.ok(pixel(8, 8, 8)[2] > 230, strategy + ' transparent corner');
+        assert.ok(
+          pixel(8, 96, 64)[1] < 8,
+          strategy + ' RGB image uses the BT.709 matrix, not just tags',
+        );
+        assert.ok(
+          pixel(8, 8, 8)[0] < 8 && pixel(8, 8, 8)[1] < 8,
+          strategy + ' background colour uses the BT.709 matrix',
+        );
+        const text = {
+          id: 'label',
+          kind: 'hook_title',
+          at: 0.2,
+          dur: 0.4,
+          props: { text: 'X', size: 32, font: 'DejaVu Sans', x: 0.5, y: 0.5 },
+        };
+        for (const above of [false, true]) {
+          const layered = structuredClone(e);
+          layered.overlays = above
+            ? [...layered.overlays, text]
+            : [text, ...layered.overlays];
+          const layeredOut = join(dir, `${strategy}-${above}.mkv`);
+          await compose({
+            edl: layered,
+            ffmpeg,
+            ffprobe,
+            output: layeredOut,
+            dir: join(dir, 'work'),
+            strategy,
+            fontsDir: tools.env.KIMO_FONTS,
+          });
+          const decoded = (
+            await command(ffmpeg, [
+              '-v',
+              'error',
+              '-i',
+              layeredOut,
+              '-pix_fmt',
+              'rgb24',
+              '-f',
+              'rawvideo',
+              'pipe:1',
+            ])
+          ).stdout;
+          const green = decoded[(8 * W * H + 64 * W + 96) * 3 + 1];
+          assert.ok(
+            above
+              ? green > pixel(8, 96, 64)[1] + 100
+              : green === pixel(8, 96, 64)[1],
+            `${strategy} preserves text/image layer order: ${above}, green=${green}`,
+          );
+        }
       }
     } finally {
       await rm(dir, { recursive: true, force: true });

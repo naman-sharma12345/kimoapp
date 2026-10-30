@@ -53,7 +53,7 @@ test('native conversion retains rational rate, camera and linked sound; edits re
     edl = fromKimoProject(p);
   assert.equal(edl.edl_version, 1);
   assert.equal(edl.canvas.fps, '30000/1001');
-  assert.equal(edl.video[0].clips[0].camera[1].zoom, 1.2);
+  assert.equal(edl.video[0].clips[0].camera.find((k) => k.t === 1).zoom, 1.2);
   assert.equal(edl.sources[0].path, 'C:/media/one.mp4');
   const changed = applyEdits(edl, [
     { tool: 'move_clip', args: { clip_id: 'c1', start: 0.5 } },
@@ -159,4 +159,32 @@ test('slow motion at source EOF holds the final real frame', () => {
   );
   assert.equal(p.indices.at(-1), 24);
   assert.ok(p.indices.every((n) => n < 25));
+});
+
+test('native transform sampling preserves independent curves and translation under zoom', () => {
+  const p = project(),
+    clip = p.tracks[0].clips[0];
+  clip.props.x = {
+    base: 0,
+    keys: [
+      { t: 0, v: 0, ease: 'linear' },
+      { t: 1, v: 8 },
+    ],
+  };
+  clip.props.y = { base: 12 };
+  const e = fromKimoProject(p),
+    camera = e.video[0].clips[0].camera;
+  const atOne = camera.find((k) => k.t === 1);
+  assert.ok(Math.abs(atOne.x - (0.5 - 8 / (192 * 1.2))) < 1e-10);
+  assert.ok(Math.abs(atOne.y - (0.5 - 12 / (128 * 1.2))) < 1e-10);
+  const sample = camera.find((k) => k.t > 0 && k.t < 1),
+    t = sample.t;
+  const z = 1 + 0.2 * t * t * (3 - 2 * t);
+  assert.ok(Math.abs(sample.zoom - z) < 1e-10);
+  assert.ok(Math.abs(sample.x - (0.5 - (8 * t) / (192 * z))) < 1e-10);
+  assert.equal(
+    sample.ease,
+    'linear',
+    'dense EDL samples must not ease the native curve twice',
+  );
 });

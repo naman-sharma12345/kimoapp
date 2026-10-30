@@ -129,7 +129,10 @@ export function cameraRectsForClip(clip, source, canvas, plan) {
 function geometry(clip, source, canvas, plan) {
   // Normalize before resampling in both strategies. Otherwise RGB sources can
   // be transformed before conversion in A but after conversion in B.
-  const filters = ['format=yuva444p'];
+  const filters = [
+    'scale=out_color_matrix=bt709:out_range=tv',
+    'format=yuva444p',
+  ];
   const rotation = (((source.rotation ?? 0) % 360) + 360) % 360;
   if (rotation === 90) filters.push('transpose=clock');
   else if (rotation === 270) filters.push('transpose=cclock');
@@ -156,9 +159,19 @@ function geometry(clip, source, canvas, plan) {
       rectFilter(cameraRectsForClip(clip, source, canvas, plan)),
       `scale=${canvas.w}:${canvas.h}:flags=lanczos+accurate_rnd+full_chroma_int`,
     );
-  const angle = curveValue(clip.rotation, 0);
-  if (angle)
-    filters.push(`rotate=${safe((angle * Math.PI) / 180)}:fillcolor=black@0`);
+  const angles = plan.indices.map(
+    (_, i) =>
+      (curveValue(
+        clip.rotation,
+        (plan.start + i) / rate(canvas.fps) - clip.at,
+      ) *
+        Math.PI) /
+      180,
+  );
+  if (angles.some((a) => Math.abs(a) > 1e-9))
+    filters.push(
+      `rotate='${splineExpr(angles, 'n', 0.000001)}':fillcolor=black@0`,
+    );
   for (const effect of clip.grade?.effects ?? []) {
     if (effect.kind !== 'primaries') continue;
     const p = effect.params ?? {},
@@ -243,7 +256,7 @@ async function mappedSegment({
       '0:v:0',
       '-an',
       '-vf',
-      `trim=end_frame=${last - first + 1},format=${rawFormat}`,
+      `trim=end_frame=${last - first + 1}${source.alpha ? '' : ',scale=out_color_matrix=bt709:out_range=tv'},format=${rawFormat}`,
       '-fps_mode',
       'passthrough',
       '-f',
@@ -278,6 +291,7 @@ async function mappedSegment({
       `${source.w}x${source.h}`,
       '-framerate',
       String(canvas.fps),
+      ...(source.alpha ? [] : ['-colorspace', 'bt709', '-color_range', 'tv']),
       '-i',
       'pipe:0',
       '-an',
@@ -291,6 +305,14 @@ async function mappedSegment({
       '3',
       '-pix_fmt',
       'yuva444p',
+      '-colorspace',
+      'bt709',
+      '-color_primaries',
+      'bt709',
+      '-color_trc',
+      'bt709',
+      '-color_range',
+      'tv',
       '-fps_mode',
       'passthrough',
       output,
@@ -350,6 +372,14 @@ const lossless = [
   '3',
   '-pix_fmt',
   'yuv444p',
+  '-colorspace',
+  'bt709',
+  '-color_primaries',
+  'bt709',
+  '-color_trc',
+  'bt709',
+  '-color_range',
+  'tv',
   '-fps_mode',
   'passthrough',
 ];
@@ -380,6 +410,14 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
             '3',
             '-pix_fmt',
             'yuva444p',
+            '-colorspace',
+            'bt709',
+            '-color_primaries',
+            'bt709',
+            '-color_trc',
+            'bt709',
+            '-color_range',
+            'tv',
             path,
           ],
           { signal },
@@ -447,6 +485,7 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
       at: from / fps,
       speed: 1,
       _baked: true,
+      _overlayIndex: track._overlayIndex,
     });
   }
   return { clips: layers, sources };
@@ -591,18 +630,41 @@ export async function compose({
   strategy = 'auto',
   frame = null,
   fontsDir,
+  assetRoot,
 }) {
   // Work on a private normalized copy; IPC/saved EDLs stay immutable.
   edl = structuredClone(edl);
-  for (const overlay of edl.overlays) {
+  for (const [ti, track] of edl.audio.entries())
+    for (const [ci, clip] of track.clips.entries()) {
+      clip.id ??= `audio-${ti}-${ci}`;
+      clip.speed ??= 1;
+      clip.in ??= 0;
+      if (!clip.asset) continue;
+      clip.asset = resolve(assetRoot ?? resolve(output, '..'), clip.asset);
+      if (!existsSync(clip.asset))
+        throw new Error(`EDL audio ${clip.id}: missing asset ${clip.asset}`);
+      const info = await inspect(ffprobe, clip.asset);
+      if (!info.streams.some((s) => s.codec_type === 'audio'))
+        throw new Error(`EDL audio ${clip.id}: asset has no audio stream`);
+      const length = Number(info.format?.duration);
+      clip.dur ??= ((clip.out ?? length) - clip.in) / clip.speed;
+      clip.out ??= clip.in + clip.dur * clip.speed;
+      if (length > 0 && clip.out > length + 1 / 48000)
+        throw new Error(
+          `EDL audio ${clip.id}.out: exceeds asset duration ${length}`,
+        );
+    }
+  for (const [overlayIndex, overlay] of edl.overlays.entries()) {
     if (!['image', 'text_behind'].includes(overlay.kind) || !overlay.src)
       continue;
     const p = overlay.props ?? {};
     edl.video.push({
       track: 'overlay:' + overlay.id,
+      _overlayIndex: overlayIndex,
       clips: [
         {
           id: 'picture:' + overlay.id,
+          _overlayIndex: overlayIndex,
           src: overlay.src,
           at: overlay.at,
           in: p.in ?? 0,
@@ -711,10 +773,10 @@ export async function compose({
           '-f',
           'lavfi',
           '-i',
-          `color=c=${edl.canvas.bg ?? 'black'}:s=${edl.canvas.w}x${edl.canvas.h}:r=${edl.canvas.fps}`,
+          `color=c=${edl.canvas.bg ?? 'black'}:s=${edl.canvas.w}x${edl.canvas.h}:r=${edl.canvas.fps},format=rgb24`,
         ],
         graph = [
-          `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},format=yuv444p[base0]`,
+          `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p[base0]`,
         ];
       let input = 1,
         layer = 0,
@@ -725,10 +787,32 @@ export async function compose({
       const activeClips = baked?.clips ?? clips,
         activeSources = baked?.sources ?? edl.sources;
       let pass = 0;
+      let overlayCursor = 0;
       for (const clip of activeClips) {
         const source = activeSources.find((s) => s.id === clip.src),
           plan = framePlan(clip, source, edl.canvas.fps, from, to);
         if (!plan.indices.length) continue;
+        // The overlay array is ordered, including text underneath later images.
+        if (clip._overlayIndex != null) {
+          const ass = join(dir, `before-${from}-${clip._overlayIndex}.ass`);
+          await writeFile(
+            ass,
+            subtitles(
+              {
+                ...edl,
+                overlays: edl.overlays.slice(overlayCursor, clip._overlayIndex),
+              },
+              from,
+              to,
+            ),
+          );
+          const textBase = `textBefore${clip._overlayIndex}`;
+          graph.push(
+            `[${base}]subtitles=filename='${basename(ass)}'${localFonts ? ":fontsdir='fonts'" : ''}[${textBase}]`,
+          );
+          base = textBase;
+          overlayCursor = clip._overlayIndex + 1;
+        }
         let vf;
         if (clip._baked) {
           args.push('-i', source.path);
@@ -836,7 +920,7 @@ export async function compose({
               ...lossless,
               stage,
             ],
-            { signal },
+            { signal, cwd: dir },
           );
           args.length = 0;
           args.push('-i', stage);
@@ -850,7 +934,14 @@ export async function compose({
         }
       }
       const ass = join(dir, `overlays-${from}.ass`);
-      await writeFile(ass, subtitles(edl, from, to));
+      await writeFile(
+        ass,
+        subtitles(
+          { ...edl, overlays: edl.overlays.slice(overlayCursor) },
+          from,
+          to,
+        ),
+      );
       graph.push(
         `[${base}]subtitles=filename='${basename(ass)}'${localFonts ? ":fontsdir='fonts'" : ''},format=yuv444p[composed]`,
       );

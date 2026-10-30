@@ -83,6 +83,7 @@ export function pictureTools({
           signal,
           emit,
           fontsDir,
+          assetRoot: dir,
         });
         return {
           content: [
@@ -156,6 +157,7 @@ export function pictureTools({
           signal,
           emit: () => {},
           fontsDir,
+          assetRoot: dir,
         });
       }
       return {

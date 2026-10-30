@@ -160,12 +160,18 @@ export function validate(edl) {
         if (!c.id || ids.has(c.id)) fail(at + '.id', 'unique clip id required');
         ids.add(c.id);
         const s = sources.get(c.src);
-        if (!s && !c.asset) fail(at + '.src', `unknown asset ${c.src}`);
+        if (
+          !s &&
+          (family === 'video' || typeof c.asset !== 'string' || !c.asset)
+        )
+          fail(at + '.src', `unknown asset ${c.src}`);
         if (!finite(c.at) || c.at < 0)
           fail(at + '.at', 'nonnegative time required');
         const speed = c.speed ?? 1;
         if (!finite(speed) || speed <= 0)
           fail(at + '.speed', 'positive speed required');
+        if (c.gain_db != null && !finite(c.gain_db))
+          fail(at + '.gain_db', 'finite gain required');
         const d = c.dur ?? (c.out - c.in) / speed;
         if (!finite(d) || d <= 0) fail(at, 'duration must be > 0');
         if (
@@ -314,6 +320,9 @@ export function fromKimoProject(
     bg: '#000000',
   };
   for (const track of project.tracks ?? []) {
+    for (const [key, value] of Object.entries(track))
+      if (!['id', 'name', 'clips', 'muted'].includes(key) && meaningful(value))
+        warn(`tracks.${track.id}.${key}`, value);
     const vt = { track: track.id, name: track.name ?? '', clips: [] },
       at = { track: track.id, name: track.name ?? '', clips: [] };
     for (const c of track.clips ?? []) {
@@ -342,6 +351,13 @@ export function fromKimoProject(
           warn(`${path}.props.${k}.expr`, v.expr);
       }
       const props = c.props ?? {};
+      if (
+        props.reveal &&
+        (curveValue(props.reveal, 0, 1) !== 1 ||
+          props.reveal.keys?.length ||
+          props.reveal.expr?.length)
+      )
+        warn(`${path}.props.reveal`, props.reveal);
       if (c.source.type === 'text') {
         const dur = Math.min(
           c.duration,
@@ -392,6 +408,21 @@ export function fromKimoProject(
         const times = [
           ...new Set([
             0,
+            ...(['x', 'y', 'scale'].some((k) => props[k]?.keys?.length)
+              ? Array.from(
+                  { length: Math.ceil(c.duration * rate(canvas.fps)) + 1 },
+                  (_, i) =>
+                    Math.min(
+                      c.duration,
+                      Math.max(
+                        0,
+                        (Math.ceil(c.start * rate(canvas.fps)) + i) /
+                          rate(canvas.fps) -
+                          c.start,
+                      ),
+                    ),
+                )
+              : []),
             ...['x', 'y', 'scale'].flatMap((k) =>
               (props[k]?.keys ?? []).map((q) => q.t ?? q.time),
             ),
@@ -421,20 +452,34 @@ export function fromKimoProject(
             ),
           ]),
         ].sort((a, b) => a - b);
-        const camera = times.map((t) => ({
-          t,
-          x: 0.5 - curveValue(props.x, t) / canvas.w,
-          y: 0.5 - curveValue(props.y, t) / canvas.h,
-          zoom: curveValue(props.scale, t, 1),
-          ease:
-            props.scale?.keys?.find((k) => (k.t ?? k.time) === t)?.ease ??
-            'cubic',
-        }));
+        const fit = curveValue(props.fit, 0, 1) === 0 ? 'contain' : 'cover';
+        const sourceAspect = source.w / source.h,
+          canvasAspect = canvas.w / canvas.h;
+        const cropW =
+          sourceAspect > canvasAspect ? source.h * canvasAspect : source.w;
+        const cropH =
+          sourceAspect > canvasAspect ? source.h : source.w / canvasAspect;
+        const camera = times.map((t) => {
+          const zoom = curveValue(props.scale, t, 1);
+          return {
+            t,
+            x:
+              0.5 -
+              (curveValue(props.x, t) / (canvas.w * zoom)) *
+                (fit === 'contain' ? 1 : cropW / source.w),
+            y:
+              0.5 -
+              (curveValue(props.y, t) / (canvas.h * zoom)) *
+                (fit === 'contain' ? 1 : cropH / source.h),
+            zoom,
+            ease: 'linear',
+          };
+        });
         vt.clips.push({
           ...common,
           camera,
           reframe: { mode: 'manual' },
-          fit: curveValue(props.fit, 0, 1) === 0 ? 'contain' : 'cover',
+          fit,
           opacity: clone(props.opacity ?? { base: 1 }),
           rotation: clone(props.rotation ?? { base: 0 }),
           grade: {
@@ -505,7 +550,14 @@ export function fromKimoProject(
       meaningful(value)
     )
       warn(key, value);
-  for (const key of ['lights', 'materials', 'occluders'])
+  for (const key of [
+    'lights',
+    'materials',
+    'occluders',
+    'camera',
+    'ocio_view_delivery',
+    'color_pipeline',
+  ])
     if (meaningful(project[key])) warn(key, project[key]);
   const edl = {
     edl_version: 1,
