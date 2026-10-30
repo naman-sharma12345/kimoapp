@@ -1,0 +1,25 @@
+{
+  "id": "VLOG-1",
+  "segment": 5,
+  "duration": 10.01,
+  "seeks": [
+    {
+      "at": 2,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 5,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 9,
+      "ready": 4,
+      "error": null
+    }
+  ],
+  "requests": 0,
+  "errors": [],
+  "scope": "Prepared source preview briefly played and sought; no full listening or final-render acceptance."
+}

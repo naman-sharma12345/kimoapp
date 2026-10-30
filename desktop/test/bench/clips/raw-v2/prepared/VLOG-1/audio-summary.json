@@ -1,0 +1,50 @@
+[
+  {
+    "segment": 1,
+    "wordEntries": 22,
+    "firstDetectedSpeech": 0,
+    "lastDetectedSpeech": 8.8,
+    "wordsOutsideMedia": 0,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  },
+  {
+    "segment": 2,
+    "wordEntries": 25,
+    "firstDetectedSpeech": 0,
+    "lastDetectedSpeech": 10.1,
+    "wordsOutsideMedia": 1,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  },
+  {
+    "segment": 3,
+    "wordEntries": 32,
+    "firstDetectedSpeech": 0,
+    "lastDetectedSpeech": 9.86,
+    "wordsOutsideMedia": 0,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  },
+  {
+    "segment": 4,
+    "wordEntries": 32,
+    "firstDetectedSpeech": 0,
+    "lastDetectedSpeech": 9.96,
+    "wordsOutsideMedia": 0,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  },
+  {
+    "segment": 5,
+    "wordEntries": 25,
+    "firstDetectedSpeech": 0.01,
+    "lastDetectedSpeech": 12.32,
+    "wordsOutsideMedia": 2,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  },
+  {
+    "segment": 6,
+    "wordEntries": 23,
+    "firstDetectedSpeech": 0,
+    "lastDetectedSpeech": 11.43,
+    "wordsOutsideMedia": 1,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  }
+]

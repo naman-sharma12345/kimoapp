@@ -1,0 +1,46 @@
+{
+  "artifact": {
+    "id": 12997254002,
+    "name": "raw-v2-prepared-41099499282-MUSIC-1",
+    "digest": "sha256:0101afcf49adb1984d1f5b5afcc545955694d2b02e82aa030211f09c76c10fcc",
+    "size_in_bytes": 45732856
+  },
+  "fetchedBytes": 4059902,
+  "files": [
+    {
+      "name": "1-words.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "name": "prepared.json",
+      "bytes": 6347,
+      "sha256": "ed86a41c577a73c8bb8e08c969399f88b2cbd34127c1c939e7559db0bd631cd6"
+    },
+    {
+      "name": "CREDITS.txt",
+      "bytes": 352,
+      "sha256": "83d930c4d5e646e17f954834252fb9f359110ab989a7958d234abf2c1c6afdd4"
+    },
+    {
+      "name": "review-1/hook.jpg",
+      "bytes": 100178,
+      "sha256": "419bd22ac98c218077467799c330eb901a7ef7dbb7f7b7566e3dd4f614739a90"
+    },
+    {
+      "name": "review-1/sheet.jpg",
+      "bytes": 143574,
+      "sha256": "4889ec7605df2212bc7d614fd205225b18918bb59882d423241dfcace58f0549"
+    },
+    {
+      "name": "review-1/source-preview.mp4",
+      "bytes": 1399164,
+      "sha256": "9266d5e12a8aa22c7cd25530815f9449bf44f7d0a9a0dcf31587047aad436330"
+    },
+    {
+      "name": "review-1/strip.mp4",
+      "bytes": 2343969,
+      "sha256": "4d912336a8a94187531b9773507c66fe395a53cd8b4c685c3cf4c61c4a090ac6"
+    }
+  ]
+}

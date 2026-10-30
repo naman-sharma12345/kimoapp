@@ -79,3 +79,68 @@ Evidence: [source sheet](review/MUSIC-1/candidate-sheet.jpg), [first second](rev
 The user approved the publisher's custom permission with full credits and hashtags. Actual350-second prefix sheets and first-second frames were inspected for HOST and INTERVIEW. HOST contains outdoor handheld two-host selfie footage; foreground face placement and physical motion vary. INTERVIEW contains genuine microphone interviews and camera reframing, plus walkaway, exterior and chapel context shots. Neither prefix is itself a golden case. Selected TH-2/POD-1/VLOG-1 intervals require dense preview/audio review before acceptance. Files are public Drive playback renditions, not camera-original containers. Dedicated BROLL remains unavailable after two HTTP429 responses; no further retry or access bypass is planned.
 
 Evidence: [host sheet](review/CINE-HOST/candidate-sheet.jpg), [host first second](review/CINE-HOST/candidate-first-second.jpg), [interview sheet](review/CINE-INTERVIEW/candidate-sheet.jpg), [interview first second](review/CINE-INTERVIEW/candidate-first-second.jpg). The full required [credits and hashtags](CREDITS.md) apply to these inspection derivatives as well.
+
+## Exact prepared-file inspection (41099499282)
+
+All six preparation artifacts are frozen in [prepared-manifest.json](prepared-manifest.json). Actual per-second contact sheets and ten first-second frames were inspected for every input, including all six vlog excerpts. Small source previews briefly played and sought in an owned headless Chrome browser with zero HTTP requests/errors; it was closed. All six vlog previews also decoded and sought at2,5and9seconds without browser errors or HTTP requests. Full audio listening is not inferred. Per-input ASR summaries explicitly count timestamps outside media duration. These are source checks, not final output acceptance.
+
+### TH-2 outdoor raw host selection
+
+1. The45-second selected interval begins with a handheld chest/partial-face framing near a fence.
+2. By about2seconds the foreground host is centred beneath trees.
+3. The background shifts between trees, a timber building and fairgoers as the camera moves.
+4. A second host is briefly visible near the end.
+5. Natural head turns and expressive speech gestures provide real subject motion.
+6. The first second is a weak editorial opening, not a prepared hook.
+7. Low-angle views around24–26seconds make facial perspective inconsistent.
+8. The sampled footage contains no added dialogue captions or title package.
+9. Large perspective changes are captured camera motion; they need source-referenced measurement.
+10. A centre portrait crop would preserve some foreground views but can lose the second host.
+11. Offline ASR includes speech but has some timestamps beyond the45-second media; those estimates are not validated words.
+12. Preview playback and seeks at2,22and44seconds decode successfully.
+13. No full listening or frame-by-frame continuity certification is claimed from these samples.
+14. Full Cinestudy credits/hashtags accompany the exact prepared artifact and this review.
+
+Evidence: [sheet](prepared/TH-2/review-1/sheet.jpg), [first second](prepared/TH-2/review-1/hook.jpg), [hashes](prepared/TH-2/prepared.json), [credits](prepared/TH-2/CREDITS.txt).
+
+### POD-1 outdoor two-person conversation
+
+1. Both participants remain visible in the wide source composition.
+2. The interviewer stands left and holds a microphone toward the costumed guest.
+3. The guest stands right and gestures through the selected minute.
+4. The background includes a tree canopy, fair buildings and passers-by.
+5. The camera physically reframes and slightly rolls as the conversation continues.
+6. Subject positions change gradually in the inspected per-second cells.
+7. No baked multicamera angle switches like the rejected Wozniak candidate appear in those cells.
+8. There are no pre-existing dialogue captions in the selected samples.
+9. The first-second strip shows the guest's moving arm and stable two-person arrangement.
+10. Centre cropping this16:9 two-shot to portrait would be an editorial framing limitation.
+11. It is an outdoor podcast/documentary interview, not an indoor studio podcast.
+12. Preview playback and seeks at2,30and59seconds decode without errors.
+13. Still sampling and brief playback do not certify complete audio intelligibility or every inter-frame transition.
+14. Required custom-permission credits and hashtags are retained with the prepared bytes.
+
+Evidence: [sheet](prepared/POD-1/review-1/sheet.jpg), [first second](prepared/POD-1/review-1/hook.jpg), [hashes](prepared/POD-1/prepared.json), [credits](prepared/POD-1/CREDITS.txt).
+
+### VLOG-1 six raw shot excerpts
+
+1. This case has six10-second prepared inputs, totalling60seconds before container padding.
+2. They come from two publisher-provided raw camera rolls at the same Renaissance faire.
+3. They are explicitly not six independent camera-original files.
+4. Input1 is the host close-up, beginning awkwardly near a fence before the camera rises.
+5. Input2 is the two-person microphone conversation.
+6. Input3 continues the interview from a different position; it is not a silent walkaway shot.
+7. Input4 moves around the participants and begins to pan toward the timber building.
+8. Input5 follows the building exterior into the chapel entrance, providing usable context b-roll.
+9. Input6 begins on a costumed woman, then pulls wide and exits the chapel.
+10. The inspected source samples have no added caption/title package.
+11. Joins between these selected inputs are deliberate benchmark preparation boundaries, not newly chosen AI editorial cuts.
+12. Speech and location context are present; the ordering is an offline fixture, not a polished story.
+13. Physical camera dips and rotation are retained rather than smoothed out of the input.
+14. The dedicated b-roll camera file was unavailable after two429responses; no substitute finished montage is used.
+15. All twelve actual input sheets/first-second images were inspected; complete audio listening is still pending.
+16. Exact prepared hashes, source ranges and full credits are retained.
+
+Evidence: [prepared provenance](prepared/VLOG-1/prepared.json), [credits](prepared/VLOG-1/CREDITS.txt), input sheets/first-second frames in prepared/VLOG-1/review-1 through review-6.
+
+TH-1/TUT-1/MUSIC-1 exact prepared sheets and first-second frames were also inspected; their earlier candidate observations still apply. Prepared evidence is under prepared/ID. MUSIC source preview remains silent; a separate music-stem mix is only exercised by the comparison fixture.

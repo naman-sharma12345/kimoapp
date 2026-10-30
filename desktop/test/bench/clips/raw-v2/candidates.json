@@ -155,8 +155,7 @@
     }
   ],
   "missing": [
-    "TH-2: raw outdoor handheld walk-and-talk, 30–60 seconds, real speech/wind",
-    "VLOG-1: 6–12 distinct raw clips with speech and b-roll, 40–80 seconds total",
-    "MUSIC-1: candidate exists; original hash, selected CC0 track and actual review pending"
+    "Final raw-v2 before/after renders, measurements and output reviews remain pending.",
+    "Dedicated b-roll pack unavailable after two HTTP429 responses; vlog instead uses acquired raw context shots, with the limitation documented."
   ]
 }

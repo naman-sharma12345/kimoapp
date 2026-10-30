@@ -1,0 +1,46 @@
+{
+  "artifact": {
+    "id": 12998681053,
+    "name": "raw-v2-prepared-41099499282-TH-2",
+    "digest": "sha256:9b583ec9e83e870224edb6364580d352fb405740e0cd5c02ad831a4f491d4116",
+    "size_in_bytes": 85624468
+  },
+  "fetchedBytes": 13162769,
+  "files": [
+    {
+      "name": "1-words.json",
+      "bytes": 6337,
+      "sha256": "d49b94cb4bbf0cba98116ca89bc252acbd2c8856be429007c764b64b74d149e0"
+    },
+    {
+      "name": "prepared.json",
+      "bytes": 9211,
+      "sha256": "2c594e2039666d9835625411fc600edc4c6ad0e15c7261790a181183f8bb8963"
+    },
+    {
+      "name": "CREDITS.txt",
+      "bytes": 543,
+      "sha256": "cf608501160208fbf29c67289216b4c863ddbada3134c96e95d4bef0d1263b0b"
+    },
+    {
+      "name": "review-1/hook.jpg",
+      "bytes": 82839,
+      "sha256": "ca3e1807aa3399ec0b0930260c9837a8a33cfdb8de7259fc0ee12c90d946f98f"
+    },
+    {
+      "name": "review-1/sheet.jpg",
+      "bytes": 409481,
+      "sha256": "7e4cd6c14f702472f98c64b8ef9b1d9fc7f7514235817871259e818bbae5354f"
+    },
+    {
+      "name": "review-1/strip.mp4",
+      "bytes": 4835118,
+      "sha256": "6a640680c48c5b423a00fcf2f15987f4a88f2d467f863272fd27c03c1e7e7a3f"
+    },
+    {
+      "name": "review-1/source-preview.mp4",
+      "bytes": 7752984,
+      "sha256": "418515b0c9c4da7f6309ac828f09be463becb971d3ca8ec7009277c848bb8623"
+    }
+  ]
+}

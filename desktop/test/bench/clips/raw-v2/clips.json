@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "status": "selected source intervals; prepared-file hashes and final acceptance pending",
+  "status": "Selected raw shot excerpts, exact preparation frozen in prepared-manifest.json; final renderer acceptance pending",
   "sources": {
     "TH-1": {
       "id": "TH-1",
@@ -124,7 +124,10 @@
       "name": "Unedited indoor interview",
       "speech": true,
       "duration": 60,
-      "aspects": ["9:16", "16:9"],
+      "aspects": [
+        "9:16",
+        "16:9"
+      ],
       "notes": "Single fixed camera. Publisher watermark; Commons licence review pending. Static background makes frame identity ambiguous; no assumption of zero repeats from missing coverage.",
       "segments": [
         {
@@ -139,7 +142,10 @@
       "name": "Raw outdoor host walk-and-talk",
       "speech": true,
       "duration": 45,
-      "aspects": ["9:16", "16:9"],
+      "aspects": [
+        "9:16",
+        "16:9"
+      ],
       "notes": "Two hosts on a handheld selfie camera with walking/pauses. Physical capture motion must be distinguished from compositor camera jitter. Publisher public Drive playback rendition, not camera-original bytes.",
       "segments": [
         {
@@ -154,7 +160,10 @@
       "name": "Blender screen tutorial with facecam",
       "speech": true,
       "duration": 75,
-      "aspects": ["9:16", "16:9"],
+      "aspects": [
+        "9:16",
+        "16:9"
+      ],
       "notes": "Screen capture with facecam lower right. Static UI can make frame matching ambiguous; portrait centre crop is an editorial limitation.",
       "segments": [
         {
@@ -169,7 +178,10 @@
       "name": "Renaissance faire raw source selections",
       "speech": true,
       "duration": 60,
-      "aspects": ["9:16", "16:9"],
+      "aspects": [
+        "9:16",
+        "16:9"
+      ],
       "notes": "Six separately prepared raw shot excerpts from the same event host/interview camera rolls; they are not six independent camera-original files. Speech, walkaway/exterior and chapel context shots. Exact boundaries still require selected-preview review. Dedicated b-roll file was unavailable after two HTTP429 responses.",
       "segments": [
         {
@@ -209,7 +221,10 @@
       "name": "Raw two-person outdoor interview",
       "speech": true,
       "duration": 60,
-      "aspects": ["9:16", "16:9"],
+      "aspects": [
+        "9:16",
+        "16:9"
+      ],
       "notes": "Two-person podcast/documentary conversation with microphone. Outdoor setting with physical camera reframing, not a studio podcast. Public Drive playback rendition.",
       "segments": [
         {
@@ -224,7 +239,10 @@
       "name": "Continuous wave b-roll and separate composer bed",
       "speech": false,
       "duration": 20,
-      "aspects": ["9:16", "16:9"],
+      "aspects": [
+        "9:16",
+        "16:9"
+      ],
       "notes": "Silent original video plus independently imported CC0 music stem; declared manual offline soundtrack fixture, no AI editing claims.",
       "segments": [
         {

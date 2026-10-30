@@ -1,0 +1,10 @@
+[
+  {
+    "segment": 1,
+    "wordEntries": 97,
+    "firstDetectedSpeech": 0,
+    "lastDetectedSpeech": 46.59,
+    "wordsOutsideMedia": 2,
+    "scope": "Offline ASR timing evidence, not a complete human listening review. Out-of-range timings must not be accepted as speech beyond the media."
+  }
+]
