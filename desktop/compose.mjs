@@ -401,7 +401,8 @@ const lossless = [
   '-fps_mode',
   'passthrough',
 ];
-function textFilter(path, localFonts) {
+function textFilter(path, localFonts, script) {
+  if (!script.includes('\nDialogue:')) return 'format=yuv444p';
   // FFmpeg 6's ASS draw context uses a fixed YUV matrix. Composite its RGB
   // colours in RGB instead, then explicitly return to the BT.709 4:4:4 graph.
   return `scale=in_color_matrix=bt709:in_range=tv,format=rgb24,setparams=range=full:colorspace=gbr,subtitles=filename='${basename(path)}'${localFonts ? ":fontsdir='fonts'" : ''},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709`;
@@ -829,19 +830,19 @@ export async function compose({
         // The overlay array is ordered, including text underneath later images.
         if (clip._overlayIndex != null) {
           const ass = join(dir, `before-${from}-${clip._overlayIndex}.ass`);
-          await writeFile(
-            ass,
-            subtitles(
-              {
-                ...edl,
-                overlays: edl.overlays.slice(overlayCursor, clip._overlayIndex),
-              },
-              from,
-              to,
-            ),
+          const text = subtitles(
+            {
+              ...edl,
+              overlays: edl.overlays.slice(overlayCursor, clip._overlayIndex),
+            },
+            from,
+            to,
           );
+          await writeFile(ass, text);
           const textBase = `textBefore${clip._overlayIndex}`;
-          graph.push(`[${base}]${textFilter(ass, localFonts)}[${textBase}]`);
+          graph.push(
+            `[${base}]${textFilter(ass, localFonts, text)}[${textBase}]`,
+          );
           base = textBase;
           overlayCursor = clip._overlayIndex + 1;
         }
@@ -968,15 +969,13 @@ export async function compose({
         }
       }
       const ass = join(dir, `overlays-${from}.ass`);
-      await writeFile(
-        ass,
-        subtitles(
-          { ...edl, overlays: edl.overlays.slice(overlayCursor) },
-          from,
-          to,
-        ),
+      const text = subtitles(
+        { ...edl, overlays: edl.overlays.slice(overlayCursor) },
+        from,
+        to,
       );
-      graph.push(`[${base}]${textFilter(ass, localFonts)}[composed]`);
+      await writeFile(ass, text);
+      graph.push(`[${base}]${textFilter(ass, localFonts, text)}[composed]`);
       const script = join(dir, `picture-${from}.ffgraph`),
         chunk = join(dir, `picture-${from}.mkv`);
       await writeFile(script, graph.join(';\n'));

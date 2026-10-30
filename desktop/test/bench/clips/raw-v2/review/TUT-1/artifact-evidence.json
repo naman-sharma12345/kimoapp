@@ -1,0 +1,26 @@
+{
+  "artifact": {
+    "id": 12992611389,
+    "name": "raw-v2-candidate-41086477761-TUT-1",
+    "digest": "sha256:1bbeff053bc87dfe23eb17618eef64f81576c1885fb19ed694e817ef3d68730c",
+    "size_in_bytes": 49700209
+  },
+  "fetchedBytes": 178068,
+  "files": [
+    {
+      "name": "candidate-first-second.jpg",
+      "bytes": 29422,
+      "sha256": "bb371f159ad374a4fdbb31d71a6078ed1ec2e3a865ee341e70596593fb2c4394"
+    },
+    {
+      "name": "provenance.json",
+      "bytes": 4873,
+      "sha256": "87cdd272e962fb666f4dd7ab7fb6936a697019405a0b341d219db98e6960021a"
+    },
+    {
+      "name": "candidate-sheet.jpg",
+      "bytes": 77870,
+      "sha256": "9680a1bf0c3769a5495fefe4c37b23064bfb58ae010c0146d252b133a6aedde3"
+    }
+  ]
+}

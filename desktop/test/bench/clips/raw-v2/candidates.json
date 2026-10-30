@@ -14,7 +14,9 @@
       "credit": "ProPublica",
       "start": 70,
       "duration": 60,
-      "pending": "Description explicitly identifies a full unedited single-camera interview. Verify the selected interval, source licence and real pauses; the Commons external licence review is still pending. A public figure interview is test footage, not an endorsement."
+      "pending": "Description explicitly identifies a full unedited single-camera interview. Verify the selected interval, source licence and real pauses; the Commons external licence review is still pending. A public figure interview is test footage, not an endorsement.",
+      "sha256": "cf880aa9a077c7e96ec521439834895ba656969ad3cb05ba0830b1bf5b0b74ed",
+      "reviewStatus": "provisional: visual source fit, full interval and audio review pending"
     },
     {
       "id": "POD-1",
@@ -27,7 +29,9 @@
       "credit": "ConversationEDU",
       "start": 90,
       "duration": 60,
-      "pending": "Verify a continuous two-person shot with both speakers audible and visible. Reject if this is a finished multicamera cut or a single-speaker-only view."
+      "pending": "Verify a continuous two-person shot with both speakers audible and visible. Reject if this is a finished multicamera cut or a single-speaker-only view.",
+      "sha256": "c808d0ab73bc3482c444e1463dda1c463215590effdb98d3d68fcdbab9493dc4",
+      "reviewStatus": "rejected: baked multicamera cuts; not raw"
     },
     {
       "id": "TUT-1",
@@ -39,7 +43,9 @@
       "credit": "Dillon Gu / Blender Studio",
       "start": 60,
       "duration": 75,
-      "pending": "Official free narrated screencast. Verify a continuous screen capture without baked-in editorial zooms, captions or cuts in the selected interval. No facecam is promised."
+      "pending": "Official free CC-BY screencast with embedded facecam actually visible. Full selected-interval and audio checks remain pending.",
+      "sha256": "868fde1baadb813be1142435abb6be6b82f82e72bbe72cf8f560ed7c179a148c",
+      "reviewStatus": "provisional: visual source fit, full interval and audio review pending"
     }
   ],
   "missing": [

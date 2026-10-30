@@ -4,7 +4,7 @@ on:
     inputs:
       seed_run:
         description: 'Preserved Phase 1 source/cache artifact run; never resets the cumulative ledger'
-        default: '40891223587'
+        default: '41086877223'
         type: string
       golden:
         description: 'Run the golden matrix (disable to verify only Electron smoke)'

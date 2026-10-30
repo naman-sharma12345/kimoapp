@@ -1,0 +1,26 @@
+{
+  "artifact": {
+    "id": 12991971872,
+    "name": "raw-v2-candidate-41086477761-POD-1",
+    "digest": "sha256:f0e17e7464744dc8dbc8e15200faf41d579f1367f6807d0979e43a6c51996388",
+    "size_in_bytes": 167997257
+  },
+  "fetchedBytes": 177981,
+  "files": [
+    {
+      "name": "candidate-first-second.jpg",
+      "bytes": 27570,
+      "sha256": "b2182300fa6ab94057c3a27f6b25697fc7bd9ad60e526e16dcc0eb957b4a04e1"
+    },
+    {
+      "name": "provenance.json",
+      "bytes": 3902,
+      "sha256": "289a8adee0fbdeb0659e045d0315d0f9fd73b1fae2fd3bd0bb717c163c7d7a3e"
+    },
+    {
+      "name": "candidate-sheet.jpg",
+      "bytes": 80606,
+      "sha256": "54a45edcc8edc4e041925c9d51dc424f0b707aff5690fd33567975da177ae134"
+    }
+  ]
+}
