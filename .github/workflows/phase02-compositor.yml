@@ -2,6 +2,10 @@ name: Phase 02 compositor validation
 on:
   workflow_dispatch:
     inputs:
+      seed_run:
+        description: 'Preserved Phase 1 source/cache artifact run; never resets the cumulative ledger'
+        default: '40891223587'
+        type: string
       golden:
         description: 'Run the golden matrix (disable to verify only Electron smoke)'
         default: true
@@ -76,8 +80,8 @@ jobs:
       - run: npm ci --ignore-scripts --prefix desktop
       - uses: actions/download-artifact@v4
         with:
-          run-id: 40891223587
-          name: phase01-40891223587-TH-1
+          run-id: ${{ inputs.seed_run }}
+          name: phase01-${{ inputs.seed_run }}-TH-1
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/seed
       - run: ./desktop/test/bench/restore-run.ps1 -Source "$env:RUNNER_TEMP/seed"
@@ -170,8 +174,8 @@ jobs:
       - run: npm ci --ignore-scripts --prefix desktop
       - uses: actions/download-artifact@v4
         with:
-          run-id: 40891223587
-          name: phase01-40891223587-TH-1
+          run-id: ${{ inputs.seed_run }}
+          name: phase01-${{ inputs.seed_run }}-TH-1
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/seed
       - run: ./desktop/test/bench/restore-run.ps1 -Source "$env:RUNNER_TEMP/seed"

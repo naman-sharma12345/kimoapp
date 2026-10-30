@@ -1,0 +1,27 @@
+name: Preserve benchmark evidence
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  preserve:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        clip: [TH-1, TH-2]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 40891223587
+          name: phase01-40891223587-${{ matrix.clip }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/preserved
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase01-${{ github.run_id }}-${{ matrix.clip }}
+          path: ${{ runner.temp }}/preserved
+          compression-level: 0
+          retention-days: 7

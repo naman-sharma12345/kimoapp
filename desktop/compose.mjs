@@ -401,6 +401,11 @@ const lossless = [
   '-fps_mode',
   'passthrough',
 ];
+function textFilter(path, localFonts) {
+  // FFmpeg 6's ASS draw context uses a fixed YUV matrix. Composite its RGB
+  // colours in RGB instead, then explicitly return to the BT.709 4:4:4 graph.
+  return `scale=in_color_matrix=bt709:in_range=tv,format=rgb24,setparams=range=full:colorspace=gbr,subtitles=filename='${basename(path)}'${localFonts ? ":fontsdir='fonts'" : ''},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709`;
+}
 async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
   const fps = rate(edl.canvas.fps),
     layers = [],
@@ -836,9 +841,7 @@ export async function compose({
             ),
           );
           const textBase = `textBefore${clip._overlayIndex}`;
-          graph.push(
-            `[${base}]subtitles=filename='${basename(ass)}'${localFonts ? ":fontsdir='fonts'" : ''}[${textBase}]`,
-          );
+          graph.push(`[${base}]${textFilter(ass, localFonts)}[${textBase}]`);
           base = textBase;
           overlayCursor = clip._overlayIndex + 1;
         }
@@ -973,9 +976,7 @@ export async function compose({
           to,
         ),
       );
-      graph.push(
-        `[${base}]subtitles=filename='${basename(ass)}'${localFonts ? ":fontsdir='fonts'" : ''},format=yuv444p[composed]`,
-      );
+      graph.push(`[${base}]${textFilter(ass, localFonts)}[composed]`);
       const script = join(dir, `picture-${from}.ffgraph`),
         chunk = join(dir, `picture-${from}.mkv`);
       await writeFile(script, graph.join(';\n'));
