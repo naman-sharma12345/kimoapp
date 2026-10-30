@@ -8,6 +8,66 @@ import { sha256 } from './io.mjs';
 import { downloadVerified } from './fetch-clips.mjs';
 import { escapeHtml, reviewHtml } from './report.mjs';
 import { relocatePaths } from './portable.mjs';
+import { ai } from '../../engine.mjs';
+
+test('real AI transport sends long contact-sheet labels within the proxy contract', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-label-'));
+  const imageUrl = 'data:image/jpeg;base64,YQ==';
+  const cache = new ProxyCache({
+    directory: dir,
+    replay: false,
+    maxRequests: 1,
+    upstream: async (_url, request) => {
+      const body = JSON.parse(request.body);
+      assert.equal(body.kind, 'review');
+      assert.equal(body.images[0].url, imageUrl);
+      assert.equal(body.images[0].label.length, 80);
+      return Response.json({ record: { verdict: 'clean' } });
+    },
+  });
+  const restore = cache.install();
+  try {
+    assert.deepEqual(
+      await ai('review', 'review this render', [
+        { label: 'contact sheet '.repeat(8), url: imageUrl },
+      ]),
+      { verdict: 'clean' },
+    );
+    cache.assertClean();
+    assert.equal(cache.requests, 1);
+  } finally {
+    restore();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('real AI transport does not retry permanent HTTP failures through the recorder', async () => {
+  let calls = 0;
+  const cache = new ProxyCache({
+    directory: tmpdir(),
+    replay: false,
+    maxRequests: 3,
+    upstream: async () => {
+      calls++;
+      return Response.json(
+        { error: { code: 'invalid_request', message: 'contract rejected' } },
+        { status: 400 },
+      );
+    },
+  });
+  const restore = cache.install();
+  try {
+    await assert.rejects(
+      ai('review', 'permanent HTTP failure regression fixture'),
+      /contract rejected/,
+    );
+    assert.equal(calls, 1);
+    assert.equal(cache.requests, 1);
+    assert.throws(() => cache.assertClean(), /Proxy 400/);
+  } finally {
+    restore();
+  }
+});
 
 test('downloaded project paths relocate without changing identifiers or sibling prefixes', () => {
   const project = {

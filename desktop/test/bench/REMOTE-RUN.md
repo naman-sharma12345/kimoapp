@@ -1,49 +1,26 @@
-# Phase 1 continuation state
+# Phase 2 continuation state
 
-Updated 29 October 2026. **Phase 1 is not complete.** The framework and resource follow-up are pushed; real golden recordings, replay verification and the final visual critiques remain in progress. Keep the user’s PC free of full renders.
+Updated 30 October 2026 (India). The user explicitly requested Phase 2; this supersedes the earlier instruction to wait for Phase 1. Phase 1 remains incomplete and is not represented as complete.
 
-## Active recording
+## Preserved Phase 1 evidence and budget
 
-- GitHub run **40891223587**, workflow `phase01-baseline.yml`, checked out commit `234d748`.
-- Record inputs: `clips=TH-1,TH-2,TUT-1`, `aspect=both`, `label=v0.3.2-baseline`.
-- Last observed: `record TH-1` in progress, no failed steps and no completed artifacts. Verified media preparation succeeded. Do not cancel/restart merely because the real editor is slow.
-- Each completed clip uploads `phase01-40891223587-<clip>`, containing `data/` (exact prepared inputs and selected outputs), `repo/cache/` (responses and cumulative ledger), `repo/RESULTS.md`, and `bundle.json` with the original data root. Download completed clips promptly to `%LOCALAPPDATA%/kimo/bench/remote/40891223587/<clip>`.
-- Earlier run `40890534861` failed workflow parsing. `40890736929` was cancelled during media preparation; its record steps never ran. Do not count either as a baseline.
+Run 40891223587 ended cancelled. TH-1 and TH-2 record steps failed; both uploaded artifacts. TH-1 is downloaded under LocalAppData/kimo/bench/remote/40891223587/TH-1. TH-2 download is in progress at the same sibling path; retry if incomplete. Keep exact prepared media, response caches and original outputs. The old packager omitted SAM-derived media, so those native projects cannot be silently substituted with original inputs.
 
-## Budget and access
+TH-1 artifact ledger reserves USD 1.3467694 cumulatively (30 network requests, count is a minimum). The TH-2 artifact is newer and must be collected before any more paid work. Root cache/spend.json is stale. The user authorized only USD 5 additional, aggregate reservation cap USD 5.49 including the old USD 0.49. Never reset or duplicate this allowance. No additional paid recordings are authorized beyond that total. Phase 2 validation makes zero network calls and checks the ledger stays byte-identical.
 
-The user explicitly approved **USD 5 additional** AI spending in this chat. `cache/spend.json` records an aggregate reservation cap of **USD 5.49**, retaining the interrupted legacy run’s USD 0.49 reservation. The root checkout ledger does not yet include this active cloud run. Never start another paid batch from that stale ledger or reset the counter. Reservations are upper bounds, not verified billing. Record batches must remain sequential and seed the latest completed cloud ledger/cache.
+The old Phase 1 heartbeat was deleted when Phase 2 began. Do not restart it or dispatch paid batches automatically.
 
-GitHub’s connector lacks workflow dispatch. Existing Git credentials work through this local helper (no token is printed or written):
+## Phase 2 implementation and checks
 
-```powershell
-node "$env:LOCALAPPDATA/kimo/bench/control-gh.mjs" run view 40891223587 --json status,conclusion,jobs
-node "$env:LOCALAPPDATA/kimo/bench/control-gh.mjs" api repos/naman-sharma12345/kimoapp/actions/runs/40891223587/artifacts
-node "$env:LOCALAPPDATA/kimo/bench/control-gh.mjs" run download 40891223587 --name phase01-40891223587-TH-1 --dir "$env:LOCALAPPDATA/kimo/bench/remote/40891223587/TH-1"
-```
+App-owned version-1 EDL, source-frame mapping, floating-point camera compositor, ASS text, separate audio, timeline IPC and runEdit routes are implemented. Tiny synthetic tests pass on bundled Windows FFmpeg: 59 tests, seven frame rates, 2x/0.5x, fractional cuts, A/B intermediate strategy equivalence, cancellation, quoted paths, tone seams and delivery frames. Full real-footage renders must run on standard GitHub-hosted Windows runners, not this PC. The upload master still prefers supported hardware encoding; picture composition itself uses bounded CPU workers.
 
-The helper supports ordinary `gh` arguments and sets the repository/account from saved Git credentials. Do not expose credentials. Running-job log downloads return 404; the temporary unsigned browser view also requires sign-in to read logs. That tab was closed. Prefer API step/artifact status and completed-job logs rather than repeatedly trying those unavailable log surfaces.
+Workflow phase02-compositor.yml runs all six prepared golden clips at both aspects, plus a real Electron smoke without installer/release. No AI/SAM network permitted. Captions-only editorial control (music uses non-AI SAM-mode route with no SAM request) is deliberately different from the incomplete Phase 1 AI edits. Optional native picture reference uses the identical saved project, benchmark only, with a 10-minute timeout. A failed native comparison stays an unavailable metric, never an invented score improvement.
 
-## Finish the work
+After dispatch, record the actual run ID here. Collect artifacts promptly, inspect actual sheets/hook frames and metrics, fix any real failures, extend source-frame measurement where needed, and document limitations. Complete RESULTS.md and docs/PHASE_LOG.md honestly; do not tick unmeasured visual, jitter or score acceptance. Required root lint/typecheck/test/build run in normal push CI. Existing broader web bundle-cap/browser issues are outside this desktop change. Fetch/rebase origin/main before each normal push, never force, verify remote SHA. No release or next phase.
 
-1. Collect the first three clip artifacts, inspect their `failure.json`, `run.json`, metrics and real ops, and preserve all genuine response entries. Merge caches without deleting the seven old v1 entries. The latest record artifact holds the most current cumulative ledger.
-2. After the first record job finishes, dispatch remaining `VLOG-1,POD-1,MUSIC-1` in record mode, seeding the latest first-job artifact. Use the same baseline label and the authorized cap. Both aspects are supported; POD-1’s specified primary case is landscape. Keep the paid budget sequential even though replay jobs can run concurrently.
-3. Dispatch cache-only replay jobs with a new label such as `v0.3.2-replay`, one clip per job if useful. Seed each from that clip’s original record artifact so the exact prepared source bytes survive across machines. A cache miss must fail without paid fallback; diagnose genuine volatile request fields or cache defects rather than fabricating responses. Record zero requests, cache completeness, source hashes and output hashes. Replays may reveal nondeterminism; document it honestly.
-4. The current workflow also supports `mode=analyze`: seed a record artifact, retain its original label, and recompute metrics/reviews without editing or paid requests. `restore-run.ps1` writes the old root marker; `run.mjs --analyze-existing` resolves the downloaded final/project locally and relocates source paths in memory. Use the same measurement code for all final rows. The original active run predates the newer duck-envelope estimate and unknown-caption-geometry handling, so its scores need uniform remeasurement. Keep original video/project bytes and provenance.
-5. Open actual `sheet.jpg` and ten-sample first-second `hook.jpg` images with vision, inspect the final audio transcript and ops, verify offline playback/seek, and write an honest **10–20 line critique per golden clip**. Do not reuse the five-second smoke as a golden baseline. Keep dataset substitutions and measurement limits visible. Bad scores are expected; Phase 1 measures them.
-6. Complete `RESULTS.md`, `BASELINE.md` and the desktop Phase 01 section of `docs/PHASE_LOG.md`. Commit JSON caches and small evidence, keeping large media outside Git. Preserve attribution with shared artifacts. Download our artifacts and remove them only after dependent replay/record jobs have restored their seeds; never delete unrelated artifacts. Keep durable local copies first.
-7. Run required validation, fetch/rebase `origin/main` before each normal push, push main without force and verify the remote head. Do not start Phase 2, tag a release or build an installer. Only then mark Phase 1 complete and disable the continuation heartbeat.
-
-Manual workflow dispatch example (replace seed with the actual latest artifact):
+GitHub helper (uses saved credentials only in memory):
 
 ```powershell
-node "$env:LOCALAPPDATA/kimo/bench/control-gh.mjs" workflow run phase01-baseline.yml --ref main -f clips=VLOG-1,POD-1,MUSIC-1 -f mode=record -f aspect=both -f label=v0.3.2-baseline -f seed_run=40891223587 -f seed_artifact=phase01-40891223587-TUT-1
+node "$env:LOCALAPPDATA/kimo/bench/control-gh.mjs" workflow run phase02-compositor.yml --ref main
+node "$env:LOCALAPPDATA/kimo/bench/control-gh.mjs" run list --workflow phase02-compositor.yml --limit 3
 ```
-
-The standard runner is remote; no full edit is running locally. Resource/GPU changes do not yet establish sustained local responsiveness or perceptual quality on real footage. Keep those separate from Phase 1’s benchmark acceptance.
-
-## Validation and continuation
-
-All 39 desktop tests passed locally with bundled Windows FFmpeg, including a 1.2-second NVDEC/NVENC synthetic fixture. The new hook contact-sheet graph also ran successfully with that FFmpeg. GitHub’s desktop unit job passed on Windows/Linux after the portability changes. GitHub run `40891215691` passed the combined lint/typecheck/test/build step; broader web checks failed the landing bundle cap (166342 gzip bytes against 120000) and an alternate-export-checkbox browser timeout. No web product code is changed by the benchmark. Check the latest CI when finalizing.
-
-Heartbeat `finish-phase-1-remote-benchmark` continues this task in the same chat every 15 minutes, quietly while nothing changes. It must be disabled when the requested phase is genuinely complete. Inspect its saved full fields before updating it; preserve fields the user did not ask to change.

@@ -10,6 +10,7 @@ import { rmSync } from 'node:fs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const web = resolve(here, '../../apps/web');
+const webAssets = web.replaceAll('\\', '/');
 
 // apps/web CSS is written for Tailwind v4 + Next: `@theme static` blocks hold the
 // tokens and assets are referenced from /public. Turn them into plain CSS that
@@ -18,11 +19,11 @@ const studioCss = {
   name: 'kimo-studio-css',
   enforce: 'pre',
   transform(code, id) {
-    if (!id.startsWith(web) || !id.endsWith('.css')) return null;
+    if (!id.replaceAll('\\', '/').startsWith(webAssets) || !id.endsWith('.css')) return null;
     return code
       .replace(/@theme\s+static\s*\{/g, ':root {')
-      .replace(/url\((['"]?)\/(fonts|brand)\//g, `url($1${web}/public/$2/`)
-      .replace(/url\((['"]?)\/grain\.png/g, `url($1${web}/public/grain.png`);
+      .replace(/url\((['"]?)\/(fonts|brand)\//g, `url($1${webAssets}/public/$2/`)
+      .replace(/url\((['"]?)\/grain\.png/g, `url($1${webAssets}/public/grain.png`);
   },
 };
 // One classic deferred script instead of an ES module: loads from file:// in any
@@ -46,7 +47,7 @@ const fromDesktop = {
   name: 'kimo-web-deps',
   enforce: 'pre',
   async resolveId(source, importer, options) {
-    if (!importer || !importer.startsWith(web) || source.startsWith('.') || source.startsWith('/') || source.startsWith('@web') || source.startsWith('\0')) return null;
+    if (!importer || !importer.replaceAll('\\', '/').startsWith(webAssets) || source.startsWith('.') || source.startsWith('/') || source.startsWith('@web') || source.startsWith('\0')) return null;
     return this.resolve(source, resolve(here, 'src/main.jsx'), { ...options, skipSelf: true });
   },
 };

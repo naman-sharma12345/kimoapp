@@ -181,8 +181,15 @@ export class ProxyCache {
       await this.onReserve?.(reserve);
       const response = await this.upstream(url, init);
       const raw = await response.text();
-      if (!response.ok)
-        throw new Error(`Proxy ${response.status}: ${raw.slice(0, 300)}`);
+      if (!response.ok) {
+        this.failures.push(`Proxy ${response.status}: ${raw.slice(0, 300)}`);
+        // HTTP errors must remain HTTP responses. Throwing here makes the app
+        // mistake a permanent 400 for a connection failure and retry it.
+        return new Response(raw, {
+          status: response.status,
+          headers: response.headers,
+        });
+      }
       const stored = this.normalize(raw, false);
       const entry = {
         version: 2,

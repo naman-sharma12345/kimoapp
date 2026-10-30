@@ -65,6 +65,15 @@
     { id: 'p4', name: 'drone b-roll', status: 'done', took: 41_000, preset: 'shorts', mode: 'sam', sam: { effect: 'text_behind', prompt: 'person' }, files: files('drone.mp4'), output: 'master.mp4', timeline: tl(1), projectFile: 'x' },
     { id: 'p5', name: 'lecture captions', status: 'failed', error: 'ffmpeg exited with code 1: invalid data found when processing input', preset: 'youtube', mode: 'captions', files: files('lecture.mkv') },
   ];
+  const mockEdl = (timeline) => {
+    const e={edl_version:1,canvas:{w:1920,h:1080,fps:30,bg:'#000000'},sources:[],video:[],audio:[],overlays:[],master:{lufs:-14,true_peak:-1}};
+    for(const track of timeline.tracks_bottom_to_top){const video={track:track.track_id,clips:[]},audio={track:track.track_id,clips:[]};for(const c of track.clips){
+      if(c.src.startsWith('text:'))e.overlays.push({id:c.id,track:track.track_id,kind:'caption_word_group',at:c.start,dur:c.end-c.start,props:{text:c.src.replace(/^text:\s*/, '')}});
+      else{const id='src-'+c.id,isAudio=/\.(mp3|wav)$/i.test(c.src);e.sources.push({id,path:c.src,w:isAudio?0:1920,h:isAudio?0:1080,fps:30,duration:3600});(isAudio?audio:video).clips.push({id:c.id,src:id,in:c.in??0,out:(c.in??0)+c.end-c.start,at:c.start,speed:1});}
+    }if(video.clips.length)e.video.push(video);if(audio.clips.length)e.audio.push(audio);}
+    return e;
+  };
+  for(const p of library)if(p.timeline)p.edl=mockEdl(p.timeline);
   const ops = [
     ['probe', 'probe the footage', '318 s, 4K 30p, stereo'],
     ['transcribe', 'transcribe speech with whisper', 'offline, word timings'],
@@ -104,6 +113,7 @@
     mediaUrl: (p) => M + String(p).split(/[\\/]/).pop().replace(/\.mp4$/, '.webm') + '?',
     status: async () => ({ version: '0.3.1', kimo: true, ffmpeg: '7.1-full_build-www.gyan.dev', whisper: true, model: window.__noModel ? false : true, gpu: 'h264_nvenc', presets, styles }),
     library: async () => library.map((p) => ({ ...p })),
+    edl: async (id) => structuredClone(library.find(p=>p.id===id)?.edl??null),
     log: async (id) => log[id] ?? [],
     pathsOf: () => [],
     expand: async () => [],
@@ -114,7 +124,16 @@
     ],
     create: async (o) => [{ ...library[0], id: 'new' + Date.now(), status: 'queued', files: o.files }],
     rerun: async () => null, stop: async () => {}, remove: async () => {}, save: async () => 'C:/Users/naman/Videos/kimo/manali.mp4',
-    followup: async () => null, apply: async () => null, saveThumb: async () => 'thumb.jpg', copy: async () => {}, reveal: async () => {},
+    followup: async () => null, apply: async ({id,ops}) => {
+      const p=library.find(p=>p.id===id);if(!p?.edl)return null;
+      for(const op of ops){const e=p.edl,c=e.video.flatMap(t=>t.clips).find(c=>c.id===op.args.clip_id)??e.overlays.find(c=>c.id===op.args.clip_id);if(!c)continue;
+        if(op.tool==='move_clip')c.at=op.args.start;
+        if(op.tool==='trim_clip'){if(c.props)c.dur=op.args.duration;else{c.in=op.args.in_point??c.in;c.out=c.in+op.args.duration*c.speed;}}
+        if(op.tool==='edit_caption')c.props.text=op.args.text;
+        if(op.tool==='delete_clip'){for(const t of e.video)t.clips=t.clips.filter(x=>x!==c);e.overlays=e.overlays.filter(x=>x!==c);}
+      }
+      emit('project',structuredClone(p));return structuredClone(p);
+    }, saveThumb: async () => 'thumb.jpg', copy: async () => {}, reveal: async () => {},
     downloadModel: () => new Promise((r) => { let f = 0; const t = setInterval(() => { f += 0.1; emit('progress', { id: 'model', label: 'downloading the captions model', f }); if (f >= 1) (clearInterval(t), r()); }, 300); }),
     openLog: async () => {},
     samPreview: async () => ({ image: M + 'f3.jpg', objects: 2 }),
@@ -128,7 +147,7 @@
     live() {
       emit('event', { id: 'p1', t: 'preview', image: M + 'y4.jpg', after: 'grade', time: 12.4 });
       emit('event', { id: 'p1', t: 'progress', label: 'rendering preview', f: 0.62, eta: 48, estimated: true });
-      emit('event', { id: 'p1', t: 'timeline', timeline: tl(3) });
+        emit('event', { id: 'p1', t: 'timeline', timeline: { edl:mockEdl(tl(3)) } });
       emit('event', { id: 'p1', t: 'op', opId: 'o6', ok: true, ms: 2600 });
       emit('event', { id: 'p1', t: 'op', phase: 'start', opId: 'o7', tool: 'render', title: 'render the 1080p preview', why: 'NVENC, 2 passes' });
     },

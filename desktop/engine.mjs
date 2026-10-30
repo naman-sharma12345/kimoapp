@@ -3,11 +3,13 @@
 // kimo AI proxy (api.getkimo.tech); SAM effects also send a downscaled copy of
 // the clip segment they process (see sam.mjs).
 import { spawnBackground as spawn, execFileBackground as execFile, acquireExclusive } from './resources.cjs';
-import { existsSync, mkdirSync, statSync, readFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter } from './sam.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
+import { pictureTools } from './picture-tools.mjs';
+import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -46,7 +48,8 @@ export class Mcp {
     this.next = 1;
     this.pending = new Map();
     this.buffer = '';
-    this.child = spawn(bin, [], {
+    const [command, ...args] = Array.isArray(bin) ? bin : [bin];
+    this.child = spawn(command, args, {
       cwd: dir,
       env: { ...process.env, ...env, HOME: dir, TMPDIR: dir, TEMP: dir, TMP: dir },
       windowsHide: true,
@@ -186,14 +189,19 @@ function argsLine(args) {
   return text.length > 110 ? `${text.slice(0, 110)}…` : text;
 }
 
-async function ai(kind, text, images = [], signal) {
+export async function ai(kind, text, images = [], signal) {
   for (let attempt = 0; attempt < 3; attempt++) {
     let response;
     try {
       response = await fetch(AI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Kimo-Desktop': '1' },
-        body: JSON.stringify({ kind, text: text.slice(0, 60_000), images }),
+        body: JSON.stringify({
+          kind,
+          text: text.slice(0, 60_000),
+          // The proxy caps labels at 80 characters; long clips list more digits.
+          images: images.map((image) => ({ ...image, label: image.label.slice(0, 80) })),
+        }),
         signal: AbortSignal.any([signal, AbortSignal.timeout(200_000)].filter(Boolean)),
       });
     } catch (e) {
@@ -316,9 +324,9 @@ export function recommendedMbps(width, height, fps = 30) {
   return Math.round(8 * hi);
 }
 
-const runTool = (bin, args, onLine) =>
+const runTool = (bin, args, onLine, signal) =>
   new Promise((done) => {
-    const child = spawn(bin, /ffmpeg(\.exe)?$/i.test(bin) ? ['-nostdin', ...args] : args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, /ffmpeg(\.exe)?$/i.test(bin) ? ['-nostdin', ...args] : args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], signal });
     let out = '';
     let err = '';
     child.stdout.on('data', (d) => {
@@ -468,7 +476,7 @@ export async function youtubeMaster({
   const rec = recommendedMbps(P.width, P.height, fps);
   const gop = Math.max(1, Math.round(fps / 2));
   const L = m.loudnorm;
-  const fix = L && (Math.abs(m.lufs + 14) > 0.5 || m.truePeak > -1.5);
+  const fix = L && [L.input_i,L.input_tp,L.input_lra,L.input_thresh,L.target_offset].every(v=>Number.isFinite(Number(v))) && (Math.abs(m.lufs + 14) > 0.5 || m.truePeak > -1.5);
   const af = fix
     ? [
         '-af',
@@ -509,6 +517,10 @@ export async function youtubeMaster({
       '2',
       '-flags',
       '+cgop',
+      '-fps_mode',
+      'passthrough',
+      '-color_range',
+      'tv',
       '-colorspace',
       'bt709',
       '-color_primaries',
@@ -613,9 +625,10 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, ops, speed, sam }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam }) {
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
+  if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   const P = PRESETS[preset] ?? PRESETS.shorts;
   const S = STYLES[style] ?? STYLES.auto;
   const release = acquireExclusive('render');
@@ -623,9 +636,12 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   try { mcp = new Mcp(bin, dir, env); } catch (e) { release(); throw e; }
   signal?.addEventListener('abort', () => mcp.kill());
   const history = [];
-  const out = join(dir, 'master.mp4');
+  const out = join(dir, legacy_kimo_render ? 'master.mp4' : 'master.mkv');
   const finalOut = join(dir, 'final.mp4');
   const saved = join(dir, 'project.kimo.json');
+  const savedEdl = join(dir, 'edit.edl.json');
+  const appEdl = suppliedEdl ?? (edlFile && existsSync(edlFile) ? JSON.parse(readFileSync(edlFile,'utf8')) : null);
+  const pictures = pictureTools({mcp,dir,files,mode,suppliedEdl,ffmpeg,ffprobe,out,savedEdl,signal,emit,fontsDir:env?.KIMO_FONTS,runTool});
   let duration;
   let timeline = null;
   let msPerSec = speed || 2500; // export ms per second of 1080p timeline, learned per PC
@@ -633,14 +649,15 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   let youtube = null;
   let reviewImages = [];
   const silent = async (name, args) => {
-    const r = await mcp.call(name, args);
+    const r = !legacy_kimo_render && pictures.handles.has(name) ? await pictures.call(name,args) : await mcp.call(name, args);
     return r?.isError ? null : r;
   };
   const refreshTimeline = async () => {
     const r = await silent('timeline_summary', {});
     if (!r) return;
     timeline = resultJson(r);
-    emit({ t: 'timeline', timeline });
+    if(legacy_kimo_render)emit({ t: 'timeline', timeline });
+    else try{emit({t:'timeline',timeline:await pictures.timeline()});}catch(error){if(signal?.aborted)throw error;}
   };
   const previewAt = async (name, args) => {
     const d = Number(timeline?.duration) || 0;
@@ -666,7 +683,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     emit({ t: 'op', id, phase: 'start', tool: name, title: `${name} ${argsLine(args)}`, why, at: Date.now() });
     const t0 = Date.now();
     let ticker;
-    if (name === 'export') {
+    if (name === 'export' && legacy_kimo_render) {
       const px = (P.width * P.height) / (1920 * 1080);
       const est = Math.max(1500, (Number(timeline?.duration) || 10) * msPerSec * px);
       const target = args.path;
@@ -682,7 +699,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         emit({ t: 'progress', phase: 'render', label: 'rendering with kimo', f, eta: Math.max(1, (est - el) / 1000), bytes, estimated: true });
       }, 500);
     }
-    const result = await (SAM_TOOLS.includes(name) ? samTool(name, args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
+    const result = await (SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
     const failed = Boolean(result?.isError);
     const text = resultText(result);
     history.push(`${name}(${JSON.stringify(args).slice(0, 400)}) => ${failed ? 'ERROR ' : ''}${text}`);
@@ -770,6 +787,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
    * the SAM render (kimo's own re-render repeats ~5 of every 32 frames, which reads as judder).
    */
   const samPassthrough = async () => {
+    if(!legacy_kimo_render)return;
     const stage = mode === 'sam' && files.length === 1 && files[0].sam ? files[0].path : null;
     if (!stage || !existsSync(stage)) return;
     const tmp = join(dir, 'master-av.mp4');
@@ -783,7 +801,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   };
   /** Export + measure + sample frames for the review. */
   const check = async (pass) => {
-    emit({ t: 'status', text: `rendering with the real kimo engine (pass ${pass})` });
+    emit({ t: 'status', text: legacy_kimo_render ? `rendering with the real kimo engine (pass ${pass})` : `compositing exact source frames (pass ${pass})` });
     await call('export', { path: out, crf: 16 });
     if (!existsSync(out)) throw new Error(`export failed: ${history.at(-1)?.slice(-300)}`);
     await samPassthrough();
@@ -861,7 +879,11 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     const fileLines = files.map((f) => `- ${f.path} (${f.kind}${f.duration ? `, ${Number(f.duration).toFixed(1)} s` : ''})`).join('\n');
     const loaded = (mode === 'followup' || mode === 'manual') && projectFile && existsSync(projectFile);
     if ((mode === 'followup' || mode === 'manual') && !loaded) throw new Error('this edit has no saved project yet; re-run it first');
-    if (loaded) await call('load_project', { path: projectFile });
+    if (loaded) {
+      let plannerFile=projectFile;
+      if(appEdl&&!legacy_kimo_render){plannerFile=join(dir,'resume.kimo.json');writeFileSync(plannerFile,JSON.stringify(toKimoProject(appEdl)));}
+      await call('load_project', { path: plannerFile });
+    }
 
 
     if (mode === 'captions' || mode === 'sam') {
@@ -892,7 +914,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       await check(1);
       }
     } else if (mode === 'manual') {
-      for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
+      if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
     } else {
       const context = mode === 'followup'
@@ -966,6 +988,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     } catch (err) {
       if (signal?.aborted) throw err;
       emit({ t: 'op', id, phase: 'end', ok: false, ms: Date.now() - t0, error: String(err.message).slice(0, 240) });
+      if(!legacy_kimo_render)throw new Error(`Delivery encode failed; the lossless composed picture is retained: ${err.message}`);
     }
     const output = master && existsSync(finalOut) ? finalOut : out;
     const mf = await measure(ffmpeg, ffprobe, output);
@@ -975,6 +998,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     // ---------- thumbnail + YouTube pack ----------
     // Save the edit first: the thumbnail text below is never part of it.
     await silent('save_project', { path: saved });
+    if(pictures.lastEdl){writeFileSync(savedEdl,JSON.stringify(pictures.lastEdl,null,2));emit({t:'timeline',timeline:{...toTimeline(pictures.lastEdl),edl:publicEdl(pictures.lastEdl)}});}
     let thumbnail = null;
     const d = mf.duration || duration || 1;
     if (mode !== 'manual') {
@@ -1008,7 +1032,9 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       };
       emit({ t: 'youtube', youtube });
     }
-    return { output, master: out, duration: mf.duration || duration, history, timeline, quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec };
+    const keepMaster=legacy_kimo_render||process.env.KIMO_COMPOSE_KEEP_MASTER==='1'||output===out;
+    if(!keepMaster&&existsSync(out))unlinkSync(out);
+    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec };
   } finally {
     try { mcp.kill(); } finally { release(); }
   }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Undo2, X, Check } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
 import { kimo, fmtTime, fmtTc, busy } from './lib.js';
+import { toTimeline } from '../../edl.mjs';
 
 const clipKind = (c) => (/^text:/.test(c.src ?? '') ? 'text' : /\.(mp3|wav|m4a|aac|flac|ogg)$/i.test(c.src ?? '') ? 'audio' : /\.(png|jpe?g|webp|gif)$/i.test(c.src ?? '') ? 'image' : /\./.test(c.src ?? '') ? 'video' : 'fx');
 const tlDuration = (t) => Math.max(1, Number(t?.duration) || 0, ...(t?.tracks_bottom_to_top ?? []).flatMap((k) => k.clips.map((c) => c.end)));
@@ -15,7 +16,8 @@ const trackLabel = (k, i, counts) => {
 const label = (c) => (clipKind(c) === 'text' ? c.src.replace(/^text:\s*/, '') : String(c.src || c.id).split(/[\\/]/).pop());
 
 export function Timeline({ project, live, video, time, orig, guard, notify, setLibrary }) {
-  const [tl, setTl] = useState(project.timeline ?? null);
+  const model = useMemo(() => project.edl ? toTimeline(project.edl) : null, [project.edl]);
+  const [tl, setTl] = useState(model);
   const [draft, setDraft] = useState(null);
   const [edits, setEdits] = useState([]);
   const [undo, setUndo] = useState([]);
@@ -28,13 +30,19 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
   const isBusy = busy(project);
 
   useEffect(() => {
-    if (live?.data && !edits.length) setTl(live.data);
+    if (live?.data?.edl && !edits.length) setTl(toTimeline(live.data.edl));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live?.n]);
   useEffect(() => {
-    if (project.timeline && !edits.length && !live) setTl(project.timeline);
+    if (model && !edits.length && !live) setTl(model);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.timeline]);
+  }, [model]);
+  useEffect(() => {
+    if(model || !kimo.edl)return;
+    let active=true;
+    kimo.edl(project.id).then(edl=>{if(active&&edl)setTl(toTimeline(edl));}).catch(error=>notify(String(error.message??error)));
+    return()=>{active=false;};
+  },[project.id,model,notify]);
 
   const view = draft ?? tl;
   const dur = tlDuration(view);

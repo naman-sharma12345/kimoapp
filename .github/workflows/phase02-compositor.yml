@@ -1,0 +1,99 @@
+name: Phase 02 compositor validation
+on:
+  workflow_dispatch:
+    inputs:
+      clips:
+        description: 'JSON array of golden IDs'
+        default: '["TH-1","TH-2","TUT-1","VLOG-1","POD-1","MUSIC-1"]'
+        type: string
+      legacy:
+        description: 'Also measure the old renderer on the identical saved project'
+        default: true
+        type: boolean
+permissions:
+  contents: read
+  actions: read
+jobs:
+  golden:
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        clip: ${{ fromJSON(inputs.clips) }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+      KIMO_WORKER_THREADS: '2'
+      KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
+      KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
+      BENCH_CLIP: ${{ matrix.clip }}
+      BENCH_LEGACY: ${{ inputs.legacy }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --ignore-scripts --prefix desktop
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 40891223587
+          name: phase01-40891223587-TH-1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/seed
+      - run: ./desktop/test/bench/restore-run.ps1 -Source "$env:RUNNER_TEMP/seed"
+      - name: Offline golden render and identical-project comparison
+        run: node desktop/test/bench/phase02.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase02-${{ github.run_id }}-${{ matrix.clip }}
+          path: ${{ runner.temp }}/kimo-bench-data/out/phase02/${{ matrix.clip }}
+          compression-level: 0
+          retention-days: 3
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - run: ./test/bench/bootstrap.ps1
+      - run: npm ci
+      - name: Real Electron smoke, without installer or release
+        run: |
+          Add-Type -AssemblyName System.Speech
+          $voice = New-Object System.Speech.Synthesis.SpeechSynthesizer
+          $voice.SetOutputToWaveFile("$env:RUNNER_TEMP/speech.wav")
+          $voice.Speak('Welcome to kimo. This tests the frame exact compositor.')
+          $voice.Dispose()
+          & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=640x360:r=24000/1001:d=5' -i "$env:RUNNER_TEMP/speech.wav" -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$env:RUNNER_TEMP/clip.mp4"
+          & node_modules/electron/dist/electron.exe . --smoke "$env:RUNNER_TEMP/clip.mp4" --smoke-out "$PWD/smoke.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Electron smoke failed' }
+          $result = Get-Content smoke.json -Raw | ConvertFrom-Json
+          if (-not $result.ok -or -not $result.render.edl -or -not $result.render.composed) { throw 'Smoke did not prove app-owned composition' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase02-${{ github.run_id }}-smoke
+          path: desktop/smoke.json

@@ -134,11 +134,11 @@ async function pump() {
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile, sam: next.sam,
+      preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
-        if (ev.t === 'timeline') next.timeline = ev.timeline;
+        if (ev.t === 'timeline') { next.timeline = ev.timeline; if(ev.timeline?.edl)next.edl=ev.timeline.edl; }
         if (ev.t === 'say' && ev.kind === 'script') next.script = ev.text;
         // keep the project id; a tool call's own id travels as opId
         const { id: opId, ...rest } = ev;
@@ -153,6 +153,8 @@ async function pump() {
     if (result.youtube) next.youtube = result.youtube;
     if (result.timeline) next.timeline = result.timeline;
     if (result.projectFile) next.projectFile = result.projectFile;
+    if (result.edlFile) next.edlFile = result.edlFile;
+    if (result.edl) next.edl = result.edl;
     next.renders = (next.renders ?? 0) + 1;
     next.took = Date.now() - next.started;
     if (result.speed) saveSettings({ speed: result.speed });
@@ -267,7 +269,7 @@ async function smoke(clip, outPath) {
     flush();
     const live = { timeline: 0, preview: 0, progress: 0 };
     const r = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, note: '', preset: 'square', mode: 'captions', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => (ev.t === 'op' && ops.push(ev), ev.t in live && live[ev.t]++) });
-    report.render = { output: r.output, bytes: fs.statSync(r.output).size, duration: r.duration, live, quality: r.quality, projectFile: Boolean(r.projectFile), ops: ops.filter((o) => o.phase === 'end').map((o) => `${o.ok ? 'ok' : 'ERR'} ${o.ms}ms ${o.error || ''}`) };
+    report.render = { edl: r.edl?.edl_version === 1, composed: ops.some(o => o.tool === 'compose' && o.phase === 'end' && o.ok), output: r.output, bytes: fs.statSync(r.output).size, duration: r.duration, live, quality: r.quality, projectFile: Boolean(r.projectFile), ops: ops.filter((o) => o.phase === 'end').map((o) => `${o.ok ? 'ok' : 'ERR'} ${o.ms}ms ${o.error || ''}`) };
     // timeline editor path: trim the first clip on the saved project and re-render
     const first = r.timeline?.tracks_bottom_to_top?.[0]?.clips?.[0];
     report.stage = 'manual';
@@ -277,7 +279,7 @@ async function smoke(clip, outPath) {
       report.manual = { duration: r3.duration, expected: Math.max(1, (first.end - first.start) - 1) };
     }
     report.captions = r.history.filter((h) => h.startsWith('auto_captions')).map((h) => h.slice(0, 600));
-    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000);
+    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed);
     const samAt = process.argv.indexOf('--smoke-sam');
     if (samAt > 0) {
       // SAM 3.1 end to end on Windows: proxy upload → track → 9:16 follow reframe + text behind the subject → kimo render
@@ -388,6 +390,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('status', status);
   ipcMain.handle('library', () => library.map(publicProject));
   ipcMain.handle('project:log', (_e, id) => library.find((p) => p.id === id)?.log ?? []);
+  ipcMain.handle('edl:get', async (_e,id) => {
+    const p=library.find(p=>p.id===id);if(!p)return null;
+    const edl=await import('./edl.mjs');
+    const model=p.edlFile&&fs.existsSync(p.edlFile)?JSON.parse(fs.readFileSync(p.edlFile,'utf8')):p.projectFile&&fs.existsSync(p.projectFile)?edl.fromKimoProject(JSON.parse(fs.readFileSync(p.projectFile,'utf8')),p.files):null;
+    return edl.publicEdl(model);
+  });
   ipcMain.handle('expand', (_e, inputs) => expand(inputs));
   ipcMain.handle('pick', async (_e, folders) => {
     const r = await dialog.showOpenDialog(win, { properties: folders ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'], filters: folders ? [] : [{ name: 'Media', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mp3', 'wav', 'm4a', 'png', 'jpg', 'jpeg'] }] });
@@ -435,7 +443,13 @@ app.whenReady().then(async () => {
       return { tool: o.tool, args: a };
     });
     if (!clean.length) return null;
-    Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'manual', ops: clean, note: p.note } });
+    const edl=await import('./edl.mjs');
+    const current=p.edlFile&&fs.existsSync(p.edlFile)?JSON.parse(fs.readFileSync(p.edlFile,'utf8')):edl.fromKimoProject(JSON.parse(fs.readFileSync(p.projectFile,'utf8')),p.files);
+    const changed=edl.applyEdits(current,clean);
+    p.edlFile=join(projectDir(p.id),'edit.edl.json');
+    fs.writeFileSync(p.edlFile,JSON.stringify(changed,null,2));
+    p.edl=edl.publicEdl(changed);p.timeline={...edl.toTimeline(changed),edl:p.edl};
+    Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'manual', ops: clean, edl:changed, note: p.note } });
     update(p);
     pump();
     return publicProject(p);
