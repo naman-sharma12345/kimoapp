@@ -1,0 +1,47 @@
+{
+  "scope": "All six full prepared artifact ZIPs preserved outside OneDrive; final archive digest matches GitHub API, no local rendering",
+  "backups": [
+    {
+      "id": "12996919911",
+      "name": "raw-v2-prepared-41099499282-TH-1",
+      "size": 13756551,
+      "digest": "sha256:866be9dae73bd9f3dbc123679b816c7ba65a46ac940cfd7a2a12b98a88c8300d",
+      "apiDigestVerified": true
+    },
+    {
+      "id": "12998681053",
+      "name": "raw-v2-prepared-41099499282-TH-2",
+      "size": 85624468,
+      "digest": "sha256:9b583ec9e83e870224edb6364580d352fb405740e0cd5c02ad831a4f491d4116",
+      "apiDigestVerified": true
+    },
+    {
+      "id": "12998216585",
+      "name": "raw-v2-prepared-41099499282-TUT-1",
+      "size": 8989083,
+      "digest": "sha256:52dcba1981ad162a279f97e2c1b01b780e75d27a6487c295eb8b7863f1ce3e9e",
+      "apiDigestVerified": true
+    },
+    {
+      "id": "12998447079",
+      "name": "raw-v2-prepared-41099499282-VLOG-1",
+      "size": 126827432,
+      "digest": "sha256:c7a6c3d34a6f967976e880e2b52cf404b4e64f3f078b1341b77e88bf84fcd559",
+      "apiDigestVerified": true
+    },
+    {
+      "id": "12998467021",
+      "name": "raw-v2-prepared-41099499282-POD-1",
+      "size": 94926640,
+      "digest": "sha256:f714b0ee36f1d86801803f3e41f57efd10c8e93a3cb1c80c53f24d7d36d64b61",
+      "apiDigestVerified": true
+    },
+    {
+      "id": "12997254002",
+      "name": "raw-v2-prepared-41099499282-MUSIC-1",
+      "size": 45732856,
+      "digest": "sha256:0101afcf49adb1984d1f5b5afcc545955694d2b02e82aa030211f09c76c10fcc",
+      "apiDigestVerified": true
+    }
+  ]
+}

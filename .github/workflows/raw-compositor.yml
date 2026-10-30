@@ -18,6 +18,10 @@ on:
         description: 'Remeasure preserved comparisons without rerendering; requires prepared_run'
         type: string
         default: ''
+      recompose:
+        description: 'Render the saved project with current compositor before reanalysis; requires analyze_run'
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -106,6 +110,7 @@ jobs:
       BENCH_CLIP: ${{ matrix.clip }}
       BENCH_LEGACY: ${{ inputs.legacy }}
       BENCH_ANALYZE_ONLY: ${{ inputs.analyze_run != '' }}
+      BENCH_RECOMPOSE: ${{ inputs.recompose }}
       KIMO_WORKER_THREADS: '2'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
       KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
