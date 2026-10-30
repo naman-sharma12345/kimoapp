@@ -9,6 +9,32 @@ import { downloadVerified } from './fetch-clips.mjs';
 import { escapeHtml, reviewHtml } from './report.mjs';
 import { relocatePaths } from './portable.mjs';
 import { ai } from '../../engine.mjs';
+import { mergeLedger } from './merge-ledger.mjs';
+
+test('restoring a cumulative ledger never resets, doubles or raises authorization', () => {
+  const current = {
+    reservedUsd: 5.49,
+    networkRequests: 53,
+    authorizedUsd: 5.49,
+    requestCountIsMinimum: true,
+  };
+  const old = { reservedUsd: 1.34, networkRequests: 30, authorizedUsd: 99 };
+  assert.deepEqual(mergeLedger(current, old), {
+    ...current,
+    authorization: undefined,
+  });
+  const newer = mergeLedger(
+    { ...current, reservedUsd: 0.49, networkRequests: 7 },
+    { ...old, reservedUsd: 2.2, networkRequests: 53 },
+  );
+  assert.equal(newer.reservedUsd, 2.2);
+  assert.equal(newer.networkRequests, 53);
+  assert.equal(newer.authorizedUsd, 5.49);
+  assert.throws(
+    () => mergeLedger(current, { ...old, reservedUsd: NaN }),
+    /Invalid spending ledger/,
+  );
+});
 
 test('real AI transport sends long contact-sheet labels within the proxy contract', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'kimo-label-'));

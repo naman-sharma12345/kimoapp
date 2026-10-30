@@ -1,7 +1,11 @@
 param([Parameter(Mandatory=$true)][string]$Source)
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Get-Location).Path
-if (Test-Path -LiteralPath "$Source/repo/cache") { Copy-Item -Path "$Source/repo/cache/*" -Destination "$repoRoot/desktop/test/bench/cache" -Recurse -Force }
+if (Test-Path -LiteralPath "$Source/repo/cache") {
+  Get-ChildItem -LiteralPath "$Source/repo/cache" -Exclude spend.json | Copy-Item -Destination "$repoRoot/desktop/test/bench/cache" -Recurse -Force
+  & node desktop/test/bench/merge-ledger.mjs --current "$repoRoot/desktop/test/bench/cache/spend.json" --seed "$Source/repo/cache/spend.json"
+  if ($LASTEXITCODE -ne 0) { throw 'Cumulative spending ledger could not be restored safely' }
+}
 if (Test-Path -LiteralPath "$Source/data") {
   New-Item -ItemType Directory -Force $env:KIMO_BENCH_DATA | Out-Null
   Copy-Item -Path "$Source/data/*" -Destination $env:KIMO_BENCH_DATA -Recurse -Force
