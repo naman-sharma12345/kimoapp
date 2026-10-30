@@ -1,0 +1,11 @@
+# Replacement raw dataset
+
+The user explicitly requires new raw footage for final Phase 2 acceptance and has no footage to supply. The original version-1 set remains immutable legacy evidence. This directory stages a replacement; **candidates are not accepted golden clips**.
+
+Each accepted source needs a stable URL, downloaded SHA256, licence/credit and exact selected interval. Check actual picture and sound for case fit, pre-existing cuts, captions, camera motion and repeated/static source frames. A licence declaration or the word “raw” in a title does not establish those properties. Do not split a finished montage into files and call it a raw vlog. Do not add synthetic speech or loop short clips to satisfy duration. Do not mark source ambiguity as an observed compositor pass.
+
+The first acquisition workflow checks three candidates on standard hosted Windows runners. It preserves the original source bytes and published SHA1 where available, computes SHA256, probes metadata and exports small candidate contact sheets/first-second frames. Acquisition is not a benchmark render, Creator Score comparison or AI replay. Missing cases and licence/content review remain explicit in `candidates.json`.
+
+The existing cumulative USD 5.49 reservation stays unchanged. Acquiring licensed footage does not authorize any new paid AI calls. Final editing baselines, matched before/after runs and honest 10–20-line critiques remain required after the dataset is frozen. Keep large originals, prepared files and render outputs outside Git and outside this PC's OneDrive checkout.
+
+Source research also checked [Open Journalism Network's CC-BY library](https://www.openjournalism.network/faq) for separate raw b-roll and [cc0 Films](https://www.cc0films.com/) for original interview material. Neither has been silently adopted as a completed six-case dataset. Cinestudy's podcast practice project has its own attribution/hashtag permission rather than the requested CC-BY/CC0/Pexels terms; RawFootage Lab includes finished copyrighted media and lacks a clear per-file open licence. Those are not accepted sources here.

@@ -1,0 +1,43 @@
+name: Raw dataset candidate inspection
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        clip: [TH-1, POD-1, TUT-1]
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      BENCH_CLIP: ${{ matrix.clip }}
+      KIMO_WORKER_THREADS: '2'
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+      KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
+      KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --ignore-scripts --prefix desktop
+      - run: node desktop/test/bench/acquire-raw.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raw-v2-candidate-${{ github.run_id }}-${{ matrix.clip }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2-candidates/${{ matrix.clip }}
+          compression-level: 0
+          retention-days: 7

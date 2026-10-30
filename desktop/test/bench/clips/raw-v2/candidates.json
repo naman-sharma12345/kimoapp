@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "status": "candidates only; not an accepted golden dataset",
+  "requestedByUser": "Require a new raw dataset; user has no footage to supply",
+  "candidates": [
+    {
+      "id": "TH-1",
+      "title": "Unedited: ProPublica Interviews President Biden, September 2023",
+      "page": "https://commons.wikimedia.org/wiki/File:Unedited-_ProPublica_Interviews_President_Biden,_September_2023.webm",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f4/Unedited-_ProPublica_Interviews_President_Biden%2C_September_2023.webm?download=1",
+      "publishedSha1": "451df2dc2f3b4926f26da29536854a7191738cdb",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "ProPublica",
+      "start": 70,
+      "duration": 60,
+      "pending": "Description explicitly identifies a full unedited single-camera interview. Verify the selected interval, source licence and real pauses; the Commons external licence review is still pending. A public figure interview is test footage, not an endorsement."
+    },
+    {
+      "id": "POD-1",
+      "title": "Interview with Steve Wozniak",
+      "page": "https://commons.wikimedia.org/wiki/File:Interview_with_Steve_Wozniak.webm",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a5/Interview_with_Steve_Wozniak.webm?download=1",
+      "publishedSha1": "eaf9793bedde499eb4700ed5729c554e828d1251",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "ConversationEDU",
+      "start": 90,
+      "duration": 60,
+      "pending": "Verify a continuous two-person shot with both speakers audible and visible. Reject if this is a finished multicamera cut or a single-speaker-only view."
+    },
+    {
+      "id": "TUT-1",
+      "title": "Basics of Blender — Minecraft Animation Workshop",
+      "page": "https://studio.blender.org/training/minecraft-animation-workshop/5a85e79423b3640e67115ba1/",
+      "url": "https://studio.blender.org/download-source/files/a1/a19524bad5f44da3923bd90c7ff3a9f6/a19524bad5f44da3923bd90c7ff3a9f6-1080p.mp4",
+      "licence": "CC BY 4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "credit": "Dillon Gu / Blender Studio",
+      "start": 60,
+      "duration": 75,
+      "pending": "Official free narrated screencast. Verify a continuous screen capture without baked-in editorial zooms, captions or cuts in the selected interval. No facecam is promised."
+    }
+  ],
+  "missing": [
+    "TH-2: raw outdoor handheld walk-and-talk, 30–60 seconds, real speech/wind",
+    "VLOG-1: 6–12 distinct raw clips with speech and b-roll, 40–80 seconds total",
+    "MUSIC-1: raw b-roll plus a separately licensed CC0 music bed, 20–40 seconds, no speech"
+  ]
+}
