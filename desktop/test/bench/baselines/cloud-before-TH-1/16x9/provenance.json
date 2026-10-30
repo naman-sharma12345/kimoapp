@@ -1,0 +1,11 @@
+{
+  "run": 40891223587,
+  "artifact": "phase01-40891223587-TH-1",
+  "scope": "Failed AI record run; actual delivered output preserved. Historical metrics, not uniformly remeasured.",
+  "sourceHashes": [
+    "b8465fd460731642318235cf7ffad6e69972597554a2efa395ada4d5b69deae9"
+  ],
+  "finalHash": "d1020d90983646ddbdcfa2d75db3d16eec24c024936a27671fdafedee8e3ce17",
+  "projectHash": "22a54e8fc94cc16feaf4fa6a82f3ed5e1906b6b1c822b3b351638ed3689988d3",
+  "hookSamples": "10 frames at 0.0 through 0.9 seconds, extracted from the original final.mp4 without rerendering the edit; 5 columns then second row"
+}
