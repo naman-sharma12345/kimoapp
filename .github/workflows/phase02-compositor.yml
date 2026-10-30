@@ -6,6 +6,10 @@ on:
         description: 'Run the golden matrix (disable to verify only Electron smoke)'
         default: true
         type: boolean
+      record_project:
+        description: 'Recompose the preserved real TH-1 landscape AI project, offline'
+        default: false
+        type: boolean
       clips:
         description: 'JSON array of golden IDs'
         default: '["TH-1","TH-2","TUT-1","VLOG-1","POD-1","MUSIC-1"]'
@@ -116,3 +120,42 @@ jobs:
         with:
           name: phase02-${{ github.run_id }}-smoke
           path: desktop/smoke.json
+  record-project:
+    if: inputs.record_project
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+      KIMO_WORKER_THREADS: '2'
+      KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
+      KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
+    steps:
+      - uses: actions/checkout@v4
+      - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --ignore-scripts --prefix desktop
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 40891223587
+          name: phase01-40891223587-TH-1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/seed
+      - run: ./desktop/test/bench/restore-run.ps1 -Source "$env:RUNNER_TEMP/seed"
+      - run: node desktop/test/bench/recompose-record.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase02-${{ github.run_id }}-real-AI-TH-1
+          path: ${{ runner.temp }}/kimo-bench-data/out/phase02-record
+          compression-level: 0
+          retention-days: 3
