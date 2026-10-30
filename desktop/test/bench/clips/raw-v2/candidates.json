@@ -97,7 +97,9 @@
       "speech": true,
       "transcribe": false,
       "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
-      "youtubePublisherVersion": "https://www.youtube.com/watch?v=cOKvTm6-uLQ"
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=cOKvTm6-uLQ",
+      "sha256": "deced13a3c6e6b48ef24b6229bb94e1107b0aac42afbaf50c26e88a22de65354",
+      "reviewStatus": "Actual prefix contact sheet and first-second frames inspected; selected-case review pending"
     },
     {
       "id": "CINE-INTERVIEW",
@@ -122,7 +124,9 @@
       "speech": true,
       "transcribe": false,
       "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
-      "youtubePublisherVersion": "https://www.youtube.com/watch?v=ltdV_nPuYlw"
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=ltdV_nPuYlw",
+      "sha256": "388928428f05f80ea61e4e3f797be2e1b0d617e07b92c54cdbd96aec7b353745",
+      "reviewStatus": "Actual prefix contact sheet and first-second frames inspected; selected-case review pending"
     },
     {
       "id": "CINE-BROLL",

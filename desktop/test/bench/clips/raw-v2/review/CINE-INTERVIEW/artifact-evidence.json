@@ -1,0 +1,26 @@
+{
+  "artifact": {
+    "id": 12994239644,
+    "name": "raw-v2-candidate-41093785376-CINE-INTERVIEW",
+    "digest": "sha256:2ca14f14183294bfe52be0fe1534d0d23a066074d8fac2c66a4317e03506e64e",
+    "size_in_bytes": 256263487
+  },
+  "fetchedBytes": 410236,
+  "files": [
+    {
+      "name": "candidate-first-second.jpg",
+      "bytes": 68150,
+      "sha256": "a32571f1d5f0911653433cf587cec73e600528f522ffcaa258874d7e7cedb7e9"
+    },
+    {
+      "name": "provenance.json",
+      "bytes": 5679,
+      "sha256": "4d544802b05b535fa9df06e6c5a48bb41edada1c54165962aad0a54b52ae0494"
+    },
+    {
+      "name": "candidate-sheet.jpg",
+      "bytes": 270380,
+      "sha256": "bc32267983fea129663454b8c28403ef82a332c956d480fa4befb7c73f51e9d8"
+    }
+  ]
+}

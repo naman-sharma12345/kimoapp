@@ -55,3 +55,27 @@ TH-1: ProPublica, _Unedited: ProPublica Interviews President Biden, September 20
 TUT-1: Dillon Gu / Blender Studio, _Basics of Blender — Minecraft Animation Workshop_, [official lesson](https://studio.blender.org/training/minecraft-animation-workshop/5a85e79423b3640e67115ba1/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Inspection images are time samples, resized and tiled with timestamps.
 
 Rejected POD-1: ConversationEDU, _Interview with Steve Wozniak_, [source page](https://commons.wikimedia.org/wiki/File:Interview_with_Steve_Wozniak.webm), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Inspection images are time samples, resized and tiled with timestamps.
+
+## MUSIC-1: provisional continuous b-roll with independent bed
+
+- Selected source interval is the first20seconds of the4K25Pexels wave shot.
+- Actual selected contact sheet and ten first-second frames were inspected.
+- Aerial camera movement follows waves breaking on a rocky shore.
+- Continuous wave evolution is visible; inspected samples do not show a montage.
+- The source has no audio stream, independently confirmed by ffprobe.
+- A separately acquired composer-published CC0 track is available as a real audio stem.
+- The selected Ending.wav is44.651179seconds at44.1kHz stereo.
+- Source video, composer archive and chosen track SHA256 hashes are pinned.
+- Brief preview playback and seeks at2,10and19seconds decoded without browser errors.
+- No preview HTTP requests were made; the owned browser was closed.
+- The inspected source preview is silent and does not establish music timing or mix quality.
+- Physical aerial motion must not be counted as compositor-induced camera jitter.
+- Final soundtrack fixture, native comparison and full-output review remain pending.
+
+Evidence: [source sheet](review/MUSIC-1/candidate-sheet.jpg), [first second](review/MUSIC-1/candidate-first-second.jpg), [source provenance](review/MUSIC-1/provenance.json), [music provenance](review/MUSIC-1/music-provenance.json), [playback proof](review/MUSIC-1/playback-check.json). Full credits are in [CREDITS.md](CREDITS.md).
+
+## Cinestudy source-pack inspection
+
+The user approved the publisher's custom permission with full credits and hashtags. Actual350-second prefix sheets and first-second frames were inspected for HOST and INTERVIEW. HOST contains outdoor handheld two-host selfie footage; foreground face placement and physical motion vary. INTERVIEW contains genuine microphone interviews and camera reframing, plus walkaway, exterior and chapel context shots. Neither prefix is itself a golden case. Selected TH-2/POD-1/VLOG-1 intervals require dense preview/audio review before acceptance. Files are public Drive playback renditions, not camera-original containers. Dedicated BROLL remains unavailable after two HTTP429 responses; no further retry or access bypass is planned.
+
+Evidence: [host sheet](review/CINE-HOST/candidate-sheet.jpg), [host first second](review/CINE-HOST/candidate-first-second.jpg), [interview sheet](review/CINE-INTERVIEW/candidate-sheet.jpg), [interview first second](review/CINE-INTERVIEW/candidate-first-second.jpg). The full required [credits and hashtags](CREDITS.md) apply to these inspection derivatives as well.

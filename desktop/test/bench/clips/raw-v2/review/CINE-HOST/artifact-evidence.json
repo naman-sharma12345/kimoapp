@@ -1,0 +1,26 @@
+{
+  "artifact": {
+    "id": 12996075664,
+    "name": "raw-v2-candidate-41093785376-CINE-HOST",
+    "digest": "sha256:aea722504f009ad933450bf09c249c59bc2e0c4cb20eda8b9018e5058544ffac",
+    "size_in_bytes": 267767057
+  },
+  "fetchedBytes": 327436,
+  "files": [
+    {
+      "name": "candidate-first-second.jpg",
+      "bytes": 56200,
+      "sha256": "83e476c5bda162d1d2f6bbb425eeb94bece1b77e14238d42c581051df596dd28"
+    },
+    {
+      "name": "provenance.json",
+      "bytes": 5670,
+      "sha256": "958a2781c2636e22b7ebfc652ae2c756ea883433b986311148fddcdc16d8b08b"
+    },
+    {
+      "name": "candidate-sheet.jpg",
+      "bytes": 255769,
+      "sha256": "56928cc9d88daf06d63c48cd2fac209325d95b66e86f5e8b0ca3e0998b132a14"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "MUSIC-1",
+  "duration": 20,
+  "width": 640,
+  "height": 360,
+  "seeks": [
+    {
+      "at": 2,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 10,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 19,
+      "ready": 4,
+      "error": null
+    }
+  ],
+  "requests": 0,
+  "errors": [],
+  "scope": "Small source-candidate preview played briefly and sought; no final mixed music render or complete listening review."
+}

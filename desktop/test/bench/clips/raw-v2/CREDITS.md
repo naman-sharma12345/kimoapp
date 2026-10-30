@@ -17,7 +17,7 @@ Copyright Sonnyboo. All Rights Reserved.
 
 #CINESTUDY #SONNYBOO #SABOROSS
 
-These full credits and hashtags must accompany every distributed prepared clip and benchmark output that uses this footage, in its description/sidecar or on screen. The publisher also explicitly permits its public YouTube versions. Acquisition selects stream-copied prefixes of those versions on hosted runners; it does not claim to preserve the multi-gigabyte camera-original container. Exact downloaded and prepared SHA256 values, rendition metadata and selected source ranges are recorded separately.
+These full credits and hashtags must accompany every distributed prepared clip and benchmark output that uses this footage, in its description/sidecar or on screen. The publisher also explicitly permits its public YouTube versions. YouTube acquisition was sign-in blocked on hosted runners. Acquisition instead selects stream-copied prefixes of the independently published anonymous public Drive playback renditions on hosted runners; it does not claim to preserve the multi-gigabyte camera-original container. Exact downloaded and prepared SHA256 values, rendition metadata and selected source ranges are recorded separately.
 
 ## Independent MUSIC-1 sources
 

@@ -1,0 +1,243 @@
+{
+  "version": 2,
+  "status": "selected source intervals; prepared-file hashes and final acceptance pending",
+  "sources": {
+    "TH-1": {
+      "id": "TH-1",
+      "title": "Unedited: ProPublica Interviews President Biden, September 2023",
+      "page": "https://commons.wikimedia.org/wiki/File:Unedited-_ProPublica_Interviews_President_Biden,_September_2023.webm",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f4/Unedited-_ProPublica_Interviews_President_Biden%2C_September_2023.webm?download=1",
+      "publishedSha1": "451df2dc2f3b4926f26da29536854a7191738cdb",
+      "licence": "CC BY 3.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "credit": "ProPublica",
+      "start": 70,
+      "duration": 60,
+      "pending": "Description explicitly identifies a full unedited single-camera interview. Verify the selected interval, source licence and real pauses; the Commons external licence review is still pending. A public figure interview is test footage, not an endorsement.",
+      "sha256": "cf880aa9a077c7e96ec521439834895ba656969ad3cb05ba0830b1bf5b0b74ed",
+      "reviewStatus": "provisional: visual source fit, full interval and audio review pending",
+      "artifactRun": "41089581693"
+    },
+    "TUT-1": {
+      "id": "TUT-1",
+      "title": "Basics of Blender — Minecraft Animation Workshop",
+      "page": "https://studio.blender.org/training/minecraft-animation-workshop/5a85e79423b3640e67115ba1/",
+      "url": "https://studio.blender.org/download-source/files/a1/a19524bad5f44da3923bd90c7ff3a9f6/a19524bad5f44da3923bd90c7ff3a9f6-1080p.mp4",
+      "licence": "CC BY 4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "credit": "Dillon Gu / Blender Studio",
+      "start": 60,
+      "duration": 75,
+      "pending": "Official free CC-BY screencast with embedded facecam actually visible. Full selected-interval and audio checks remain pending.",
+      "sha256": "868fde1baadb813be1142435abb6be6b82f82e72bbe72cf8f560ed7c179a148c",
+      "reviewStatus": "provisional: visual source fit, full interval and audio review pending",
+      "artifactRun": "41089581693"
+    },
+    "MUSIC-1": {
+      "id": "MUSIC-1",
+      "title": "Waves Rushing And Splashing To The Shore",
+      "page": "https://www.pexels.com/video/waves-rushing-and-splashing-to-the-shore-1409899/",
+      "url": "https://videos.pexels.com/video-files/1409899/1409899-uhd_3840_2160_25fps.mp4",
+      "licence": "Pexels licence",
+      "licenceUrl": "https://www.pexels.com/license/",
+      "credit": "Michal Marek / Pexels",
+      "start": 0,
+      "duration": 20,
+      "speech": false,
+      "pending": "Inspect the actual continuous aerial shot and verify no speech. A separately attributed CC0 composer track is acquired alongside the video; final music timing/mix and render comparison are still required.",
+      "music": {
+        "title": "5 Chiptunes (Action)",
+        "page": "https://opengameart.org/content/5-chiptunes-action",
+        "url": "https://opengameart.org/sites/default/files/5%20Action%20Chiptunes%20By%20Juhani%20Junkala.zip",
+        "licence": "CC0 1.0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "credit": "Juhani Junkala / SubspaceAudio",
+        "sha256": "d5ec74e7f90f0b407f68e44ef791b28af30b47e5252414bdb289ae371fc59173",
+        "zipSha256": "ea189990c0fb9a700187ccc740eda72400341a082305a163867467d96346460d",
+        "archiveEntry": "Juhani Junkala [Retro Game Music Pack] Ending.wav",
+        "file": "music-bed.wav"
+      },
+      "sha256": "131c56517827125501b067f5cef2369755b6c3efc199a2adeebfe38c1a9fb3db",
+      "reviewStatus": "provisional: actual sheets and first-second frames inspected, source has no audio stream; final cut/music mix and measurements pending",
+      "artifactRun": "41091058004"
+    },
+    "CINE-HOST": {
+      "id": "CINE-HOST",
+      "role": "source-pack",
+      "title": "Renfest raw podcast host segments",
+      "provider": "google-drive-public",
+      "page": "https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/",
+      "url": "https://drive.google.com/file/d/1yNEXV00DG2dpxdjkZnVxtE5LceVYChhY/view",
+      "cameraOriginal": "https://drive.google.com/file/d/1yNEXV00DG2dpxdjkZnVxtE5LceVYChhY/view",
+      "licence": "Cinestudy free edit permission; full credits and hashtags required",
+      "licenceUrl": "https://docs.google.com/document/d/1MJiWj9n9cF83v3AMKd83Jo-n4QyYBvLL2XP1HsKI9h0/edit",
+      "credit": "Directed by Greg Sabo\nProduced by Greg Sabo and Peter John Ross\nA-Camera/Cinematography by Greg Sabo\nB-Camera Operator - Peter John Ross\nHosted by Peter John Ross and Greg Sabo\nEdited by kimo benchmark (test preparation)\nCopyright Sonnyboo. All Rights Reserved.\n#CINESTUDY #SONNYBOO #SABOROSS",
+      "userExceptionApproved": "2026-10-30: user explicitly allowed Cinestudy with its required credits",
+      "rendition": "Anonymous public Drive playback rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera-original container",
+      "downloadRange": {
+        "start": 0,
+        "end": 360
+      },
+      "start": 0,
+      "duration": 350,
+      "sampleEvery": 10,
+      "speech": true,
+      "transcribe": false,
+      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=cOKvTm6-uLQ",
+      "sha256": "deced13a3c6e6b48ef24b6229bb94e1107b0aac42afbaf50c26e88a22de65354",
+      "reviewStatus": "Actual prefix contact sheet and first-second frames inspected; selected-case review pending",
+      "artifactRun": "41093785376"
+    },
+    "CINE-INTERVIEW": {
+      "id": "CINE-INTERVIEW",
+      "role": "source-pack",
+      "title": "Renfest raw interviews, camera A",
+      "provider": "google-drive-public",
+      "page": "https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/",
+      "url": "https://drive.google.com/file/d/1N_fyQLf3wLXrYa7mbGy8DOmmHJcRbFVG/view",
+      "cameraOriginal": "https://drive.google.com/file/d/1N_fyQLf3wLXrYa7mbGy8DOmmHJcRbFVG/view",
+      "licence": "Cinestudy free edit permission; full credits and hashtags required",
+      "licenceUrl": "https://docs.google.com/document/d/1MJiWj9n9cF83v3AMKd83Jo-n4QyYBvLL2XP1HsKI9h0/edit",
+      "credit": "Directed by Greg Sabo\nProduced by Greg Sabo and Peter John Ross\nA-Camera/Cinematography by Greg Sabo\nB-Camera Operator - Peter John Ross\nHosted by Peter John Ross and Greg Sabo\nEdited by kimo benchmark (test preparation)\nCopyright Sonnyboo. All Rights Reserved.\n#CINESTUDY #SONNYBOO #SABOROSS",
+      "userExceptionApproved": "2026-10-30: user explicitly allowed Cinestudy with its required credits",
+      "rendition": "Anonymous public Drive playback rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera-original container",
+      "downloadRange": {
+        "start": 0,
+        "end": 360
+      },
+      "start": 0,
+      "duration": 350,
+      "sampleEvery": 10,
+      "speech": true,
+      "transcribe": false,
+      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=ltdV_nPuYlw",
+      "sha256": "388928428f05f80ea61e4e3f797be2e1b0d617e07b92c54cdbd96aec7b353745",
+      "reviewStatus": "Actual prefix contact sheet and first-second frames inspected; selected-case review pending",
+      "artifactRun": "41093785376"
+    }
+  },
+  "clips": [
+    {
+      "id": "TH-1",
+      "name": "Unedited indoor interview",
+      "speech": true,
+      "duration": 60,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Single fixed camera. Publisher watermark; Commons licence review pending. Static background makes frame identity ambiguous; no assumption of zero repeats from missing coverage.",
+      "segments": [
+        {
+          "source": "TH-1",
+          "start": 70,
+          "duration": 60
+        }
+      ]
+    },
+    {
+      "id": "TH-2",
+      "name": "Raw outdoor host walk-and-talk",
+      "speech": true,
+      "duration": 45,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Two hosts on a handheld selfie camera with walking/pauses. Physical capture motion must be distinguished from compositor camera jitter. Publisher public Drive playback rendition, not camera-original bytes.",
+      "segments": [
+        {
+          "source": "CINE-HOST",
+          "start": 270,
+          "duration": 45
+        }
+      ]
+    },
+    {
+      "id": "TUT-1",
+      "name": "Blender screen tutorial with facecam",
+      "speech": true,
+      "duration": 75,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Screen capture with facecam lower right. Static UI can make frame matching ambiguous; portrait centre crop is an editorial limitation.",
+      "segments": [
+        {
+          "source": "TUT-1",
+          "start": 60,
+          "duration": 75
+        }
+      ]
+    },
+    {
+      "id": "VLOG-1",
+      "name": "Renaissance faire raw source selections",
+      "speech": true,
+      "duration": 60,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Six separately prepared raw shot excerpts from the same event host/interview camera rolls; they are not six independent camera-original files. Speech, walkaway/exterior and chapel context shots. Exact boundaries still require selected-preview review. Dedicated b-roll file was unavailable after two HTTP429 responses.",
+      "segments": [
+        {
+          "source": "CINE-HOST",
+          "start": 270,
+          "duration": 10
+        },
+        {
+          "source": "CINE-INTERVIEW",
+          "start": 80,
+          "duration": 10
+        },
+        {
+          "source": "CINE-INTERVIEW",
+          "start": 230,
+          "duration": 10
+        },
+        {
+          "source": "CINE-INTERVIEW",
+          "start": 250,
+          "duration": 10
+        },
+        {
+          "source": "CINE-INTERVIEW",
+          "start": 260,
+          "duration": 10
+        },
+        {
+          "source": "CINE-INTERVIEW",
+          "start": 330,
+          "duration": 10
+        }
+      ]
+    },
+    {
+      "id": "POD-1",
+      "name": "Raw two-person outdoor interview",
+      "speech": true,
+      "duration": 60,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Two-person podcast/documentary conversation with microphone. Outdoor setting with physical camera reframing, not a studio podcast. Public Drive playback rendition.",
+      "segments": [
+        {
+          "source": "CINE-INTERVIEW",
+          "start": 80,
+          "duration": 60
+        }
+      ]
+    },
+    {
+      "id": "MUSIC-1",
+      "name": "Continuous wave b-roll and separate composer bed",
+      "speech": false,
+      "duration": 20,
+      "aspects": ["9:16", "16:9"],
+      "notes": "Silent original video plus independently imported CC0 music stem; declared manual offline soundtrack fixture, no AI editing claims.",
+      "segments": [
+        {
+          "source": "MUSIC-1",
+          "start": 0,
+          "duration": 20
+        }
+      ],
+      "music": {
+        "source": "MUSIC-1",
+        "in": 0,
+        "duration": 20
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "artifact": {
+    "id": 12994870635,
+    "name": "raw-v2-candidate-41091058004-MUSIC-1",
+    "digest": "sha256:acf07852802550a4b6c34d79c07f99595e9922f9006f962c067e78ebdc98d3ba",
+    "size_in_bytes": 117987785
+  },
+  "fetchedBytes": 3729061,
+  "files": [
+    {
+      "name": "candidate-first-second.jpg",
+      "bytes": 49770,
+      "sha256": "0b03eae9c9e3410bb8e0b8b024db462ecc5580100b2100337ec4994b1693c90a"
+    },
+    {
+      "name": "candidate-sheet.jpg",
+      "bytes": 47183,
+      "sha256": "a878f8d376aa3f7e37a492ebe736bd4153955c625517848aebabbdbd6882455b"
+    },
+    {
+      "name": "music-provenance.json",
+      "bytes": 2892,
+      "sha256": "5ffe024446efaeb2d449edd9fefe3c75c1576b239eae9e0b9be942a208e4caeb"
+    },
+    {
+      "name": "provenance.json",
+      "bytes": 3917,
+      "sha256": "72780ecaa2fcb46c809a0a35b77ca2d898a654c0d32bc6a9d355b07c95c9a859"
+    },
+    {
+      "name": "candidate-preview.mp4",
+      "bytes": 3559081,
+      "sha256": "75f26a418987dfc71be99501eef4221f75e70d1c76d496a67cd7eb99a827a319"
+    }
+  ]
+}
