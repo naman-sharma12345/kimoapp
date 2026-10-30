@@ -792,8 +792,22 @@ export async function compose({
       const st = statSync(source.path);
       source.signature = `${st.size}:${st.mtimeMs}`;
     }
-    const clips = edl.video.flatMap((t) => t.clips),
-      estimatedNodes = clips.length * 7 + edl.overlays.length * 2;
+    const clips = edl.video.flatMap((t) => t.clips);
+    // Caption/shape cues share ASS passes; they are not separate graph nodes.
+    // Count conservative source/transform stacks and the ASS passes around images.
+    const estimatedNodes =
+      7 +
+      clips.reduce(
+        (nodes, clip) =>
+          nodes +
+          18 +
+          (clip.fit === 'contain' ? 3 : 0) +
+          (clip.grade?.effects?.filter((e) => e.kind === 'primaries').length ??
+            0) *
+            6,
+        0,
+      ) +
+      (clips.filter((c) => c._overlayIndex != null).length + 1) * 7;
     const [clockN, clockD = 1] = String(edl.canvas.fps).split('/').map(Number);
     const complex =
       strategy === 'B' || estimatedNodes > 200 || total / fps > 600;

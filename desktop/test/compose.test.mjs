@@ -695,6 +695,131 @@ for (const fps of ['24000/1001', 24, 25, '30000/1001', 30, 50, 60])
     },
   );
 test(
+  'dense caption cues share a direct ASS pass with identical fallback pixels',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-dense-captions-'));
+    try {
+      const path = await fixture(dir, 25),
+        e = edlFor(path, 25);
+      e.overlays = Array.from({ length: 150 }, (_, i) => ({
+        id: `caption-${i}`,
+        kind: 'caption_word_group',
+        at: i / 150,
+        dur: 1 / 150,
+        props: {
+          text: `word ${i}`,
+          font: 'DejaVu Sans',
+          size: 12,
+          x: 0.5,
+          y: 0.8,
+          color: '#ffffff',
+        },
+      }));
+      const direct = await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output: join(dir, 'auto.mkv'),
+        dir: join(dir, 'auto'),
+      });
+      const fallback = await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output: join(dir, 'fallback.mkv'),
+        dir: join(dir, 'fallback'),
+        strategy: 'B',
+      });
+      assert.equal(direct.strategy, 'A');
+      const decode = async (p) =>
+        (
+          await command(ffmpeg, [
+            '-v',
+            'error',
+            '-i',
+            p,
+            '-an',
+            '-pix_fmt',
+            'rgb24',
+            '-f',
+            'rawvideo',
+            'pipe:1',
+          ])
+        ).stdout;
+      const a = await decode(direct.output),
+        b = await decode(fallback.output);
+      assert.equal(a.length, b.length);
+      assert.ok(
+        a.equals(b),
+        'dense-caption direct/fallback decoded pictures differ',
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
+  'a timeline over ten minutes still selects the bounded fallback for a single-frame preview',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-long-preview-'));
+    try {
+      const source = await fixture(dir, 25),
+        e = edlFor(source, 25);
+      e.overlays.push({
+        id: 'late-title',
+        kind: 'hook_title',
+        at: 600,
+        dur: 1,
+        props: { text: 'later', size: 12 },
+      });
+      const r = await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output: join(dir, 'frame.png'),
+        dir: join(dir, 'work'),
+        frame: 0,
+      });
+      assert.equal(r.strategy, 'B');
+      assert.ok(existsSync(r.output));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
+  'a genuinely large picture-layer graph still selects the bounded fallback',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-many-layers-'));
+    try {
+      const source = await fixture(dir, 25),
+        e = edlFor(source, 25);
+      e.video = Array.from({ length: 14 }, (_, i) => ({
+        track: `V${i}`,
+        clips: [{ id: `layer${i}`, src: 's', in: 0, out: 1, at: 0, speed: 1 }],
+      }));
+      const result = await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output: join(dir, 'frame.png'),
+        dir: join(dir, 'work'),
+        frame: 0,
+      });
+      assert.equal(result.strategy, 'B');
+      assert.ok(existsSync(result.output));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
   'bounded fallback retains the same frame count and a cancelled render stops',
   { timeout: 90000 },
   async () => {
