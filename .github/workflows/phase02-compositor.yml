@@ -30,6 +30,10 @@ on:
         description: 'Retry missing native references from a restored artifact (30-minute limit)'
         default: false
         type: boolean
+      evidence_only:
+        description: 'Upload small review evidence only (full renders are retained by the comparison run)'
+        default: false
+        type: boolean
 permissions:
   contents: read
   actions: read
@@ -87,7 +91,7 @@ jobs:
       - name: Offline golden render and identical-project comparison
         run: node desktop/test/bench/phase02.mjs
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && !inputs.evidence_only
         with:
           name: phase02-${{ github.run_id }}-${{ matrix.clip }}
           path: ${{ runner.temp }}/kimo-bench-data/out/phase02/${{ matrix.clip }}
