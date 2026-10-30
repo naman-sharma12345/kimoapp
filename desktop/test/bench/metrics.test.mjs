@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as m from './metrics.mjs';
+import { sourceResidualJitter, registerTranslation } from './registration.mjs';
 import { command, probeFile, filterPath, readJson } from './io.mjs';
 import {
   projectEdl,
@@ -14,6 +15,83 @@ import {
 
 const words = (list) =>
   list.map(([text, start, end]) => ({ text, start, end }));
+
+test('source-referenced camera estimate cancels capture motion, brightness and masked captions but detects injected shake', () => {
+  const width = 64,
+    height = 48,
+    count = 80;
+  const picture = (x, y, t) =>
+    110 +
+    24 * Math.sin(x * 0.31 + t * 0.17) +
+    19 * Math.cos(y * 0.29 - t * 0.09) +
+    12 * Math.sin((x + y) * 0.19 + t * 0.07);
+  const references = [],
+    clean = [],
+    shaken = [],
+    masks = [];
+  for (let t = 0; t < count; t++) {
+    const reference = new Float64Array(width * height),
+      output = new Float64Array(reference.length),
+      shake = new Float64Array(reference.length),
+      mask = new Uint8Array(reference.length).fill(1);
+    for (let y = 0; y < height; y++)
+      for (let x = 0; x < width; x++) {
+        const k = y * width + x;
+        reference[k] = picture(x, y, t);
+        output[k] = reference[k] * 1.1 + 3;
+        shake[k] = picture(x + (t % 2 ? 0.12 : -0.12), y, t) * 1.1 + 3;
+        if (y > 34) {
+          mask[k] = 0;
+          output[k] = (x + t) % 2 ? 255 : 0;
+          shake[k] = output[k];
+        }
+      }
+    references.push(reference);
+    clean.push(output);
+    shaken.push(shake);
+    masks.push(mask);
+  }
+  const options = {
+    width,
+    height,
+    outputWidth: 1920,
+    outputHeight: 1080,
+    masks,
+  };
+  const baseline = sourceResidualJitter(clean, references, options),
+    bad = sourceResidualJitter(shaken, references, options);
+  assert.equal(baseline.coverage, 1);
+  assert.ok(baseline.jitter_px < 0.001, JSON.stringify(baseline));
+  assert.equal(bad.coverage, 1);
+  assert.ok(bad.jitter_px > 0.5, JSON.stringify(bad));
+  const fit = registerTranslation(
+    shaken[25],
+    references[25],
+    width,
+    height,
+    masks[25],
+  );
+  assert.ok(Math.abs(fit.dx - 0.12) < 0.02, JSON.stringify(fit));
+});
+
+test('source-referenced jitter rejects flat/aperture images and insufficient registration coverage', () => {
+  const width = 64,
+    height = 48,
+    flat = new Uint8Array(width * height).fill(100);
+  const stripes = Uint8Array.from(
+    flat,
+    (_, k) => 100 + 40 * Math.sin((k % width) * 0.3),
+  );
+  assert.equal(registerTranslation(flat, flat, width, height), null);
+  assert.equal(registerTranslation(stripes, stripes, width, height), null);
+  const result = sourceResidualJitter(
+    Array(20).fill(flat),
+    Array(20).fill(flat),
+    { width, height, outputWidth: 1920, outputHeight: 1080 },
+  );
+  assert.equal(result.jitter_px, null);
+  assert.equal(result.coverage, 0);
+});
 test('speech onset and union of internal gaps, never padding', () => {
   const w = words([
     ['Hi', 0.2, 0.5],
@@ -517,6 +595,98 @@ test(
       );
       assert.ok(match.repeated_frames >= 1);
       assert.ok(match.skipped_frames >= 1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
+  'decoded lossless camera calibration detects subpixel shake independently of moving source content',
+  { timeout: 120000 },
+  async (t) => {
+    const ffmpeg = process.env.KIMO_FFMPEG || 'ffmpeg';
+    try {
+      await command(ffmpeg, ['-version']);
+    } catch (e) {
+      if (process.env.KIMO_BENCH_REQUIRE_FFMPEG) throw e;
+      t.skip('FFmpeg unavailable');
+      return;
+    }
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-registration-'));
+    try {
+      const width = 64,
+        height = 48,
+        count = 32;
+      const image = (x, y, t) =>
+        Math.round(
+          120 +
+            30 * Math.sin(x * 0.31 + t * 0.14) +
+            22 * Math.cos(y * 0.29 - t * 0.12),
+        );
+      const references = [],
+        encoded = [];
+      for (let t = 0; t < count; t++) {
+        const source = Buffer.alloc(width * height),
+          shifted = Buffer.alloc(source.length);
+        for (let y = 0; y < height; y++)
+          for (let x = 0; x < width; x++) {
+            source[y * width + x] = image(x, y, t);
+            shifted[y * width + x] = image(x + (t % 2 ? 0.12 : -0.12), y, t);
+          }
+        references.push(source);
+        encoded.push(shifted);
+      }
+      const raw = join(dir, 'input.gray'),
+        video = join(dir, 'encoded.mkv');
+      await writeFile(raw, Buffer.concat(encoded));
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-f',
+        'rawvideo',
+        '-pixel_format',
+        'gray',
+        '-video_size',
+        `${width}x${height}`,
+        '-framerate',
+        '24',
+        '-i',
+        raw,
+        '-c:v',
+        'ffv1',
+        video,
+      ]);
+      const result = await command(ffmpeg, [
+        '-v',
+        'error',
+        '-i',
+        video,
+        '-pix_fmt',
+        'gray',
+        '-f',
+        'rawvideo',
+        'pipe:1',
+      ]);
+      const frames = Array.from({ length: count }, (_, i) =>
+        result.stdout.subarray(i * width * height, (i + 1) * width * height),
+      );
+      const measured = sourceResidualJitter(frames, references, {
+        width,
+        height,
+        outputWidth: 1920,
+        outputHeight: 1080,
+      });
+      assert.equal(measured.coverage, 1);
+      assert.ok(measured.jitter_px > 0.5, JSON.stringify(measured));
+      const clean = sourceResidualJitter(references, references, {
+        width,
+        height,
+        outputWidth: 1920,
+        outputHeight: 1080,
+      });
+      assert.equal(clean.jitter_px, 0);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
