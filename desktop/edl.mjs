@@ -1,5 +1,7 @@
 // App-owned, versioned edit decisions. This module is also safe in the renderer.
 export function rate(value) {
+  if (!/^\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?$/.test(String(value)))
+    throw new Error(`Invalid frame rate: ${value}`);
   const [n, d = 1] = String(value).split('/').map(Number);
   if (!(n > 0 && d > 0 && Number.isFinite(n / d)))
     throw new Error(`Invalid frame rate: ${value}`);
@@ -19,7 +21,7 @@ export const duration = (edl) =>
   Math.max(
     0,
     ...edl.video.flatMap((t) =>
-      t.clips.map((c) => c.at + (c.out - c.in) / c.speed),
+      t.clips.map((c) => c.at + (c.out - c.in) / (c.speed ?? 1)),
     ),
     ...edl.overlays.map((o) => o.at + o.dur),
     ...edl.audio.flatMap((t) =>
@@ -28,14 +30,23 @@ export const duration = (edl) =>
   );
 export const frameCount = (edl) =>
   Math.ceil(duration(edl) * rate(edl.canvas.fps) - 1e-7);
-export function curveValue(curve, time, fallback = 0) {
+export function curveValue(curve, time, fallback = 0, preparedKeys) {
   if (typeof curve === 'number') return curve;
-  const keys = (curve?.keys ?? [])
-    .map((k) => ({ t: k.t ?? k.time, v: k.v ?? k.value, ease: k.ease }))
-    .toSorted((a, b) => a.t - b.t);
+  const keys =
+    preparedKeys ??
+    (curve?.keys ?? [])
+      .map((k) => ({ t: k.t ?? k.time, v: k.v ?? k.value, ease: k.ease }))
+      .toSorted((a, b) => a.t - b.t);
   let value = Number(curve?.base ?? fallback);
   if (keys.length && time >= keys[0].t) {
-    const index = keys.findIndex((k) => k.t > time);
+    let lo = 0,
+      hi = keys.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (keys[mid].t > time) hi = mid;
+      else lo = mid + 1;
+    }
+    const index = lo < keys.length ? lo : -1;
     if (index < 0) value = keys.at(-1).v;
     else {
       const a = keys[index - 1],
@@ -85,13 +96,20 @@ export function curveValue(curve, time, fallback = 0) {
   }
   return value;
 }
+export function curveSampler(curve, fallback = 0) {
+  const keys = (curve?.keys ?? [])
+    .map((k) => ({ t: k.t ?? k.time, v: k.v ?? k.value, ease: k.ease }))
+    .sort((a, b) => a.t - b.t);
+  return (time) => curveValue(curve, time, fallback, keys);
+}
 export function framePlan(clip, source, fps, from = 0, to = Infinity) {
   const f = rate(fps),
-    s = rate(source.fps || fps);
+    s = rate(source.fps || fps),
+    speed = clip.speed ?? 1;
   const start = Math.max(from, Math.ceil(clip.at * f - 1e-7));
   const end = Math.min(
     to,
-    Math.ceil((clip.at + (clip.out - clip.in) / clip.speed) * f - 1e-7),
+    Math.ceil((clip.at + (clip.out - clip.in) / speed) * f - 1e-7),
   );
   const indices = Array.from({ length: Math.max(0, end - start) }, (_, i) =>
     source.kind === 'image'
@@ -102,9 +120,7 @@ export function framePlan(clip, source, fps, from = 0, to = Infinity) {
             : source.duration > 0
               ? Math.ceil(source.duration * s - 1e-7) - 1
               : Infinity,
-          Math.round(
-            ((start + i) / f - clip.at) * clip.speed * s + clip.in * s,
-          ),
+          Math.round(((start + i) / f - clip.at) * speed * s + clip.in * s),
         ),
   );
   const stride = indices.length > 1 ? indices[1] - indices[0] : 1;
@@ -209,6 +225,22 @@ export function validate(edl) {
   for (const [i, o] of edl.overlays.entries()) {
     if (!o.id || ids.has(o.id)) fail(`overlays[${i}].id`, 'unique id required');
     ids.add(o.id);
+    if (
+      ![
+        'hook_title',
+        'lower_third',
+        'caption_word_group',
+        'callout',
+        'progress',
+        'image',
+        'text_behind',
+      ].includes(o.kind)
+    )
+      fail(`overlays[${i}].kind`, `unknown overlay kind ${o.kind}`);
+    if (o.kind === 'image' && !o.src)
+      fail(`overlays[${i}].src`, 'image source required');
+    if (o.kind !== 'image' && (!o.props || typeof o.props !== 'object'))
+      fail(`overlays[${i}].props`, 'overlay properties required');
     if (!finite(o.at) || o.at < 0 || !finite(o.dur) || o.dur <= 0)
       fail(`overlays[${i}]`, 'nonnegative at and duration > 0 required');
     if (o.src && !sources.has(o.src))
@@ -453,12 +485,15 @@ export function fromKimoProject(
           ]),
         ].sort((a, b) => a - b);
         const fit = curveValue(props.fit, 0, 1) === 0 ? 'contain' : 'cover';
-        const sourceAspect = source.w / source.h,
+        const rotated = Math.abs(source.rotation ?? 0) % 180 === 90;
+        const sourceW = rotated ? source.h : source.w,
+          sourceH = rotated ? source.w : source.h;
+        const sourceAspect = sourceW / sourceH,
           canvasAspect = canvas.w / canvas.h;
         const cropW =
-          sourceAspect > canvasAspect ? source.h * canvasAspect : source.w;
+          sourceAspect > canvasAspect ? sourceH * canvasAspect : sourceW;
         const cropH =
-          sourceAspect > canvasAspect ? source.h : source.w / canvasAspect;
+          sourceAspect > canvasAspect ? sourceH : sourceW / canvasAspect;
         const camera = times.map((t) => {
           const zoom = curveValue(props.scale, t, 1);
           return {
@@ -466,11 +501,11 @@ export function fromKimoProject(
             x:
               0.5 -
               (curveValue(props.x, t) / (canvas.w * zoom)) *
-                (fit === 'contain' ? 1 : cropW / source.w),
+                (fit === 'contain' ? 1 : cropW / sourceW),
             y:
               0.5 -
               (curveValue(props.y, t) / (canvas.h * zoom)) *
-                (fit === 'contain' ? 1 : cropH / source.h),
+                (fit === 'contain' ? 1 : cropH / sourceH),
             zoom,
             ease: 'linear',
           };
@@ -508,8 +543,8 @@ export function fromKimoProject(
       let lane = lanes.find((l) =>
         l.every(
           (p) =>
-            c.at >= p.at + (p.out - p.in) / p.speed - 1e-6 ||
-            c.at + (c.out - c.in) / c.speed <= p.at + 1e-6,
+            c.at >= p.at + (p.out - p.in) / (p.speed ?? 1) - 1e-6 ||
+            c.at + (c.out - c.in) / (c.speed ?? 1) <= p.at + 1e-6,
         ),
       );
       if (!lane) {
@@ -581,7 +616,7 @@ export function toTimeline(edl) {
       id: c.id,
       src: paths.get(c.src),
       start: c.at,
-      end: c.at + (c.out - c.in) / c.speed,
+      end: c.at + (c.out - c.in) / (c.speed ?? 1),
       in: c.in,
       speed: c.speed,
     })),
@@ -644,7 +679,7 @@ export function applyEdits(original, ops) {
         if (x.props) x.dur = op.args.duration;
         else {
           if (op.args.in_point != null) x.in = op.args.in_point;
-          x.out = x.in + op.args.duration * x.speed;
+          x.out = x.in + op.args.duration * (x.speed ?? 1);
         }
       }
     else if (op.tool === 'edit_caption' && c.props) {
@@ -683,7 +718,7 @@ export function toKimoProject(edl) {
       if (!c) return [];
       const n = clone(old);
       n.start = c.at;
-      n.duration = c.dur ?? (c.out - c.in) / c.speed;
+      n.duration = c.dur ?? (c.out - c.in) / (c.speed ?? 1);
       if (c.props) {
         n.source.text = c.props.text;
         if (c.props.text_fx) n.text_fx = clone(c.props.text_fx);

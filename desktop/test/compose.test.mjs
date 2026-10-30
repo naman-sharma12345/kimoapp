@@ -6,7 +6,8 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { command, filterPath, probeFile } from './bench/io.mjs';
 import { compose, cameraRectsForClip } from '../compose.mjs';
-import { rate, frameCount, framePlan } from '../edl.mjs';
+import { rate, frameCount, framePlan, fromKimoProject } from '../edl.mjs';
+import { frameSourceMetrics, projectEdl } from './bench/analyze.mjs';
 import { toolPaths } from './bench/run.mjs';
 import { youtubeMaster, measure } from '../engine.mjs';
 const tools = toolPaths(),
@@ -17,6 +18,102 @@ const W = 192,
   block = 8,
   left = 32,
   top = 60;
+
+test(
+  'pixel matcher masks captions, aligns float crops and still catches injected judder',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-match-'));
+    try {
+      const source = await fixture(dir, 25);
+      const project = {
+        width: W,
+        height: H,
+        fps: 25,
+        assets: {
+          s: { path: source, width: W, height: H, fps: 25, duration: 1.6 },
+        },
+        tracks: [
+          {
+            id: 'V',
+            clips: [
+              {
+                id: 'clip1',
+                source: { type: 'media', asset: 's' },
+                start: 0,
+                duration: 1,
+                in_point: 0,
+                speed: 1,
+                props: { scale: { base: 1.15 } },
+              },
+            ],
+          },
+          {
+            id: 'T',
+            clips: [
+              {
+                id: 'clip2',
+                source: {
+                  type: 'text',
+                  text: 'caption pixels',
+                  font: 'DejaVu Sans',
+                  size: 16,
+                  color: [1, 1, 1],
+                },
+                start: 0,
+                duration: 1,
+                props: { y: { base: -45 } },
+              },
+            ],
+          },
+        ],
+      };
+      const output = join(dir, 'clean.mkv');
+      await compose({
+        edl: fromKimoProject(project),
+        ffmpeg,
+        ffprobe,
+        output,
+        dir: join(dir, 'work'),
+        fontsDir: tools.env.KIMO_FONTS,
+      });
+      const events = projectEdl(project);
+      const good = await frameSourceMetrics(
+        ffmpeg,
+        output,
+        events,
+        25,
+        W,
+        H,
+        1,
+      );
+      assert.equal(good.repeated_frames, 0);
+      assert.equal(good.skipped_frames, 0);
+      assert.ok(good.frame_match_coverage >= 0.95, JSON.stringify(good));
+      const bad = join(dir, 'judder.mkv');
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-i',
+        output,
+        '-vf',
+        'shuffleframes=0 0 2 3 4',
+        '-an',
+        '-c:v',
+        'ffv1',
+        '-level',
+        '3',
+        bad,
+      ]);
+      const faulty = await frameSourceMetrics(ffmpeg, bad, events, 25, W, H, 1);
+      assert.ok(faulty.repeated_frames >= 4, JSON.stringify(faulty));
+      assert.ok(faulty.skipped_frames >= 4, JSON.stringify(faulty));
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
 
 test(
   'external audio assets resolve duration and gain without a source entry',
@@ -122,9 +219,7 @@ test(
       const e = {
         edl_version: 1,
         canvas: { w: W, h: H, fps: 25, bg: '#0000FF' },
-        sources: [
-          { id: 'png', path: image, w: W, h: H, kind: 'image', fps: 25 },
-        ],
+        sources: [{ id: 'png', path: image, w: W, h: H, fps: 25 }],
         video: [],
         audio: [],
         overlays: [

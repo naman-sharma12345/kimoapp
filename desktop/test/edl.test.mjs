@@ -8,6 +8,7 @@ import {
   toKimoProject,
   toTimeline,
   curveValue,
+  frameCount,
 } from '../edl.mjs';
 const project = () => ({
   width: 192,
@@ -73,6 +74,7 @@ test('validator reports exact range, unknown asset, overlap and zero-duration lo
     assert.throws(() => validate(copy), re);
   };
   bad((e) => (e.video[0].clips[0].src = 'missing'), /unknown asset missing/);
+  bad((e) => (e.canvas.fps = '25/1/garbage'), /canvas.fps/);
   bad((e) => (e.video[0].clips[0].out = 100), /exceeds source duration/);
   bad((e) => (e.video[0].clips[0].out = 1), /duration must be > 0/);
   bad(
@@ -186,5 +188,17 @@ test('native transform sampling preserves independent curves and translation und
     sample.ease,
     'linear',
     'dense EDL samples must not ease the native curve twice',
+  );
+});
+
+test('omitted speed consistently means normal playback through validation, planning and timeline', () => {
+  const e = fromKimoProject(project());
+  delete e.video[0].clips[0].speed;
+  validate(e);
+  assert.equal(frameCount(e), 60);
+  assert.equal(toTimeline(e).tracks_bottom_to_top[0].clips[0].end, 2);
+  assert.equal(
+    framePlan(e.video[0].clips[0], e.sources[0], e.canvas.fps).indices.length,
+    60,
   );
 });

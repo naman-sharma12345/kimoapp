@@ -12,7 +12,14 @@ import { join, resolve, sep, basename } from 'node:path';
 import { once } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawnBackground } from './resources.cjs';
-import { validate, rate, frameCount, framePlan, curveValue } from './edl.mjs';
+import {
+  validate,
+  rate,
+  frameCount,
+  framePlan,
+  curveValue,
+  curveSampler,
+} from './edl.mjs';
 import { rectFilter, splineExpr } from './sam.mjs';
 import { subtitles } from './compose-text.mjs';
 
@@ -111,13 +118,16 @@ export function cameraRectsForClip(clip, source, canvas, plan) {
     base: keys[0][key],
     keys: keys.map((k) => ({ t: k.t, v: k[key], ease: k.ease ?? 'cubic' })),
   });
+  const zoomAt = curveSampler(curve('zoom'), 1),
+    xAt = curveSampler(curve('x'), 0.5),
+    yAt = curveSampler(curve('y'), 0.5);
   return plan.indices.map((_, i) => {
     const t = (plan.start + i) / rate(canvas.fps) - clip.at,
-      z = curveValue(curve('zoom'), t, 1),
+      z = zoomAt(t),
       w = cw / z,
       h = ch / z;
-    const x = curveValue(curve('x'), t, 0.5) * W - w / 2,
-      y = curveValue(curve('y'), t, 0.5) * H - h / 2;
+    const x = xAt(t) * W - w / 2,
+      y = yAt(t) * H - h / 2;
     return [
       Math.max(0, Math.min(W - w, x)),
       Math.max(0, Math.min(H - h, y)),
@@ -634,6 +644,8 @@ export async function compose({
 }) {
   // Work on a private normalized copy; IPC/saved EDLs stay immutable.
   edl = structuredClone(edl);
+  for (const source of edl.sources)
+    if (/\.(png|jpe?g|webp)$/i.test(source.path)) source.kind ??= 'image';
   for (const [ti, track] of edl.audio.entries())
     for (const [ci, clip] of track.clips.entries()) {
       clip.id ??= `audio-${ti}-${ci}`;
@@ -737,6 +749,15 @@ export async function compose({
         throw new Error(`EDL source ${source.id} is missing: ${source.path}`);
       const info = await inspect(ffprobe, source.path);
       const video = info.streams.find((s) => s.codec_type === 'video');
+      source.kind ??= /\.(png|jpe?g|webp)$/i.test(source.path)
+        ? 'image'
+        : video
+          ? 'video'
+          : 'audio';
+      source.fps ||=
+        video?.r_frame_rate && video.r_frame_rate !== '0/0'
+          ? video.r_frame_rate
+          : edl.canvas.fps;
       source.audio = info.streams.some((s) => s.codec_type === 'audio');
       if (video) {
         source.w = video.width;
