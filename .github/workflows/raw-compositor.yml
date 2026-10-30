@@ -10,11 +10,20 @@ on:
         description: 'Measure native renderer on the identical saved project'
         type: boolean
         default: true
+      prepared_run:
+        description: 'Reuse exact prepared artifacts from a completed raw run; blank prepares once'
+        type: string
+        default: ''
+      analyze_run:
+        description: 'Remeasure preserved comparisons without rerendering; requires prepared_run'
+        type: string
+        default: ''
 permissions:
   contents: read
   actions: read
 jobs:
   prepare:
+    if: inputs.prepared_run == ''
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -81,6 +90,7 @@ jobs:
           retention-days: 7
   compare:
     needs: prepare
+    if: always() && (needs.prepare.result == 'success' || inputs.prepared_run != '')
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -95,6 +105,7 @@ jobs:
       BENCH_DATASET: raw-v2
       BENCH_CLIP: ${{ matrix.clip }}
       BENCH_LEGACY: ${{ inputs.legacy }}
+      BENCH_ANALYZE_ONLY: ${{ inputs.analyze_run != '' }}
       KIMO_WORKER_THREADS: '2'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
       KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
@@ -113,8 +124,17 @@ jobs:
       - run: npm ci --ignore-scripts --prefix desktop
       - uses: actions/download-artifact@v4
         with:
-          name: raw-v2-prepared-${{ github.run_id }}-${{ matrix.clip }}
+          run-id: ${{ inputs.prepared_run || github.run_id }}
+          name: raw-v2-prepared-${{ inputs.prepared_run || github.run_id }}-${{ matrix.clip }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/kimo-bench-data/raw-v2/media/${{ matrix.clip }}
+      - uses: actions/download-artifact@v4
+        if: inputs.analyze_run != ''
+        with:
+          run-id: ${{ inputs.analyze_run }}
+          name: raw-v2-comparison-${{ inputs.analyze_run }}-${{ matrix.clip }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}
       - run: node desktop/test/bench/phase02.mjs
       - uses: actions/upload-artifact@v4
         if: always()

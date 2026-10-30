@@ -114,6 +114,11 @@ try {
           JSON.stringify(sourceHashes)
       )
         throw new Error('Prepared input hashes changed');
+      if (
+        originalRun &&
+        (await hashFile(join(dir, 'final.mp4'))) !== originalRun.finalHash
+      )
+        throw new Error('Preserved final bytes changed before reanalysis');
       // A declared manual soundtrack fixture imports a separate music stem through the real MCP
       // tools. It then takes the same runEdit manual route users use, without any paid planner.
       let soundtrackProject;
@@ -290,7 +295,12 @@ try {
             reservedUsdDelta: 0,
           });
         const legacy = join(dir, 'legacy-final.mp4');
-        if (existsSync(legacy)) await analyze(legacy, 'legacy');
+        if (existsSync(legacy)) {
+          const legacyRun = await readJson(join(dir, 'legacy-run.json'));
+          if ((await hashFile(legacy)) !== legacyRun.finalHash)
+            throw new Error('Preserved native reference bytes changed');
+          await analyze(legacy, 'legacy');
+        }
       }
       if (
         process.env.BENCH_LEGACY === 'true' &&
