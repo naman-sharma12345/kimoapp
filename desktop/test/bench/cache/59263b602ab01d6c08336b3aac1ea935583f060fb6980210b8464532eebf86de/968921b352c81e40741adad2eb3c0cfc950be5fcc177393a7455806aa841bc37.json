@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "key": "968921b352c81e40741adad2eb3c0cfc950be5fcc177393a7455806aa841bc37",
+  "endpoint": "/v1/desktop/sam/file",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"file_id\":\"file-1126741960341047\",\"bytes\":2500889}",
+  "responseSha256": "6187496a7e8ca8729a78bc41176c0c1daa9a458078d1bb53324a0f05e3e30ba7",
+  "reservationUsd": 0,
+  "requestEvidence": {
+    "bodyHash": "eb048d59138687bebc9f0a21f1fa6f3345f477eb07ae7e5783b8adc7844ae2c7"
+  }
+}

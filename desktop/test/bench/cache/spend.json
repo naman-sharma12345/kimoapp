@@ -1,12 +1,14 @@
 {
-  "reservedUsd": 0.49,
-  "networkRequests": 7,
+  "reservedUsd": 5.49,
+  "networkRequests": 53,
   "requestCountIsMinimum": true,
-  "note": "Interrupted legacy recorder did not flush its in-memory ledger. Conservatively reserve the entire phase allowance; this is not actual billed spend. Saved build responses count only successful recorded requests.",
+  "note": "TH-2 artifact confirms at least USD 2.2000843 reserved and 53 requests. TUT-1 then ran 70 minutes and was cancelled at the job timeout before its ledger artifact uploaded. Conservatively reserve the remaining authorized allowance; exact billing and final request count are unknown. No additional paid calls may start from this ledger.",
   "authorizedUsd": 5.49,
   "authorization": {
     "additionalUsd": 5,
     "date": "2026-10-29",
     "source": "User explicitly approved up to USD 5 additional AI spending to finish Phase 1."
-  }
+  },
+  "lastArtifactReservedUsd": 2.2000843,
+  "unrecoveredRunReservationUsd": 3.2899157
 }

@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "key": "85acc42b5d2a144a5bbfd936d18717deb032598603a56f80a34e75c7d9fcff6d",
+  "endpoint": "/v1/desktop/sam/file/delete",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8"
+  },
+  "body": "{\"deleted\":true}",
+  "responseSha256": "1b70b1c98c544d975c39049311ab1d24ed1d87aedc2874bdc946d39bd421b4b8",
+  "reservationUsd": 0,
+  "requestEvidence": {
+    "bodyHash": "fe62b1142be2669cf413c1faef9c45e3e03d91feee575bf9b282a814f802a103"
+  }
+}
