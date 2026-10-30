@@ -49,12 +49,21 @@ const allowed = new Set([
   'studio.blender.org',
   'videos.pexels.com',
 ]);
-if (!existsSync(original) && source.provider === 'youtube') {
+if (
+  !existsSync(original) &&
+  ['youtube', 'google-drive-public'].includes(source.provider)
+) {
   const publisher = new URL(source.url);
+  const validYoutube =
+    publisher.hostname === 'www.youtube.com' &&
+    publisher.pathname === '/watch' &&
+    /^[A-Za-z0-9_-]{11}$/.test(publisher.searchParams.get('v') ?? '');
+  const drive =
+    publisher.hostname === 'drive.google.com' &&
+    /^\/file\/d\/[A-Za-z0-9_-]+\/view$/.test(publisher.pathname);
   if (
-    publisher.hostname !== 'www.youtube.com' ||
-    publisher.pathname !== '/watch' ||
-    !/^[A-Za-z0-9_-]{11}$/.test(publisher.searchParams.get('v') ?? '')
+    (source.provider === 'youtube' && !validYoutube) ||
+    (source.provider === 'google-drive-public' && !drive)
   )
     throw new Error('Explicit public publisher video URL required');
   if (!process.env.KIMO_YTDLP)

@@ -78,15 +78,15 @@
       "id": "CINE-HOST",
       "role": "source-pack",
       "title": "Renfest raw podcast host segments",
-      "provider": "youtube",
+      "provider": "google-drive-public",
       "page": "https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/",
-      "url": "https://www.youtube.com/watch?v=cOKvTm6-uLQ",
+      "url": "https://drive.google.com/file/d/1yNEXV00DG2dpxdjkZnVxtE5LceVYChhY/view",
       "cameraOriginal": "https://drive.google.com/file/d/1yNEXV00DG2dpxdjkZnVxtE5LceVYChhY/view",
       "licence": "Cinestudy free edit permission; full credits and hashtags required",
       "licenceUrl": "https://docs.google.com/document/d/1MJiWj9n9cF83v3AMKd83Jo-n4QyYBvLL2XP1HsKI9h0/edit",
       "credit": "Directed by Greg Sabo\nProduced by Greg Sabo and Peter John Ross\nA-Camera/Cinematography by Greg Sabo\nB-Camera Operator - Peter John Ross\nHosted by Peter John Ross and Greg Sabo\nEdited by kimo benchmark (test preparation)\nCopyright Sonnyboo. All Rights Reserved.\n#CINESTUDY #SONNYBOO #SABOROSS",
       "userExceptionApproved": "2026-10-30: user explicitly allowed Cinestudy with its required credits",
-      "rendition": "Publisher-authorized YouTube rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera original",
+      "rendition": "Anonymous public Drive playback rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera-original container",
       "downloadRange": {
         "start": 0,
         "end": 360
@@ -96,21 +96,22 @@
       "sampleEvery": 10,
       "speech": true,
       "transcribe": false,
-      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case."
+      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=cOKvTm6-uLQ"
     },
     {
       "id": "CINE-INTERVIEW",
       "role": "source-pack",
       "title": "Renfest raw interviews, camera A",
-      "provider": "youtube",
+      "provider": "google-drive-public",
       "page": "https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/",
-      "url": "https://www.youtube.com/watch?v=ltdV_nPuYlw",
+      "url": "https://drive.google.com/file/d/1N_fyQLf3wLXrYa7mbGy8DOmmHJcRbFVG/view",
       "cameraOriginal": "https://drive.google.com/file/d/1N_fyQLf3wLXrYa7mbGy8DOmmHJcRbFVG/view",
       "licence": "Cinestudy free edit permission; full credits and hashtags required",
       "licenceUrl": "https://docs.google.com/document/d/1MJiWj9n9cF83v3AMKd83Jo-n4QyYBvLL2XP1HsKI9h0/edit",
       "credit": "Directed by Greg Sabo\nProduced by Greg Sabo and Peter John Ross\nA-Camera/Cinematography by Greg Sabo\nB-Camera Operator - Peter John Ross\nHosted by Peter John Ross and Greg Sabo\nEdited by kimo benchmark (test preparation)\nCopyright Sonnyboo. All Rights Reserved.\n#CINESTUDY #SONNYBOO #SABOROSS",
       "userExceptionApproved": "2026-10-30: user explicitly allowed Cinestudy with its required credits",
-      "rendition": "Publisher-authorized YouTube rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera original",
+      "rendition": "Anonymous public Drive playback rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera-original container",
       "downloadRange": {
         "start": 0,
         "end": 360
@@ -120,21 +121,22 @@
       "sampleEvery": 10,
       "speech": true,
       "transcribe": false,
-      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case."
+      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=ltdV_nPuYlw"
     },
     {
       "id": "CINE-BROLL",
       "role": "source-pack",
       "title": "Renfest raw b-roll",
-      "provider": "youtube",
+      "provider": "google-drive-public",
       "page": "https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/",
-      "url": "https://www.youtube.com/watch?v=UewtQgBNS8M",
+      "url": "https://drive.google.com/file/d/1iIEbNyaFb-aJa1jufphbpW1UhC8pyzAf/view",
       "cameraOriginal": "https://drive.google.com/file/d/1iIEbNyaFb-aJa1jufphbpW1UhC8pyzAf/view",
       "licence": "Cinestudy free edit permission; full credits and hashtags required",
       "licenceUrl": "https://docs.google.com/document/d/1MJiWj9n9cF83v3AMKd83Jo-n4QyYBvLL2XP1HsKI9h0/edit",
       "credit": "Directed by Greg Sabo\nProduced by Greg Sabo and Peter John Ross\nA-Camera/Cinematography by Greg Sabo\nB-Camera Operator - Peter John Ross\nHosted by Peter John Ross and Greg Sabo\nEdited by kimo benchmark (test preparation)\nCopyright Sonnyboo. All Rights Reserved.\n#CINESTUDY #SONNYBOO #SABOROSS",
       "userExceptionApproved": "2026-10-30: user explicitly allowed Cinestudy with its required credits",
-      "rendition": "Publisher-authorized YouTube rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera original",
+      "rendition": "Anonymous public Drive playback rendition capped at 1080p; stream-copied prefix for selecting raw takes, not the multi-gigabyte camera-original container",
       "downloadRange": {
         "start": 0,
         "end": 360
@@ -144,7 +146,8 @@
       "sampleEvery": 10,
       "speech": false,
       "transcribe": false,
-      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case."
+      "pending": "Inspect actual raw takes, exclude the publisher intro/slates from final selected cases, then freeze exact case intervals and prepared-file hashes. This is a source pack, not an accepted 350-second golden case.",
+      "youtubePublisherVersion": "https://www.youtube.com/watch?v=UewtQgBNS8M"
     }
   ],
   "missing": [
