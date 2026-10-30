@@ -210,6 +210,24 @@ test('source matching distinguishes repeats/skips from correct and static frames
     0,
   );
 });
+
+test('source matching permits planned slow-motion holds and frame-rate conversion skips', () => {
+  const source = Array.from({ length: 12 }, (_, i) => Buffer.alloc(24, i * 20));
+  for (const expected of [
+    [0, 0, 1, 1, 2, 2, 3],
+    [0, 1, 2, 4, 5, 6, 8],
+  ]) {
+    const result = m.matchFrames(
+      expected.map((i) => source[i]),
+      source,
+      expected,
+    );
+    assert.equal(result.repeated_frames, 0);
+    assert.equal(result.skipped_frames, 0);
+    assert.equal(result.incorrect_frames, 0);
+    assert.equal(result.coverage, 1);
+  }
+});
 test('delivery gate checks metadata and mandatory audio rate', () => {
   const streams = {
     video: {

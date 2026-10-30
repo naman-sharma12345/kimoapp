@@ -345,7 +345,7 @@ export const clippedPct = (values) =>
     ? (values.filter((n) => n === 0 || n === 255).length * 100) / values.length
     : null;
 
-/** Matches local source indices, excluding intentional cuts/speed changes at call sites. */
+/** Compare decoded indices against the planned delta, including intentional holds/skips. */
 export function matchFrames(
   output,
   source,
@@ -383,16 +383,12 @@ export function matchFrames(
     skipped = 0,
     compared = 0;
   for (let i = 1; i < indices.length; i++) {
-    if (
-      indices[i] == null ||
-      indices[i - 1] == null ||
-      expected[i] - expected[i - 1] !== 1
-    )
-      continue;
+    if (indices[i] == null || indices[i - 1] == null) continue;
     compared++;
-    if (indices[i] === indices[i - 1]) repeated++;
-    if (indices[i] - indices[i - 1] > 1)
-      skipped += indices[i] - indices[i - 1] - 1;
+    const delta = indices[i] - indices[i - 1];
+    const planned = expected[i] - expected[i - 1];
+    if (planned > 0 && delta === 0) repeated++;
+    if (delta > planned) skipped += delta - planned;
   }
   return {
     repeated_frames: compared ? repeated : null,
@@ -402,6 +398,8 @@ export function matchFrames(
     coverage: output.length > 1 ? compared / (output.length - 1) : 0,
     indices,
     mean_mad: mean(errors),
+    incorrect_frames: indices.filter((n, i) => n != null && n !== expected[i])
+      .length,
   };
 }
 export function deliveryOk(checks, streams) {

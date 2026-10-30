@@ -225,14 +225,12 @@ export async function frameSourceMetrics(
     if (
       !e.path ||
       !e.sourceFps ||
-      Math.abs(e.sourceFps - fps) > 0.1 ||
       e.zoom < 1 ||
       base(c, 'x') ||
       base(c, 'y') ||
       animated ||
       c.speed_curve ||
       c.motion_path ||
-      Math.abs(e.speed - 1) > 0.001 ||
       base(c, 'rotation')
     ) {
       details.push({
@@ -242,26 +240,25 @@ export async function frameSourceMetrics(
       continue;
     }
     const size = 108 * 192;
+    const firstOutput = Math.ceil(e.start * fps - 1e-7);
+    const lastOutput = Math.ceil(e.end * fps - 1e-7);
+    const firstSource = Math.max(0, Math.round(e.in_point * e.sourceFps) - 4);
+    const offset = Math.max(0, (firstSource - 0.5) / e.sourceFps);
     const out = await command(ffmpeg, [
       '-nostdin',
       '-v',
       'error',
       '-i',
       output,
-      '-ss',
-      String(e.start),
-      '-t',
-      String(duration),
       '-an',
       '-vf',
-      'scale=108:192:flags=area,format=gray',
+      `trim=start_frame=${firstOutput}:end_frame=${lastOutput},scale=108:192:flags=area,format=gray`,
       '-fps_mode',
       'passthrough',
       '-f',
       'rawvideo',
       'pipe:1',
     ]);
-    const offset = Math.max(0, e.in_point - 3 / fps);
     const zoom = e.zoom;
     const cropW = Math.min(width / zoom, width),
       cropH = Math.min(height / zoom, height);
@@ -275,7 +272,7 @@ export async function frameSourceMetrics(
       '-i',
       e.path,
       '-t',
-      String(duration + 6 / fps),
+      String(duration * e.speed + 8 / e.sourceFps),
       '-an',
       '-vf',
       vf,
@@ -288,7 +285,11 @@ export async function frameSourceMetrics(
     const outputFrames = split(out.stdout, size),
       sourceFrames = split(src.stdout, size);
     const expected = outputFrames.map(
-      (_, i) => Math.round((e.in_point - offset) * fps) + i,
+      (_, i) =>
+        Math.round(
+          (((firstOutput + i) / fps - e.start) * e.speed + e.in_point) *
+            e.sourceFps,
+        ) - firstSource,
     );
     const matched = metric.matchFrames(outputFrames, sourceFrames, expected);
     repeats += matched.repeated_frames ?? 0;
@@ -507,7 +508,7 @@ export async function measureRun({
         ? 'RMS music-stem level under speech versus gaps.'
         : 'Estimated from saved music/background-audio volume and duck-gain envelopes; source dynamics are unknown. Unavailable if no bed or speech/gap windows exist.',
       frame:
-        '108x192 grey MAD +/-3 source frames, EDL cuts excluded. Animated mappings explicitly reduce coverage; source/output fps must match.',
+        '108x192 grey MAD +/-3 source frames, EDL cuts excluded. Expected source indices use the global output grid, source rate and clip speed. Intentional rate-conversion/slow-motion holds are not judder. Animated mappings explicitly reduce coverage; ambiguous static frames remain unmeasured.',
       delivery:
         'qualityChecks plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR.',
     },
