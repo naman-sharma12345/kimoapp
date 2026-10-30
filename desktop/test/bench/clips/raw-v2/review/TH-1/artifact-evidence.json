@@ -1,11 +1,11 @@
 {
   "artifact": {
-    "id": 12991508463,
-    "name": "raw-v2-candidate-41086477761-TH-1",
-    "digest": "sha256:145c8d1c53b4a133f387a2423fd679ac1072389a884312d80512c75dcbe425fe",
-    "size_in_bytes": 177176525
+    "id": 12993796026,
+    "name": "raw-v2-candidate-41089581693-TH-1",
+    "digest": "sha256:7bad8e95298da2824f2c08c5916ef64048cbf3c882a1df8312ffa10546b3e212",
+    "size_in_bytes": 180986290
   },
-  "fetchedBytes": 189611,
+  "fetchedBytes": 2078872,
   "files": [
     {
       "name": "candidate-first-second.jpg",
@@ -13,14 +13,29 @@
       "sha256": "2483b3ed8245280a899a9c1312a8be322a9786cf931864a023ef4ed292bdb21d"
     },
     {
-      "name": "provenance.json",
-      "bytes": 4730,
-      "sha256": "7361bb5fb783f0cd4130d2bf43e671f343e6f5fef9caa1cfa3cbb8e07141eec9"
+      "name": "candidate-sheet.jpg",
+      "bytes": 66690,
+      "sha256": "b3f00d08ba8bc9d2bef2e02350f2e6ad2ee808394319e2c01213c26caad5d8a6"
     },
     {
-      "name": "candidate-sheet.jpg",
-      "bytes": 84060,
-      "sha256": "ca92a55e8ce92ddec7c3fe062d88262a2dd5d3d74726b8ee9689a0daa0aaa00a"
+      "name": "candidate-words.json",
+      "bytes": 10545,
+      "sha256": "ce119fb7ba75cdfdfa864ce0ba881ca1b9b382f50456c01007adbbe44f9f2b6f"
+    },
+    {
+      "name": "provenance.json",
+      "bytes": 4895,
+      "sha256": "3737873d43859bc4169727945ad6234d1057fa36267026a12c79c854d0349c31"
+    },
+    {
+      "name": "transcripts/e47fd10da115f36b71c2be0868dfa4e38e5de6b6b931b3cc46cbe29892579b34-ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb.json",
+      "bytes": 85462,
+      "sha256": "be156edc4726b8c1c29b047b1e161db9f7fd0da402cb9c8df7b02d9a9f768630"
+    },
+    {
+      "name": "candidate-preview.mp4",
+      "bytes": 1809853,
+      "sha256": "e47fd10da115f36b71c2be0868dfa4e38e5de6b6b931b3cc46cbe29892579b34"
     }
   ]
 }

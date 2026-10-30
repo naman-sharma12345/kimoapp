@@ -16,7 +16,7 @@ permissions:
 jobs:
   inspect:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
       - uses: actions/cache@v4
         with:
@@ -44,6 +44,13 @@ jobs:
           key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
       - run: ./desktop/test/bench/bootstrap.ps1
       - run: npm ci --ignore-scripts --prefix desktop
+      - name: Verified standalone source-acquisition tool (CI only)
+        if: startsWith(matrix.clip, 'CINE-')
+        run: |
+          $sourceDownloader = Join-Path $env:RUNNER_TEMP 'yt-dlp.exe'
+          Invoke-WebRequest 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp.exe' -OutFile $sourceDownloader -TimeoutSec 180
+          if ((Get-FileHash -LiteralPath $sourceDownloader -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d') { throw 'Acquisition tool SHA256 mismatch' }
+          "KIMO_YTDLP=$sourceDownloader" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - uses: actions/download-artifact@v4
         if: inputs.seed_run != '' && inputs.seed_run != 'fresh'
         with:
@@ -59,16 +66,20 @@ jobs:
           $musicManifest = Get-Content desktop/test/bench/clips/raw-v2/candidates.json -Raw | ConvertFrom-Json
           $musicSource = ($musicManifest.candidates | Where-Object id -eq 'MUSIC-1').music
           $musicZip = Join-Path $musicRoot 'music-source.zip'
-          Invoke-WebRequest -Uri $musicSource.url -OutFile $musicZip -TimeoutSec 300
+          if (-not (Test-Path -LiteralPath $musicZip)) { Invoke-WebRequest -Uri $musicSource.url -OutFile $musicZip -TimeoutSec 300 }
+          $musicZipHash = (Get-FileHash -LiteralPath $musicZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($musicSource.zipSha256 -and $musicZipHash -ne $musicSource.zipSha256) { throw 'Pinned music archive SHA256 mismatch' }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $musicArchive = [IO.Compression.ZipFile]::OpenRead($musicZip)
           try {
             $musicTracks = @($musicArchive.Entries | Where-Object FullName -match '\.(wav|ogg|mp3)$' | Sort-Object FullName)
             if ($musicTracks.Count -eq 0) { throw 'Composer archive contains no audio tracks' }
-            $musicTrack = $musicTracks | Where-Object FullName -match 'Ending' | Select-Object -First 1
+            $musicTrack = if ($musicSource.archiveEntry) { $musicTracks | Where-Object FullName -eq $musicSource.archiveEntry | Select-Object -First 1 } else { $musicTracks | Where-Object FullName -match 'Ending' | Select-Object -First 1 }
+            if ($musicSource.archiveEntry -and -not $musicTrack) { throw 'Pinned music track missing' }
             if (-not $musicTrack) { $musicTrack = $musicTracks[0] }
             $musicOut = Join-Path $musicRoot ('music-bed' + [IO.Path]::GetExtension($musicTrack.FullName))
             [IO.Compression.ZipFileExtensions]::ExtractToFile($musicTrack, $musicOut, $true)
+            if ($musicSource.sha256 -and (Get-FileHash -LiteralPath $musicOut -Algorithm SHA256).Hash.ToLowerInvariant() -ne $musicSource.sha256) { throw 'Pinned music bed SHA256 mismatch' }
             $musicProbe = & $env:KIMO_FFPROBE -v error -show_streams -show_format -of json $musicOut | ConvertFrom-Json
             if ($LASTEXITCODE -ne 0) { throw 'Cannot probe music bed' }
             @{ source = $musicSource; zipSha256 = (Get-FileHash -LiteralPath $musicZip -Algorithm SHA256).Hash.ToLowerInvariant(); archiveEntry = $musicTrack.FullName; file = [IO.Path]::GetFileName($musicOut); sha256 = (Get-FileHash -LiteralPath $musicOut -Algorithm SHA256).Hash.ToLowerInvariant(); tracks = @($musicTracks.FullName); metadata = $musicProbe; accepted = $false } | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $musicRoot 'music-provenance.json') -Encoding utf8

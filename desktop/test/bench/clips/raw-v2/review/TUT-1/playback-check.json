@@ -1,0 +1,26 @@
+{
+  "id": "TUT-1",
+  "duration": 75,
+  "width": 640,
+  "height": 360,
+  "seeks": [
+    {
+      "at": 2,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 37,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 74,
+      "ready": 4,
+      "error": null
+    }
+  ],
+  "requests": 0,
+  "errors": [],
+  "scope": "Small source-candidate preview played briefly and sought; not a full footage render or complete listening review."
+}

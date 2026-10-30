@@ -51,3 +51,8 @@ Replacement raw benchmark candidates (test acquisition only, not installed):
   in the hosted candidate's music-provenance.json before final dataset adoption.
 - Other inspected sources and resized review images are credited in
   test/bench/clips/raw-v2/REVIEW.md. Provisional and rejected candidates are marked.
+- Cinestudy / Sonnyboo, Sabo/Ross Renaissance Fair raw footage. The user approved
+  the publisher's separate free edit permission on 30 October 2026. Every derived
+  dataset case/output must carry the full roles, credits and three required
+  hashtags in test/bench/clips/raw-v2/CREDITS.md; no CC licence is asserted for it.
+  Source and permission: https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/

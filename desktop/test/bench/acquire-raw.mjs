@@ -1,8 +1,8 @@
 // Candidate acquisition/inspection only. Never invokes the editor or AI transport.
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
-import { mkdir, readFile, rename, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
@@ -24,12 +24,81 @@ const ledgerPath = join(ROOT, 'cache/spend.json');
 const ledger = await readFile(ledgerPath);
 const dir = join(DATA_ROOT, 'raw-v2-candidates', source.id);
 await mkdir(dir, { recursive: true });
+await writeFile(
+  join(dir, 'CREDITS.txt'),
+  [
+    source.title,
+    source.credit,
+    source.page,
+    source.licence,
+    source.licenceUrl,
+    ...(source.music
+      ? [
+          source.music.title,
+          source.music.credit,
+          source.music.page,
+          source.music.licence,
+          source.music.licenceUrl,
+        ]
+      : []),
+  ].join('\n\n') + '\n',
+);
 const original = join(dir, 'source.media');
 const allowed = new Set([
   'upload.wikimedia.org',
   'studio.blender.org',
   'videos.pexels.com',
 ]);
+if (!existsSync(original) && source.provider === 'youtube') {
+  const publisher = new URL(source.url);
+  if (
+    publisher.hostname !== 'www.youtube.com' ||
+    publisher.pathname !== '/watch' ||
+    !/^[A-Za-z0-9_-]{11}$/.test(publisher.searchParams.get('v') ?? '')
+  )
+    throw new Error('Explicit public publisher video URL required');
+  if (!process.env.KIMO_YTDLP)
+    throw new Error('Hosted acquisition downloader required');
+  const range = source.downloadRange;
+  if (
+    !range ||
+    !Number.isFinite(range.start) ||
+    !Number.isFinite(range.end) ||
+    range.start < 0 ||
+    range.end <= range.start
+  )
+    throw new Error('Explicit finite publisher-source range required');
+  await command(
+    process.env.KIMO_YTDLP,
+    [
+      '--ignore-config',
+      '--no-playlist',
+      '--no-progress',
+      '--no-warnings',
+      '--socket-timeout',
+      '30',
+      '--retries',
+      '1',
+      '--js-runtimes',
+      'node',
+      '--ffmpeg-location',
+      dirname(tools.ffmpeg),
+      '--format',
+      'bv[height<=1080]+ba/b[height<=1080]',
+      '--download-sections',
+      `*${range.start}-${range.end}`,
+      '--merge-output-format',
+      'mkv',
+      '--remux-video',
+      'mkv',
+      '--output',
+      join(dir, 'download.%(ext)s'),
+      source.url,
+    ],
+    { timeout: 15 * 60_000, maxStderr: 100_000 },
+  );
+  await rename(join(dir, 'download.mkv'), original);
+}
 if (!existsSync(original)) {
   const response = await fetch(source.url, {
     headers: {
@@ -114,7 +183,7 @@ await command(tools.ffmpeg, [
   '-t',
   String(source.duration),
   '-vf',
-  `trim=duration=${source.duration},setpts=PTS-STARTPTS,fps=1/5,scale=320:-2,drawtext=fontfile='C\\:/Windows/Fonts/arial.ttf':text='%{pts\\:hms}':fontsize=14:fontcolor=white:box=1:boxcolor=black@0.7,tile=6x3:padding=2:margin=2`,
+  `trim=duration=${source.duration},setpts=PTS-STARTPTS,fps=1/${source.sampleEvery ?? 5},scale=320:-2,drawtext=fontfile='C\\:/Windows/Fonts/arial.ttf':text='%{pts\\:hms}':fontsize=14:fontcolor=white:box=1:boxcolor=black@0.7,tile=6x${Math.ceil(source.duration / (source.sampleEvery ?? 5) / 6)}:padding=2:margin=2`,
   '-frames:v',
   '1',
   join(dir, 'candidate-sheet.jpg'),
@@ -160,7 +229,7 @@ await command(tools.ffmpeg, [
   '+faststart',
   preview,
 ]);
-if (source.speech !== false) {
+if (source.speech !== false && source.transcribe !== false) {
   const words = await transcribe({
     ...tools,
     input: preview,

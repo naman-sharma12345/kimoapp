@@ -1,0 +1,26 @@
+{
+  "id": "TH-1",
+  "duration": 60.026633,
+  "width": 640,
+  "height": 360,
+  "seeks": [
+    {
+      "at": 2,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 30,
+      "ready": 4,
+      "error": null
+    },
+    {
+      "at": 59,
+      "ready": 4,
+      "error": null
+    }
+  ],
+  "requests": 0,
+  "errors": [],
+  "scope": "Small source-candidate preview played briefly and sought; not a full footage render or complete listening review."
+}

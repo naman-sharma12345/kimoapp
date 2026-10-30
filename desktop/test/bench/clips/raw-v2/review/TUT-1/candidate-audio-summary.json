@@ -1,0 +1,8 @@
+{
+  "id": "TUT-1",
+  "whisperWordEntries": 259,
+  "firstDetectedSpeech_s": 0,
+  "lastDetectedSpeech_s": 74.91,
+  "longestInternalGap_s": 0.57,
+  "scope": "Offline Whisper evidence from the source preview; not a complete human listening review. Full word timings remain in the hosted artifact and local evidence cache."
+}
