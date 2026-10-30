@@ -376,6 +376,8 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
             '-an',
             '-c:v',
             'ffv1',
+            '-level',
+            '3',
             '-pix_fmt',
             'yuva444p',
             path,
