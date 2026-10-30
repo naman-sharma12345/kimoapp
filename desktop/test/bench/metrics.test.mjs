@@ -228,6 +228,22 @@ test('source matching permits planned slow-motion holds and frame-rate conversio
     assert.equal(result.coverage, 1);
   }
 });
+
+test('changing caption pixels cannot choose the previous source frame when masked', () => {
+  const source = Array.from({ length: 10 }, (_, i) => Buffer.alloc(24, i * 20));
+  const expected = [0, 1, 2, 3, 4, 5, 6];
+  const output = expected.map((i) => Buffer.from(source[i]));
+  output[3].fill(40, 1);
+  assert.equal(m.matchFrames(output, source, expected).repeated_frames, 1);
+  const masks = output.map(() =>
+    Uint8Array.from({ length: 24 }, (_, i) => (i === 0 ? 1 : 0)),
+  );
+  const measured = m.matchFrames(output, source, expected, { masks });
+  assert.equal(measured.repeated_frames, 0);
+  assert.equal(measured.skipped_frames, 0);
+  assert.equal(measured.incorrect_frames, 0);
+  assert.equal(measured.coverage, 1);
+});
 test('delivery gate checks metadata and mandatory audio rate', () => {
   const streams = {
     video: {

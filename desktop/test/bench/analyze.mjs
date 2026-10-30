@@ -3,6 +3,7 @@ import { mkdir, copyFile } from 'node:fs/promises';
 import { ROOT, command, hashFile, readJson } from './io.mjs';
 import * as metric from './metrics.mjs';
 import { workerThreads } from '../../resources.cjs';
+import { rectFilter } from '../../sam.mjs';
 
 const base = (clip, key, fallback = 0) =>
   Number(clip.props?.[key]?.base ?? fallback);
@@ -37,6 +38,8 @@ export function projectEdl(project) {
         text: source.text,
         path: asset?.path,
         sourceFps: asset?.fps,
+        sourceWidth: asset?.width,
+        sourceHeight: asset?.height,
         in_point: c.in_point ?? 0,
         speed: c.speed ?? 1,
         zoom,
@@ -259,10 +262,18 @@ export async function frameSourceMetrics(
       'rawvideo',
       'pipe:1',
     ]);
-    const zoom = e.zoom;
-    const cropW = Math.min(width / zoom, width),
-      cropH = Math.min(height / zoom, height);
-    const vf = `scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},crop=${Math.floor(cropW / 2) * 2}:${Math.floor(cropH / 2) * 2},scale=108:192:flags=area,format=gray`;
+    // Spatial alignment must match the floating-point source rectangle. An
+    // integer post-scale crop can favor an adjacent moving source frame.
+    const sw = e.sourceWidth,
+      sh = e.sourceHeight,
+      aspect = width / height;
+    if (!(sw > 0 && sh > 0)) {
+      details.push({ id: e.id, unavailable: 'source dimensions missing' });
+      continue;
+    }
+    const cropW = (sw / sh > aspect ? sh * aspect : sw) / e.zoom,
+      cropH = (sw / sh > aspect ? sh : sw / aspect) / e.zoom;
+    const vf = `scale=out_color_matrix=bt709:out_range=tv,format=yuva444p,${rectFilter([[(sw - cropW) / 2, (sh - cropH) / 2, cropW, cropH]])},scale=${width}:${height}:flags=lanczos+accurate_rnd+full_chroma_int,scale=108:192:flags=area,format=gray`;
     const src = await command(ffmpeg, [
       '-nostdin',
       '-v',
@@ -291,7 +302,38 @@ export async function frameSourceMetrics(
             e.sourceFps,
         ) - firstSource,
     );
-    const matched = metric.matchFrames(outputFrames, sourceFrames, expected);
+    // New captions are not present in the source. Exclude conservative envelopes
+    // from BOTH sides rather than letting changing words select a nearby frame.
+    const text = events.filter(
+      (v) => v.text && v.start < e.end && v.end > e.start,
+    );
+    const masks = text.length
+      ? outputFrames.map((_, i) => {
+          const time = (firstOutput + i) / fps;
+          const mask = new Uint8Array(size).fill(1);
+          for (const event of text.filter(
+            (v) => v.start <= time && v.end > time,
+          )) {
+            if (!event.box) {
+              mask.fill(0);
+              break;
+            }
+            const b = event.box,
+              x = b.x + b.w / 2,
+              y = b.y + b.h / 2;
+            const x0 = Math.max(0, Math.floor((x - b.w * 0.8 - 0.02) * 108)),
+              x1 = Math.min(108, Math.ceil((x + b.w * 0.8 + 0.02) * 108));
+            const y0 = Math.max(0, Math.floor((y - b.h - 0.02) * 192)),
+              y1 = Math.min(192, Math.ceil((y + b.h + 0.02) * 192));
+            for (let row = y0; row < y1; row++)
+              mask.fill(0, row * 108 + x0, row * 108 + x1);
+          }
+          return mask;
+        })
+      : undefined;
+    const matched = metric.matchFrames(outputFrames, sourceFrames, expected, {
+      masks,
+    });
     repeats += matched.repeated_frames ?? 0;
     skips += matched.skipped_frames ?? 0;
     compared += matched.compared;
@@ -508,7 +550,7 @@ export async function measureRun({
         ? 'RMS music-stem level under speech versus gaps.'
         : 'Estimated from saved music/background-audio volume and duck-gain envelopes; source dynamics are unknown. Unavailable if no bed or speech/gap windows exist.',
       frame:
-        '108x192 grey MAD +/-3 source frames, EDL cuts excluded. Expected source indices use the global output grid, source rate and clip speed. Intentional rate-conversion/slow-motion holds are not judder. Animated mappings explicitly reduce coverage; ambiguous static frames remain unmeasured.',
+        '108x192 grey MAD +/-3 source frames with float perspective alignment; no integer crop approximation. EDL cuts are excluded. Text envelopes are masked on both source and output; unknown animated geometry is unmeasured. Expected indices use the global grid, source rate and speed. Intended rate-conversion/slow-motion holds are not judder. Animated mappings and ambiguous static frames reduce coverage.',
       delivery:
         'qualityChecks plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR.',
     },

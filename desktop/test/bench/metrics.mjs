@@ -350,7 +350,7 @@ export function matchFrames(
   output,
   source,
   expected,
-  { radius = 3, maxMad = 24 } = {},
+  { radius = 3, maxMad = 24, masks } = {},
 ) {
   const indices = [],
     errors = [];
@@ -366,10 +366,14 @@ export function matchFrames(
       .filter((j) => j >= 0 && j < source.length)
       .sort((a, b) => Math.abs(a - target) - Math.abs(b - target));
     for (const j of candidates) {
-      let sum = 0;
+      let sum = 0,
+        pixels = 0;
       for (let k = 0; k < output[i].length; k++)
-        sum += Math.abs(output[i][k] - source[j][k]);
-      const mad = sum / output[i].length;
+        if (!masks?.[i] || masks[i][k]) {
+          sum += Math.abs(output[i][k] - source[j][k]);
+          pixels++;
+        }
+      const mad = pixels ? sum / pixels : Infinity;
       if (mad < cost - 0.001) {
         second = cost;
         cost = mad;
@@ -377,7 +381,7 @@ export function matchFrames(
       } else second = Math.min(second, mad);
     }
     indices.push(cost <= maxMad && second - cost >= 0.02 ? best : null);
-    errors.push(cost);
+    errors.push(Number.isFinite(cost) ? cost : null);
   }
   let repeated = 0,
     skipped = 0,
@@ -397,7 +401,7 @@ export function matchFrames(
     total: output.length,
     coverage: output.length > 1 ? compared / (output.length - 1) : 0,
     indices,
-    mean_mad: mean(errors),
+    mean_mad: mean(errors.filter(Number.isFinite)),
     incorrect_frames: indices.filter((n, i) => n != null && n !== expected[i])
       .length,
   };
