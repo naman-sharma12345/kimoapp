@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { command, filterPath, probeFile } from './bench/io.mjs';
 import { compose, cameraRectsForClip } from '../compose.mjs';
-import { rate, frameCount, framePlan, fromKimoProject } from '../edl.mjs';
+import { rate, frameCount, fromKimoProject } from '../edl.mjs';
 import { frameSourceMetrics, projectEdl } from './bench/analyze.mjs';
 import { toolPaths } from './bench/run.mjs';
 import { youtubeMaster, measure } from '../engine.mjs';
@@ -18,6 +18,17 @@ const W = 192,
   block = 8,
   left = 32,
   top = 60;
+
+// Independent oracle: do not use the compositor's framePlan for expected IDs.
+const oracleRate = (fps) => {
+  const [n, d = 1] = String(fps).split('/').map(Number);
+  return n / d;
+};
+const oracleId = (n, clip, fps) =>
+  Math.round(
+    (n / oracleRate(fps) - clip.at) * clip.speed * oracleRate(fps) +
+      clip.in * oracleRate(fps),
+  );
 
 test(
   'pixel matcher masks captions, aligns float crops and still catches injected judder',
@@ -44,7 +55,21 @@ test(
                 duration: 1,
                 in_point: 0,
                 speed: 1,
-                props: { scale: { base: 1.15 } },
+                props: {
+                  scale: {
+                    base: 1,
+                    expr: [
+                      {
+                        op: 'bezier',
+                        from: 1,
+                        to: 1.15,
+                        t0: 0,
+                        duration: 0,
+                        combine: 'mul',
+                      },
+                    ],
+                  },
+                },
               },
             ],
           },
@@ -78,6 +103,11 @@ test(
         fontsDir: tools.env.KIMO_FONTS,
       });
       const events = projectEdl(project);
+      assert.equal(
+        events.find((e) => e.kind === 'cut').zoom,
+        1.15,
+        'constant native punch expressions are measurable',
+      );
       const good = await frameSourceMetrics(
         ffmpeg,
         output,
@@ -563,7 +593,7 @@ test(
               n <
                 Math.ceil((c.at + (c.out - c.in) / c.speed) * rate(fps) - 1e-7),
           ),
-          plan = framePlan(c, e.sources[0], fps, n, n + 1),
+          plan = { start: n, end: n + 1, indices: [oracleId(n, c, fps)] },
           r = cameraRectsForClip(c, e.sources[0], e.canvas, plan)[0];
         let id = 0;
         for (let b = 0; b < 16; b++) {
@@ -571,7 +601,7 @@ test(
             y = Math.round(((top + 4 - r[1]) / r[3]) * H);
           if (data[n * size + (y * W + x) * 3] > 128) id |= 1 << b;
         }
-        assert.equal(id, plan.indices[0], `delivery frame ${n}`);
+        assert.equal(id, oracleId(n, c, fps), `delivery frame ${n}`);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -618,15 +648,22 @@ for (const fps of ['24000/1001', 24, 25, '30000/1001', 30, 50, 60])
             ])
           ).stdout,
           size = W * H * 3;
-        assert.equal(decoded.length / size, frameCount(edl));
-        for (let n = 0; n < frameCount(edl); n++) {
+        const expectedFrames = Math.ceil(oracleRate(fps) - 1e-7);
+        assert.equal(decoded.length / size, expectedFrames);
+        const info = await probeFile(ffprobe, output);
+        assert.ok(
+          Math.abs(oracleRate(info.video.r_frame_rate) - oracleRate(fps)) <
+            1e-6,
+          'CFR must preserve the exact source rate',
+        );
+        for (let n = 0; n < expectedFrames; n++) {
           const c = edl.video[0].clips.find(
             (c) =>
               n >= Math.ceil(c.at * rate(fps) - 1e-7) &&
               n <
                 Math.ceil((c.at + (c.out - c.in) / c.speed) * rate(fps) - 1e-7),
           );
-          const plan = framePlan(c, edl.sources[0], fps, n, n + 1),
+          const plan = { start: n, end: n + 1, indices: [oracleId(n, c, fps)] },
             r = cameraRectsForClip(c, edl.sources[0], edl.canvas, plan)[0];
           let number = 0;
           for (let b = 0; b < 16; b++) {
@@ -639,7 +676,7 @@ for (const fps of ['24000/1001', 24, 25, '30000/1001', 30, 50, 60])
           }
           assert.equal(
             number,
-            plan.indices[0],
+            oracleId(n, c, fps),
             `output frame ${n}, clip ${c.id}`,
           );
         }
@@ -758,6 +795,201 @@ test(
           Math.abs(pcm.readInt16LE(s * 2) / 32768) < 0.01,
           `sample ${s} clicks`,
         );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
+  'native background geometry renders with exact bounds, alpha and frame timing',
+  { timeout: 30000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-shape-'));
+    try {
+      const e = {
+        edl_version: 1,
+        canvas: { w: W, h: H, fps: 25, bg: '#000000' },
+        sources: [],
+        video: [],
+        audio: [],
+        overlays: [
+          {
+            id: 'extent',
+            kind: 'hook_title',
+            at: 0,
+            dur: 1,
+            props: { text: '' },
+          },
+          {
+            id: 'box',
+            kind: 'callout',
+            at: 0.2,
+            dur: 0.4,
+            props: {
+              primitive: 'rect',
+              width: 60,
+              height: 24,
+              corner_radius: 6,
+              fill: [0, 1, 0],
+              x: 0.5,
+              y: 0.5,
+              curves: { opacity: { base: 0.5 } },
+            },
+          },
+        ],
+      };
+      const output = join(dir, 'shape.mkv');
+      await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output,
+        dir: join(dir, 'work'),
+      });
+      const { stdout } = await command(ffmpeg, [
+        '-v',
+        'error',
+        '-i',
+        output,
+        '-an',
+        '-pix_fmt',
+        'rgb24',
+        '-f',
+        'rawvideo',
+        'pipe:1',
+      ]);
+      const green = (frame, x, y) =>
+        stdout[(frame * W * H + y * W + x) * 3 + 1];
+      assert.ok(
+        green(5, 96, 64) > 110 && green(5, 96, 64) < 140,
+        'half-alpha center',
+      );
+      assert.ok(
+        green(4, 96, 64) < 5 && green(15, 96, 64) < 5,
+        'exact on/off frames',
+      );
+      assert.ok(green(5, 66, 52) < 10, 'rounded corner');
+      assert.ok(green(5, 64, 64) < 5, 'outside source-defined bounds');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
+  'observed float-camera edge motion stays below half a normalized pixel of residual jitter',
+  { timeout: 90000 },
+  async (t) => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-camera-jitter-'));
+    try {
+      const w = 512,
+        h = 288,
+        raw = Buffer.alloc(w * h * 3);
+      for (let y = 0; y < h; y++)
+        raw.fill(255, (y * w + 128) * 3, (y * w + w) * 3);
+      const input = join(dir, 'edge.rgb'),
+        image = join(dir, 'edge.png');
+      await writeFile(input, raw);
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-f',
+        'rawvideo',
+        '-pix_fmt',
+        'rgb24',
+        '-s',
+        w + 'x' + h,
+        '-i',
+        input,
+        '-frames:v',
+        '1',
+        image,
+      ]);
+      const e = {
+        edl_version: 1,
+        canvas: { w, h, fps: 30 },
+        sources: [{ id: 's', path: image, w, h, kind: 'image', fps: 30 }],
+        video: [
+          {
+            track: 'V',
+            clips: [
+              {
+                id: 'c',
+                src: 's',
+                in: 0,
+                out: 1,
+                at: 0,
+                speed: 1,
+                camera: [
+                  { t: 0, x: 0.5, y: 0.5, zoom: 1, ease: 'cubic' },
+                  { t: 1, x: 0.52, y: 0.5, zoom: 1.2, ease: 'cubic' },
+                ],
+              },
+            ],
+          },
+        ],
+        audio: [],
+        overlays: [],
+      };
+      const output = join(dir, 'camera.mkv');
+      await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output,
+        dir: join(dir, 'work'),
+      });
+      const pixels = (
+        await command(ffmpeg, [
+          '-v',
+          'error',
+          '-i',
+          output,
+          '-an',
+          '-pix_fmt',
+          'gray',
+          '-f',
+          'rawvideo',
+          'pipe:1',
+        ])
+      ).stdout;
+      assert.equal(pixels.length, w * h * 30);
+      const residual = [];
+      for (let n = 0; n < 30; n++) {
+        const row = pixels.subarray(
+          n * w * h + (h / 2) * w,
+          n * w * h + (h / 2 + 1) * w,
+        );
+        let edge;
+        for (let x = 1; x < w; x++)
+          if (row[x - 1] < 127.5 && row[x] >= 127.5) {
+            edge = x - 1 + (127.5 - row[x - 1]) / (row[x] - row[x - 1]);
+            break;
+          }
+        assert.ok(Number.isFinite(edge), 'visible edge');
+        const u = n / 30,
+          s = u * u * (3 - 2 * u),
+          z = 1 + 0.2 * s,
+          cx = w * (0.5 + 0.02 * s),
+          crop = w / z;
+        const expected = ((127.5 - (cx - crop / 2)) / crop) * w;
+        residual.push(edge - expected);
+      }
+      const mean = residual.reduce((a, b) => a + b, 0) / residual.length;
+      const rms =
+        (Math.sqrt(
+          residual.reduce((s, r) => s + (r - mean) ** 2, 0) / residual.length,
+        ) *
+          1080) /
+        h;
+      t.diagnostic(
+        'Measured camera residual ' +
+          rms.toFixed(4) +
+          ' px at a 1080-pixel short side; static source, actual decoded pixels.',
+      );
+      assert.ok(rms < 0.5, 'float camera jitter ' + rms);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

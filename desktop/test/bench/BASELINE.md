@@ -1,6 +1,6 @@
 # Visual baseline review
 
-30 October 2026 update: Phase 1 cloud run `40891223587` saved failed TH-1 and TH-2 recordings before timing out during TUT-1. Both artifacts are preserved locally, with exact prepared media and genuine response caches. This does not complete the requested six-clip AI baseline. Phase 2's new offline compositor controls are being rendered separately in `41027923346`; actual contact sheets and hook frames must be inspected before adding their critiques here.
+30 October 2026 update: **The user requires a new raw dataset for final benchmark acceptance and has no footage to supply.** Existing public clips and all their before/after outputs remain legacy evidence. Phase 1 cloud run `40891223587` saved failed TH-1 and TH-2 recordings before timing out during TUT-1. Both artifacts are preserved locally, with exact prepared media and genuine response caches. This does not complete the requested six-clip AI baseline. Phase 2's six old offline compositor controls completed in `41027923346`; they cannot satisfy the new dataset requirement. Inspect actual contact sheets and hook frames before adding critiques here.
 
 ## Preserved TH-1 AI output: both aspects
 

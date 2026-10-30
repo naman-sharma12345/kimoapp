@@ -9,6 +9,7 @@ import {
   toTimeline,
   curveValue,
   frameCount,
+  publicEdl,
 } from '../edl.mjs';
 const project = () => ({
   width: 192,
@@ -201,4 +202,57 @@ test('omitted speed consistently means normal playback through validation, plann
     framePlan(e.video[0].clips[0], e.sources[0], e.canvas.fps).indices.length,
     60,
   );
+});
+
+test('native title background shapes stay ordered, editable and resumable', () => {
+  const p = project();
+  p.tracks.push({
+    id: 'T',
+    clips: [
+      {
+        id: 'shape',
+        source: {
+          type: 'shape',
+          shape: 'rect',
+          width: 120,
+          height: 30,
+          fill: [0, 0, 0],
+          corner_radius: 5,
+        },
+        start: 0,
+        duration: 1,
+        props: { y: { base: -20 } },
+      },
+    ],
+  });
+  const e = fromKimoProject(p);
+  assert.equal(e.overlays[0].props.primitive, 'rect');
+  assert.equal(
+    toTimeline(e).tracks_bottom_to_top.find((t) => t.track_id === 'T').clips[0]
+      .src,
+    'generated',
+  );
+  const changed = applyEdits(e, [
+    { tool: 'move_clip', args: { clip_id: 'shape', start: 0.2 } },
+  ]);
+  assert.equal(toKimoProject(changed).tracks[1].clips[0].source.shape, 'rect');
+  assert.equal(toKimoProject(changed).tracks[1].clips[0].start, 0.2);
+  assert.throws(
+    () =>
+      applyEdits(e, [
+        { tool: 'edit_caption', args: { clip_id: 'shape', text: 'wrong' } },
+      ]),
+    /Unsupported EDL edit/,
+  );
+});
+
+test('timeline IPC preserves editing data without serializing renderer graphs', () => {
+  const full = fromKimoProject(project()),
+    view = publicEdl(full);
+  assert.deepEqual(toTimeline(view), toTimeline(full));
+  assert.ok(JSON.stringify(view).length < JSON.stringify(full).length / 4);
+  const before = full.video[0].clips[0].at;
+  view.video[0].clips[0].at = 7;
+  assert.equal(full.video[0].clips[0].at, before);
+  assert.equal(view.native_project, undefined);
 });

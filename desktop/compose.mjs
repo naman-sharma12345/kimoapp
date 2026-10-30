@@ -194,7 +194,12 @@ function geometry(clip, source, canvas, plan) {
       `eq=contrast=${safe(v('contrast', 1))}:saturation=${safe(v('saturation', 1))}`,
     );
   }
-  filters.push('setsar=1', 'format=yuva444p');
+  filters.push(
+    'setsar=1',
+    'scale=out_color_matrix=bt709:out_range=tv',
+    'format=yuva444p',
+    'setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709',
+  );
   const opacity = plan.indices.map((_, i) =>
     Math.max(
       0,
@@ -797,7 +802,7 @@ export async function compose({
           `color=c=${edl.canvas.bg ?? 'black'}:s=${edl.canvas.w}x${edl.canvas.h}:r=${edl.canvas.fps},format=rgb24`,
         ],
         graph = [
-          `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p[base0]`,
+          `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[base0]`,
         ];
       let input = 1,
         layer = 0,

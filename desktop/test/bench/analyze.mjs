@@ -4,6 +4,7 @@ import { ROOT, command, hashFile, readJson } from './io.mjs';
 import * as metric from './metrics.mjs';
 import { workerThreads } from '../../resources.cjs';
 import { rectFilter } from '../../sam.mjs';
+import { curveValue, curveSampler } from '../../edl.mjs';
 
 const base = (clip, key, fallback = 0) =>
   Number(clip.props?.[key]?.base ?? fallback);
@@ -21,14 +22,16 @@ export function projectEdl(project) {
           ? captionIds.has(c.id)
             ? 'caption'
             : 'graphic'
-          : asset?.width > 0
-            ? 'cut'
-            : /sfx|whoosh|impact|pop|click/i.test(
-                  `${asset?.path} ${track.name}`,
-                )
-              ? 'sfx'
-              : 'music';
-      const zoom = base(c, 'scale', 1);
+          : source.type !== 'media'
+            ? 'graphic'
+            : asset?.width > 0
+              ? 'cut'
+              : /sfx|whoosh|impact|pop|click/i.test(
+                    `${asset?.path} ${track.name}`,
+                  )
+                ? 'sfx'
+                : 'music';
+      const zoom = curveValue(c.props?.scale, 0, 1);
       const event = {
         id: c.id,
         track: track.id,
@@ -75,6 +78,27 @@ export function projectEdl(project) {
           event.box = null;
           event.geometry = 'unavailable: animated/rotated text';
         }
+      }
+      if (source.type === 'shape') {
+        const zoom = curveValue(c.props?.scale, 0, 1),
+          w = (Number(source.width) * zoom) / project.width,
+          h = (Number(source.height) * zoom) / project.height;
+        event.box =
+          Number.isFinite(w) && Number.isFinite(h)
+            ? {
+                x: 0.5 + curveValue(c.props?.x, 0) / project.width - w / 2,
+                y: 0.5 + curveValue(c.props?.y, 0) / project.height - h / 2,
+                w,
+                h,
+              }
+            : null;
+        event.geometry = 'native shape extent';
+        if (
+          ['x', 'y', 'scale', 'rotation'].some(
+            (k) => c.props?.[k]?.keys?.length || c.props?.[k]?.expr?.length,
+          )
+        )
+          event.box = null;
       }
       events.push(event);
       if (kind === 'cut') {
@@ -222,19 +246,34 @@ export async function frameSourceMetrics(
   for (const e of visibleSourceSegments(events, duration)) {
     const c = e.raw;
     const duration = e.end - e.start;
-    const animated = ['x', 'y', 'scale', 'rotation'].some(
-      (k) => c.props?.[k]?.keys?.length || c.props?.[k]?.expr?.length,
-    );
+    const firstOutput = Math.ceil(e.start * fps - 1e-7);
+    const lastOutput = Math.ceil(e.end * fps - 1e-7);
+    const transform = {};
+    let animated = false;
+    for (const key of ['x', 'y', 'scale', 'rotation', 'opacity']) {
+      const at = curveSampler(
+        c.props?.[key],
+        ['scale', 'opacity'].includes(key) ? 1 : 0,
+      );
+      transform[key] = at(firstOutput / fps - c.start);
+      for (let frame = firstOutput + 1; frame < lastOutput; frame++)
+        if (Math.abs(at(frame / fps - c.start) - transform[key]) > 1e-7) {
+          animated = true;
+          break;
+        }
+    }
     if (
       !e.path ||
       !e.sourceFps ||
-      e.zoom < 1 ||
-      base(c, 'x') ||
-      base(c, 'y') ||
+      transform.scale < 1 ||
+      transform.x ||
+      transform.y ||
+      Math.abs(transform.opacity - 1) > 1e-7 ||
+      curveValue(c.props?.fit, 0, 1) === 0 ||
       animated ||
       c.speed_curve ||
       c.motion_path ||
-      base(c, 'rotation')
+      transform.rotation
     ) {
       details.push({
         id: e.id,
@@ -243,8 +282,6 @@ export async function frameSourceMetrics(
       continue;
     }
     const size = 108 * 192;
-    const firstOutput = Math.ceil(e.start * fps - 1e-7);
-    const lastOutput = Math.ceil(e.end * fps - 1e-7);
     const firstSource = Math.max(0, Math.round(e.in_point * e.sourceFps) - 4);
     const offset = Math.max(0, (firstSource - 0.5) / e.sourceFps);
     const out = await command(ffmpeg, [
@@ -271,8 +308,8 @@ export async function frameSourceMetrics(
       details.push({ id: e.id, unavailable: 'source dimensions missing' });
       continue;
     }
-    const cropW = (sw / sh > aspect ? sh * aspect : sw) / e.zoom,
-      cropH = (sw / sh > aspect ? sh : sw / aspect) / e.zoom;
+    const cropW = (sw / sh > aspect ? sh * aspect : sw) / transform.scale,
+      cropH = (sw / sh > aspect ? sh : sw / aspect) / transform.scale;
     const vf = `scale=out_color_matrix=bt709:out_range=tv,format=yuva444p,${rectFilter([[(sw - cropW) / 2, (sh - cropH) / 2, cropW, cropH]])},scale=${width}:${height}:flags=lanczos+accurate_rnd+full_chroma_int,scale=108:192:flags=area,format=gray`;
     const src = await command(ffmpeg, [
       '-nostdin',
@@ -305,7 +342,8 @@ export async function frameSourceMetrics(
     // New captions are not present in the source. Exclude conservative envelopes
     // from BOTH sides rather than letting changing words select a nearby frame.
     const text = events.filter(
-      (v) => v.text && v.start < e.end && v.end > e.start,
+      (v) =>
+        (v.text || v.kind === 'graphic') && v.start < e.end && v.end > e.start,
     );
     const masks = text.length
       ? outputFrames.map((_, i) => {

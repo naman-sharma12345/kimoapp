@@ -241,6 +241,11 @@ export function validate(edl) {
       fail(`overlays[${i}].src`, 'image source required');
     if (o.kind !== 'image' && (!o.props || typeof o.props !== 'object'))
       fail(`overlays[${i}].props`, 'overlay properties required');
+    if (
+      o.props?.primitive &&
+      ![o.props.width, o.props.height].every((v) => finite(v) && v > 0)
+    )
+      fail(`overlays[${i}].props`, 'positive finite shape dimensions required');
     if (!finite(o.at) || o.at < 0 || !finite(o.dur) || o.dur <= 0)
       fail(`overlays[${i}]`, 'nonnegative at and duration > 0 required');
     if (o.src && !sources.has(o.src))
@@ -390,6 +395,34 @@ export function fromKimoProject(
           props.reveal.expr?.length)
       )
         warn(`${path}.props.reveal`, props.reveal);
+      if (
+        c.source.type === 'shape' &&
+        ['rect', 'ellipse', 'polygon'].includes(c.source.shape)
+      ) {
+        const dur = Math.min(
+          c.duration,
+          Math.max(0, (pictureEnd || Infinity) - c.start),
+        );
+        if (dur > 0)
+          overlays.push({
+            id: c.id,
+            kind: 'callout',
+            at: c.start,
+            dur,
+            track: track.id,
+            props: {
+              ...clone(c.source),
+              primitive: c.source.shape,
+              x: 0.5 + curveValue(props.x, 0) / canvas.w,
+              y: 0.5 + curveValue(props.y, 0) / canvas.h,
+              reference: { w: canvas.w, h: canvas.h },
+              curves: clone(props),
+            },
+            anim: { in: 'native', out: 'native' },
+            native: clone(c),
+          });
+        continue;
+      }
       if (c.source.type === 'text') {
         const dur = Math.min(
           c.duration,
@@ -629,7 +662,7 @@ export function toTimeline(edl) {
     }
     t.clips.push({
       id: o.id,
-      src: `text: ${o.props.text ?? ''}`,
+      src: o.props.primitive ? 'generated' : `text: ${o.props.text ?? ''}`,
       start: o.at,
       end: o.at + o.dur,
     });
@@ -682,7 +715,7 @@ export function applyEdits(original, ops) {
           x.out = x.in + op.args.duration * (x.speed ?? 1);
         }
       }
-    else if (op.tool === 'edit_caption' && c.props) {
+    else if (op.tool === 'edit_caption' && typeof c.props?.text === 'string') {
       c.props.text = op.args.text;
       if (c.props.text_fx) c.props.text_fx.animators = [];
     } else throw new Error(`Unsupported EDL edit: ${op.tool}`);
@@ -691,16 +724,55 @@ export function applyEdits(original, ops) {
 }
 export function publicEdl(edl) {
   if (!edl) return edl;
-  const view = clone(edl);
-  delete view.native_project;
-  for (const s of view.sources) delete s.native;
-  for (const c of [
-    ...view.video.flatMap((t) => t.clips),
-    ...view.audio.flatMap((t) => t.clips),
-    ...view.overlays,
-  ])
-    delete c.native;
-  return view;
+  // The window edits IDs/ranges/text through whitelisted operations, never full
+  // renderer graphs. Keep dense camera samples and word animators off IPC and
+  // the frequently saved library; edit.edl.json retains the complete model.
+  const pick = (value, keys) =>
+    Object.fromEntries(
+      keys.filter((k) => value[k] !== undefined).map((k) => [k, value[k]]),
+    );
+  const clip = (c) =>
+    pick(c, [
+      'id',
+      'src',
+      'in',
+      'out',
+      'at',
+      'speed',
+      'asset',
+      'dur',
+      'linked',
+      'gain_db',
+    ]);
+  const tracks = (family) =>
+    edl[family].map((t) => ({
+      ...pick(t, ['track', 'name']),
+      clips: t.clips.map(clip),
+    }));
+  return {
+    edl_version: edl.edl_version,
+    canvas: { ...edl.canvas },
+    sources: edl.sources.map((s) =>
+      pick(s, [
+        'id',
+        'path',
+        'fps',
+        'w',
+        'h',
+        'duration',
+        'kind',
+        'audio',
+        'rotation',
+      ]),
+    ),
+    video: tracks('video'),
+    audio: tracks('audio'),
+    overlays: edl.overlays.map((o) => ({
+      ...pick(o, ['id', 'kind', 'at', 'dur', 'track', 'src']),
+      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height']),
+    })),
+    master: { ...edl.master },
+  };
 }
 export function toKimoProject(edl) {
   const project = clone(edl.native_project);
@@ -720,7 +792,7 @@ export function toKimoProject(edl) {
       n.start = c.at;
       n.duration = c.dur ?? (c.out - c.in) / (c.speed ?? 1);
       if (c.props) {
-        n.source.text = c.props.text;
+        if (typeof c.props.text === 'string') n.source.text = c.props.text;
         if (c.props.text_fx) n.text_fx = clone(c.props.text_fx);
       } else {
         n.in_point = c.in;

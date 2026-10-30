@@ -332,10 +332,11 @@ export function cameraRects({ tracks, path, src, cw, ch, frames, fps, punches, d
 
 /** FFmpeg `perspective` filter that cuts the exact float rectangle per frame (bicubic, no pixel rounding). */
 export function rectFilter(rects) {
-  const L = splineExpr(rects.map((r) => r[0]));
-  const T = splineExpr(rects.map((r) => r[1]));
-  const R = splineExpr(rects.map((r) => r[0] + r[2]));
-  const B = splineExpr(rects.map((r) => r[1] + r[3]));
+  // perspective counts its first input frame as 1; EDL arrays start at 0.
+  const L = splineExpr(rects.map((r) => r[0]), '(in-1)');
+  const T = splineExpr(rects.map((r) => r[1]), '(in-1)');
+  const R = splineExpr(rects.map((r) => r[0] + r[2]), '(in-1)');
+  const B = splineExpr(rects.map((r) => r[1] + r[3]), '(in-1)');
   return `perspective=x0='${L}':y0='${T}':x1='${R}':y1='${T}':x2='${L}':y2='${B}':x3='${R}':y3='${B}':interpolation=cubic:sense=source:eval=frame`;
 }
 
