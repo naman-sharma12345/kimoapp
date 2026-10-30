@@ -1,0 +1,13 @@
+{
+  "scope": "Genuine Phase 1 TH-1 landscape AI edit, same project and exact prepared source, app-owned recompose; no new planner or SAM requests",
+  "recordRun": 40891223587,
+  "commit": "bf2fde96bcb83a0b9712df59bb8ec56e14744251",
+  "originalProjectHash": "22a54e8fc94cc16feaf4fa6a82f3ed5e1906b6b1c822b3b351638ed3689988d3",
+  "sourceHashes": [
+    "b8465fd460731642318235cf7ffad6e69972597554a2efa395ada4d5b69deae9"
+  ],
+  "beforeHash": "d1020d90983646ddbdcfa2d75db3d16eec24c024936a27671fdafedee8e3ce17",
+  "afterHash": "a639f4c95772305b95c08a8e1bcaac6ae0e6cea97d372096eba605d323237fbd",
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0
+}

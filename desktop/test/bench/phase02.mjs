@@ -234,6 +234,16 @@ try {
           jitter,
         });
         await writeJson(join(dir, `${target}-metrics.json`), metrics);
+        if (target === 'legacy') {
+          const review = join(dir, 'legacy-review');
+          await mkdir(review, { recursive: true });
+          await reviewMedia({
+            ffmpeg: tools.ffmpeg,
+            output,
+            directory: review,
+            duration: final.duration,
+          });
+        }
         return metrics;
       };
       if (result.output !== join(dir, 'final.mp4'))

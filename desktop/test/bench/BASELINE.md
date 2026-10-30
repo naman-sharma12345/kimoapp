@@ -53,3 +53,26 @@ This completed captions-only render predates resource/GPU changes. It is a techn
 Opening the local review confirmed video playback, timeline seeking, offline operation and the corrected mobile layout. Review media lives in out/scratch/bench-smoke; the small contact sheet and metrics are committed under baselines/smoke-v0.3.2.
 
 No real-footage before/after critique of the resource controls or NVENC master is claimed. Full golden recordings now run remotely; they do not establish local sustained responsiveness or GPU perceptual-quality sign-off.
+
+## Saved-AI TH-1 landscape recompose review (legacy diagnostic)
+
+Actual contact sheets and ten first-second samples were inspected for both outputs from41089587650. [Before sheet](baselines/composed-real-AI-TH-1/before/sheet.jpg), [after sheet](baselines/composed-real-AI-TH-1/after/sheet.jpg), [before first second](baselines/composed-real-AI-TH-1/before/hook.jpg), [after first second](baselines/composed-real-AI-TH-1/after/hook.jpg). Source attribution remains in CREDITS.md.
+
+1. The after output restores the native project's black hook-background rectangle.
+2. It appears across the speaker's chest in the early sampled frames.
+3. Hook lettering on that bar is very small and has poor practical legibility.
+4. Restoring geometry does not fix the planner's hook typography.
+5. Large body captions remain the most prominent new graphic treatment.
+6. They still overlap the source's green identification bar.
+7. Existing source edits include an outdoor interview, bookcase footage and book-cover imagery.
+8. Their presence cannot be credited as newly chosen app b-roll.
+9. The source's cover transition remains visible in both sheets.
+10. The later interview spans still have little framing variation.
+11. A visible caption contains filler wording despite the automatic zero-filler estimate.
+12. The after delivery gate passes and measured clipped luma falls.
+13. Frame matching has only about69–71%coverage; counted repeats are not full-footage certification.
+14. Whole-picture motion values include source/overlay changes and do not isolate camera jitter.
+15. Uniform version1 score79.7→80.3 is a diagnostic observation, not certified causal improvement.
+16. The preserved failed recording leaves before-video/project-state pairing uncertain; the new raw comparison must export both sides from the same saved state.
+
+No full listening review is inferred from these stills. These outputs remain legacy evidence and do not close the user's new-raw-dataset acceptance.
