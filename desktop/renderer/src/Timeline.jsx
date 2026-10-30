@@ -249,6 +249,16 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
                     <div
                       key={c.id}
                       className="desk-clip"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${label(c)} · ${c.start.toFixed(2)}–${c.end.toFixed(2)} s`}
+                      onKeyDown={(e) => {
+                        if (e.target.tagName === 'INPUT') return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault(); e.stopPropagation(); setSelected(c.id);
+                          if (e.key === 'Enter' && kind === 'text' && canEdit()) setEditingText(c.id);
+                        }
+                      }}
                       data-kind={kind}
                       data-sel={selected === c.id || undefined}
                       data-new={(animate && !seen.current.has(c.id)) || undefined}
