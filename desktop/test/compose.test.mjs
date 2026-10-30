@@ -863,7 +863,7 @@ test(
         stdout[(frame * W * H + y * W + x) * 3 + 1];
       assert.ok(
         green(5, 96, 64) > 110 && green(5, 96, 64) < 140,
-        'half-alpha center',
+        `half-alpha center: ${green(5, 96, 64)}`,
       );
       assert.ok(
         green(4, 96, 64) < 5 && green(15, 96, 64) < 5,

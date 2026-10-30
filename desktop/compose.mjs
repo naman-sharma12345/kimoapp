@@ -142,6 +142,7 @@ function geometry(clip, source, canvas, plan) {
   const filters = [
     'scale=out_color_matrix=bt709:out_range=tv',
     'format=yuva444p',
+    'setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709',
   ];
   const rotation = (((source.rotation ?? 0) % 360) + 360) % 360;
   if (rotation === 90) filters.push('transpose=clock');
@@ -192,11 +193,13 @@ function geometry(clip, source, canvas, plan) {
       'format=gbrp',
       `lutrgb=r='${channel('r')}':g='${channel('g')}':b='${channel('b')}'`,
       `eq=contrast=${safe(v('contrast', 1))}:saturation=${safe(v('saturation', 1))}`,
+      'scale=out_color_matrix=bt709:out_range=tv',
+      'format=yuva444p',
+      'setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709',
     );
   }
   filters.push(
     'setsar=1',
-    'scale=out_color_matrix=bt709:out_range=tv',
     'format=yuva444p',
     'setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709',
   );
@@ -842,7 +845,8 @@ export async function compose({
         let vf;
         if (clip._baked) {
           args.push('-i', source.path);
-          vf = 'setpts=PTS-STARTPTS';
+          vf =
+            'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
         } else if (!plan.arithmetic) {
           const key = createHash('sha256')
               .update(
@@ -878,7 +882,8 @@ export async function compose({
                 }),
             });
           args.push('-i', segment);
-          vf = 'setpts=PTS-STARTPTS';
+          vf =
+            'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
         } else {
           const first = plan.indices[0],
             last = plan.indices.at(-1),
@@ -905,7 +910,7 @@ export async function compose({
         );
         let top = name;
         graph.push(
-          `[${base}][${top}]overlay=eof_action=pass:repeatlast=0:format=auto:enable='gte(t,${safe((plan.start - from - 0.25) / fps)})*lt(t,${safe((plan.end - from - 0.25) / fps)})'[${next}]`,
+          `[${base}][${top}]overlay=eof_action=pass:repeatlast=0:format=auto:enable='gte(t,${safe((plan.start - from - 0.25) / fps)})*lt(t,${safe((plan.end - from - 0.25) / fps)})',setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[${next}]`,
         );
         if (
           clip.mask ||
