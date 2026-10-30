@@ -127,7 +127,9 @@ export function cameraRectsForClip(clip, source, canvas, plan) {
   });
 }
 function geometry(clip, source, canvas, plan) {
-  const filters = [];
+  // Normalize before resampling in both strategies. Otherwise RGB sources can
+  // be transformed before conversion in A but after conversion in B.
+  const filters = ['format=yuva444p'];
   const rotation = (((source.rotation ?? 0) % 360) + 360) % 360;
   if (rotation === 90) filters.push('transpose=clock');
   else if (rotation === 270) filters.push('transpose=cclock');

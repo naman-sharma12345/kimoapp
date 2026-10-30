@@ -2,6 +2,10 @@ name: Phase 02 compositor validation
 on:
   workflow_dispatch:
     inputs:
+      golden:
+        description: 'Run the golden matrix (disable to verify only Electron smoke)'
+        default: true
+        type: boolean
       clips:
         description: 'JSON array of golden IDs'
         default: '["TH-1","TH-2","TUT-1","VLOG-1","POD-1","MUSIC-1"]'
@@ -15,6 +19,7 @@ permissions:
   actions: read
 jobs:
   golden:
+    if: inputs.golden
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -88,8 +93,10 @@ jobs:
           $voice.Speak('Welcome to kimo. This tests the frame exact compositor.')
           $voice.Dispose()
           & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=640x360:r=24000/1001:d=5' -i "$env:RUNNER_TEMP/speech.wav" -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$env:RUNNER_TEMP/clip.mp4"
-          & node_modules/electron/dist/electron.exe . --smoke "$env:RUNNER_TEMP/clip.mp4" --smoke-out "$PWD/smoke.json"
-          if ($LASTEXITCODE -ne 0) { throw 'Electron smoke failed' }
+          $smokeProcess = Start-Process "$PWD/node_modules/electron/dist/electron.exe" -ArgumentList @('.', '--smoke', "$env:RUNNER_TEMP/clip.mp4", '--smoke-out', "$PWD/smoke.json") -WindowStyle Hidden -PassThru
+          $null = $smokeProcess.Handle
+          if (-not $smokeProcess.WaitForExit(35 * 60 * 1000)) { Stop-Process -Id $smokeProcess.Id -Force; throw 'Electron smoke timed out' }
+          if ($smokeProcess.ExitCode -ne 0) { Get-Content smoke.json; throw 'Electron smoke failed' }
           $result = Get-Content smoke.json -Raw | ConvertFrom-Json
           if (-not $result.ok -or -not $result.render.edl -or -not $result.render.composed) { throw 'Smoke did not prove app-owned composition' }
       - uses: actions/upload-artifact@v4

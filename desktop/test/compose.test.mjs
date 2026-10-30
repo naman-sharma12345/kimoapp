@@ -17,6 +17,95 @@ const W = 192,
   block = 8,
   left = 32,
   top = 60;
+
+test(
+  'image overlays retain alpha and exact on/off frames in both strategies',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-alpha-'));
+    try {
+      const image = join(dir, 'graphic.png');
+      const rgba = Buffer.alloc(W * H * 4);
+      for (let y = 40; y < 88; y++)
+        for (let x = 60; x < 132; x++) {
+          const i = (y * W + x) * 4;
+          rgba[i] = 255;
+          rgba[i + 3] = 255;
+        }
+      const raw = join(dir, 'graphic.rgba');
+      await writeFile(raw, rgba);
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-f',
+        'rawvideo',
+        '-pix_fmt',
+        'rgba',
+        '-s',
+        `${W}x${H}`,
+        '-i',
+        raw,
+        '-frames:v',
+        '1',
+        image,
+      ]);
+      const e = {
+        edl_version: 1,
+        canvas: { w: W, h: H, fps: 25, bg: '#0000FF' },
+        sources: [
+          { id: 'png', path: image, w: W, h: H, kind: 'image', fps: 25 },
+        ],
+        video: [],
+        audio: [],
+        overlays: [
+          {
+            id: 'graphic',
+            kind: 'image',
+            src: 'png',
+            at: 0.2,
+            dur: 0.4,
+            props: {},
+          },
+        ],
+      };
+      for (const strategy of ['A', 'B']) {
+        const output = join(dir, strategy + '.mkv');
+        await compose({
+          edl: e,
+          ffmpeg,
+          ffprobe,
+          output,
+          dir: join(dir, 'work'),
+          strategy,
+        });
+        const { stdout } = await command(ffmpeg, [
+          '-v',
+          'error',
+          '-i',
+          output,
+          '-pix_fmt',
+          'rgb24',
+          '-f',
+          'rawvideo',
+          'pipe:1',
+        ]);
+        const pixel = (frame, x, y) => [
+          ...stdout.subarray(
+            (frame * W * H + y * W + x) * 3,
+            (frame * W * H + y * W + x) * 3 + 3,
+          ),
+        ];
+        assert.ok(pixel(4, 96, 64)[2] > 230, strategy + ' before graphic');
+        assert.ok(pixel(5, 96, 64)[0] > 230, strategy + ' first graphic frame');
+        assert.ok(pixel(14, 96, 64)[0] > 230, strategy + ' last graphic frame');
+        assert.ok(pixel(8, 8, 8)[2] > 230, strategy + ' transparent corner');
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
 async function fixture(dir, fps) {
   const font = [
     join(tools.env.KIMO_FONTS, 'DejaVuSans.ttf'),
@@ -181,7 +270,30 @@ test(
         strategy: 'B',
         fontsDir: tools.env.KIMO_FONTS,
       });
-      assert.deepEqual(await decode(a), await decode(b));
+      const direct = await decode(a),
+        baked = await decode(b);
+      let differences = 0,
+        maxError = 0,
+        first = -1;
+      for (let i = 0; i < Math.max(direct.length, baked.length); i++)
+        if (direct[i] !== baked[i]) {
+          differences++;
+          if (first < 0) first = i;
+          maxError = Math.max(
+            maxError,
+            Math.abs((direct[i] ?? 0) - (baked[i] ?? 0)),
+          );
+        }
+      assert.ok(
+        direct.equals(baked),
+        JSON.stringify({
+          directBytes: direct.length,
+          bakedBytes: baked.length,
+          differences,
+          maxError,
+          first,
+        }),
+      );
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

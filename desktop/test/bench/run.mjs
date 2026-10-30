@@ -95,9 +95,11 @@ async function runExclusive(args, signal) {
     'max-requests',
     'max-usd',
     'analyze-existing',
+    'legacy-kimo-render',
   ];
   for (const key of Object.keys(args))
     if (!allowed.includes(key)) throw new Error(`Unknown --${key}`);
+  if (args['legacy-kimo-render']) process.env.KIMO_BENCH_LEGACY = '1';
   if (args['replay-cache'] && args['record-cache'])
     throw new Error('Choose replay or record');
   const template = args.template ?? 'default';
@@ -219,6 +221,7 @@ async function runExclusive(args, signal) {
           await writeFile(join(dir, 'ops.jsonl'), '');
           result = await runEdit({
             ...tools,
+            legacy_kimo_render: Boolean(args['legacy-kimo-render']),
             signal,
             dir,
             files,

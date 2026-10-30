@@ -626,9 +626,9 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
 export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam }) {
+  if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
-  if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   const P = PRESETS[preset] ?? PRESETS.shorts;
   const S = STYLES[style] ?? STYLES.auto;
   const release = acquireExclusive('render');

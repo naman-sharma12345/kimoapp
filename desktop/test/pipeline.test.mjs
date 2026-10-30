@@ -8,6 +8,18 @@ import { runEdit, PRESETS, probe } from '../engine.mjs';
 import { command } from './bench/io.mjs';
 import { toolPaths } from './bench/run.mjs';
 const tools = toolPaths();
+test('legacy picture rendering cannot be enabled from a normal app call', async () => {
+  const previous = process.env.KIMO_BENCH_LEGACY;
+  delete process.env.KIMO_BENCH_LEGACY;
+  try {
+    await assert.rejects(
+      runEdit({ legacy_kimo_render: true }),
+      /restricted to explicit benchmark/,
+    );
+  } finally {
+    if (previous != null) process.env.KIMO_BENCH_LEGACY = previous;
+  }
+});
 test(
   'all runEdit modes use the app compositor and persist an editable EDL',
   { timeout: 180000 },
