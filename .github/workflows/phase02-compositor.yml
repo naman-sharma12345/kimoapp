@@ -14,6 +14,10 @@ on:
         description: 'Also measure the old renderer on the identical saved project'
         default: true
         type: boolean
+      analyze_run:
+        description: 'Existing Phase 2 artifact run to remeasure without rendering'
+        default: ''
+        type: string
 permissions:
   contents: read
   actions: read
@@ -37,6 +41,7 @@ jobs:
       KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
       BENCH_CLIP: ${{ matrix.clip }}
       BENCH_LEGACY: ${{ inputs.legacy }}
+      BENCH_ANALYZE_ONLY: ${{ inputs.analyze_run != '' }}
     steps:
       - uses: actions/checkout@v4
       - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
@@ -58,6 +63,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ runner.temp }}/seed
       - run: ./desktop/test/bench/restore-run.ps1 -Source "$env:RUNNER_TEMP/seed"
+      - uses: actions/download-artifact@v4
+        if: inputs.analyze_run != ''
+        with:
+          run-id: ${{ inputs.analyze_run }}
+          name: phase02-${{ inputs.analyze_run }}-${{ matrix.clip }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/kimo-bench-data/out/phase02/${{ matrix.clip }}
       - name: Offline golden render and identical-project comparison
         run: node desktop/test/bench/phase02.mjs
       - uses: actions/upload-artifact@v4

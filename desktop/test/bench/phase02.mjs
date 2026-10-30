@@ -1,8 +1,15 @@
 // Offline compositor regression. This deliberately makes no editorial AI claims.
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
 import { readFile, mkdir, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { runEdit, probe, Mcp, measure, youtubeMaster } from '../../engine.mjs';
+import {
+  runEdit,
+  probe,
+  Mcp,
+  measure,
+  youtubeMaster,
+  qualityChecks,
+} from '../../engine.mjs';
 import { toolPaths } from './run.mjs';
 import {
   DATA_ROOT,
@@ -51,25 +58,52 @@ try {
       if (e.t === 'status') console.log(clip.id, aspect, e.text);
     };
     try {
-      const result = await runEdit({
-        ...tools,
-        files,
-        dir,
-        preset: aspect === '9:16' ? 'shorts' : 'youtube',
-        mode: clip.speech ? 'captions' : 'sam',
-        emit: log,
-      });
+      const onlyAnalysis = process.env.BENCH_ANALYZE_ONLY === 'true';
+      const originalRun = onlyAnalysis
+        ? await readJson(join(dir, 'run.json'))
+        : null;
+      if (
+        originalRun &&
+        JSON.stringify(originalRun.sourceHashes) !==
+          JSON.stringify(sourceHashes)
+      )
+        throw new Error('Prepared input hashes changed');
+      const result = onlyAnalysis
+        ? {
+            output: join(dir, 'final.mp4'),
+            projectFile: join(dir, 'project.kimo.json'),
+            edlFile: join(dir, 'edit.edl.json'),
+            edl: await readJson(join(dir, 'edit.edl.json')),
+            duration: (
+              await measure(tools.ffmpeg, tools.ffprobe, join(dir, 'final.mp4'))
+            ).duration,
+          }
+        : await runEdit({
+            ...tools,
+            files,
+            dir,
+            preset: aspect === '9:16' ? 'shorts' : 'youtube',
+            mode: clip.speech ? 'captions' : 'sam',
+            emit: log,
+          });
       const elapsedMs = Date.now() - started;
       const project = await readJson(result.projectFile);
-      const words = clip.speech
-        ? await transcribe({
-            ...tools,
-            input: result.output,
-            directory: join(DATA_ROOT, 'transcripts'),
-          })
-        : [];
-      await writeJson(join(dir, 'words.json'), words);
-      const analyze = async (output, quality, target) => {
+      const analyze = async (output, target) => {
+        // Measure each final's own audio and delivery with identical checks.
+        const words = clip.speech
+          ? await transcribe({
+              ...tools,
+              input: output,
+              directory: join(DATA_ROOT, 'transcripts'),
+            })
+          : [];
+        await writeJson(join(dir, `${target}-words.json`), words);
+        const final = await measure(tools.ffmpeg, tools.ffprobe, output);
+        const quality = qualityChecks(
+          final,
+          { width: result.edl.canvas.w, height: result.edl.canvas.h },
+          { final: true, sourceAudio: files.some((f) => f.audio) },
+        );
         const jitter = await motionJitter(tools.ffmpeg, output);
         const metrics = await measureRun({
           ...tools,
@@ -84,35 +118,49 @@ try {
         await writeJson(join(dir, `${target}-metrics.json`), metrics);
         return metrics;
       };
-      await copyFile(result.output, join(dir, 'final.mp4'));
-      await analyze(result.output, result.quality.checks, 'compose');
+      if (result.output !== join(dir, 'final.mp4'))
+        await copyFile(result.output, join(dir, 'final.mp4'));
+      await analyze(result.output, 'compose');
       await reviewMedia({
         ffmpeg: tools.ffmpeg,
         output: result.output,
         directory: dir,
         duration: result.duration,
       });
-      await writeJson(join(dir, 'run.json'), {
-        commit: (await command('git', ['rev-parse', 'HEAD'])).stdout
-          .toString()
-          .trim(),
-        clip: clip.id,
-        aspect,
-        mode: clip.speech ? 'captions' : 'sam',
-        scope:
-          'Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit',
-        sourceHashes,
-        finalHash: await hashFile(result.output),
-        elapsedMs,
-        networkAttempts: attempts,
-        reservedUsdDelta: 0,
-        edl: result.edlFile,
-        composed: ops.some(
-          (e) => e.tool === 'compose' && e.phase === 'end' && e.ok,
-        ),
-        datasetLimitations: clip.notes,
-      });
-      if (process.env.BENCH_LEGACY === 'true') {
+      if (!onlyAnalysis)
+        await writeJson(join(dir, 'run.json'), {
+          commit: (await command('git', ['rev-parse', 'HEAD'])).stdout
+            .toString()
+            .trim(),
+          clip: clip.id,
+          aspect,
+          mode: clip.speech ? 'captions' : 'sam',
+          scope:
+            'Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit',
+          sourceHashes,
+          finalHash: await hashFile(result.output),
+          elapsedMs,
+          networkAttempts: attempts,
+          reservedUsdDelta: 0,
+          edl: result.edlFile,
+          composed: ops.some(
+            (e) => e.tool === 'compose' && e.phase === 'end' && e.ok,
+          ),
+          datasetLimitations: clip.notes,
+        });
+      if (onlyAnalysis) {
+        await writeJson(join(dir, 'analysis.json'), {
+          commit: (await command('git', ['rev-parse', 'HEAD'])).stdout
+            .toString()
+            .trim(),
+          at: new Date().toISOString(),
+          finalHash: await hashFile(result.output),
+          networkAttempts: attempts,
+          reservedUsdDelta: 0,
+        });
+        const legacy = join(dir, 'legacy-final.mp4');
+        if (existsSync(legacy)) await analyze(legacy, 'legacy');
+      } else if (process.env.BENCH_LEGACY === 'true') {
         const mcp = new Mcp(tools.bin, dir, tools.env),
           start = Date.now();
         try {
@@ -141,7 +189,7 @@ try {
             m: measured,
             encoder: null,
           });
-          await analyze(upload, [], 'legacy');
+          await analyze(upload, 'legacy');
           await writeJson(join(dir, 'legacy-run.json'), {
             nativeMs,
             projectHash: await hashFile(result.projectFile),
