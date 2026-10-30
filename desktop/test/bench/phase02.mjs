@@ -1,6 +1,6 @@
 // Offline compositor regression. This deliberately makes no editorial AI claims.
 import { appendFileSync, existsSync } from 'node:fs';
-import { readFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, mkdir, copyFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   runEdit,
@@ -22,6 +22,8 @@ import {
 import { measureRun, transcribe } from './analyze.mjs';
 import { reviewMedia } from './report.mjs';
 import { motionJitter } from '../../sam.mjs';
+import { compose } from '../../compose.mjs';
+import { fromKimoProject } from '../../edl.mjs';
 
 const tools = toolPaths();
 const manifest = await readJson(join(ROOT, 'clips/clips.json'));
@@ -88,6 +90,33 @@ try {
           });
       const elapsedMs = Date.now() - started;
       const project = await readJson(result.projectFile);
+      const recomposed = onlyAnalysis && process.env.BENCH_RECOMPOSE === 'true';
+      if (recomposed) {
+        const previousHash = await hashFile(result.output);
+        if (previousHash !== originalRun.finalHash)
+          throw new Error('Recorded final hash changed before recompose');
+        result.edl = fromKimoProject(project, files, { emit: log });
+        await writeJson(result.edlFile, result.edl);
+        const master = join(dir, 'recomposed.mkv');
+        await compose({
+          ...tools,
+          edl: result.edl,
+          output: master,
+          dir: join(dir, 'compose'),
+          fontsDir: tools.env.KIMO_FONTS,
+          assetRoot: dir,
+          emit: log,
+        });
+        await youtubeMaster({
+          ffmpeg: tools.ffmpeg,
+          input: master,
+          output: result.output,
+          P: { width: result.edl.canvas.w, height: result.edl.canvas.h },
+          m: await measure(tools.ffmpeg, tools.ffprobe, master),
+          encoder: null,
+        });
+        await unlink(master);
+      }
       const analyze = async (output, target) => {
         // Measure each final's own audio and delivery with identical checks.
         const words = clip.speech
@@ -157,10 +186,36 @@ try {
           finalHash: await hashFile(result.output),
           networkAttempts: attempts,
           reservedUsdDelta: 0,
+          recomposed,
+          priorFinalHash: originalRun.finalHash,
         });
+        if (recomposed)
+          await writeJson(join(dir, 'run.json'), {
+            ...originalRun,
+            commit: (await command('git', ['rev-parse', 'HEAD'])).stdout
+              .toString()
+              .trim(),
+            finalHash: await hashFile(result.output),
+            priorRender: {
+              commit: originalRun.commit,
+              finalHash: originalRun.finalHash,
+            },
+            recomposed: true,
+            networkAttempts: attempts,
+            reservedUsdDelta: 0,
+          });
         const legacy = join(dir, 'legacy-final.mp4');
         if (existsSync(legacy)) await analyze(legacy, 'legacy');
-      } else if (process.env.BENCH_LEGACY === 'true') {
+      }
+      if (
+        process.env.BENCH_LEGACY === 'true' &&
+        (!onlyAnalysis || process.env.BENCH_RETRY_LEGACY === 'true') &&
+        !(
+          onlyAnalysis &&
+          existsSync(join(dir, 'legacy-final.mp4')) &&
+          existsSync(join(dir, 'legacy-run.json'))
+        )
+      ) {
         const mcp = new Mcp(tools.bin, dir, tools.env),
           start = Date.now();
         try {
@@ -174,7 +229,7 @@ try {
           const reply = await mcp.request(
             'tools/call',
             { name: 'export', arguments: { path: legacy } },
-            600000,
+            1800000,
           );
           if (reply.error || reply.result?.isError)
             throw new Error(JSON.stringify(reply));
@@ -196,6 +251,8 @@ try {
             finalHash: await hashFile(upload),
             sameProject: true,
           });
+          if (existsSync(join(dir, 'legacy-failure.json')))
+            await unlink(join(dir, 'legacy-failure.json'));
         } catch (error) {
           await writeJson(join(dir, 'legacy-failure.json'), {
             error: error.message,
