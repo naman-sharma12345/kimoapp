@@ -1,5 +1,7 @@
 # Visual baseline review
 
+30 October 2026 update: Phase 1 cloud run `40891223587` saved failed TH-1 and TH-2 recordings before timing out during TUT-1. Both artifacts are preserved locally, with exact prepared media and genuine response caches. This does not complete the requested six-clip AI baseline. Phase 2's new offline compositor controls are being rendered separately in `41027923346`; actual contact sheets and hook frames must be inspected before adding their critiques here.
+
 The six requested golden baselines are **pending**. The live TH-1 AI run and its replay were stopped to restore PC responsiveness. TH-2, TUT-1, VLOG-1, POD-1 and MUSIC-1 outputs were not rendered or visually reviewed; neither was the 16:9 set. Source-media substitutions are described in clips/clips.json and CREDITS.md. These are not checked acceptance boxes.
 
 ## Supplemental five-second smoke critique

@@ -1,5 +1,11 @@
 # Creator benchmark results
 
+30 October 2026: **Phase 2 implementation is in validation; golden acceptance is pending.** The EDL and app-owned picture path are pushed. Remote run `41027923346` renders all six prepared clips in both aspects using an offline editorial control and an identical-project native comparison. These are not replays of the missing Phase 1 AI edits. No golden zero-repeat, jitter or score-improvement claim is made before inspecting those outputs.
+
+Windows and Linux unit CI passed in run `41029430331`. Windows Electron smoke `41029000946` passed at 24000/1001, saved an EDL, composed picture, and completed a manual trim re-render. Local tiny-fixture tests also cover alpha images, text/image layer order, external audio assets and output colour conversion; final verification follows subsequent edits. The required root lint/typecheck/test/build step passed in `41028998366`; its broader verify job failed the existing web bundle budget afterward.
+
+The initial Linux fallback test found incompatible FFV1 gap headers; the corrected run above passes without weakening frame assertions. The initial Electron workflow read an in-progress report before waiting for its GUI executable; the corrected smoke passes. First-run legacy measurements must be remeasured with the latest identical delivery checks and per-output transcripts before comparing Creator Scores.
+
 29 October 2026. **The full Phase 1 baseline is incomplete.** Two long local benchmark processes were stopped when the user reported severe PC lag. No golden score or visual critique is invented for unfinished output. The user's follow-up requests added scheduling safeguards and high-quality GPU master encoding; those changes were checked with lightweight tests, not another full render.
 
 ## Golden baseline status

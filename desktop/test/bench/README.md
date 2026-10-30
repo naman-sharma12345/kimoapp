@@ -47,7 +47,15 @@ Measurement limits are included with every result:
 - Delivery combines `qualityChecks()` with metadata, AAC bitrate, IDR/closed-GOP checks and per-frame CFR timestamps. Bitrate warnings retain the app's simple-footage policy.
 - Unavailable applicable metrics score zero. Speech-free groups are excluded with weights renormalized. Delivery remains a separate gate. Scores never replace visual review.
 
-Do not begin Phase 2 or cut a release from an incomplete checklist. See BASELINE.md and NOTES.md for observations.
+The user explicitly requested Phase 2 after the incomplete baseline. Keep Phase 1's missing evidence visible; do not cut a release. See BASELINE.md and NOTES.md for observations.
+
+## Phase 2 compositor validation
+
+`phase02-compositor.yml` runs full golden footage in both aspects on hosted Windows runners, and real Electron smoke without an installer. No paid network is allowed. Offline captions (music uses the non-AI route) provide an editorial control, separately labeled from the unfinished Phase 1 AI recordings. Native comparisons render the identical saved project with a bounded timeout. Failed references remain unavailable.
+
+`--legacy-kimo-render` is an explicit bench-only switch for the normal CLI; Electron cannot select it. Native comparisons never become a production fallback. The Phase 2 workflow can remeasure existing artifacts via `analyze_run`, preserving final video and input hashes. Both outputs use their own final-audio transcripts and identical delivery checks. Matching compares decoded source indices against planned frame-rate/speed deltas, so intentional half-speed holds and mixed-rate skips do not count as judder. Static ambiguity and unsupported mappings lower reported coverage.
+
+Artifact restore merges cumulative spending counters by maximum and preserves current authorization. It never resets a higher reservation from an older snapshot or sums the same cumulative spending twice. The timed-out Phase 1 TUT-1 ledger was not recovered; its remaining allowance is conservatively reserved. Phase 2 makes no additional paid calls.
 
 ## Resource safeguards
 

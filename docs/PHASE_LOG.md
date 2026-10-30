@@ -198,6 +198,24 @@ Core validation: final lint, strict typecheck, **141 unit/integration tests** (i
 
 This phase is submitted for PR review with the explicit manual/performance gates above, rather than claiming an unverified production launch.
 
+## Desktop creator Phase 02 - app-owned frame-exact picture (30 October 2026)
+
+The user explicitly requested this desktop phase after the incomplete Phase 1 benchmark, overriding the earlier sequencing instruction. Work is pushed to main without force. No engine repository/binary or web runtime behavior is changed. No installer/release is built. Full footage runs on standard hosted Windows runners; this PC only runs bounded synthetic and browser checks.
+
+### Acceptance checklist
+
+- [x] Version-1 EDL, precise validation, native-project conversion with warning ops, and timeline IPC. Native planner data is retained for follow-up; manual edits persist the EDL and render it directly. Unit/integration coverage exercises the manual supplied-EDL path.
+- [x] Exact barcode source indices at 24000/1001, 24, 25, 30000/1001, 30, 50 and 60 fps, with trims, 2x, half speed and punch camera keys. Direct/fallback strategy equality, quoted Windows paths, cancellation and delivery encoding are tested. Windows/Linux CI run `41029430331` passed; additional asset/colour changes require final CI.
+- [x] Picture routes for AI, captions, follow-up, manual, SAM, queued jobs, review sheets, thumbnails and smoke use the app compositor. Legacy picture rendering is disabled by default and restricted to explicit benchmark calls.
+- [x] 1 kHz tone-cut test has no sample above -40 dBFS at the checked seam. Separate audio mixing follows source cuts and applies 10 ms equal-power edge fades; full voice/SFX chains remain later-phase work.
+- [x] Windows Electron smoke `41029000946` passed with real tools at 24000/1001, saved EDL/composed-picture assertions and a manual re-render, without building an installer.
+- [x] EDL timeline browser check renders 13 fixture clips and persists a caption edit through the mocked preload bridge without JavaScript errors. Evidence: [timeline](screens/phase-02-desktop-edl.png), [edited caption](screens/phase-02-desktop-edl-edit.png). The viewer is empty because this is an IPC/layout fixture, not golden footage or real media playback evidence. Existing tokens and visual layout are retained.
+- [ ] All six full golden clips rendered and visually reviewed in both aspects: remote validation `41027923346` remains in progress. Inspect genuine contact sheets and first-second frames and add 10–20-line critiques; do not tick from synthetic fixtures.
+- [ ] Real-footage repeated-frame counts, punch jitter below 0.5 px and higher Creator Scores against a fair baseline: pending collected artifacts and uniform measurement. Planned source-frame indices alone are not an observed zero-repeat result. Missing/ambiguous mappings and unavailable legacy references must stay labeled.
+- [ ] Final RESULTS.md/BASELINE.md evidence table and final required checks on the completed change: pending. The root lint/typecheck/test/build command passed in run `41028998366`; its later web bundle-budget failure is pre-existing and outside this desktop change.
+
+Implementation and extension boundaries are documented in desktop/COMPOSITOR.md. The latest complete Phase 1 artifact confirms USD 2.2000843 reserved and at least 53 requests. An unuploaded TUT-1 ledger is conservatively covered by reserving the remaining authorized allowance, total USD 5.49; actual billing is unknown. No more paid calls are started. Artifact restores preserve the larger cumulative ledger rather than resetting it.
+
 ## Desktop creator Phase 01 - benchmark and resource follow-up (29 October 2026)
 
 User request: implement the attached benchmark phase and push to GitHub. Subsequent steering requested immediate relief from PC lag and high-quality rendering with minimum CPU use. The heavy local baseline and replay were stopped; no further full render was started. Desktop implementation is ready for a normal main-branch push, with the full baseline explicitly incomplete.
