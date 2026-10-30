@@ -1,0 +1,136 @@
+name: Raw dataset compositor comparison
+on:
+  workflow_dispatch:
+    inputs:
+      clips:
+        description: 'JSON array of raw-v2 case IDs'
+        type: string
+        default: '["TH-1","TH-2","TUT-1","VLOG-1","POD-1","MUSIC-1"]'
+      legacy:
+        description: 'Measure native renderer on the identical saved project'
+        type: boolean
+        default: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare:
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        clip: ${{ fromJSON(inputs.clips) }}
+    runs-on: windows-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      BENCH_CLIP: ${{ matrix.clip }}
+      KIMO_BENCH_DATA: ${{ runner.temp }}/kimo-bench-data
+      KIMO_WORKER_THREADS: '2'
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+      KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
+      KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --ignore-scripts --prefix desktop
+      - uses: actions/download-artifact@v4
+        if: matrix.clip == 'TH-1' || matrix.clip == 'TUT-1'
+        with:
+          run-id: 41089581693
+          name: raw-v2-candidate-41089581693-${{ matrix.clip }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2-candidates/${{ matrix.clip }}
+      - uses: actions/download-artifact@v4
+        if: matrix.clip == 'TH-2' || matrix.clip == 'VLOG-1'
+        with:
+          run-id: 41093785376
+          name: raw-v2-candidate-41093785376-CINE-HOST
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2-candidates/CINE-HOST
+      - uses: actions/download-artifact@v4
+        if: matrix.clip == 'POD-1' || matrix.clip == 'VLOG-1'
+        with:
+          run-id: 41093785376
+          name: raw-v2-candidate-41093785376-CINE-INTERVIEW
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2-candidates/CINE-INTERVIEW
+      - uses: actions/download-artifact@v4
+        if: matrix.clip == 'MUSIC-1'
+        with:
+          run-id: 41091058004
+          name: raw-v2-candidate-41091058004-MUSIC-1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2-candidates/MUSIC-1
+      - run: node desktop/test/bench/prepare-raw.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raw-v2-prepared-${{ github.run_id }}-${{ matrix.clip }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2/media/${{ matrix.clip }}
+          compression-level: 0
+          retention-days: 7
+  compare:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        clip: ${{ fromJSON(inputs.clips) }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      BENCH_DATASET: raw-v2
+      BENCH_CLIP: ${{ matrix.clip }}
+      BENCH_LEGACY: ${{ inputs.legacy }}
+      KIMO_BENCH_DATA: ${{ runner.temp }}/kimo-bench-data
+      KIMO_WORKER_THREADS: '2'
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+      KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
+      KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --ignore-scripts --prefix desktop
+      - uses: actions/download-artifact@v4
+        with:
+          name: raw-v2-prepared-${{ github.run_id }}-${{ matrix.clip }}
+          path: ${{ runner.temp }}/kimo-bench-data/raw-v2/media/${{ matrix.clip }}
+      - run: node desktop/test/bench/phase02.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raw-v2-comparison-${{ github.run_id }}-${{ matrix.clip }}
+          path: ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: raw-v2-evidence-${{ github.run_id }}-${{ matrix.clip }}
+          path: |
+            ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}/**/*.json
+            ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}/**/*.jsonl
+            ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}/**/*.jpg
+            ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}/**/*.txt
+            ${{ runner.temp }}/kimo-bench-data/out/phase02-raw-v2/${{ matrix.clip }}/**/strip.mp4
+          retention-days: 7

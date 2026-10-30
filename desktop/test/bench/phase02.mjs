@@ -9,6 +9,8 @@ import {
   measure,
   youtubeMaster,
   qualityChecks,
+  resultJson,
+  canvasFps,
 } from '../../engine.mjs';
 import { toolPaths } from './run.mjs';
 import {
@@ -26,17 +28,57 @@ import { compose } from '../../compose.mjs';
 import { fromKimoProject } from '../../edl.mjs';
 
 const tools = toolPaths();
-const manifest = await readJson(join(ROOT, 'clips/clips.json'));
+const dataset = process.env.BENCH_DATASET || 'legacy';
+if (!['legacy', 'raw-v2'].includes(dataset))
+  throw new Error('Unknown benchmark dataset');
+if (
+  dataset === 'raw-v2' &&
+  (process.env.GITHUB_ACTIONS !== 'true' ||
+    process.env.RUNNER_ENVIRONMENT !== 'github-hosted')
+)
+  throw new Error(
+    'Full raw comparison requires a standard GitHub-hosted runner',
+  );
+const manifest = await readJson(
+  join(
+    ROOT,
+    dataset === 'raw-v2' ? 'clips/raw-v2/clips.json' : 'clips/clips.json',
+  ),
+);
 const clip = manifest.clips.find((c) => c.id === process.env.BENCH_CLIP);
 if (!clip) throw new Error('BENCH_CLIP must name one of the six golden clips');
-const root = join(DATA_ROOT, 'out/phase02', clip.id);
-await mkdir(root, { recursive: true });
-const paths = clip.segments.map((_, i) =>
-  join(DATA_ROOT, 'clips/media', clip.id, `${i + 1}.mp4`),
+const root = join(
+  DATA_ROOT,
+  dataset === 'raw-v2' ? 'out/phase02-raw-v2' : 'out/phase02',
+  clip.id,
 );
+await mkdir(root, { recursive: true });
+const mediaRoot = join(
+  DATA_ROOT,
+  dataset === 'raw-v2' ? 'raw-v2/media' : 'clips/media',
+  clip.id,
+);
+const paths = clip.segments.map((_, i) => join(mediaRoot, `${i + 1}.mp4`));
+if (clip.music) paths.push(join(mediaRoot, 'music-bed.wav'));
 const files = await Promise.all(paths.map((p) => probe(tools.ffprobe, p)));
 if (files.some((f) => !f)) throw new Error('Exact prepared input is missing');
 const sourceHashes = await Promise.all(paths.map(hashFile));
+if (dataset === 'raw-v2') {
+  const prepared = await readJson(join(mediaRoot, 'prepared.json'));
+  if (
+    prepared.dataset !== dataset ||
+    prepared.case !== clip.id ||
+    prepared.segments.length !== clip.segments.length
+  )
+    throw new Error('Wrong prepared dataset artifact');
+  for (let i = 0; i < prepared.segments.length; i++)
+    if (prepared.segments[i].sha256 !== sourceHashes[i])
+      throw new Error('Exact prepared bytes changed');
+  if (clip.music && prepared.music.sha256 !== sourceHashes.at(-1))
+    throw new Error('Music bed bytes changed');
+  await copyFile(join(mediaRoot, 'prepared.json'), join(root, 'prepared.json'));
+  await copyFile(join(mediaRoot, 'CREDITS.txt'), join(root, 'CREDITS.txt'));
+}
 const ledger = await readFile(join(ROOT, 'cache/spend.json'));
 // Any accidental network path is a hard failure, including calls swallowed by the editor.
 let attempts = 0;
@@ -50,6 +92,8 @@ try {
   for (const aspect of ['9:16', '16:9']) {
     const dir = join(root, aspect.replace(':', 'x'));
     await mkdir(dir, { recursive: true });
+    if (dataset === 'raw-v2')
+      await copyFile(join(mediaRoot, 'CREDITS.txt'), join(dir, 'CREDITS.txt'));
     const ops = [],
       started = Date.now();
     const log = (e) => {
@@ -70,6 +114,43 @@ try {
           JSON.stringify(sourceHashes)
       )
         throw new Error('Prepared input hashes changed');
+      // A declared manual soundtrack fixture imports a separate music stem through the real MCP
+      // tools. It then takes the same runEdit manual route users use, without any paid planner.
+      let soundtrackProject;
+      if (clip.music && !onlyAnalysis) {
+        soundtrackProject = join(dir, 'soundtrack.kimo.json');
+        const mcp = new Mcp(tools.bin, dir, tools.env);
+        try {
+          await mcp.start();
+          const call = async (name, args) => {
+            const reply = await mcp.call(name, args);
+            if (reply.isError) throw new Error(JSON.stringify(reply));
+            return resultJson(reply);
+          };
+          await call('project_set', {
+            width: aspect === '9:16' ? 1080 : 1920,
+            height: aspect === '9:16' ? 1920 : 1080,
+            fps: canvasFps(files),
+          });
+          for (const file of files) {
+            const asset = await call('import_media', { path: file.path });
+            const track = await call('add_track', {});
+            await call('add_clip', {
+              track_id: track.track_id,
+              source_type: 'media',
+              asset_id: asset.asset_id,
+              start: 0,
+              duration: clip.duration,
+              in_point: 0,
+              fit: 'cover',
+            });
+          }
+          await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+          await call('save_project', { path: soundtrackProject });
+        } finally {
+          mcp.kill();
+        }
+      }
       const result = onlyAnalysis
         ? {
             output: join(dir, 'final.mp4'),
@@ -85,7 +166,10 @@ try {
             files,
             dir,
             preset: aspect === '9:16' ? 'shorts' : 'youtube',
-            mode: clip.speech ? 'captions' : 'sam',
+            mode: clip.music ? 'manual' : clip.speech ? 'captions' : 'sam',
+            ...(soundtrackProject
+              ? { projectFile: soundtrackProject, ops: [] }
+              : {}),
             emit: log,
           });
       const elapsedMs = Date.now() - started;
@@ -162,8 +246,9 @@ try {
             .toString()
             .trim(),
           clip: clip.id,
+          dataset,
           aspect,
-          mode: clip.speech ? 'captions' : 'sam',
+          mode: clip.music ? 'manual' : clip.speech ? 'captions' : 'sam',
           scope:
             'Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit',
           sourceHashes,
