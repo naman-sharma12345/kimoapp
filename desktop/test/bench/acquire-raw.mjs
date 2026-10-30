@@ -91,7 +91,10 @@ await writeJson(join(dir, 'provenance.json'), {
   sha256: sourceHash,
   acquiredAt: prior?.acquiredAt ?? new Date().toISOString(),
   inspectedAt: new Date().toISOString(),
-  seedRun: process.env.BENCH_SEED_RUN || null,
+  seedRun:
+    process.env.BENCH_SEED_RUN === 'fresh'
+      ? null
+      : process.env.BENCH_SEED_RUN || null,
   accepted: false,
   status: 'Candidate downloaded; actual content/licence review still required',
   metadata,

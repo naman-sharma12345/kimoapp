@@ -7,9 +7,9 @@ on:
         type: string
         default: '["TH-1","TUT-1"]'
       seed_run:
-        description: 'Existing candidate artifact run to inspect exact preserved bytes; blank downloads originals'
+        description: 'Existing candidate artifact run, or fresh to download originals'
         type: string
-        default: '41086477761'
+        default: 'fresh'
 permissions:
   contents: read
   actions: read
@@ -45,7 +45,7 @@ jobs:
       - run: ./desktop/test/bench/bootstrap.ps1
       - run: npm ci --ignore-scripts --prefix desktop
       - uses: actions/download-artifact@v4
-        if: inputs.seed_run != ''
+        if: inputs.seed_run != '' && inputs.seed_run != 'fresh'
         with:
           run-id: ${{ inputs.seed_run }}
           name: raw-v2-candidate-${{ inputs.seed_run }}-${{ matrix.clip }}
