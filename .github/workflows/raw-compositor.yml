@@ -27,13 +27,13 @@ jobs:
         shell: pwsh
     env:
       BENCH_CLIP: ${{ matrix.clip }}
-      KIMO_BENCH_DATA: ${{ runner.temp }}/kimo-bench-data
       KIMO_WORKER_THREADS: '2'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
       KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
       KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
     steps:
       - uses: actions/checkout@v4
+      - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -95,13 +95,13 @@ jobs:
       BENCH_DATASET: raw-v2
       BENCH_CLIP: ${{ matrix.clip }}
       BENCH_LEGACY: ${{ inputs.legacy }}
-      KIMO_BENCH_DATA: ${{ runner.temp }}/kimo-bench-data
       KIMO_WORKER_THREADS: '2'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
       KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe
       KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
     steps:
       - uses: actions/checkout@v4
+      - run: '"KIMO_BENCH_DATA=$env:RUNNER_TEMP/kimo-bench-data" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append'
       - uses: actions/setup-node@v4
         with:
           node-version: 20
