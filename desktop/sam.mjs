@@ -585,6 +585,23 @@ function loadTracks(file) {
   }
 }
 
+/**
+ * Person tracks SAM already measured for this exact file (default reframe
+ * request: whole clip up to SAM_MAX_SECONDS, 12 fps, "person"), read from the
+ * job's SAM cache. Never calls SAM; null when nothing is cached.
+ */
+export function cachedPersonTracks(samDir, input, duration) {
+  try {
+    const st = statSync(input);
+    const d = Math.min(SAM_MAX_SECONDS, Math.max(0.5, Number(duration) || 1));
+    const key = createHash('sha1').update(JSON.stringify([input, st.size, st.mtimeMs, 0, d, 12, 'person'])).digest('hex').slice(0, 16);
+    const file = join(samDir, `sam-tracks-${key}.json`);
+    return existsSync(file) ? loadTracks(file) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** drawtext box height / font size for the bundled display fonts (Anton). */
 const ANTON_BOX = 1.2;
 
