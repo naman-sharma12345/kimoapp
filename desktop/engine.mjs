@@ -6,7 +6,7 @@ import { spawnBackground as spawn, execFileBackground as execFile, acquireExclus
 import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks } from './sam.mjs';
+import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
@@ -14,6 +14,10 @@ import { pictureTools } from './picture-tools.mjs';
 import { pickCaptionStyle, pickHookStyle, noteHints, captionStyles, captionStyle as captionStyleOf, CAPTION_ENGINE } from './captions.mjs';
 import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
 import { planCut, applyCutPlan, plannerBrief, loadSavedPlan, storablePlan } from './cutstage.mjs';
+import { GRAPHIC_TOOLS, GRAPHIC_TOOL_TEXT, graphicToolCall } from './graphics/plan.mjs';
+import { describeClips, matchSentences, outputSentences } from './broll.mjs';
+import { outputWords } from './captions.mjs';
+import { createHash } from 'node:crypto';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -28,8 +32,10 @@ export const ENGINE_TOOLS = [
   'add_title', 'add_text', 'add_glow_text', 'auto_captions', 'caption_from_words',
   'edit_caption', 'finish_audio', 'lint_edit', 'timeline_summary', 'add_track',
   'add_clip', 'trim_clip', 'move_clip', 'delete_clip', 'set_property', 'set_audio',
-  'auto_reframe', 'stabilize', 'place_broll', 'undo',
+  'auto_reframe', 'stabilize', 'undo',
 ];
+// Phase 6: b-roll placement and titles/lower thirds are the app's (broll.mjs,
+// graphics/); kimo's place_broll is no longer offered.
 // Phase 4: the picture's punch-ins/zooms come from the app's camera director
 // (camera.mjs); kimo's add_punch_ins / add_smart_punch are no longer offered.
 
@@ -188,7 +194,7 @@ function parseCalls(raw) {
       args: item?.args && typeof item.args === 'object' && !Array.isArray(item.args) ? item.args : {},
       why: typeof item?.why === 'string' ? item.why.slice(0, 160) : undefined,
     }))
-    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name) || CAMERA_TOOLS.includes(c.name))
+    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name) || CAMERA_TOOLS.includes(c.name) || GRAPHIC_TOOLS.includes(c.name))
     .slice(0, 8);
 }
 function argsLine(args) {
@@ -310,10 +316,11 @@ function expertGuide(P, S, files, cut) {
   const vertical = P.height > P.width;
   const talking = files.some((f) => f.kind === 'video');
   return `edit like a top youtube editor (the result must look professionally edited, not auto-generated):
-- hook: the first 2-3 s decide retention. ${cut ? `the cut already opens on ${cut.hook ? 'the strongest line (cold open)' : 'the first spoken word'}; keep it first.` : 'start on speech or the most striking moment, never on dead air.'} put a 3-6 word hook on its own top track starting at 0.3 s or earlier, for 2-2.5 s, with add_title style "${S.title}" (short, specific, curiosity, no clickbait lies${cut?.judgment?.hook_text ? `; use "${cut.judgment.hook_text}"` : ''}).
+- hook: the first 2-3 s decide retention. ${cut ? `the cut already opens on ${cut.hook ? 'the strongest line (cold open)' : 'the first spoken word'}; keep it first.` : 'start on speech or the most striking moment, never on dead air.'} the app's graphics kit puts a 3-6 word hook title on screen at 0.15 s for ~2.4 s (word pop, marker swipe on the key word${cut?.judgment?.hook_text ? `, text "${cut.judgment.hook_text}"` : ''}); change it only with hook_title(text) (short, specific, curiosity, no clickbait lies). never add_title/add_text for the hook.
 - pacing: ${cut ? 'dead air, fillers, stutters and retakes are already removed by the transcript cut planner (word-accurate). do not re-cut the talking track; spend your calls on framing, captions, titles, grade and sound.' : talking ? `auto_rough_cut every talking clip in story order with max_pause ${S.max_pause ?? 0.3} and pad 0.05; read the returned segments and re-run with drop [{asset_id,index}] for false starts, repeats and filler-only segments (um, uh, like).` : 'cut to the beat or keep shots 1.5-4 s.'}
 - cadence: a visual change (cut, punch, b-roll, graphic) every 1.5-4 s on talking footage, never more than 6 s static.
-- camera: the app's camera director already frames the talking track: a framing change (wide / medium / tight) at every jump cut, pushes landing on emphasis words, snap punches on numbers and punchlines at high energy, wide section openers, speaker framing for podcasts and punch-ins on the clicked region of screen recordings, all eased and smooth. never punch or zoom the talking track yourself (set_property scale/x/y on it is overridden). use camera_style only to change the energy, camera_emphasis for an extra beat, camera_hold to keep a moment still, transition for section changes (mostly hard cuts), speed_ramp only on b-roll. if there are extra non-speech video files, place_broll them over the talking track (min_shot 1.2, max_shot 3); their sound gets J/L-cuts automatically.
+- camera: the app's camera director already frames the talking track: a framing change (wide / medium / tight) at every jump cut, pushes landing on emphasis words, snap punches on numbers and punchlines at high energy, wide section openers, speaker framing for podcasts and punch-ins on the clicked region of screen recordings, all eased and smooth. never punch or zoom the talking track yourself (set_property scale/x/y on it is overridden). use camera_style only to change the energy, camera_emphasis for an extra beat, camera_hold to keep a moment still, transition for section changes (mostly hard cuts), speed_ramp only on b-roll. b-roll: the app already places the user's non-speech clips over jump cuts and abstract lines (1.2-3.5 s, J-cut in, L-cut out, own slow push, sound at -24 dB, ≤ 40 % of runtime); broll_auto(density) changes how much, broll(at, dur, clip) puts a specific clip somewhere.
+- graphics: purposeful only. the app's kit already adds the hook title (shorts), lower thirds when someone introduces themselves, number pops on numeric emphasis, chapter cards (16:9), callouts and Screen Studio zooms on screen recordings${P.height > P.width ? '' : ', a subscribe end card on longer 16:9 videos'}; it enforces max 1 graphic on screen and the density limit. use graphic(...) to add one the viewer needs (a stat, a callout, a sticker on a joke) or remove one, callout(...) to point at a button in a screen recording, screen_zoom(...) to zoom onto a region.
 - captions: auto_captions style "${S.captions.style}", max_words_per_line ${S.captions.max_words_per_line}${S.captions.lines ? `, lines ${S.captions.lines}` : ''}, keywords true, highlight true, position auto, hint = names/terms from the note. captions must stay inside the title-safe area${vertical ? ' (vertical: keep text out of the bottom 20% and right 15% where shorts/reels ui sits; position middle is safest)' : ''}.
 - look: auto_grade every media clip (style strength as given). never stack two grades.
 - sound: finish_audio last with target_lufs -14 (music under speech ${S.label.startsWith('Doc') ? -20 : -16} db when there is music). the app enforces true-peak -1 dBTP on delivery.
@@ -741,7 +748,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         emit({ t: 'progress', phase: 'render', label: 'rendering with kimo', f, eta: Math.max(1, (est - el) / 1000), bytes, estimated: true });
       }, 500);
     }
-    const result = await (CAMERA_TOOLS.includes(name) ? cameraTool(name, args) : SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
+    const result = await (CAMERA_TOOLS.includes(name) ? cameraTool(name, args) : GRAPHIC_TOOLS.includes(name) ? graphicsTool(name, args) : SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
     const failed = Boolean(result?.isError);
     const text = resultText(result);
     history.push(`${name}(${JSON.stringify(args).slice(0, 400)}) => ${failed ? 'ERROR ' : ''}${text}`);
@@ -811,6 +818,104 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       emit({ t: 'op', id: opId, phase: 'end', ok: false, ms: Date.now() - t0, error: String(error.message).slice(0, 200) });
       cameraCtx();
     }
+  };
+  // ---------- Phase 6 graphics + b-roll: the app's motion-graphics kit and b-roll placement ----------
+  const NO_GRAPHICS = /\b(no|without|skip|remove|drop|turn off)\s+(the\s+|any\s+)?(graphics|titles|overlays)\b/i;
+  const graphicsConfig = () => (pictures.graphics ??= { enabled: true, template: style || 'auto', note, hookStyle: null, state: {}, targets: {}, samLayers: [] });
+  /** The graphics kit on: template defaults + planner tools are applied on every picture snapshot. */
+  const startGraphics = (saved = appEdl) => {
+    if (legacy_kimo_render) return;
+    const g = saved?.graphics;
+    const off = NO_GRAPHICS.test(note ?? '') && mode !== 'manual';
+    pictures.graphics = {
+      enabled: !off,
+      template: g?.template ?? (style || 'auto'),
+      note: mode === 'followup' ? [saved?.graphics?.note, note].filter(Boolean).join('\n') : note,
+      hookStyle: pictures.captions?.hook_style ?? g?.hook_style ?? pickHookStyle({ style, note }),
+      state: g?.planner ? { calls: g.planner.calls ?? [], ...(g.planner.hookText ? { hookText: g.planner.hookText } : {}), ...(saved?.broll ? { brollDensity: saved.broll.density, broll: saved.broll.planner ?? [] } : {}) } : {},
+      targets: g?.targets ?? {},
+      samLayers: g?.sam_layers ?? [],
+    };
+    if (!pictures.broll && saved?.broll?.clips?.length) pictures.broll = { clips: saved.broll.clips, matches: saved.broll.matches ?? [], density: saved.broll.density ?? 0.5, note };
+  };
+  /** B-roll inputs: one cached vision description per non-speech clip and one batched sentence match (AI modes only). */
+  const startBroll = async (withAi) => {
+    if (legacy_kimo_render || !cut) return;
+    const clips = cut.clips.filter((c) => c.kind === 'broll' && c.file?.kind === 'video').map((c) => ({ path: c.file.path, duration: c.duration ?? c.file.duration }));
+    if (!clips.length) return;
+    const id = randomUUID().slice(0, 8);
+    const t0 = Date.now();
+    emit({ t: 'op', id, phase: 'start', tool: 'broll', title: `b-roll · ${clips.length} clip${clips.length === 1 ? '' : 's'} of your own footage${withAi ? ' · describing and matching' : ' (offline: names + jump cuts)'}`, why: 'cover jump cuts and abstract lines with your own non-speech shots', at: t0 });
+    try {
+      const cacheDir = env?.KIMO_CACHE_DIR || join(dir, 'cache');
+      const desc = await describeClips({ clips, ffmpeg, cacheDir, signal, ask: withAi ? (text, images) => ai('review', text, images, signal) : null });
+      for (const c of clips) c.description = desc.get(norm(c.path)) ?? null;
+      const snap = await pictures.snapshot();
+      const sentences = outputSentences(outputWords(snap, pictures.camera?.ctx ?? {}));
+      const matches = await matchSentences({ sentences, clips, cacheDir, signal, ask: withAi ? (text) => ai('build', text, [], signal) : null });
+      pictures.broll = { clips, matches: [...matches], density: 0.5, note };
+      graphicsConfig();
+      emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: `${desc.size}/${clips.length} described · ${matches.size} sentence match${matches.size === 1 ? '' : 'es'}` });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      emit({ t: 'op', id, phase: 'end', ok: false, ms: Date.now() - t0, error: String(error.message).slice(0, 200) });
+    }
+  };
+  /** A callout's target from a prompt: SAM on the composed frame (one image call, cached by frame + prompt). */
+  const resolveTarget = async (at, prompt) => {
+    const png = join(dir, `callout-${Math.round(at * 1000)}.png`);
+    const r = await pictures.call('render_frame', { time: at, path: png, inline: 'never' });
+    if (r?.isError || !existsSync(png)) return null;
+    const url = await jpeg(png, 1280);
+    if (!url) return null;
+    const cacheDir = join(env?.KIMO_CACHE_DIR || join(dir, 'cache'), 'sam-targets');
+    mkdirSync(cacheDir, { recursive: true });
+    const key = createHash('sha256').update(url + '\n' + prompt.toLowerCase()).digest('hex').slice(0, 24);
+    const file = join(cacheDir, `${key}.json`);
+    if (existsSync(file)) return JSON.parse(readFileSync(file, 'utf8')).box;
+    const jpgPath = png.replace(/\.png$/, '.jpg');
+    const size = await probe(ffprobe, jpgPath).catch(() => null);
+    const W = size?.width || P.width;
+    const H = size?.height || P.height;
+    const tracks = await segmentImage({ image: url, prompt, width: W, height: H, signal });
+    const o = tracks.objects.get(tracks.main) ?? [...tracks.objects.values()][0];
+    const b = o?.frames.get(0)?.box ?? [...(o?.frames.values() ?? [])][0]?.box;
+    const box = b ? { x: (b.left / W) * P.width, y: (b.top / H) * P.height, w: ((b.right - b.left) / W) * P.width, h: ((b.bottom - b.top) / H) * P.height } : null;
+    writeFileSync(file, JSON.stringify({ box }));
+    return box;
+  };
+  const graphicsTool = async (name, args) => {
+    const g = graphicsConfig();
+    const r = graphicToolCall(g.state, name, args);
+    if (!r.ok) return { isError: true, content: [{ type: 'text', text: r.text }] };
+    let text = r.text;
+    try {
+      if (name === 'callout' && args.target_prompt && !Array.isArray(args.box)) {
+        const box = await resolveTarget(Number(args.at), String(args.target_prompt).slice(0, 80));
+        if (box) g.targets[g.state.calls.length - 1] = box;
+        text = JSON.stringify({ ok: true, target: box ? 'found' : 'not found; the active screen region is used' });
+      }
+      if (name === 'graphic' && String(args.kind).toLowerCase() === 'text_behind' && !args.remove) {
+        // the existing SAM matte render, exposed as an EDL element over that moment
+        const snap = await pictures.snapshot();
+        const track = snap.video.find((t) => t.clips.some((c) => (snap.cut_plan?.keep ?? []).some((k) => k.clip_id === c.id))) ?? snap.video[0];
+        const at = Number(args.at) || 0;
+        const dur = Math.max(1, Math.min(4, Number(args.dur) || 2.5));
+        const clip = track?.clips.find((c) => at >= c.at && at < c.at + (c.out - c.in) / (c.speed ?? 1));
+        const src = clip && snap.sources.find((x) => x.id === clip.src);
+        const file = src && files.find((f) => norm(f.path) === norm(src.path));
+        if (!file) return { isError: true, content: [{ type: 'text', text: 'text_behind needs the talking-head clip under that time' }] };
+        const srcT = clip.in + (at - clip.at) * (clip.speed ?? 1);
+        const out = await runSam(file, { effect: 'text_behind', text: String(args.props?.text ?? args.text ?? '').slice(0, 24), start: srcT, duration: dur * (clip.speed ?? 1), text_start: 0, text_end: dur * (clip.speed ?? 1) });
+        g.samLayers.push({ path: out.output, at, dur, in: 0, text: args.props?.text ?? args.text, duration: out.duration, w: out.width, h: out.height, fps: out.fps });
+        text = JSON.stringify({ ok: true, text_behind: 'rendered behind the subject with SAM; composed as an EDL element' });
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      text = JSON.stringify({ ok: false, note: String(error.message).slice(0, 160) });
+    }
+    await refreshTimeline();
+    return { content: [{ type: 'text', text }] };
   };
   // ---------- Phase 5 captions: kimo's own caption engine from the Phase 3 transcript words ----------
   /**
@@ -1040,6 +1145,11 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       }
       }
       await prepareCamera();
+      if (mode === 'captions') {
+        // offline: b-roll from file names at jump cuts, graphics from the template (no AI)
+        await startBroll(false);
+        startGraphics();
+      }
       await refreshTimeline();
       if (mode === 'sam') {
         await call('finish_audio', { target_lufs: -14, keep_ambience: true });
@@ -1057,6 +1167,11 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       if (!suppliedEdl && capEdl?.captions) {
         if (!pictures.camera && capEdl.camera_plan) pictures.camera = { ctx: capEdl.camera_plan };
         pictures.enableCaptions({ style: capEdl.captions.style, hook_style: capEdl.captions.hook_style, hints: capEdl.captions.hints ?? [], keep: capEdl.overlays.filter((o) => o.props?.engine === CAPTION_ENGINE && o.props.edited) });
+      }
+      // and the saved graphics plan / b-roll (planner graphics calls, matched clips)
+      if (!suppliedEdl && capEdl?.graphics) {
+        if (!pictures.camera && capEdl.camera_plan) pictures.camera = { ctx: capEdl.camera_plan };
+        startGraphics(capEdl);
       }
       if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
@@ -1088,9 +1203,11 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         }
       }
       await prepareCamera();
+      if (mode !== 'followup') await startBroll(true);
+      startGraphics();
       const captionsOn = !NO_CAPTIONS.test(note ?? '') || (mode === 'followup' && appEdl?.captions) ? await startCaptions() : false;
       const captionBrief = captionsOn && pictures.captions?.enabled
-        ? `captions: ALREADY DONE by the app's caption engine (style "${pictures.captions.style}", word-timed from the transcript, keyword accent, placed below the chin inside the safe area, yields to hook titles). do not call caption_from_words. call auto_captions only to switch style: one of ${[...captionStyles().values()].filter((x) => x.kind === 'caption').map((x) => x.id).join(', ')}. edit_caption with a cap### clip id changes words. a hook title (add_title, first 3 s) is drawn with the "${pictures.captions.hook_style ?? 'planner'}" title effect.`
+        ? `captions: ALREADY DONE by the app's caption engine (style "${pictures.captions.style}", word-timed from the transcript, keyword accent, placed below the chin inside the safe area, yields to hook titles, lower thirds and callouts). do not call caption_from_words. call auto_captions only to switch style: one of ${[...captionStyles().values()].filter((x) => x.kind === 'caption').map((x) => x.id).join(', ')}. edit_caption with a cap### clip id changes words. the hook title is drawn by the app's graphics kit${pictures.graphics?.hookStyle && pictures.graphics.hookStyle !== 'planner' ? ` with the "${pictures.graphics.hookStyle}" effect` : ''}.`
         : '';
       const context = mode === 'followup'
         ? [
@@ -1100,7 +1217,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `canvas: ${P.width}x${P.height}. files:\n${fileLines}`,
           ...brief,
           expertGuide(P, S, files, brief.length ? (loadSavedPlan(projectFile) ?? {}) : null),
-          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}\n${GRAPHIC_TOOL_TEXT}`,
         ]
         : [
           `user's note: ${note || 'make a great video from these'}`,
@@ -1108,7 +1225,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `files:\n${fileLines}`,
           ...brief,
           expertGuide(P, S, files, cut?.plan ?? null),
-          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}\n${GRAPHIC_TOOL_TEXT}`,
         ];
       if (captionBrief) context.splice(context.length - 1, 0, captionBrief);
       await buildRounds(mode === 'followup' ? 4 : MAX_ROUNDS, context);

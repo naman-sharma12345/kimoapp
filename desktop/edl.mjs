@@ -312,11 +312,14 @@ export function validate(edl) {
         'progress',
         'image',
         'text_behind',
+        'graphic',
       ].includes(o.kind)
     )
       fail(`overlays[${i}].kind`, `unknown overlay kind ${o.kind}`);
     if (o.kind === 'image' && !o.src)
       fail(`overlays[${i}].src`, 'image source required');
+    if (o.kind === 'graphic' && (typeof o.props?.element !== 'string' || !o.props.element))
+      fail(`overlays[${i}].props.element`, 'graphic element kind required');
     if (o.kind !== 'image' && (!o.props || typeof o.props !== 'object'))
       fail(`overlays[${i}].props`, 'overlay properties required');
     if (
@@ -810,7 +813,7 @@ export function toTimeline(edl) {
     }
     t.clips.push({
       id: o.id,
-      src: o.props.primitive ? 'generated' : `text: ${o.props.text ?? ''}`,
+      src: o.kind === 'graphic' ? `graphic: ${String(o.props.element).replace('_', ' ')}${[o.props.text, o.props.name, o.props.value, o.props.title, o.props.emoji].find((v) => typeof v === 'string' && v) ? ` · ${[o.props.text, o.props.name, o.props.value, o.props.title, o.props.emoji].find((v) => typeof v === 'string' && v).replaceAll('.', '·')}` : ''}` : o.props.primitive ? 'generated' : `text: ${o.props.text ?? ''}`,
       start: o.at,
       end: o.at + o.dur,
       ...(isCaptionChunk(o) ? { caption: true } : {}),
@@ -923,7 +926,7 @@ export function publicEdl(edl) {
     audio: tracks('audio'),
     overlays: edl.overlays.map((o) => ({
       ...pick(o, ['id', 'kind', 'at', 'dur', 'track', 'src']),
-      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height', 'engine', 'style', 'edited', 'hidden']),
+      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height', 'engine', 'style', 'edited', 'hidden', 'element']),
     })),
     ...(edl.captions ? { captions: { style: edl.captions.style, hook_style: edl.captions.hook_style ?? null, bounds: captionBounds(edl), stats: edl.captions.stats } } : {}),
     master: { ...edl.master },

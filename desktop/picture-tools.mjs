@@ -11,6 +11,8 @@ import {
 import { directCamera } from './camera.mjs';
 import { applyCaptions, captionStyle, pickCaptionStyle, CAPTION_ENGINE } from './captions.mjs';
 import { editCaptionChunk } from './caption-edits.mjs';
+import { applyGraphics } from './graphics/plan.mjs';
+import { planBroll, applyBroll } from './broll.mjs';
 
 /** Implements picture operations locally. The planner remains a read-only black-box toolbox. */
 export function pictureTools({
@@ -41,12 +43,49 @@ export function pictureTools({
     captions: null,
     captionEdits: [],
     captionReport: null,
+    // Phase 6 b-roll ({clips, matches, density, note}) and graphics ({enabled, template, note, hookStyle, state, targets, samLayers})
+    broll: null,
+    graphics: null,
+    graphicsReport: null,
     handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit']),
   };
   api.snapshot = async () => {
     const edl = await snapshotEdl();
     if (api.cutPlan) edl.cut_plan = api.cutPlan;
-    return captioned(directed(edl));
+    return captioned(graphicked(directed(brolled(edl))));
+  };
+  const skipped = (stage, error) => {
+    const title = `${stage} skipped: ${error.message}`.slice(0, 200);
+    if (!warnings.has(title)) {
+      warnings.add(title);
+      emit({ t: 'op', phase: 'end', tool: `${stage}_warning`, title, warning: true, ok: true, at: Date.now() });
+    }
+  };
+  /** Phase 6 b-roll: the user's non-speech clips over jump cuts and abstract lines (before the director, so it frames around them). */
+  const brolled = (edl) => {
+    if (!api.broll?.clips?.length || (mode === 'manual' && suppliedEdl)) return edl;
+    try {
+      const st = api.graphics?.state ?? {};
+      const ctx = api.camera?.ctx ?? edl.camera_plan ?? {};
+      const plan = planBroll(edl, { ctx, clips: api.broll.clips, matches: new Map(api.broll.matches ?? []), density: st.brollDensity ?? api.broll.density ?? 0.5, planner: st.broll ?? [], note: api.broll.note ?? '' });
+      applyBroll(edl, plan.inserts, { files });
+      edl.broll = { version: 1, density: st.brollDensity ?? api.broll.density ?? 0.5, clips: api.broll.clips, matches: api.broll.matches ?? [], planner: st.broll ?? [], inserts: plan.inserts, skipped: plan.skipped.slice(0, 40), stats: plan.stats };
+    } catch (error) {
+      skipped('broll', error);
+    }
+    return edl;
+  };
+  /** Phase 6 graphics: defaults per template + planner tools under the restraint rules (after the director, before captions). */
+  const graphicked = (edl) => {
+    if (!api.graphics || (mode === 'manual' && suppliedEdl)) return edl;
+    try {
+      applyGraphics(edl, api.graphics, api.camera?.ctx ?? edl.camera_plan ?? {});
+      if (edl.graphics) Object.assign(edl.graphics, { targets: api.graphics.targets ?? {}, sam_layers: api.graphics.samLayers ?? [] });
+      api.graphicsReport = edl.graphics?.report ?? null;
+    } catch (error) {
+      skipped('graphics', error);
+    }
+    return edl;
   };
   /** Turns the app caption engine on: the planner's caption tools now restyle/edit kimo captions locally. */
   api.enableCaptions = (config) => {
@@ -167,6 +206,14 @@ export function pictureTools({
             id = Math.random().toString(16).slice(2, 10);
           emit({ t: 'op', id, phase: 'start', tool: 'camera_director', title: `camera director · energy ${r.energy} · ${r.shots} shots`, why: 'framing changes at every jump cut, pushes into emphasis, wide section openers', at: Date.now() });
           emit({ t: 'op', id, phase: 'end', ok: true, ms: 0, result: `${r.snaps} snap punches · ${r.pushes} pushes · ${r.openers} openers${r.speaker_shots ? ` · ${r.speaker_shots} speaker shots` : ''}${r.screen_punches ? ` · ${r.screen_punches} screen punches` : ''}${r.jl ? ` · ${r.jl} J/L-cuts` : ''} · max static ${r.metrics?.max_static_s ?? '?'} s` });
+        }
+        if (edl.graphics || edl.broll?.inserts?.length) {
+          const g = edl.graphics?.report ?? {};
+          const b = edl.broll?.stats ?? {};
+          const id = Math.random().toString(16).slice(2, 10);
+          const kinds = Object.entries(g.by_kind ?? {}).map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
+          emit({ t: 'op', id, phase: 'start', tool: 'graphics_plan', title: `graphics · ${g.count ?? 0} on screen${edl.broll?.inserts?.length ? ` · ${edl.broll.inserts.length} b-roll` : ''}`, why: 'hook title, lower thirds, number pops, callouts and b-roll, at most one graphic at a time', at: Date.now() });
+          emit({ t: 'op', id, phase: 'end', ok: true, ms: 0, result: `${kinds || 'no graphics'}${g.overlaps ? ` · ${g.overlaps} overlaps` : ' · no overlaps'} · ${g.per_min ?? 0}/min (limit ${edl.graphics?.density_limit ?? '?'})${edl.graphics?.dropped?.length ? ` · ${edl.graphics.dropped.length} held back` : ''}${b.count ? ` · b-roll ${Math.round((b.share ?? 0) * 100)}% of runtime` : ''}${g.screen_cards ? ` · ${g.screen_cards} screen cards` : ''}` });
         }
         writeFileSync(savedEdl, JSON.stringify(edl, null, 2));
         const result = await compose({
