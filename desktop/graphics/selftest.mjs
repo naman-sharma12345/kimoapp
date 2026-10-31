@@ -27,7 +27,19 @@ export async function graphicsSelfTest({ ffmpeg = 'ffmpeg', ffprobe = 'ffprobe',
   mkdirSync(dir, { recursive: true });
   const theme = themeFor('kimo');
   const out = { backend: backendName(), elements: {}, ok: false };
+  let be = 'auto';
   try {
+    // probe the offscreen window once; if it cannot render, the app falls back to the built-in canvas, and so does this test
+    if (out.backend !== 'soft') {
+      try {
+        const probe = graphicJob({ kind: 'progress', props: {}, canvas, fps: 30, dur: 1, theme });
+        await frameBuffer(probe, 0);
+      } catch (error) {
+        out.hostError = String(error.message ?? error).slice(0, 300);
+        out.backend = `soft (${out.backend} failed)`;
+        be = 'soft';
+      }
+    }
     for (const kind of ELEMENT_KINDS) {
       const wide = kind === 'cta' ? { w: 960, h: 540 } : canvas;
       const job = graphicJob({ kind, props: SAMPLE[kind], canvas: wide, fps: 30, dur: kind === 'cta' ? 5 : 2.4, theme });
@@ -35,14 +47,14 @@ export async function graphicsSelfTest({ ffmpeg = 'ffmpeg', ffprobe = 'ffprobe',
         out.elements[kind] = 'refused';
         continue;
       }
-      const b = await frameBuffer(job, Math.min(job.frames - 1, 20));
+      const b = await frameBuffer(job, Math.min(job.frames - 1, 20), be);
       let lit = 0;
       for (let i = 3; i < b.length; i += 4) if (b[i]) lit++;
       out.elements[kind] = kind === 'text_behind' ? 'sam' : lit > 0 ? `ok ${job.box.w}x${job.box.h}` : 'empty';
     }
     const job = graphicJob({ kind: 'hook_title', props: SAMPLE.hook_title, canvas, fps: 30, dur: 2.4, theme });
-    const a = await frameBuffer(job, 37);
-    const b = await frameBuffer(job, 37);
+    const a = await frameBuffer(job, 37, be);
+    const b = await frameBuffer(job, 37, be);
     out.deterministic = md5(a) === md5(b);
     const soft = await frameBuffer(job, 37, 'soft');
     let diff = 0;
