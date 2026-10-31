@@ -1,7 +1,7 @@
 // logo_or_icon: an icon from the bundled Lucide (ISC) / Tabler (MIT) set, or a
 // Simple Icons (CC0) brand mark, with a label, in a card or as a floating
 // badge near the subject. props.icon = {d, kind: 'line' | 'brand', hex}.
-import { drawPanel, visualAlpha, fitText, text, scale, panelLayout, graphicEase, clamp01, withAlpha } from './common.mjs';
+import { drawPanel, visualAlpha, fitText, text, scale, panelLayout, graphicEase, clamp01, withAlpha, reveal } from './common.mjs';
 import { panelOf } from '../panel.mjs';
 import { strokeIcon, fillIcon } from '../svgpath.mjs';
 
@@ -19,7 +19,7 @@ export default {
   draw(ctx, t, props, L, env) {
     const { fps, dur, theme: th, canvas } = env;
     const a = visualAlpha(t, dur, fps);
-    const pop = graphicEase('back_out')(clamp01(((t - (props.items?.[0]?.t ?? 0)) * fps) / 8));
+    const pop = reveal(t, props.items?.[0]?.t ?? 0, fps, 8, 'back_out');
     ctx.save();
     ctx.globalAlpha = a;
     drawPanel(ctx, L.P, th, canvas, { full: props.mode === 'full' || props.mode === 'pip' });

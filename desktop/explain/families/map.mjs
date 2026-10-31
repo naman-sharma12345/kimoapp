@@ -5,7 +5,7 @@
 // props.map = {shapes: [[lon,lat,…] flat rings in 0.1° units], places:
 // [{name, lon, lat, t}], route, from: view, to: view} — prepared by
 // explain/geo.mjs so the render page needs no data files.
-import { drawPanel, visualAlpha, text, scale, panelLayout, graphicEase, clamp01, withAlpha } from './common.mjs';
+import { drawPanel, visualAlpha, text, scale, panelLayout, graphicEase, clamp01, withAlpha, reveal } from './common.mjs';
 import { panelOf } from '../panel.mjs';
 import { partialPolyline, strokePolyline } from '../../graphics/kit.mjs';
 
@@ -76,7 +76,7 @@ export default {
       }
     }
     places.forEach((p, i) => {
-      const drop = graphicEase('back_out')(clamp01(((t - (p.t ?? 0)) * fps) / 9));
+      const drop = reveal(t, p.t ?? 0, fps, 9, 'back_out');
       if (drop <= 0) return;
       const [x, y] = pts[i];
       const r = L.small * 0.5;

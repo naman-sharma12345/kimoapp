@@ -11,9 +11,18 @@ import { clamp01, graphicEase, roundRectPath, withAlpha, setShadow, clearShadow,
 export const REVEAL_FRAMES = 7;
 export const SLIDE_PX = 24;
 
-/** 0..1 eased reveal of an item that enters at itemT (seconds) at time t. */
-export function reveal(t, itemT, fps, frames = REVEAL_FRAMES) {
-  return graphicEase('cubic_out')(clamp01(((t - itemT) * fps) / frames));
+/**
+ * Frames since an item's entry frame, counting the entry frame itself as 1
+ * (0 before it). The entry frame is the first frame at or after itemT, so an
+ * item is already visible on that exact frame, not one frame later.
+ */
+export function entryFrames(t, itemT, fps) {
+  const f = Math.floor((t - itemT) * fps + 1e-6);
+  return f < 0 ? 0 : f + 1;
+}
+/** 0..1 eased reveal of an item that enters at itemT (seconds) at time t (visible from its entry frame). */
+export function reveal(t, itemT, fps, frames = REVEAL_FRAMES, ease = 'cubic_out') {
+  return graphicEase(ease)(clamp01(entryFrames(t, itemT, fps) / frames));
 }
 /** Index of the item being talked about at t (last entered), or -1. */
 export function activeIndex(items, t) {
@@ -23,7 +32,7 @@ export function activeIndex(items, t) {
 }
 /** Whole-visual fade in/out (6 frames in, 6 out). */
 export function visualAlpha(t, dur, fps, inF = 6, outF = 6) {
-  const a = clamp01((t * fps) / inF);
+  const a = clamp01(entryFrames(t, 0, fps) / inF);
   const b = clamp01(((dur - t) * fps) / outF);
   return graphicEase('cubic_out')(Math.min(a, b));
 }

@@ -2,7 +2,7 @@
 // element named ("click Settings"), at props.target (canvas px), located
 // from the planner's coordinates or a cached SAM box prompt. Pairs with the
 // Phase 6 screen zoom. A small label names the element.
-import { visualAlpha, fitText, text, panelLayout, graphicEase, clamp01, withAlpha, unit, roundRectPath, arrowHead } from './common.mjs';
+import { visualAlpha, fitText, text, panelLayout, graphicEase, clamp01, withAlpha, unit, roundRectPath, arrowHead, reveal } from './common.mjs';
 import { partialPolyline, strokePolyline } from '../../graphics/kit.mjs';
 
 export default {
@@ -20,7 +20,7 @@ export default {
   draw(ctx, t, props, L, env) {
     const { fps, dur, theme: th } = env;
     const a = visualAlpha(t, dur, fps, 3, 6);
-    const d = graphicEase('cubic_out')(clamp01(((t - (props.items?.[0]?.t ?? 0)) * fps) / 10));
+    const d = reveal(t, props.items?.[0]?.t ?? 0, fps, 10);
     const { T, u } = L;
     ctx.save();
     ctx.globalAlpha = a;
