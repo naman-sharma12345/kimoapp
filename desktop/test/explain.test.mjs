@@ -322,3 +322,59 @@ test('plan: beats become EDL overlays on time, off the face, with camera room, S
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('chat patches and planner tools: the spec examples become plan changes; timeline edits keep bubbles in step', async () => {
+  const { notePatches, explainToolCall, placeUserBeats } = await import('../explain/tools.mjs');
+  const st = {};
+  assert.deepEqual(notePatches(st, 'fewer graphics').changes, ['density light']);
+  notePatches(st, 'no memes');
+  assert.equal(st.toggles.memes, false);
+  notePatches(st, 'add a meme when I fail');
+  assert.equal(st.toggles.memes, true);
+  assert.ok(st.userBeats.some((b) => b.kind === 'meme' && b.word === 'fail'));
+  notePatches(st, 'add a map of Delhi at 0:42');
+  assert.deepEqual(st.userBeats.at(-1), { kind: 'map', places: ['Delhi'], at: 42, word: undefined });
+  notePatches(st, 'show a chart when I talk about revenue');
+  assert.equal(st.userBeats.at(-1).kind, 'chart');
+  notePatches(st, 'put the speaker in a bubble during the explanation');
+  assert.equal(st.layoutHint, 'pip');
+  notePatches(st, 'show a real photo of the Taj Mahal there');
+  assert.equal(st.userBeats.at(-1).query, 'Taj Mahal');
+  assert.match(notePatches(st, 'make the list appear one by one').changes[0], /one by one/);
+  notePatches(st, 'more visuals in the intro');
+  assert.equal(st.focus.from, 0);
+  notePatches(st, 'regenerate visuals for this part (12.5–20 s)');
+  assert.deepEqual([st.regenerate.from, st.regenerate.to], [12.5, 20]);
+  assert.equal(explainToolCall(st, 'explain_auto', { density: 'loud' }).ok, false);
+  assert.equal(explainToolCall(st, 'explain_auto', { density: 'rich' }).ok, true);
+  assert.equal(explainToolCall(st, 'explain', { kind: 'stat', at: 3, value: 40, unit: '%' }).ok, true);
+  explainToolCall(st, 'explain_remove', { kind: 'meme' });
+  assert.deepEqual(st.removed.at(-1), { id: undefined, kind: 'meme' });
+  const words = W('we started in Delhi and our revenue went from 10 lakh to 50 lakh this year', 0.5, 40);
+  const { beats, missing } = placeUserBeats([{ kind: 'map', places: ['Delhi'], at: 42 }, { kind: 'chart', word: 'revenue' }, { kind: 'stat', at: 999 }], words);
+  assert.equal(beats[0].start_word_idx, 4);
+  assert.equal(beats[1].start_word_idx, 6);
+  assert.equal(missing.length, 1);
+  // timeline edits: text, family, layout → pip bubble added; delete removes companions
+  const { applyEdits } = await import('../edl.mjs');
+  const edl = {
+    edl_version: 1,
+    canvas: { w: 1920, h: 1080, fps: 30 },
+    sources: [{ id: 'a', path: 'C:/v/talk.mp4', kind: 'video', fps: 30, w: 1920, h: 1080, duration: 20, audio: true }],
+    video: [{ track: 'V1', clips: [{ id: 'c1', src: 'a', in: 0, out: 20, at: 0, speed: 1, fit: 'cover' }] }],
+    audio: [],
+    overlays: [{ id: 'ex-b1', kind: 'graphic', at: 2, dur: 4, track: 'graphics', props: { element: 'ex_list', mode: 'side', title: '3 reasons', items: [{ text: 'No users', t: 0.2 }, { text: 'Too slow', t: 1 }], explain: { beat: 'b1', kind: 'list' }, explain_plan: true } }],
+    master: { lufs: -14, true_peak: -1 },
+  };
+  let e = applyEdits(edl, [{ tool: 'edit_explain', args: { clip_id: 'ex-b1', title: 'Why it failed', items: ['No users', 'Too slow', 'No money'], kind: 'flow', mode: 'pip' } }]);
+  const o = e.overlays.find((x) => x.id === 'ex-b1');
+  assert.equal(o.props.element, 'ex_flow');
+  assert.equal(o.props.items.length, 3);
+  assert.equal(o.props.items[1].t, 1, 'item times stay on their words');
+  assert.ok(e.overlays.some((x) => x.kind === 'pip' && x.id.startsWith('ex-b1-')));
+  e = applyEdits(e, [{ tool: 'move_clip', args: { clip_id: 'ex-b1', start: 5 } }]);
+  assert.equal(e.overlays.find((x) => x.id === 'ex-b1-ring').at, 5);
+  assert.equal(e.overlays.find((x) => x.kind === 'pip').at, 5);
+  e = applyEdits(e, [{ tool: 'delete_clip', args: { clip_id: 'ex-b1' } }]);
+  assert.equal(e.overlays.length, 0);
+});

@@ -1,4 +1,5 @@
 import { isCaptionChunk, editCaptionChunk, captionBounds } from './caption-edits.mjs';
+import { isExplain, editExplain, deleteExplain } from './explain/edit.mjs';
 // App-owned, versioned edit decisions. This module is also safe in the renderer.
 const TRANSITION_KINDS = ['cut', 'dip', 'whip', 'zoom', 'morph'];
 export function rate(value) {
@@ -860,6 +861,15 @@ export function applyEdits(original, ops) {
     if (isCaptionChunk(c) && op.tool !== 'delete_clip') {
       // kimo caption chunks: word-boundary snapping, no overlaps, word timings kept
       editCaptionChunk(edl, c, op);
+      continue;
+    }
+    if (isExplain(c)) {
+      // Phase 7 explainer beats: inline edits, and their speaker bubble / ring follow
+      if (op.tool === 'delete_clip') deleteExplain(edl, c);
+      else if (op.tool === 'move_clip') editExplain(edl, Object.assign(c, { at: op.args.start }), {});
+      else if (op.tool === 'trim_clip') editExplain(edl, Object.assign(c, { dur: op.args.duration }), {});
+      else if (op.tool === 'edit_explain' || op.tool === 'edit_caption') editExplain(edl, c, op.tool === 'edit_caption' ? { text: op.args.text } : op.args);
+      else throw new Error(`Unsupported EDL edit: ${op.tool}`);
       continue;
     }
     if (op.tool === 'delete_clip') {
