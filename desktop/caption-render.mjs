@@ -79,7 +79,7 @@ function textParts(style, chunk, { colourOf, opacityOf = () => 1, extra = () => 
 }
 
 /** Chunk-level entrance/exit tags shifted so they run continuously across word-state events. */
-function chunkMotion(style, { offset, dur, scale, fps, index, out = true }) {
+function chunkMotion(style, { offset, dur, scale, fps, index, out = true, rotate = true }) {
   const a = style.animation ?? {};
   const inA = a.in ?? {};
   const outA = a.out ?? {};
@@ -109,7 +109,7 @@ function chunkMotion(style, { offset, dur, scale, fps, index, out = true }) {
   if (inMs > 0 && o < inMs) tags.push(tag.alpha(0), tag.t(-o, inMs - o, tag.alpha(1)));
   if (out && outMs > 0 && outA.type === 'fade') tags.push(tag.t(ms(dur) - outMs - o, ms(dur) - o, tag.alpha(0)));
   const rot = style.word_fx?.rotate;
-  if (rot) tags.push(tag.frz(jitter(index, 3) * rot));
+  if (rot && rotate) tags.push(tag.frz(jitter(index, 3) * rot));
   return tags;
 }
 
@@ -169,9 +169,21 @@ export function drawChunk(doc, overlay, canvas, fps, win = { from: 0, to: Infini
         const cyc = style.word_fx.stroke_cycle;
         const stroke = cyc[chunk.index % cyc.length];
         const bord = (style.outline ?? 0) * canvas.w;
-        const parts = (outline, b, layer) => ({ layer, start: overlay.at, end, style: styleName, parts: [{ tags: [...base, ...motion(0), tag.c3(outline), tag.bord(b)] }, ...textParts(style, chunk, { colourOf: (k) => accentOr(k, c.text) })] });
-        emit(doc, parts(style.word_fx.outer_stroke ?? '#000000', bord * (style.word_fx.outer_scale ?? 2), layerBase), w);
-        emit(doc, parts(stroke, bord, layerBase + 1), w);
+        // per-word rotation: each word is its own event at its laid-out centre (fonts.mjs advances),
+        // so rotating one word never moves the line; each word gets its own ±rotate° tilt
+        const rot = style.word_fx.rotate ?? 0;
+        const top = cy - mm.height / 2;
+        const placed = mm.lines.flatMap((line, li) => line.words.map((lw) => ({ k: lw.index, x: cx - line.width / 2 + lw.x + lw.width / 2, y: top + li * mm.lineH + mm.lineH / 2 })));
+        const wordMotion = chunkMotion(style, { offset: 0, dur: overlay.dur, scale, fps, index: chunk.index, rotate: false });
+        for (const pw of placed) {
+          const word = chunk.words[pw.k];
+          if (!word) continue;
+          const font = fontOf(style, word.lang ?? (isDevanagari(word.w) ? 'hi' : 'latin'));
+          const tilt = rot ? tag.frz(jitter(chunk.index * 7 + pw.k, 3) * rot) : null;
+          const one = (outline, b, layer) => ({ layer, start: overlay.at, end, style: styleName, parts: [{ tags: [tag.an(5), tag.pos(pw.x, pw.y), ...wordMotion, ...(tilt ? [tilt] : []), tag.c3(outline), tag.bord(b), tag.fn(font.family), tag.c(accentOr(pw.k, c.text))] }, { text: cased(style, word.w) }] });
+          emit(doc, one(style.word_fx.outer_stroke ?? '#000000', bord * (style.word_fx.outer_scale ?? 2), layerBase), w);
+          emit(doc, one(stroke, bord, layerBase + 1), w);
+        }
       } else {
         const extra = style.blur ? [tag.blur(0)] : [];
         emit(doc, { layer: layerBase + 2, start: overlay.at, end, style: styleName, parts: [{ tags: [...base, ...motion(0), ...extra] }, ...textParts(style, chunk, { colourOf: (k) => accentOr(k, c.text) })] }, w);

@@ -507,6 +507,10 @@ const overlapArea = (a, b) => Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, 
 
 /** Rough boxes of the other graphics (hook titles, callouts, lower thirds) for collision checks. */
 export function graphicBoxes(edl) {
+  // Phase 6 kit graphics carry their own laid-out box (the progress bar and the screen card are edge treatments, not blockers)
+  const kit = edl.overlays
+    .filter((o) => o.kind === 'graphic' && o.props?.safe_box && !['progress', 'screen_zoom'].includes(o.props.element))
+    .map((o) => ({ id: o.id, kind: o.props.element, at: o.at, end: o.at + o.dur, ...o.props.safe_box }));
   return edl.overlays
     .filter((o) => o.props?.engine !== CAPTION_ENGINE && ['hook_title', 'callout', 'lower_third', 'text_behind', 'image'].includes(o.kind))
     .map((o) => {
@@ -529,7 +533,8 @@ export function graphicBoxes(edl) {
         h = lines.length * size * 1.25;
       }
       return { id: o.id, kind: o.kind, at: o.at, end: o.at + o.dur, x0: cx - w / 2, x1: cx + w / 2, y0: cy - h / 2, y1: cy + h / 2 };
-    });
+    })
+    .concat(kit);
 }
 
 /**
@@ -702,6 +707,11 @@ export function applyCaptions(edl, config, ctx = {}) {
     return edl;
   }
   const built = buildCaptions(edl, { style: config.style, ctx, hints: config.hints ?? [], emphasis: config.emphasis });
+  // a number pop already shows this word big: the caption keeps it without the accent (no double)
+  const plain = edl.graphics?.no_accent ?? [];
+  if (plain.length)
+    for (const o of built.overlays)
+      for (const w of o.props.words) if (w.accent && plain.some((n) => w.at < n.end + 0.05 && w.until > n.at - 0.05 && /\d/.test(w.w))) delete w.accent;
   const kept = built.overlays.filter((o) => !edited.some((e) => e.at < o.at + o.dur && e.at + e.dur > o.at));
   const overlays = [...kept, ...edited].sort((a, b) => a.at - b.at);
   const ids = new Set(edl.overlays.map((o) => o.id));
