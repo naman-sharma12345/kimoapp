@@ -211,6 +211,9 @@ test(
         assert.ok(caps.flatMap((o) => o.props.words.map((w) => w.w.toLowerCase().replace(/[^a-z]/g, ''))).sort().join(' ') === 'again hello world', `${mode}: caption words`);
         assert.ok(!calls.some((c) => c.name === 'auto_captions'), `${mode}: the engine's own captions are not used`);
         assert.ok(ended('captions')?.ok, `${mode}: captions op`);
+        // Phase 6: the graphics plan rides on the EDL, restraint-checked
+        assert.ok(edl.graphics?.version === 1 && edl.graphics.report.overlaps === 0, `${mode}: graphics plan on the EDL`);
+        assert.ok(!calls.some((c) => c.name === 'place_broll'), `${mode}: b-roll is the app's`);
         if (mode === 'captions') {
           // Studio caption edit: re-renders the text pass over the cached base composite
           const edited = applyEdits(edl, [{ tool: 'edit_caption', args: { clip_id: caps[0].id, text: 'hi there' } }]);

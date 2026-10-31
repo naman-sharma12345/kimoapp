@@ -40,6 +40,17 @@ const engineEnv = () => {
 
 let engine; // engine.mjs (ESM)
 const loadEngine = async () => (engine ??= await import(pathToFileURL(join(__dirname, 'engine.mjs')).href));
+// Phase 6 graphics: a hidden offscreen Chromium window renders the motion graphics (graphics/render.html)
+let graphicsHost = null;
+const registerGraphicsHost = async () => {
+  if (graphicsHost) return graphicsHost;
+  const r = await import(pathToFileURL(join(__dirname, 'graphics', 'renderer.mjs')).href);
+  const { bundledFontsDir } = await import(pathToFileURL(join(__dirname, 'fonts.mjs')).href);
+  const { createGraphicsHost } = require('./graphics/host-electron.cjs');
+  graphicsHost = createGraphicsHost({ dir: join(__dirname, 'graphics'), fontsDir: bundledFontsDir(), emojiDir: r.emojiDir(), log: (m) => console.log(m) });
+  r.setGraphicsHost(graphicsHost);
+  return graphicsHost;
+};
 let samMod;
 const loadSam = async () => (samMod ??= await import(pathToFileURL(join(__dirname, 'sam.mjs')).href));
 const logFile = () => join(data(), 'kimo.log');
@@ -295,7 +306,19 @@ async function smoke(clip, outPath) {
     const { fontSelfTest } = await import(pathToFileURL(join(__dirname, 'caption-selftest.mjs')).href);
     const fonts = await fontSelfTest({ ffmpeg: p.ffmpeg, dir: join(data(), 'smoke', 'caption-fonts'), edl: savedEdl });
     report.captionEngine = { style: savedEdl?.captions?.style ?? null, chunks: chunks.length, text: chunks.map((o) => o.props.text).join(' | ').slice(0, 300), stats: savedEdl?.captions?.stats ?? null, engineCaptions: r.history.some((h) => h.startsWith('auto_captions')), fonts };
-    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && (!report.cutPlan || chunks.length > 0));
+    // Phase 6: motion graphics through the active backend (offscreen Chromium, else the built-in canvas)
+    report.stage = 'graphics';
+    flush();
+    const { graphicsSelfTest } = await import(pathToFileURL(join(__dirname, 'graphics', 'selftest.mjs')).href);
+    report.graphics = await graphicsSelfTest({ ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, dir: join(data(), 'smoke', 'graphics'), clip: files[0] });
+    if (report.graphics.compose?.ok) {
+      try {
+        fs.copyFileSync(join(data(), 'smoke', 'graphics', 'graphics-selftest.mkv'), join(outPath, '..', 'graphics-selftest.mkv'));
+      } catch {
+        /* optional artifact */
+      }
+    }
+    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && report.graphics.ok && (!report.cutPlan || chunks.length > 0));
     const samAt = process.argv.indexOf('--smoke-sam');
     if (samAt > 0) {
       // SAM 3.1 end to end on Windows: proxy upload → track → 9:16 follow reframe + text behind the subject → kimo render
@@ -384,6 +407,8 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => (url.startsWith('https://') && shell.openExternal(url), { action: 'deny' }));
   win.webContents.on('will-navigate', (ev) => ev.preventDefault());
   win.webContents.on('render-process-gone', (_e, d) => log('renderer gone', d.reason));
+  // closing the app window closes the hidden graphics window too (so window-all-closed still quits)
+  win.on('closed', () => graphicsHost?.close());
   win.loadFile(join(__dirname, 'renderer', 'index.html'));
 }
 
@@ -392,6 +417,7 @@ if (smokeAt < 0 && !app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => win && (win.isMinimized() && win.restore(), win.focus()));
 
 app.whenReady().then(async () => {
+  await registerGraphicsHost().catch((error) => console.error('graphics host unavailable; the built-in canvas renders graphics', error));
   if (smokeAt >= 0) {
     const outAt = process.argv.indexOf('--smoke-out');
     return smoke(process.argv[smokeAt + 1], outAt > 0 ? process.argv[outAt + 1] : join(data(), 'smoke.json'));
@@ -532,3 +558,5 @@ app.whenReady().then(async () => {
     }
 });
 app.on('window-all-closed', () => app.quit());
+// the hidden graphics window must not keep the app alive
+app.on('before-quit', () => graphicsHost?.close());
