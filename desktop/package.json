@@ -59,6 +59,13 @@
       "speakers.mjs",
       "camera.mjs",
       "camera-probe.mjs",
+      "captions.mjs",
+      "caption-edits.mjs",
+      "caption-render.mjs",
+      "caption-selftest.mjs",
+      "ass.mjs",
+      "fonts.mjs",
+      "fonts/**",
       "data/**",
       "renderer/**",
       "!renderer/src/**",
@@ -93,6 +100,9 @@
         "repo": "kimoapp",
         "releaseType": "release"
       }
+    ],
+    "asarUnpack": [
+      "fonts/**"
     ]
   }
 }
