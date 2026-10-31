@@ -34,6 +34,7 @@ import {
   maskFilter,
   normalizeMask,
 } from './compose-fx.mjs';
+import { prepareGraphics } from './compose-graphics.mjs';
 
 const stop = (signal) => {
   if (signal?.aborted) throw new Error('cancelled');
@@ -147,7 +148,13 @@ function geometry(clip, source, canvas, plan) {
   if (rotation === 90) filters.push('transpose=clock');
   else if (rotation === 270) filters.push('transpose=cclock');
   else if (rotation === 180) filters.push('hflip', 'vflip');
-  if (clip.fit === 'contain') {
+  if (clip.place) {
+    // a rendered graphic: its frames are already at canvas scale; pad to the canvas at its box
+    const p = clip.place;
+    if (source.w !== p.w || source.h !== p.h)
+      filters.push(`scale=${p.w}:${p.h}:flags=lanczos+accurate_rnd+full_chroma_int`);
+    filters.push(`pad=${canvas.w}:${canvas.h}:${Math.round(p.x)}:${Math.round(p.y)}:color=black@0`);
+  } else if (clip.fit === 'contain') {
     filters.push(
       'format=yuva444p',
       `scale=${canvas.w}:${canvas.h}:force_original_aspect_ratio=decrease:flags=lanczos+accurate_rnd+full_chroma_int`,
@@ -169,6 +176,18 @@ function geometry(clip, source, canvas, plan) {
       rectFilter(cameraRectsForClip(clip, source, canvas, plan)),
       `scale=${canvas.w}:${canvas.h}:flags=lanczos+accurate_rnd+full_chroma_int`,
     );
+  // screen card: the recording inset onto the card (its rounded corners come from the clip mask)
+  if (clip._card) {
+    const k = clip._card;
+    filters.push(
+      `scale=${k.w}:${k.h}:flags=lanczos+accurate_rnd+full_chroma_int`,
+      `pad=${canvas.w}:${canvas.h}:${k.x}:${k.y}:color=black@0`,
+    );
+  }
+  // screen card backdrop: a blurred, dimmed copy of the recording
+  if (clip.blur > 0) filters.push(`gblur=sigma=${safe(clip.blur)}:steps=2`);
+  if (clip.dim > 0)
+    filters.push(`lutyuv=y='16+(val-16)*${safe(1 - Math.min(0.9, clip.dim))}'`);
   const angles = plan.indices.map(
     (_, i) =>
       (curveValue(
@@ -902,10 +921,28 @@ export async function compose({
           `EDL audio ${clip.id}.out: exceeds asset duration ${length}`,
         );
     }
+  // Phase 6: kit graphics → transparent clips (cached), screen cards → backdrop + shadow tracks
+  {
+    const fps0 = rate(edl.canvas.fps);
+    const workspace0 = resolve(dir ?? join(resolve(output, '..'), '.compose'));
+    const seen = new Set();
+    await prepareGraphics(edl, {
+      ffmpeg,
+      dir: join(cacheDir ?? workspace0, 'graphics'),
+      signal,
+      emit,
+      frameTime: frame == null ? null : frame / fps0,
+      warn: (title) => {
+        if (seen.has(title)) return;
+        seen.add(title);
+        emit({ t: 'op', tool: 'compose_warning', phase: 'end', warning: true, ok: true, title, at: Date.now() });
+      },
+    });
+  }
   for (const [overlayIndex, overlay] of edl.overlays.entries()) {
-    if (!['image', 'text_behind'].includes(overlay.kind) || !overlay.src)
+    if (!['image', 'text_behind', 'graphic'].includes(overlay.kind) || !overlay.src)
       continue;
-    const p = overlay.props ?? {};
+    const p = overlay.kind === 'graphic' ? {} : overlay.props ?? {};
     edl.video.push({
       track: 'overlay:' + overlay.id,
       _overlayIndex: overlayIndex,
@@ -923,6 +960,7 @@ export async function compose({
           opacity: p.opacity ?? 1,
           mask: p.mask,
           rotation: p.rotation,
+          ...(overlay._place ? { place: overlay._place, fit: 'cover' } : {}),
         },
       ],
     });

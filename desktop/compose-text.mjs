@@ -112,7 +112,7 @@ export function subtitles(edl, from = 0, to = Infinity) {
   const lines = [];
   for (const [layer, o] of edl.overlays.entries()) {
     // kimo captions and styled hook titles are drawn by caption-render.mjs
-    if (o.kind === 'image' || (o.kind === 'text_behind' && o.src) || o.props?.engine === 'kimo-captions' || o._kimoText) continue;
+    if (o.kind === 'image' || o.kind === 'graphic' || (o.kind === 'text_behind' && o.src) || o.props?.engine === 'kimo-captions' || o._kimoText) continue;
     const start = Math.max(from, Math.ceil(o.at * fps - 1e-7)),
       end = Math.min(to, Math.ceil((o.at + o.dur) * fps - 1e-7));
     let last,
