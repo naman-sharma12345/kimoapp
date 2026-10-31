@@ -37,3 +37,11 @@
 
 - Measurement v4 corrects a camera-coverage denominator bug: the global matcher counts adjacent frame pairs, while SG7 registration counts output frames. A fully registered500-frame sequence has494 eligible centres and coverage100%, not494/493. The physical registration fits and95% gate stay unchanged. Saved v3 per-segment counts permit a transparent JSON-only correction with original SHA256 provenance; keep the original v3 files. Do not re-render footage or clamp invalid percentages merely to turn a gate green.
 - A native-only longer export retry now skips completed references, retains exact saved projects/media and checks full VIDEO stream coverage. Native format durations can exceed the planned picture due to short tails; preserve and measure those tails. The earlier absolute-format-duration check was caught before completed retries and replaced. Current retry41193701206 is bounded to90minutes/export on standard hosted runners and makes no paid calls.
+
+## 31 October 2026 (Phase 5, captions)
+
+- FFmpeg's `subtitles` filter shapes text simply (libass `ASS_SHAPING_SIMPLE` here): Devanagari rendered स्त with a visible halant instead of the conjunct. The `ass` filter with `shaping=complex` forms it correctly with the same libass. The final text pass now uses `ass=…:shaping=complex`; existing Phase 2 compose tests stay green with the switch.
+- `-ss` before a lavfi `color` input resets timestamps, so libass drew time 0; the font check renders the whole script at a low frame rate instead (every face in use gets selected and logged once).
+- libass needs real files for `fontsdir`, so the licence texts live in `fonts/licenses/` (a `.txt` in the fonts dir is tried as a font and logs an error) and the fonts ship `asarUnpack`ed.
+- Luckiest Guy is Apache-2.0, not OFL; Bangers (OFL) is the MrBeast lookalike. Inter was not needed: Geist covers the clean sans styles.
+- Nothing looped twice without progress.
