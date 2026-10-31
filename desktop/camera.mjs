@@ -251,6 +251,8 @@ export function energyFor(style, canvas) {
       return vertical ? 4 : 3;
     case 'tutorial':
       return vertical ? 4 : 3;
+    case 'explainer':
+      return 3;
     default:
       return vertical ? 5 : 3;
   }

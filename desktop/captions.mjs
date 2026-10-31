@@ -81,6 +81,7 @@ export function pickCaptionStyle({ requested, note, template, canvas } = {}) {
   }
   for (const [re, id] of NOTE_STYLES) if (re.test(note ?? '') && /caption|subtitle|text|style|font|word/i.test(note ?? '')) return id;
   const c = template?.captions;
+  if (c?.caption_id && all.has(c.caption_id)) return c.caption_id;
   if (c?.style === 'clean') return (c.lines ?? 1) > 1 ? (vertical ? 'ali-abdaal' : 'doc-subtitle') : 'mkbhd';
   return KIMO_TO_STYLE[c?.style] ?? 'kimo';
 }
