@@ -173,7 +173,7 @@ export function detectCues(words, { note = '' } = {}) {
       const items = [];
       for (let k = n.i1 + 2; k < Math.min(lw.length, n.i1 + 400) && items.length < n.value; k++) {
         const ord = ORDINALS.find(([re]) => re.test(lw[k]));
-        if (ord && ord[1] === items.length + 1 && (k === 0 || /[.,!?]$/.test(words[k - 1].w) || ['is', 'the', 'number', 'reason', 'step', 'one'].includes(lw[k + 1]) || /^(firstly|secondly|thirdly)$/.test(lw[k]) || k - (items.at(-1)?.i ?? n.i1) > 3)) {
+        if (ord && ord[1] === items.length + 1 && (k === 0 || /[.,!?]$/.test(words[k - 1].w) || ['is', 'the', 'number', 'reason', 'step', 'one'].includes(lw[k + 1]) || /^(firstly|secondly|thirdly)$/.test(lw[k]) || k - (items.at(-1)?.i ?? n.i1) > 1)) {
           const startText = ['is', 'reason', 'step', 'thing', 'number', 'one', 'two', 'three', 'tip', 'off', 'of', 'all', 'hai', 'toh', 'baat', 'cheez', 'point', 'tarika'].includes(lw[k + 1]) ? k + 2 : k + 1;
           items.push({ i: k, text: phrase(startText, 5).replace(/\s+(hai|he|hain|h)$/i, '') });
         }
