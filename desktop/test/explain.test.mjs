@@ -185,3 +185,78 @@ test('sfx: synthesised kit (own, CC0), ≥ 0.5 s apart, gags win over ticks, lev
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('director: model decides (mocked), taste rules hold, two-pass pick, toggles, cache → 0 calls on re-run', { timeout: 60000 }, async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const { direct, directorSummary } = await import('../explain/director.mjs');
+  const { AssetCache } = await import('../explain/assets.mjs');
+  const { toolPaths } = await import('./bench/run.mjs');
+  const ffmpeg = toolPaths().ffmpeg;
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-director-'));
+  const jpg = join(dir, 'pic.jpg');
+  spawnSync(ffmpeg, ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=320x200:d=1', '-frames:v', '1', jpg]);
+  const jpeg = (await import('node:fs')).readFileSync(jpg);
+  let net = 0;
+  const fake = async (url) => {
+    net++;
+    if (url.includes('wikimedia') || url.includes('openverse')) return { ok: true, json: async () => ({ results: [{ url: 'https://img.example/taj.jpg', license: 'by', license_version: '2.0', creator: 'Ann', title: 'Taj Mahal', filetype: 'jpg' }], query: { pages: [] } }) };
+    return { ok: true, arrayBuffer: async () => jpeg };
+  };
+  const joke = W('so I tried to edit the whole video in one night and I failed so badly lol it was a total disaster then I visited the Taj Mahal in Agra and it was beautiful', 0.4, 0.5);
+  const sad = W('my grandfather passed away last year and the funeral was the hardest day of my life we lost my best friend too', 0.4, 0.5);
+  const calls = [];
+  const ask = async (kind, text, images = []) => {
+    calls.push(kind);
+    if (kind === 'explain' && text.includes('grandfather')) return { beats: [{ id: 'b1', kind: 'meme', say_word_idx: 3, start_word_idx: 3, end_word_idx: 6, importance: 0.9, meme: { format: 'this_is_fine', top: 'me', bottom: 'fine' } }] };
+    if (kind === 'explain')
+      return {
+        beats: [
+          { id: 'b1', kind: 'meme', why: 'the fail lands here', say_word_idx: 13, start_word_idx: 11, end_word_idx: 15, importance: 0.9, meme: { format: 'expectation_reality', top: 'one night edit', bottom: 'total disaster' } },
+          { id: 'b2', kind: 'photo', why: 'a named landmark: real photo', say_word_idx: 24, start_word_idx: 23, end_word_idx: 30, importance: 0.8, caption: 'Taj Mahal', asset_query: { source: 'wikimedia', q: 'Taj Mahal' } },
+          { id: 'b3', kind: 'stat', value: 99, unit: '%', label: 'invented', say_word_idx: 26, importance: 0.9 },
+        ],
+      };
+    if (kind === 'pick') {
+      assert.ok(images.length >= 1 && images.every((im) => /^data:image\/jpeg;base64,/.test(im.url) && /^b2 #\d$/.test(im.label)));
+      return { picks: [{ beat: 'b2', pick: 1, why: 'clear landmark' }] };
+    }
+    return {};
+  };
+  try {
+    const canvas = { w: 1080, h: 1920 };
+    const run = () => direct({ words: joke, canvas, template: 'explainer', ask, ffmpeg, assetCache: new AssetCache(join(dir, 'cache'), { fetch: fake }) });
+    const r1 = await run();
+    const kinds = r1.beats.map((b) => b.kind);
+    assert.ok(kinds.includes('meme'), `a joke gets a humour asset (${kinds})`);
+    assert.ok(kinds.includes('photo'), 'a named landmark gets a real photo, not an icon');
+    assert.ok(!kinds.includes('stat') && r1.dropped.some((d) => /invented number/.test(d.why)), 'invented numbers rejected');
+    const photo = r1.beats.find((b) => b.kind === 'photo');
+    assert.equal(photo.asset.credit, 'Ann, CC BY 2.0 (Openverse)');
+    assert.ok(photo.asset.path.endsWith('.png'));
+    assert.deepEqual(calls, ['explain', 'pick']);
+    assert.match(directorSummary(r1.beats, r1.report), /explainer: 2 visuals: meme, photo/);
+    // second render: everything from the cache (0 AI calls, 0 network)
+    const n = net;
+    const r2 = await run();
+    assert.deepEqual(calls, ['explain', 'pick'], 'no new AI call');
+    assert.equal(net, n, 'no new network call');
+    assert.equal(r2.report.network, 0);
+    assert.deepEqual(r2.beats.map((b) => b.kind), kinds);
+    // serious content: no humour assets
+    const r3 = await direct({ words: sad, canvas, template: 'youtube', ask, ffmpeg, assetCache: new AssetCache(join(dir, 'cache'), { fetch: fake }) });
+    assert.equal(r3.beats.filter((b) => ['meme', 'reaction_gif', 'sound_gag'].includes(b.kind)).length, 0);
+    // toggles off → none of that kind
+    const r4 = await direct({ words: joke, canvas, template: 'explainer', ask, ffmpeg, toggles: { memes: false, images: false }, cacheDir: join(dir, 'ai2'), assetCache: new AssetCache(join(dir, 'cache'), { fetch: fake }) });
+    assert.ok(!r4.beats.some((b) => ['meme', 'photo'].includes(b.kind)));
+    // no AI: deterministic cues only, never fetched pictures
+    const r5 = await direct({ words: W('there are three reasons first no users second too slow third ran out of money and 40 percent of startups fail', 0.4, 0.5), canvas, template: 'explainer', ffmpeg, assetCache: new AssetCache(join(dir, 'cache'), { fetch: fake }) });
+    assert.equal(r5.report.mode, 'cues');
+    assert.ok(r5.beats.some((b) => b.kind === 'list'));
+    assert.equal(r5.report.network, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
