@@ -505,6 +505,53 @@ button {
   grid-row: auto;
 }
 
+/* explain with visuals (Phase 7) */
+.desk-explain {
+  margin-top: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--r-12);
+  background: var(--ink-0);
+}
+.desk-explain[data-off] .desk-sam-head {
+  border-bottom: 0;
+}
+.desk-explain-body {
+  display: grid;
+  gap: var(--space-12);
+  padding: var(--space-16);
+}
+.desk-explain-density {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+.desk-explain-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--space-8) var(--space-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.desk-explain .desk-toggle-row > span {
+  display: grid;
+  white-space: normal;
+  color: var(--cream-100);
+}
+.desk-explain .desk-toggle-row small {
+  color: var(--cream-38);
+  font-size: var(--t-11);
+}
+.desk-explain .desk-toggle-row[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.desk-explain-safe {
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--line);
+}
+
 /* subject effects */
 .desk-sam {
   margin-top: var(--space-16);

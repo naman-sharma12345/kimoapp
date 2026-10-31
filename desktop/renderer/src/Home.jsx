@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FilePlus2, FolderPlus, X, Film, AudioLines, Image as ImageIcon, ScanSearch, ArrowUp, Layers } from 'lucide-react';
+import { FilePlus2, FolderPlus, X, Film, AudioLines, Image as ImageIcon, ScanSearch, ArrowUp, Layers, Shapes } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
 import { SegmentedControl } from '@web/components/ui/segmented-control';
 import { Toggle } from '@web/components/ui/toggle';
@@ -17,6 +17,81 @@ const MODE_HINT = {
   sam: 'runs only the subject effect below',
 };
 const KIND_ICON = { video: Film, audio: AudioLines, image: ImageIcon };
+// Phase 7 "explain with visuals": density and per-kind switches (main.cjs cleanExplain keeps only these)
+const DENSITY = [
+  { value: 'light', label: 'light' },
+  { value: 'normal', label: 'normal' },
+  { value: 'rich', label: 'rich' },
+];
+const DENSITY_HINT = { light: 'only the moments that need a picture', normal: 'a visual for most explained ideas', rich: 'lists, numbers and examples get one too' };
+const EXPLAIN_KINDS = [
+  ['diagrams', 'diagrams', 'lists, flows, charts, maps'],
+  ['images', 'images', 'openly licensed photos'],
+  ['memes', 'memes', 'meme formats, no copyrighted templates'],
+  ['emoji', 'emoji', 'small emoji pops'],
+  ['screenshots', 'screenshots', 'public pages you name'],
+  ['broll', 'b-roll', 'cutaways from your clips'],
+  ['gags', 'sound gags', 'ding, boing, record scratch'],
+  ['ai_images', 'ai images', 'generated, needs ai access'],
+];
+const EXPLAIN_DEFAULT = { enabled: true, density: 'normal', toggles: { diagrams: true, images: true, memes: true, emoji: true, screenshots: true, broll: true, gags: true, ai_images: false }, offline: false };
+const loadExplain = () => {
+  try {
+    const v = JSON.parse(localStorage.explain || 'null');
+    return v ? { ...EXPLAIN_DEFAULT, ...v, toggles: { ...EXPLAIN_DEFAULT.toggles, ...v.toggles } } : EXPLAIN_DEFAULT;
+  } catch {
+    return EXPLAIN_DEFAULT;
+  }
+};
+
+export function ExplainOptions({ explain, setExplain, disabled }) {
+  const set = (k, v) => setExplain((x) => ({ ...x, [k]: v }));
+  const kind = (k, v) => setExplain((x) => ({ ...x, toggles: { ...x.toggles, [k]: v } }));
+  return (
+    <section className="desk-explain" aria-label="explain with visuals" data-off={!explain.enabled || disabled || undefined}>
+      <header className="desk-sam-head">
+        <Shapes size={16} strokeWidth={1.5} aria-hidden />
+        <label className="desk-toggle-row">
+          <Toggle aria-label="explain with visuals" checked={explain.enabled && !disabled} disabled={disabled} onCheckedChange={(v) => set('enabled', v)} />
+          <span className="studio-heading">explain with visuals</span>
+        </label>
+        <span className="studio-spacer" />
+        <span className="desk-fine">{disabled ? 'ai edits only' : 'diagrams, numbers and pictures appear on the words you say'}</span>
+      </header>
+      {explain.enabled && !disabled ? (
+        <div className="desk-explain-body">
+          <div className="desk-explain-density">
+            <SegmentedControl aria-label="visual density" options={DENSITY} value={explain.density} onValueChange={(v) => set('density', v)} />
+            <span className="desk-fine">{DENSITY_HINT[explain.density]}</span>
+          </div>
+          <ul className="desk-explain-kinds" aria-label="kinds of visuals">
+            {EXPLAIN_KINDS.map(([k, l, hint]) => {
+              const off = explain.offline && ['images', 'screenshots', 'ai_images'].includes(k);
+              return (
+                <li key={k}>
+                  <label className="desk-toggle-row" data-disabled={off || undefined} title={off ? 'off while licence-safe only is on' : hint}>
+                    <Toggle aria-label={l} checked={Boolean(explain.toggles[k]) && !off} disabled={off} onCheckedChange={(v) => kind(k, v)} />
+                    <span>
+                      {l}
+                      <small>{hint}</small>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <label className="desk-toggle-row desk-explain-safe">
+            <Toggle aria-label="licence-safe only" checked={explain.offline} onCheckedChange={(v) => set('offline', v)} />
+            <span>
+              licence-safe only
+              <small>only kimo&apos;s own library: no fetched photos, screenshots or ai images, nothing to credit</small>
+            </span>
+          </label>
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 export function Library({ library, current, openProject, presets = {}, now }) {
   return (
@@ -149,6 +224,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
   const [samOpen, setSamOpen] = useState(false);
   const [sam, setSam] = useState({ prompt: 'person', effect: '', text: '', color: '#111111', image: null, punch: false });
   const [starting, setStarting] = useState(false);
+  const [explain, setExplain] = useState(loadExplain);
   const noteRef = useRef(null);
   const presets = status?.presets ?? {};
   const styles = status?.styles ?? { auto: 'Auto' };
@@ -194,9 +270,10 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
     localStorage.style = style;
     localStorage.captionStyle = captionStyle;
     localStorage.mode = mode;
+    localStorage.explain = JSON.stringify(explain);
     setStarting(true);
     try {
-      const made = await kimo.create({ files: staged, note: note.trim(), preset, style, captionStyle, mode, batch: batch && staged.length > 1, sam: samChoice });
+      const made = await kimo.create({ files: staged, note: note.trim(), preset, style, captionStyle, mode, batch: batch && staged.length > 1, sam: samChoice, explain: mode === 'ai' ? explain : undefined });
       setLibrary((l) => [...made, ...l.filter((x) => !made.some((m) => m.id === x.id))]);
       setStaged([]);
       setNote('');
@@ -343,6 +420,8 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
               subject effects{sam.effect ? ` · ${SAM_EFFECTS.find((e) => e.value === sam.effect)?.label}` : ''}
             </Button>
           </div>
+
+          <ExplainOptions explain={explain} setExplain={setExplain} disabled={mode !== 'ai'} />
 
           {samOpen ? <SubjectEffects sam={sam} setSam={setSam} video={video} guard={guard} /> : null}
 
