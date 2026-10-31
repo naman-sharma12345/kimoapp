@@ -22,6 +22,10 @@ on:
         description: 'Render the saved project with current compositor before reanalysis; requires analyze_run'
         type: boolean
         default: false
+      native_only:
+        description: 'Retry only missing native references from analyze_run, with a 90 minute export cap'
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read
@@ -101,7 +105,7 @@ jobs:
       matrix:
         clip: ${{ fromJSON(inputs.clips) }}
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: ${{ inputs.native_only && 180 || 120 }}
     defaults:
       run:
         shell: pwsh
@@ -111,6 +115,9 @@ jobs:
       BENCH_LEGACY: ${{ inputs.legacy }}
       BENCH_ANALYZE_ONLY: ${{ inputs.analyze_run != '' }}
       BENCH_RECOMPOSE: ${{ inputs.recompose }}
+      BENCH_NATIVE_ONLY: ${{ inputs.native_only }}
+      BENCH_RETRY_LEGACY: ${{ inputs.native_only }}
+      BENCH_NATIVE_TIMEOUT_MS: ${{ inputs.native_only && '5400000' || '1800000' }}
       KIMO_WORKER_THREADS: '2'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
       KIMO_FFMPEG: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffmpeg.exe

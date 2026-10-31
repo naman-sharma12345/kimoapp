@@ -29,6 +29,24 @@ import { compose } from '../../compose.mjs';
 import { fromKimoProject } from '../../edl.mjs';
 
 const tools = toolPaths();
+const nativeOnly = process.env.BENCH_NATIVE_ONLY === 'true';
+const nativeTimeoutMs = Number(process.env.BENCH_NATIVE_TIMEOUT_MS || 1800000);
+if (
+  !Number.isInteger(nativeTimeoutMs) ||
+  nativeTimeoutMs < 60000 ||
+  nativeTimeoutMs > 7200000
+)
+  throw new Error('Native benchmark timeout must be 60000..7200000 ms');
+if (
+  nativeOnly &&
+  (process.env.BENCH_ANALYZE_ONLY !== 'true' ||
+    process.env.BENCH_LEGACY !== 'true' ||
+    process.env.BENCH_RETRY_LEGACY !== 'true' ||
+    process.env.BENCH_RECOMPOSE === 'true')
+)
+  throw new Error(
+    'Native-only retry requires preserved comparisons, legacy enabled and no recomposition',
+  );
 const dataset = process.env.BENCH_DATASET || 'legacy';
 if (!['legacy', 'raw-v2'].includes(dataset))
   throw new Error('Unknown benchmark dataset');
@@ -143,6 +161,21 @@ try {
         (await hashFile(join(dir, 'final.mp4'))) !== originalRun.finalHash
       )
         throw new Error('Preserved final bytes changed before reanalysis');
+      // A verified completed native reference is never exported again by a retry batch.
+      if (
+        nativeOnly &&
+        existsSync(join(dir, 'legacy-final.mp4')) &&
+        existsSync(join(dir, 'legacy-run.json'))
+      ) {
+        const saved = await readJson(join(dir, 'legacy-run.json'));
+        if (
+          saved.sameProject !== true ||
+          (await hashFile(join(dir, 'legacy-final.mp4'))) !== saved.finalHash ||
+          (await hashFile(join(dir, 'project.kimo.json'))) !== saved.projectHash
+        )
+          throw new Error('Completed native reference or project changed');
+        continue;
+      }
       // A declared manual soundtrack fixture imports a separate music stem through the real MCP
       // tools. It then takes the same runEdit manual route users use, without any paid planner.
       let soundtrackProject;
@@ -300,15 +333,17 @@ try {
         (!recomposed ||
           (priorAudioHash &&
             priorAudioHash === (await audioHash(result.output))));
-      await analyze(result.output, 'compose', {
-        reuseWords: Boolean(reuseComposedWords),
-      });
-      await reviewMedia({
-        ffmpeg: tools.ffmpeg,
-        output: result.output,
-        directory: dir,
-        duration: result.duration,
-      });
+      if (!nativeOnly) {
+        await analyze(result.output, 'compose', {
+          reuseWords: Boolean(reuseComposedWords),
+        });
+        await reviewMedia({
+          ffmpeg: tools.ffmpeg,
+          output: result.output,
+          directory: dir,
+          duration: result.duration,
+        });
+      }
       if (!onlyAnalysis)
         await writeJson(join(dir, 'run.json'), {
           commit: (await command('git', ['rev-parse', 'HEAD'])).stdout
@@ -331,7 +366,7 @@ try {
           ),
           datasetLimitations: clip.notes,
         });
-      if (onlyAnalysis) {
+      if (onlyAnalysis && !nativeOnly) {
         await writeJson(join(dir, 'analysis.json'), {
           commit: (await command('git', ['rev-parse', 'HEAD'])).stdout
             .toString()
@@ -388,12 +423,19 @@ try {
           const reply = await mcp.request(
             'tools/call',
             { name: 'export', arguments: { path: legacy } },
-            1800000,
+            nativeTimeoutMs,
           );
           if (reply.error || reply.result?.isError)
             throw new Error(JSON.stringify(reply));
           const nativeMs = Date.now() - start;
           const measured = await measure(tools.ffmpeg, tools.ffprobe, legacy);
+          if (
+            dataset === 'raw-v2' &&
+            Math.abs(measured.duration - result.duration) > 0.15
+          )
+            throw new Error(
+              `Incomplete native reference: ${measured.duration}s versus ${result.duration}s full timeline`,
+            );
           const upload = join(dir, 'legacy-final.mp4');
           await youtubeMaster({
             ffmpeg: tools.ffmpeg,
@@ -409,10 +451,13 @@ try {
             projectHash: await hashFile(result.projectFile),
             finalHash: await hashFile(upload),
             sameProject: true,
+            nativeTimeoutMs,
+            nativeExportDuration: measured.duration,
           });
           if (existsSync(join(dir, 'legacy-failure.json')))
             await unlink(join(dir, 'legacy-failure.json'));
         } catch (error) {
+          if (nativeOnly) failed = true;
           await writeJson(join(dir, 'legacy-failure.json'), {
             error: error.message,
             elapsedMs: Date.now() - start,
