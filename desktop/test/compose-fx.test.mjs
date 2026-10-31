@@ -206,15 +206,15 @@ test(
       // Speech stand-in: 3 kHz at -20 dBFS between 1.0 s and 2.0 s only.
       await command(ffmpeg, [
         '-v', 'error', '-y', '-f', 'lavfi', '-i',
-        "aevalsrc='0.1*sin(2*PI*3000*t)*between(t,1,2)':s=48000:d=3", voice,
+        "aevalsrc='0.1*sin(2*PI*3000*t)*between(t,1,2)':s=48000:d=3", '-c:a', 'pcm_s16le', voice,
       ]);
       await command(ffmpeg, [
         '-v', 'error', '-y', '-f', 'lavfi', '-i',
-        "aevalsrc='0.1*sin(2*PI*200*t)':s=48000:d=3", music,
+        "aevalsrc='0.1*sin(2*PI*200*t)':s=48000:d=3", '-c:a', 'pcm_s16le', music,
       ]);
       await command(ffmpeg, [
         '-v', 'error', '-y', '-f', 'lavfi', '-i',
-        "aevalsrc='0.2*sin(2*PI*7000*t)':s=48000:d=0.1", sfx,
+        "aevalsrc='0.2*sin(2*PI*7000*t)':s=48000:d=0.1", '-c:a', 'pcm_s16le', sfx,
       ]);
       const edl = base([{ id: 'v', path: voice }], [], {
         video: [],
@@ -242,9 +242,10 @@ test(
       const before = db(0.3, 0.8, 200),
         during = db(1.4, 1.9, 200),
         after = db(2.6, 2.9, 200);
-      assert.ok(before - during > 10, `music ducked ${before - during} dB`);
-      assert.ok(before - during < 24, `duck not excessive ${before - during} dB`);
-      assert.ok(Math.abs(after - before) < 3, 'music recovers after speech');
+      const levels = `${before.toFixed(1)} / ${during.toFixed(1)} / ${after.toFixed(1)} dB`;
+      assert.ok(before - during > 10, `music ducked (${levels})`);
+      assert.ok(before - during < 24, `duck not excessive (${levels})`);
+      assert.ok(Math.abs(after - before) < 3, `music recovers after speech (${levels})`);
       assert.ok(db(2.5, 2.6, 7000) > -30, 'SFX present at 2.5 s');
       assert.ok(db(2.0, 2.45, 7000) < -50, 'SFX silent before its time');
     } finally {
