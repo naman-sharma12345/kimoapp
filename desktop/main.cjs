@@ -375,6 +375,11 @@ async function smoke(clip, outPath) {
         /* optional artifact */
       }
     }
+    // Phase 7: explainer families through the same backend, entry-frame sync, the synthesised sound kit, beat edits
+    report.stage = 'explain';
+    flush();
+    const { explainSelfTest } = await import(pathToFileURL(join(__dirname, 'explain', 'selftest.mjs')).href);
+    report.explain = await explainSelfTest({ ffmpeg: p.ffmpeg, dir: join(data(), 'smoke', 'explain') });
     // key lockdown: with no owner sign-in and no own key, an AI step stops locally with the clear message (no network call)
     {
       const auth = await loadAuth();
@@ -386,7 +391,7 @@ async function smoke(clip, outPath) {
       }
       report.lockdown = { ok: Boolean(locked && auth.isLockedError(locked)), message: String(locked?.message ?? 'aiHeaders returned without a sign-in').slice(0, 200) };
     }
-    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && report.graphics.ok && report.lockdown.ok && (!report.cutPlan || chunks.length > 0));
+    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && report.graphics.ok && report.explain.ok && report.lockdown.ok && (!report.cutPlan || chunks.length > 0));
     const samAt = process.argv.indexOf('--smoke-sam');
     if (samAt > 0) {
       // SAM 3.1 end to end on Windows: proxy upload → track → 9:16 follow reframe + text behind the subject → kimo render

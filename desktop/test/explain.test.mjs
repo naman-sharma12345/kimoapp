@@ -378,3 +378,24 @@ test('chat patches and planner tools: the spec examples become plan changes; tim
   e = applyEdits(e, [{ tool: 'delete_clip', args: { clip_id: 'ex-b1' } }]);
   assert.equal(e.overlays.length, 0);
 });
+
+test('publicEdl keeps the explainer fields the beat editor needs; the explain self-test passes on the built-in canvas', { timeout: 60000 }, async () => {
+  const { publicEdl } = await import('../edl.mjs');
+  const o = { id: 'ex1', kind: 'graphic', at: 1, dur: 3, track: 'graphics', props: { element: 'ex_list', mode: 'side', title: '3 reasons', items: [{ text: 'a', t: 0.2 }], explain: { beat: 'b1', kind: 'list' }, panel: { x: 1, y: 2, w: 3, h: 4 }, assets: [{ path: 'C:/secret.png' }] } };
+  const p = publicEdl({ edl_version: 1, canvas: { w: 540, h: 960, fps: 30 }, sources: [], video: [], audio: [], overlays: [o], master: {} }).overlays[0].props;
+  assert.deepEqual(p.explain, { beat: 'b1', kind: 'list' });
+  assert.equal(p.title, '3 reasons');
+  assert.equal(p.mode, 'side');
+  assert.equal(p.items.length, 1);
+  assert.equal(p.assets, undefined, 'asset paths stay off IPC');
+  assert.equal(p.panel, undefined, 'panel geometry stays off IPC');
+  const { explainSelfTest } = await import('../explain/selftest.mjs');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const ffmpeg = process.env.KIMO_FFMPEG || 'ffmpeg';
+  if (spawnSync(ffmpeg, ['-version']).status !== 0) return;
+  const r = await explainSelfTest({ ffmpeg, dir: mkdtempSync(join(tmpdir(), 'kimo-explain-st-')) });
+  assert.ok(r.ok, JSON.stringify(r));
+});
