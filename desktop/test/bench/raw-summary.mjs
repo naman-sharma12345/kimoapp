@@ -1,5 +1,6 @@
 // Read small collected evidence only; this command never decodes or renders footage.
 import { join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 import { ROOT, readJson, writeJson, hashFile } from './io.mjs';
 
 const input = process.argv[2];
@@ -10,6 +11,15 @@ const frozen = await readJson(
   join(ROOT, 'clips/raw-v2/prepared-manifest.json'),
 );
 const rows = [];
+const currentMetrics = (dir, target) =>
+  readJson(
+    join(
+      dir,
+      existsSync(join(dir, `${target}-metrics-v4.json`))
+        ? `${target}-metrics-v4.json`
+        : `${target}-metrics.json`,
+    ),
+  );
 for (const clip of frozen.cases)
   for (const aspect of ['9x16', '16x9']) {
     const dir = join(resolve(input), `${clip.id}-evidence`, aspect);
@@ -17,7 +27,7 @@ for (const clip of frozen.cases)
       clip: clip.id,
       aspect,
       scope:
-        'Version-3 identical-project offline renderer comparison; not an AI editorial replay',
+        'Version-4 identical-project offline renderer comparison; not an AI editorial replay',
     };
     try {
       const run = await readJson(join(dir, 'run.json'));
@@ -36,10 +46,10 @@ for (const clip of frozen.cases)
         throw new Error('Offline/compositor invariant failed');
       row.commit = run.commit;
       row.outputSha256 = run.finalHash;
-      const after = await readJson(join(dir, 'compose-metrics.json'));
-      if (after.version !== 3)
+      const after = await currentMetrics(dir, 'compose');
+      if (after.version !== 4)
         throw new Error(
-          'Current EOF/delivery measurements require version 3 on both sides',
+          'Current camera aggregation measurements require version 4 on both sides',
         );
       const metrics = (m) => ({
         score: m.creator.score,
@@ -65,8 +75,8 @@ for (const clip of frozen.cases)
             native.projectHash
         )
           throw new Error('Native baseline project hash mismatch');
-        const before = await readJson(join(dir, 'legacy-metrics.json'));
-        if (before.version !== 3)
+        const before = await currentMetrics(dir, 'legacy');
+        if (before.version !== 4)
           throw new Error('Native measurement version mismatch');
         row.before = metrics(before);
         row.nativeSha256 = native.finalHash;

@@ -2,7 +2,10 @@ import { join } from 'node:path';
 import { mkdir, copyFile } from 'node:fs/promises';
 import { ROOT, command, hashFile, readJson, probeFile } from './io.mjs';
 import * as metric from './metrics.mjs';
-import { sourceResidualJitter } from './registration.mjs';
+import {
+  sourceResidualJitter,
+  aggregateRegistration,
+} from './registration.mjs';
 import { workerThreads } from '../../resources.cjs';
 import { rectFilter } from '../../sam.mjs';
 import { curveValue, curveSampler } from '../../edl.mjs';
@@ -246,9 +249,6 @@ export async function frameSourceMetrics(
     total = Math.max(0, Math.round(duration * fps) - 1);
   const details = [];
   const metadata = new Map();
-  let cameraSquared = 0,
-    cameraMeasured = 0,
-    cameraEligible = total;
   // Segments keep their EDL time mapping; never treat an intentional jump cut as a drop.
   for (const e of visibleSourceSegments(events, duration)) {
     const c = e.raw;
@@ -400,11 +400,6 @@ export async function frameSourceMetrics(
     );
     // Exclude only the six SG boundary samples per measured segment; unsupported
     // segments still lower global coverage. Never fill missing registration with zero.
-    cameraEligible -= Math.min(6, outputFrames.length);
-    if (camera.jitter_px != null) {
-      cameraSquared += camera.jitter_px ** 2 * camera.measured;
-      cameraMeasured += camera.measured;
-    }
     repeats += matched.repeated_frames ?? 0;
     skips += matched.skipped_frames ?? 0;
     compared += matched.compared;
@@ -415,11 +410,7 @@ export async function frameSourceMetrics(
     skipped_frames: compared ? skips : null,
     frame_match_coverage: total ? compared / total : 0,
     frame_match: details,
-    jitter_px:
-      cameraMeasured && cameraMeasured / Math.max(1, cameraEligible) >= 0.95
-        ? Math.sqrt(cameraSquared / cameraMeasured)
-        : null,
-    camera_registration_coverage: cameraMeasured / Math.max(1, cameraEligible),
+    ...aggregateRegistration(details, Math.max(0, Math.round(duration * fps))),
   };
 }
 
@@ -609,7 +600,7 @@ export async function measureRun({
     if (duck) duck.estimated = true;
   }
   return {
-    version: 3,
+    version: 4,
     values,
     checks,
     creator: metric.creatorScore(values, weights, {
@@ -629,7 +620,7 @@ export async function measureRun({
       frame:
         '108x192 grey affine-photometric MAD +/-3 source frames (best/second cost ratio <=0.9 and absolute separation >=0.02) with float perspective alignment; no integer crop approximation. EDL cuts are excluded. Text envelopes are masked on both source and output; unknown animated geometry is unmeasured. Expected indices use the global grid, source rate and speed, clamped to exact ffprobe nb_frames when available. Intended EOF/rate-conversion/slow-motion holds are not judder. Animated mappings and ambiguous static frames reduce coverage.',
       camera:
-        'Source-referenced small-translation least squares with affine brightness fit on 108x192 decoded grey frames; masked overlay envelopes and gradient neighbours. SG7 high-frequency residual normalized to 1080 short side. Flat/aperture/poor fits are unavailable; requires 95% eligible coverage. Physical source motion cancels against the same expected source frame. This estimate does not certify source-frame identity. The old whole-picture measure remains content_motion_jitter_px. Compare measurement version-3 before and after only.',
+        'Source-referenced small-translation least squares with affine brightness fit on 108x192 decoded grey frames; masked overlay envelopes and gradient neighbours. SG7 high-frequency residual normalized to 1080 short side. Flat/aperture/poor fits are unavailable; requires 95% eligible coverage. Version4 fixes the aggregate denominator to count frames rather than adjacent source pairs. Physical source motion cancels against the same expected source frame. This estimate does not certify source-frame identity. The old whole-picture measure remains content_motion_jitter_px. Compare measurement version4 before and after only.',
       delivery:
         'Format qualityChecks (excluding whole-content motion) plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR. Motion retains its separate source-referenced gates.',
     },

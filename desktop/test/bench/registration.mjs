@@ -119,3 +119,27 @@ export function sourceResidualJitter(
       : null,
   };
 }
+
+// Registration measures frames; frame matching measures adjacent pairs. Keep their denominators separate.
+export function aggregateRegistration(segments, totalFrames) {
+  let eligible = Math.max(0, totalFrames),
+    measured = 0,
+    squared = 0;
+  for (const segment of segments) {
+    const camera = segment.camera;
+    if (!camera) continue;
+    eligible -= Math.min(6, segment.total);
+    if (camera.jitter_px != null) {
+      measured += camera.measured;
+      squared += camera.jitter_px ** 2 * camera.measured;
+    }
+  }
+  if (eligible < 0 || measured > eligible)
+    throw new Error('Registration counts exceed eligible output frames');
+  const coverage = eligible ? measured / eligible : 0;
+  return {
+    jitter_px:
+      measured && coverage >= 0.95 ? Math.sqrt(squared / measured) : null,
+    camera_registration_coverage: coverage,
+  };
+}

@@ -4,7 +4,11 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as m from './metrics.mjs';
-import { sourceResidualJitter, registerTranslation } from './registration.mjs';
+import {
+  sourceResidualJitter,
+  registerTranslation,
+  aggregateRegistration,
+} from './registration.mjs';
 import { command, probeFile, filterPath, readJson } from './io.mjs';
 import {
   projectEdl,
@@ -15,6 +19,26 @@ import {
 
 const words = (list) =>
   list.map(([text, start, end]) => ({ text, start, end }));
+
+test('camera coverage counts eligible frames rather than adjacent source pairs', () => {
+  // A 500-frame take has 494 centres with a complete seven-frame registration window.
+  const measured = [{ total: 500, camera: { measured: 494, jitter_px: 0.25 } }];
+  assert.deepEqual(aggregateRegistration(measured, 500), {
+    jitter_px: 0.25,
+    camera_registration_coverage: 1,
+  });
+  const withUnobservableTail = aggregateRegistration(measured, 550);
+  assert.equal(withUnobservableTail.jitter_px, null);
+  assert.ok(withUnobservableTail.camera_registration_coverage < 0.95);
+  assert.deepEqual(aggregateRegistration([{ total: 500 }], 500), {
+    jitter_px: null,
+    camera_registration_coverage: 0,
+  });
+  assert.throws(
+    () => aggregateRegistration([...measured, ...measured], 500),
+    /counts exceed/,
+  );
+});
 
 test('source-referenced camera estimate cancels capture motion, brightness and masked captions but detects injected shake', () => {
   const width = 64,

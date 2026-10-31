@@ -120,6 +120,10 @@ test(
       assert.equal(good.repeated_frames, 0);
       assert.equal(good.skipped_frames, 0);
       assert.ok(good.frame_match_coverage >= 0.95, JSON.stringify(good));
+      assert.ok(
+        good.camera_registration_coverage >= 0 &&
+          good.camera_registration_coverage <= 1,
+      );
       const bad = join(dir, 'judder.mkv');
       await command(ffmpeg, [
         '-v',
