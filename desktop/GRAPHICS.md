@@ -63,7 +63,7 @@ Captions yield to graphics: kit graphics carry their laid-out box and are collis
 
 ## Caveats (read before claiming anything)
 
-- **The Windows offscreen path is untested beyond the hosted Electron smoke.** If the offscreen window cannot render, graphics fall back to the soft canvas (same element code, slower, no Chromium text shaping).
+- **The Windows offscreen path is only tested on the hosted Windows runner** (the Electron smoke rendered every element and a composite with it), not on user PCs or other GPUs. If the offscreen window cannot render, graphics fall back to the soft canvas (same element code, slower, no Chromium text shaping). Chromium and the soft canvas differ slightly in antialiasing and kerning (smoke parity on the hook title: mean abs 6.12 per byte), so a fallback render is close but not pixel-identical, and the cache keys them separately.
 - Frames are read from the page canvas, not from offscreen `paint` events.
 - B-roll colour matching to the A-roll is Phase 8; b-roll gets no grade match yet.
 - B-roll camera moves are a fixed pattern (push in, push out or drift, chosen by insert index), not a pan along the clip's dominant motion.
