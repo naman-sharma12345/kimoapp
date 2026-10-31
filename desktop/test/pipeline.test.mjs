@@ -133,7 +133,7 @@ test(
     } finally {
       globalThis.fetch = original;
       delete PRESETS.fixture;
-      await rm(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   },
 );
@@ -219,7 +219,7 @@ test(
     } finally {
       globalThis.fetch = original;
       delete PRESETS.fixture;
-      await rm(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 250 });
     }
   },
 );
