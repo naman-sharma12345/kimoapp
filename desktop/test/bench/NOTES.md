@@ -45,3 +45,16 @@
 - libass needs real files for `fontsdir`, so the licence texts live in `fonts/licenses/` (a `.txt` in the fonts dir is tried as a font and logs an error) and the fonts ship `asarUnpack`ed.
 - Luckiest Guy is Apache-2.0, not OFL; Bangers (OFL) is the MrBeast lookalike. Inter was not needed: Geist covers the clean sans styles.
 - Nothing looped twice without progress.
+
+## 1 November 2026 (Phase 7, explainers)
+
+Known gaps, left open on purpose:
+
+- No keyed sources: GIPHY, Tenor, Pexels and Pixabay need API keys and are not wired. Pictures come from kimo's library, Openverse and Wikimedia Commons only.
+- Openverse and Wikimedia are called directly from the app (no proxy or mirror). Openverse answered one search with a 504 once; the source treats it as no result for that query and the beat falls back to an icon card.
+- Crowd sounds (ooh, laugh, laugh track) map to the nearest synthesised kit sound (ding, boing); there are no recorded crowd sounds.
+- No music dip: the music is not ducked further while an explainer beat or its SFX plays (voice ducking from Phase 2 still applies).
+- "Regenerate this part" re-runs the visual director and needs AI access (owner sign-in or an own key); without it the button reports the locked message.
+- UI callouts need a target box (from a screenshot or the planner); there is no automatic detection of the UI element being talked about.
+- Explain previews are a synthetic scene without the camera's make-room reframe, so top-mode panels at 9:16 sit over the fake head there; real edits reframe the speaker.
+- The renderer browser check (`test/renderer-edl.mjs`) needs a local Chrome; it could not run in the agent sandbox this session (Playwright browser download refused), so the 14-clip fixture change was checked by the renderer build and unit tests only.

@@ -198,6 +198,24 @@ Core validation: final lint, strict typecheck, **141 unit/integration tests** (i
 
 This phase is submitted for PR review with the explicit manual/performance gates above, rather than claiming an unverified production launch.
 
+## Desktop creator Phase 07 - explainers: the screen shows what is said (1 November 2026)
+
+Implementation is complete and pushed to main without force (`e915785` … `c4c7b93`, wrap-up commits `b9f92e7` … `c4c7b93`); real-footage numbers and the EXPLAIN-1 bench are deferred, as for Phases 3-6. No engine repository/binary change, no web app behaviour or Worker change in the wrap-up, deploy-cloudflare stays disabled, no installer/release/tag, no paid AI/SAM call. Design and controls: [desktop/EXPLAINERS.md](../desktop/EXPLAINERS.md); key lockdown: [desktop/SECURITY.md](../desktop/SECURITY.md).
+
+### Acceptance checklist
+
+- [x] Cue detection (en + hi/Hinglish), the visual director (cached two-pass model decision through the locked proxy, at most 4 calls, cue-only without AI), validation (density, emoji caps, variety, per-kind switches, licence-safe), word-synced timing (items 2 frames before their word, on their entry frame), layout with make-room camera keys, full ≤ 25 %, pip with a speaker bubble, and beats → EDL (`ex_*` overlays, SFX bus, caption no-accent, attributions, metrics).
+- [x] 16+ explainer families on the Phase 6 graphics kit with bundled icons and an offline map; previews regenerated after the sync/layout changes (`desktop/explain/previews/`, synthetic scene, inspected by eye).
+- [x] Asset sources (library, Openverse, Wikimedia, sandboxed screenshots of public URLs, opt-in AI images) with a licence filter, 2 GB LRU cache and per-video search cap; ATTRIBUTIONS.txt beside saved exports and credits in the description.
+- [x] Sound kit synthesised on the PC (own CC0 sounds) with SFX cue planning.
+- [x] Controls: Home "explain with visuals" (on/off, density, per-kind switches, licence-safe only), chat patches and planner tools, explainer beat blocks on the Studio GFX track with item ticks and a beat editor (title, items, text, shape, layout, delete, regenerate this part). `publicEdl` carries the explainer fields over IPC; panel geometry and asset paths stay off it.
+- [x] Meta key lockdown: owner allowlist (`OWNER_ALLOWLIST` Worker secret), desktop loopback + PKCE sign-in, 30-minute tokens, BYOK never falls back to kimo's key, fail closed.
+- [x] Light tests: 163/163 desktop tests locally (Linux, FFmpeg 6) and on hosted Windows + Linux (`41246970470`, main `c4c7b93`). Windows Electron smoke `41246983535` (Phase 02 compositor validation, golden matrix off, no installer/release) passes on `c4c7b93`: the new explain self-test ran on the offscreen Chromium window (all 8 checked families drew, frame 37 byte-identical, the third list item appears on its entry frame and not before, tick/whoosh/ding synthesised, a beat survives publicEdl and an edit_explain), and the lockdown check stopped an AI step locally. The explain self-test is part of the smoke's `report.ok`.
+- [ ] EXPLAIN-1 bench and real-footage numbers (beat-to-word sync, face overlaps, visual share, Creator Score): **deferred**; not measured, no numbers claimed.
+- [ ] Renderer browser check (`desktop/test/renderer-edl.mjs`, now 14 fixture clips including one explainer beat): not run this session (no local Chrome in the agent sandbox); the renderer build and unit tests pass.
+
+Open gaps are listed in [desktop/test/bench/NOTES.md](../desktop/test/bench/NOTES.md) (Phase 7): no keyed sources, Openverse/Wikimedia called directly (one Openverse 504 seen), crowd sounds mapped to synth sounds, no music dip, regenerate needs AI access, UI callouts need a target box. The root `kimo checks` run `41246970521` passed lint/typecheck/test/build and failed only the pre-existing web bundle budgets.
+
 ## Desktop creator Phase 06 - graphics, titles, callouts and b-roll (1 November 2026)
 
 Naman's instruction for this phase: don't go deep on tests or benchmarks. Implementation is complete and pushed to main without force (`6831afa` … `114854b`); real-footage bench numbers are deferred. No engine repository/binary or web runtime change, no installer/release, no paid AI/SAM call. Design notes and caveats: [desktop/GRAPHICS.md](../desktop/GRAPHICS.md).
