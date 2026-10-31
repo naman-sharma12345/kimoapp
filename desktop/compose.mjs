@@ -176,6 +176,29 @@ function geometry(clip, source, canvas, plan) {
       rectFilter(cameraRectsForClip(clip, source, canvas, plan)),
       `scale=${canvas.w}:${canvas.h}:flags=lanczos+accurate_rnd+full_chroma_int`,
     );
+  // Phase 7 picture-in-picture: the speaker, already framed on the canvas, is
+  // centre-cropped to the bubble's aspect, scaled into the bubble and padded
+  // to the canvas (its rounded corners come from the clip mask)
+  if (clip._pip) {
+    const k = clip._pip;
+    const even = (v) => Math.max(2, Math.round(v / 2) * 2);
+    let cw = canvas.w;
+    let ch = cw * (k.h / k.w);
+    if (ch > canvas.h) {
+      ch = canvas.h;
+      cw = ch * (k.w / k.h);
+    }
+    const z = Math.max(1, Math.min(2.5, k.zoom ?? 1));
+    cw = even(cw / z);
+    ch = even(ch / z);
+    const cx = Math.max(0, Math.min(canvas.w - cw, Math.round((k.fx ?? 0.5) * canvas.w - cw / 2)));
+    const cy = Math.max(0, Math.min(canvas.h - ch, Math.round((k.fy ?? 0.5) * canvas.h - ch / 2)));
+    filters.push(
+      `crop=${cw}:${ch}:${cx}:${cy}`,
+      `scale=${k.w}:${k.h}:flags=lanczos+accurate_rnd+full_chroma_int`,
+      `pad=${canvas.w}:${canvas.h}:${Math.round(k.x)}:${Math.round(k.y)}:color=black@0`,
+    );
+  }
   // screen card: the recording inset onto the card (its rounded corners come from the clip mask)
   if (clip._card) {
     const k = clip._card;
@@ -940,7 +963,7 @@ export async function compose({
     });
   }
   for (const [overlayIndex, overlay] of edl.overlays.entries()) {
-    if (!['image', 'text_behind', 'graphic'].includes(overlay.kind) || !overlay.src)
+    if (!['image', 'text_behind', 'graphic', 'pip'].includes(overlay.kind) || !overlay.src)
       continue;
     const p = overlay.kind === 'graphic' ? {} : overlay.props ?? {};
     edl.video.push({
@@ -961,6 +984,8 @@ export async function compose({
           mask: p.mask,
           rotation: p.rotation,
           ...(overlay._place ? { place: overlay._place, fit: 'cover' } : {}),
+          // Phase 7 speaker bubble: a copy of the talking track inset over a full-screen explainer
+          ...(overlay.kind === 'pip' && p.pip ? { _pip: p.pip, fit: 'cover' } : {}),
         },
       ],
     });

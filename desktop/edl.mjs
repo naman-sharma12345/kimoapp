@@ -313,11 +313,14 @@ export function validate(edl) {
         'image',
         'text_behind',
         'graphic',
+        'pip',
       ].includes(o.kind)
     )
       fail(`overlays[${i}].kind`, `unknown overlay kind ${o.kind}`);
     if (o.kind === 'image' && !o.src)
       fail(`overlays[${i}].src`, 'image source required');
+    if (o.kind === 'pip' && (!o.src || !o.props?.pip || !(o.props.pip.w > 0 && o.props.pip.h > 0)))
+      fail(`overlays[${i}].props.pip`, 'picture-in-picture source and bubble rect required');
     if (o.kind === 'graphic' && (typeof o.props?.element !== 'string' || !o.props.element))
       fail(`overlays[${i}].props.element`, 'graphic element kind required');
     if (o.kind !== 'image' && (!o.props || typeof o.props !== 'object'))
@@ -813,10 +816,12 @@ export function toTimeline(edl) {
     }
     t.clips.push({
       id: o.id,
-      src: o.kind === 'graphic' ? `graphic: ${String(o.props.element).replace('_', ' ')}${[o.props.text, o.props.name, o.props.value, o.props.title, o.props.emoji].find((v) => typeof v === 'string' && v) ? ` · ${[o.props.text, o.props.name, o.props.value, o.props.title, o.props.emoji].find((v) => typeof v === 'string' && v).replaceAll('.', '·')}` : ''}` : o.props.primitive ? 'generated' : `text: ${o.props.text ?? ''}`,
+      src: o.kind === 'pip' ? 'speaker bubble' : o.kind === 'graphic' ? `graphic: ${String(o.props.element).replace('_', ' ')}${[o.props.text, o.props.name, o.props.value, o.props.title, o.props.emoji].find((v) => typeof v === 'string' && v) ? ` · ${[o.props.text, o.props.name, o.props.value, o.props.title, o.props.emoji].find((v) => typeof v === 'string' && v).replaceAll('.', '·')}` : ''}` : o.props.primitive ? 'generated' : `text: ${o.props.text ?? ''}`,
       start: o.at,
       end: o.at + o.dur,
       ...(isCaptionChunk(o) ? { caption: true } : {}),
+      // Phase 7 explainer beats: family, layout and item ticks (seconds from the beat start) for the GFX track
+      ...(o.props?.explain ? { explain: { beat: o.props.explain.beat, kind: o.props.explain.kind, mode: o.props.mode ?? null, ticks: (o.props.items ?? o.props.map?.places ?? []).map((i) => i?.t).filter(Number.isFinite) } } : {}),
     });
   }
   for (const t of edl.audio) {
