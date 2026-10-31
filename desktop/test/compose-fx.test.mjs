@@ -200,21 +200,21 @@ test(
   async () => {
     const dir = await mkdtemp(join(tmpdir(), 'kimo-duck-'));
     try {
-      const voice = join(dir, 'voice.wav'),
-        music = join(dir, 'music.wav'),
-        sfx = join(dir, 'sfx.wav');
+      const voice = join(dir, 'voice.flac'),
+        music = join(dir, 'music.flac'),
+        sfx = join(dir, 'sfx.flac');
       // Speech stand-in: 3 kHz at -20 dBFS between 1.0 s and 2.0 s only.
       await command(ffmpeg, [
         '-v', 'error', '-y', '-f', 'lavfi', '-i',
-        "aevalsrc='0.1*sin(2*PI*3000*t)*between(t,1,2)':s=48000:d=3", '-c:a', 'pcm_s16le', voice,
+        "aevalsrc='0.1*sin(2*PI*3000*t)*between(t,1,2)':s=48000:d=3", '-c:a', 'flac', voice,
       ]);
       await command(ffmpeg, [
         '-v', 'error', '-y', '-f', 'lavfi', '-i',
-        "aevalsrc='0.1*sin(2*PI*200*t)':s=48000:d=3", '-c:a', 'pcm_s16le', music,
+        "aevalsrc='0.1*sin(2*PI*200*t)':s=48000:d=3", '-c:a', 'flac', music,
       ]);
       await command(ffmpeg, [
         '-v', 'error', '-y', '-f', 'lavfi', '-i',
-        "aevalsrc='0.2*sin(2*PI*7000*t)':s=48000:d=0.1", '-c:a', 'pcm_s16le', sfx,
+        "aevalsrc='0.2*sin(2*PI*7000*t)':s=48000:d=0.1", '-c:a', 'flac', sfx,
       ]);
       const edl = base([{ id: 'v', path: voice }], [], {
         video: [],

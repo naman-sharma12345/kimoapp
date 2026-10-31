@@ -697,9 +697,14 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
         Math.max(0.000976563, 10 ** ((-24 - depth / 0.95) / 20)),
       );
       const out = `[ducked${gi}_${j}]`;
+      // sidechaincompress ends at the first input EOF and drops whatever the
+      // other input still has buffered (decoder frame sizes differ), so give
+      // both inputs a second of slack and trim back to the picture clock.
+      const slack = samples + 48000;
       filters.push(
-        `${taps[j]}apad=whole_len=${samples}[vscp${gi}_${j}]`,
-        `${d.label}[vscp${gi}_${j}]sidechaincompress=threshold=${safe(threshold)}:ratio=20:knee=4:attack=${safe(Math.max(0.01, duck.attack_ms ?? 60))}:release=${safe(Math.max(0.01, duck.release_ms ?? 350))}:makeup=1:detection=rms:link=maximum${out}`,
+        `${taps[j]}apad=whole_len=${slack}[vscp${gi}_${j}]`,
+        `${d.label}apad=whole_len=${slack}[vmain${gi}_${j}]`,
+        `[vmain${gi}_${j}][vscp${gi}_${j}]sidechaincompress=threshold=${safe(threshold)}:ratio=20:knee=4:attack=${safe(Math.max(0.01, duck.attack_ms ?? 60))}:release=${safe(Math.max(0.01, duck.release_ms ?? 350))}:makeup=1:detection=rms:link=maximum,atrim=end_sample=${samples}${out}`,
       );
       consumed.add(d);
       finalLabels.push(out);
