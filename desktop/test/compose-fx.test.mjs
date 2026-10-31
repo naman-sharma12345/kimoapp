@@ -181,3 +181,74 @@ test(
   },
 );
 
+function goertzel(samples, from, to, freq, rate = 48000) {
+  const k = (2 * Math.PI * freq) / rate;
+  let s1 = 0,
+    s2 = 0;
+  for (let i = from; i < to; i++) {
+    const s0 = samples[i] + 2 * Math.cos(k) * s1 - s2;
+    s2 = s1;
+    s1 = s0;
+  }
+  const n = to - from;
+  return (2 * Math.sqrt(s1 * s1 + s2 * s2 - 2 * Math.cos(k) * s1 * s2)) / n;
+}
+
+test(
+  'music ducks under VOICE via sidechain and recovers after speech; SFX lands on time',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-duck-'));
+    try {
+      const voice = join(dir, 'voice.wav'),
+        music = join(dir, 'music.wav'),
+        sfx = join(dir, 'sfx.wav');
+      // Speech stand-in: 3 kHz at -20 dBFS between 1.0 s and 2.0 s only.
+      await command(ffmpeg, [
+        '-v', 'error', '-y', '-f', 'lavfi', '-i',
+        "aevalsrc='0.1*sin(2*PI*3000*t)*between(t,1,2)':s=48000:d=3", voice,
+      ]);
+      await command(ffmpeg, [
+        '-v', 'error', '-y', '-f', 'lavfi', '-i',
+        "aevalsrc='0.1*sin(2*PI*200*t)':s=48000:d=3", music,
+      ]);
+      await command(ffmpeg, [
+        '-v', 'error', '-y', '-f', 'lavfi', '-i',
+        "aevalsrc='0.2*sin(2*PI*7000*t)':s=48000:d=0.1", sfx,
+      ]);
+      const edl = base([{ id: 'v', path: voice }], [], {
+        video: [],
+        audio: [
+          { track: 'VOICE', role: 'VOICE', clips: [{ id: 'vo', src: 'v', in: 0, out: 3, at: 0 }] },
+          {
+            track: 'MUSIC',
+            role: 'MUSIC',
+            clips: [
+              {
+                id: 'bed', asset: music, at: 0, dur: 3, gain_db: 0,
+                duck: { under: 'VOICE', depth_db: 16, attack_ms: 30, release_ms: 200 },
+              },
+            ],
+          },
+          { track: 'SFX', role: 'SFX', clips: [{ id: 'hit', asset: sfx, at: 2.5, gain_db: -3 }] },
+        ],
+      });
+      const out = await compose({ edl, ffmpeg, ffprobe, output: join(dir, 'o.mkv'), dir: join(dir, 'w') });
+      const pcm = (
+        await command(ffmpeg, ['-v', 'error', '-i', out.output, '-ac', '1', '-f', 'f32le', 'pipe:1'])
+      ).stdout;
+      const x = new Float32Array(pcm.buffer, pcm.byteOffset, pcm.length / 4);
+      const db = (a, b, f) => 20 * Math.log10(goertzel(x, a * 48000, b * 48000, f) + 1e-12);
+      const before = db(0.3, 0.8, 200),
+        during = db(1.4, 1.9, 200),
+        after = db(2.6, 2.9, 200);
+      assert.ok(before - during > 10, `music ducked ${before - during} dB`);
+      assert.ok(before - during < 24, `duck not excessive ${before - during} dB`);
+      assert.ok(Math.abs(after - before) < 3, 'music recovers after speech');
+      assert.ok(db(2.5, 2.6, 7000) > -30, 'SFX present at 2.5 s');
+      assert.ok(db(2.0, 2.45, 7000) < -50, 'SFX silent before its time');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);

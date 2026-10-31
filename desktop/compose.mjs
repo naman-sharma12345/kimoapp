@@ -581,7 +581,8 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
     samples = Math.round(seconds * 48000);
   const args = [],
     filters = [],
-    labels = [];
+    labels = [],
+    entries = [];
   for (const track of edl.audio)
     for (const c of track.clips) {
       const s = edl.sources.find((s) => s.id === c.src) ?? {
@@ -635,6 +636,7 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
       );
       filters.push(`[${argsIndex}:a:0]${chain.join(',')}[a${input}]`);
       labels.push(`[a${input}]`);
+      entries.push({ label: `[a${input}]`, track, clip: c });
       for (const k of ['effects', 'pitch', 'denoise', 'echo', 'reverse'])
         if (Array.isArray(a[k]) ? a[k].length : a[k])
           emit({
@@ -647,12 +649,69 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
             at: Date.now(),
           });
     }
-  if (!labels.length) {
+  // MUSIC (or any clip) with `duck` is sidechain-compressed by the bus of the
+  // track/role it ducks under, so it dips only while that bus is speaking.
+  const finalLabels = [],
+    consumed = new Set();
+  const unders = [
+    ...new Set(
+      entries.filter((e) => e.clip.duck).map((e) => e.clip.duck.under ?? 'VOICE'),
+    ),
+  ];
+  for (const [gi, under] of unders.entries()) {
+    const voices = entries.filter(
+      (e) =>
+        !e.clip.duck &&
+        !consumed.has(e) &&
+        (e.track.track === under || e.track.role === under),
+    );
+    const duckers = entries.filter(
+      (e) => e.clip.duck && (e.clip.duck.under ?? 'VOICE') === under,
+    );
+    if (!voices.length) {
+      emit({
+        t: 'op',
+        tool: 'compose_warning',
+        phase: 'end',
+        warning: true,
+        ok: true,
+        title: `Audio duck under ${under}: no unducked clips on that track; mixed without ducking`,
+        at: Date.now(),
+      });
+      continue;
+    }
+    for (const v of voices) consumed.add(v);
+    const bus = `[vbus${gi}]`,
+      taps = duckers.map((_, j) => `[vsc${gi}_${j}]`);
+    filters.push(
+      `${voices.map((v) => v.label).join('')}amix=inputs=${voices.length}:normalize=0:duration=longest,asplit=${taps.length + 1}${bus}${taps.join('')}`,
+    );
+    finalLabels.push(bus);
+    duckers.forEach((d, j) => {
+      const duck = d.clip.duck,
+        depth = duck.depth_db ?? 14;
+      // Speech sits near -24 dBFS before mastering; with ratio 20 the gain
+      // reduction is ~(level - threshold) * 0.95, i.e. about depth_db.
+      const threshold = Math.min(
+        1,
+        Math.max(0.000976563, 10 ** ((-24 - depth / 0.95) / 20)),
+      );
+      const out = `[ducked${gi}_${j}]`;
+      filters.push(
+        `${taps[j]}apad=whole_len=${samples}[vscp${gi}_${j}]`,
+        `${d.label}[vscp${gi}_${j}]sidechaincompress=threshold=${safe(threshold)}:ratio=20:knee=4:attack=${safe(Math.max(0.01, duck.attack_ms ?? 60))}:release=${safe(Math.max(0.01, duck.release_ms ?? 350))}:makeup=1:detection=rms:link=maximum${out}`,
+      );
+      consumed.add(d);
+      finalLabels.push(out);
+    });
+  }
+  for (const e of entries) if (!consumed.has(e)) finalLabels.push(e.label);
+  if (!finalLabels.length) {
     args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
     filters.push(`[0:a]atrim=end_sample=${samples}[mix]`);
   } else
     filters.push(
-      `${labels.join('')}amix=inputs=${labels.length}:normalize=0:duration=longest,apad,atrim=end_sample=${samples}[mix]`,
+      `${finalLabels.join('')}amix=inputs=${finalLabels.length}:normalize=0:duration=longest,apad,atrim=end_sample=${samples}[mix]`,
     );
   const script = join(dir, 'audio.ffgraph'),
     output = join(dir, 'audio.wav');
