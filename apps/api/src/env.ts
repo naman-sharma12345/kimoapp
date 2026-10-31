@@ -57,6 +57,16 @@ export interface Env {
   KIMO_ENGINE_URL?: string;
   /** Shared secret the engine checks in X-Engine-Token. */
   KIMO_ENGINE_TOKEN?: string;
+  /**
+   * Owner allowlist (Worker secret): the only identities that may spend
+   * kimo's own Meta key. Comma/newline separated github:<login>,
+   * github-id:<id>, google:<email> or <email>. Empty allows nobody.
+   */
+  OWNER_ALLOWLIST?: string;
+  /** HMAC key (≥ 32 chars, Worker secret) for desktop owner tokens. */
+  DESKTOP_TOKEN_SECRET?: string;
+  /** Image model for opt-in explainer illustrations; unset = off (501). */
+  META_IMAGE_MODEL?: string;
   /** Hugging Face token that opens the private Space. */
   KIMO_ENGINE_HF_TOKEN?: string;
 }

@@ -96,7 +96,7 @@ export interface EngineDeps {
     sessionId: string,
     events: ServerEvent[],
   ) => Promise<void>;
-  config: (request: Request, env: Env) => Promise<AiConfig>;
+  config: (request: Request, env: Env, userId: string) => Promise<AiConfig>;
   loadSession: (
     env: Env,
     userId: string,
@@ -265,11 +265,12 @@ export function createEngine(deps: EngineDeps) {
   async function step(
     request: Request,
     env: Env,
+    userId: string,
     sessionId: string,
     job: string,
   ) {
     const body = stepSchema.parse(await readJson(request, 20_000));
-    const config = await deps.config(request, env);
+    const config = await deps.config(request, env, userId);
     const state = await loadState(env, job);
     const started = Date.now();
     let calls = 0;
@@ -622,7 +623,7 @@ export function createEngine(deps: EngineDeps) {
       return json({ bytes });
     }
     if (parts[2] === 'step' && method === 'POST')
-      return step(request, env, sessionId, job);
+      return step(request, env, userId, sessionId, job);
     if (parts[2] === 'output' && method === 'GET') {
       const response = await engine(env, `/jobs/${job}/output/out.mp4`, {
         timeout: 95_000,

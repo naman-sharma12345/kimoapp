@@ -40,6 +40,7 @@ import {
 } from './ai.ts';
 import { userAiConfig } from './ai-providers.ts';
 import { assertBudget, recordUsage, usageOf } from './ai-budget.ts';
+import { assertOwnerUser } from './owner.ts';
 import { LIMITS, checkProjectLimits } from './limits.ts';
 import { createEngine } from './engine.ts';
 
@@ -701,6 +702,7 @@ export function createEditing(deps: EditingDeps) {
         'ai_unavailable',
         "AI editing isn't switched on yet",
       );
+    if (config.source === 'kimo') await assertOwnerUser(env, userId);
     if (config.source === 'kimo') await assertBudget(env);
     if (config.source === 'kimo' && !(await bumpAiUsage(env, userId)))
       throw new HttpError(
@@ -851,7 +853,7 @@ export function createEditing(deps: EditingDeps) {
         .catch(() => null);
       await deps.broadcast(env, sessionId, row?.version ?? 0, events);
     },
-    config: async (request, env) => {
+    config: async (request, env, userId) => {
       const base = userAiConfig(request.headers) ?? aiConfig(env);
       if (!base)
         throw new HttpError(
@@ -859,6 +861,7 @@ export function createEditing(deps: EditingDeps) {
           'ai_unavailable',
           "AI editing isn't switched on yet",
         );
+      if (base.source === 'kimo') await assertOwnerUser(env, userId);
       if (base.source === 'kimo') await assertBudget(env);
       return base.source === 'kimo' ? meteredConfig(env, base) : base;
     },
@@ -1106,6 +1109,7 @@ export function createEditing(deps: EditingDeps) {
             ? (env.META_PERCEIVE_MODEL ?? '').trim() || DEFAULT_PERCEIVE_MODEL
             : base.model,
       };
+      if (config.source === 'kimo') await assertOwnerUser(env, userId);
       if (config.source === 'kimo') await assertBudget(env);
       let notes: Awaited<ReturnType<typeof requestPerception>>;
       try {
@@ -1156,6 +1160,7 @@ export function createEditing(deps: EditingDeps) {
           'ai_unavailable',
           "AI editing isn't switched on yet",
         );
+      if (config.source === 'kimo') await assertOwnerUser(env, userId);
       if (config.source === 'kimo') await assertBudget(env);
       const actionId = `check-${crypto.randomUUID().slice(0, 8)}`;
       const idle: ServerEvent = {

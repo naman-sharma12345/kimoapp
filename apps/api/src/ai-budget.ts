@@ -15,6 +15,9 @@ const PRICES: Record<string, { input: number; output: number }> = {
   // SAM 3.1 is billed per frame / image; one "token" here is one of them.
   'sam-3.1-frames': { input: 200, output: 0 }, // $0.20 per 1,000 frames
   'sam-3.1-images': { input: 2_500, output: 0 }, // $2.50 per 1,000 images
+  // Opt-in explainer illustrations: one "token" per image, metered at a
+  // conservative $0.04 each until a real image price is configured.
+  'image-generation': { input: 40_000, output: 0 },
 };
 const FALLBACK = { input: 1.25, output: 4.25 };
 export const DEFAULT_BUDGET_USD = 10;

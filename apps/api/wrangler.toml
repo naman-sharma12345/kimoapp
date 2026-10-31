@@ -43,7 +43,11 @@ new_sqlite_classes = ["SessionRoom"]
 
 # Secrets (set with `wrangler secret put`, never committed):
 # GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-# META_API_KEY (optional; AI editing answers 503 ai_unavailable without it)
+# META_API_KEY (optional; AI editing answers 503 ai_unavailable without it),
+# OWNER_ALLOWLIST (who may spend META_API_KEY: github:<login>, github-id:<id>,
+#   google:<email> or <email>, comma separated; empty = nobody, fail closed),
+# DESKTOP_TOKEN_SECRET (≥ 32 random chars; signs 30-minute desktop owner tokens).
+# The allowlist is a secret, not a [vars] entry, because this repo is public.
 
 # Workers Logs stay off: requests may carry a user's own AI key in the
 # X-AI-Key header, and kimo never keeps it anywhere, logs included.

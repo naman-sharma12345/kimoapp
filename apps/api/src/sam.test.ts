@@ -3,6 +3,7 @@ import { createApp } from './app.ts';
 import { spentUsd } from './ai-budget.ts';
 import { createTestDb } from './d1-fake.ts';
 import type { Env } from './env.ts';
+import { signDesktopToken } from './owner.ts';
 
 const API = 'https://api.getkimo.tech';
 const SSE = [
@@ -22,6 +23,8 @@ function setup(extra: Partial<Env> = {}) {
     API_ORIGIN: API,
     COOKIE_DOMAIN: '.getkimo.tech',
     META_API_KEY: 'meta-key',
+    OWNER_ALLOWLIST: 'github:naman-sharma12345',
+    DESKTOP_TOKEN_SECRET: SECRET,
     ...extra,
   } as Env;
   const calls: { url: string; init?: RequestInit }[] = [];
@@ -42,13 +45,18 @@ function setup(extra: Partial<Env> = {}) {
     app.fetch(new Request(`${API}${path}`, init), env);
   return { env, call, calls };
 }
-const desktop = { 'X-Kimo-Desktop': '1' };
+const SECRET = 'test-secret-test-secret-test-secret-42';
+const iat = Math.floor(Date.now() / 1000);
+const desktop = {
+  Authorization: `Bearer ${await signDesktopToken({ DESKTOP_TOKEN_SECRET: SECRET } as Env, { sub: 'github:naman-sharma12345', uid: 'u1', idp: 'github', pid: '182637278', em: '', lg: 'naman-sharma12345', iat, exp: iat + 1800 })}`,
+};
 
 describe('desktop SAM proxy', () => {
-  it('refuses calls that are not from the desktop app', async () => {
-    const { call } = setup();
+  it('refuses calls without an owner sign-in or a key', async () => {
+    const { call, calls } = setup();
     const r = await call('/v1/desktop/sam', { method: 'POST', body: '{}' });
-    expect(r.status).toBe(403);
+    expect(r.status).toBe(401);
+    expect(calls).toHaveLength(0);
   });
 
   it('uploads a proxy clip with the server key and purpose user_data', async () => {

@@ -36,6 +36,8 @@ function setup(options: { aiKey?: string; ai?: AiReply[] } = {}) {
     API_ORIGIN: API,
     COOKIE_DOMAIN: '.getkimo.tech',
     META_API_KEY: options.aiKey,
+    // kimo's own key answers allowlisted owners only (Phase 7 lockdown)
+    OWNER_ALLOWLIST: 'naman@example.com, github-id:owner',
   };
   const aiCalls: { url: string; body: string; auth: string }[] = [];
   const replies = [...(options.ai ?? [])];
@@ -391,6 +393,19 @@ describe('AI editing', () => {
     expect(await (await call('/v1/ai/status')).json()).toEqual({
       available: false,
     });
+  });
+
+  it('keeps kimo’s key for allowlisted owners: anyone else gets 403 owner_only and no AI call', async () => {
+    const { user, aiCalls } = setup({ aiKey: 'secret-key' });
+    const stranger = await user('other');
+    const { sessionId } = await startSession(stranger);
+    aiCalls.length = 0;
+    const response = await stranger.post(`/v1/sessions/${sessionId}/messages`, {
+      text: 'tighten it',
+    });
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe('owner_only');
+    expect(aiCalls).toHaveLength(0);
   });
 
   it('sends only timeline metadata, applies validated ops and broadcasts', async () => {

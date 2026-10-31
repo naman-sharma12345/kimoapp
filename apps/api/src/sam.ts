@@ -160,10 +160,13 @@ export async function samSegment(
     }
     throw new HttpError(502, 'ai_upstream', 'SAM could not answer; try again');
   }
-  await recordUsage(env, video ? SAM_FRAMES : SAM_IMAGES, {
-    prompt: charged,
-    completion: 0,
-  });
+  // Only kimo's own key is metered; a user's own Meta key is never counted.
+  const metered = config.source === 'kimo';
+  if (metered)
+    await recordUsage(env, video ? SAM_FRAMES : SAM_IMAGES, {
+      prompt: charged,
+      completion: 0,
+    });
   // Keep only the stream's tail: the closing event carries the usage block.
   let tail = new Uint8Array(0);
   const keep = 16_384;
@@ -180,7 +183,7 @@ export async function samSegment(
       tail = joined;
     },
     async flush() {
-      if (!video) return;
+      if (!video || !metered) return;
       const text = new TextDecoder().decode(tail);
       const billed = Number(
         /"video_frames_processed"\s*:\s*(\d+)/.exec(text)?.[1],

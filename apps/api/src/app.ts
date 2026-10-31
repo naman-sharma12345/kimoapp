@@ -37,7 +37,7 @@ import {
 } from './editing.ts';
 import { aiConfig, chatJson } from './ai.ts';
 import { BUILD_PROMPT, REVIEW_PROMPT } from './engine.ts';
-import { assertBudget } from './ai-budget.ts';
+import { assertBudget, recordUsage } from './ai-budget.ts';
 import {
   samDelete,
   samDeleteSchema,
@@ -51,6 +51,20 @@ import {
   redact,
   userAiConfig,
 } from './ai-providers.ts';
+import {
+  DESKTOP_TOKEN_SECONDS,
+  OWNER_ONLY_MESSAGE,
+  ownerSubject,
+  parseAllowlist,
+  requireOwnerToken,
+  signDesktopToken,
+  type OwnerIdentity,
+} from './owner.ts';
+import {
+  EXPLAIN_PROMPT,
+  PICK_PROMPT,
+  DESCRIBE_PROMPT,
+} from './desktop-prompts.ts';
 import {
   authorizeUrl,
   exchangeCode,
@@ -69,22 +83,44 @@ const MAX_SESSIONS = 10;
 const BIN_DAYS = 30;
 const DAY_MS = 24 * 60 * 60_000;
 /** Free D1 counters: requests per client per 10-minute window. */
-const desktopAiSchema = z.object({
-  kind: z.enum(['build', 'review']),
-  text: z.string().max(60_000),
-  images: z
-    .array(
-      z.object({
-        label: z.string().max(80),
-        url: z
-          .string()
-          .max(400_000)
-          .regex(/^data:image\/(jpeg|png);base64,/),
-      }),
-    )
-    .max(4)
-    .default([]),
+const desktopAiSchema = z
+  .object({
+    kind: z.enum(['build', 'review', 'explain', 'pick', 'describe']),
+    text: z.string().max(60_000),
+    images: z
+      .array(
+        z.object({
+          label: z.string().max(80),
+          url: z
+            .string()
+            .max(400_000)
+            .regex(/^data:image\/(jpeg|png);base64,/),
+        }),
+      )
+      .max(12)
+      .default([]),
+  })
+  .refine(
+    (body) =>
+      body.kind === 'pick' ||
+      body.kind === 'describe' ||
+      body.images.length <= 4,
+    { message: 'at most 4 images', path: ['images'] },
+  );
+const desktopTokenSchema = z.object({
+  code: z.string().min(16).max(128),
+  verifier: z.string().min(43).max(128),
 });
+const desktopRefreshSchema = z.object({
+  refresh_token: z.string().min(16).max(256),
+});
+const desktopImageSchema = z.object({
+  prompt: z.string().min(3).max(600),
+  style: z.string().max(120).default('clean flat editorial illustration'),
+});
+/** Desktop sign-in codes and refresh tokens live this long. */
+const DESKTOP_CODE_SECONDS = 120;
+const DESKTOP_REFRESH_DAYS = 30;
 
 const RATE_WINDOW_MS = 10 * 60_000;
 const RATE_LIMITS = {
@@ -94,6 +130,8 @@ const RATE_LIMITS = {
   models: 30,
   desktop: 80,
   sam: 60,
+  desktop_byok: 120,
+  desktop_image: 6,
 } as const;
 
 export type SignInErrorKind =
@@ -391,11 +429,11 @@ export function createApp(options: AppOptions = {}) {
     request: Request,
     env: Env,
     provider: AuthProvider,
+    desktopReturn?: string,
   ) {
-    const returnTo = safeReturnTo(
-      env,
-      new URL(request.url).searchParams.get('returnTo'),
-    );
+    const returnTo =
+      desktopReturn ??
+      safeReturnTo(env, new URL(request.url).searchParams.get('returnTo'));
     const config = providerConfig(env, provider);
     if (!config)
       return redirect(signinError(env, 'unavailable', provider, returnTo));
@@ -543,9 +581,13 @@ export function createApp(options: AppOptions = {}) {
       await env.DB.prepare('DELETE FROM oauth_states WHERE state = ?')
         .bind(state)
         .run();
+    const desktop = parseDesktopReturn(stored?.return_to);
+    const fail = (kind: SignInErrorKind, returnTo?: string) =>
+      desktop
+        ? redirect(loopbackUrl(desktop, { error: kind }), [clearState])
+        : redirect(signinError(env, kind, provider, returnTo), [clearState]);
     const config = providerConfig(env, provider);
-    if (!config)
-      return redirect(signinError(env, 'unavailable', provider), [clearState]);
+    if (!config) return fail('unavailable');
     const denied = url.searchParams.get('error');
     if (
       !stored ||
@@ -553,24 +595,14 @@ export function createApp(options: AppOptions = {}) {
       stored.expires_at < now().toISOString() ||
       readCookie(request, STATE_COOKIE) !== state
     )
-      return redirect(
-        signinError(
-          env,
-          denied === 'access_denied' ? 'cancelled' : 'expired',
-          provider,
-          stored?.return_to,
-        ),
-        [clearState],
+      return fail(
+        denied === 'access_denied' ? 'cancelled' : 'expired',
+        desktop ? undefined : stored?.return_to,
       );
     if (!code || denied)
-      return redirect(
-        signinError(
-          env,
-          denied === 'access_denied' ? 'cancelled' : 'not_allowed',
-          provider,
-          stored.return_to,
-        ),
-        [clearState],
+      return fail(
+        denied === 'access_denied' ? 'cancelled' : 'not_allowed',
+        desktop ? undefined : stored.return_to,
       );
     let identity: OAuthIdentity;
     try {
@@ -587,12 +619,11 @@ export function createApp(options: AppOptions = {}) {
         fetcher,
       );
     } catch {
-      return redirect(
-        signinError(env, 'not_allowed', provider, stored.return_to),
-        [clearState],
-      );
+      return fail('not_allowed', desktop ? undefined : stored.return_to);
     }
     const stamp = now().toISOString();
+    if (desktop)
+      return finishDesktopSignIn(env, provider, identity, desktop, clearState);
     const userId = await resolveUser(env, provider, identity, stamp);
     // Rotate: the session this browser had (if any) ends, a fresh one starts.
     const previous = readCookie(request, SESSION_COOKIE);
@@ -626,6 +657,268 @@ export function createApp(options: AppOptions = {}) {
     ]);
   }
 
+  // ------------------------------------------------------------ desktop sign-in
+  // The desktop app signs in through the system browser: it opens
+  // /v1/desktop/auth/start with a PKCE challenge and a loopback port, the
+  // normal GitHub/Google OAuth runs here, and the callback hands a one-time
+  // code back to http://127.0.0.1:<port>/callback. The app redeems it with
+  // its PKCE verifier for a 30-minute signed access token plus a rotating
+  // refresh token. Only allowlisted owners get either; nobody else's
+  // sign-in leaves a row behind.
+
+  interface DesktopReturn {
+    port: number;
+    state: string;
+    challenge: string;
+  }
+  const B64URL = /^[A-Za-z0-9_-]+$/;
+  function parseDesktopReturn(raw: string | undefined): DesktopReturn | null {
+    const m =
+      /^desktop:(\d{4,5}):([A-Za-z0-9_-]{8,128}):([A-Za-z0-9_-]{43})$/.exec(
+        raw ?? '',
+      );
+    if (!m) return null;
+    const port = Number(m[1]);
+    if (port < 1024 || port > 65535) return null;
+    return { port, state: m[2] as string, challenge: m[3] as string };
+  }
+  function loopbackUrl(target: DesktopReturn, params: Record<string, string>) {
+    const url = new URL(`http://127.0.0.1:${target.port}/callback`);
+    url.searchParams.set('state', target.state);
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    return url.toString();
+  }
+
+  async function startDesktopSignIn(request: Request, env: Env) {
+    const q = new URL(request.url).searchParams;
+    const provider = authProviderSchema.safeParse(q.get('provider'));
+    const port = Number(q.get('port'));
+    const state = q.get('state') ?? '';
+    const challenge = q.get('challenge') ?? '';
+    if (
+      !provider.success ||
+      !Number.isInteger(port) ||
+      port < 1024 ||
+      port > 65535 ||
+      !B64URL.test(state) ||
+      state.length < 8 ||
+      state.length > 128 ||
+      !B64URL.test(challenge) ||
+      challenge.length !== 43
+    )
+      throw new HttpError(
+        400,
+        'invalid_request',
+        'Bad desktop sign-in request',
+      );
+    return startOAuth(
+      request,
+      env,
+      provider.data,
+      `desktop:${port}:${state}:${challenge}`,
+    );
+  }
+
+  async function finishDesktopSignIn(
+    env: Env,
+    provider: AuthProvider,
+    identity: OAuthIdentity,
+    target: DesktopReturn,
+    clearState: string,
+  ) {
+    const owner: OwnerIdentity = {
+      provider,
+      providerId: identity.providerId,
+      email: identity.email,
+      ...(identity.login ? { login: identity.login } : {}),
+    };
+    const subject = ownerSubject(parseAllowlist(env.OWNER_ALLOWLIST), owner);
+    // Not an owner: no account row, no code; the app shows the BYOK path.
+    if (!subject)
+      return redirect(loopbackUrl(target, { error: 'not_allowed' }), [
+        clearState,
+      ]);
+    const stamp = now().toISOString();
+    const userId = await resolveUser(env, provider, identity, stamp);
+    const code = randomToken(32);
+    await env.DB.prepare(
+      'INSERT INTO oauth_states (state, provider, return_to, expires_at, code_verifier, nonce) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+      .bind(
+        `dc_${await sha256(code)}`.slice(0, 64),
+        'desktop-code',
+        JSON.stringify({ ...owner, uid: userId, sub: subject }),
+        new Date(now().getTime() + DESKTOP_CODE_SECONDS * 1000).toISOString(),
+        target.challenge,
+        '',
+      )
+      .run();
+    return redirect(loopbackUrl(target, { code }), [clearState]);
+  }
+
+  async function issueDesktopTokens(
+    env: Env,
+    owner: OwnerIdentity & { uid: string; sub: string },
+  ) {
+    const iat = Math.floor(now().getTime() / 1000);
+    const access = await signDesktopToken(env, {
+      sub: owner.sub,
+      uid: owner.uid,
+      idp: owner.provider,
+      pid: owner.providerId,
+      em: owner.email,
+      ...(owner.login ? { lg: owner.login } : {}),
+      iat,
+      exp: iat + DESKTOP_TOKEN_SECONDS,
+    });
+    if (!access)
+      throw new HttpError(
+        503,
+        'auth_unavailable',
+        'Desktop sign-in is not set up',
+      );
+    const refresh = `kdr_${randomToken(32)}`;
+    await env.DB.prepare(
+      'INSERT INTO auth_sessions (id, user_id, created_at, expires_at, provider) VALUES (?, ?, ?, ?, ?)',
+    )
+      .bind(
+        await sha256(`desktop-refresh:${refresh}`),
+        owner.uid,
+        now().toISOString(),
+        new Date(now().getTime() + DESKTOP_REFRESH_DAYS * DAY_MS).toISOString(),
+        `desktop:${JSON.stringify({ provider: owner.provider, providerId: owner.providerId, email: owner.email, login: owner.login ?? '', sub: owner.sub })}`,
+      )
+      .run();
+    return json({
+      access_token: access,
+      token_type: 'Bearer',
+      expires_in: DESKTOP_TOKEN_SECONDS,
+      refresh_token: refresh,
+      subject: owner.sub,
+    });
+  }
+
+  async function desktopToken(request: Request, env: Env) {
+    if (await rateLimited(env, 'auth', clientKey(request)))
+      throw new HttpError(429, 'rate_limited', 'Too many sign-in attempts');
+    const body = desktopTokenSchema.parse(await readJson(request, 4_000));
+    const key = `dc_${await sha256(body.code)}`.slice(0, 64);
+    const row = await env.DB.prepare(
+      "SELECT return_to, expires_at, code_verifier FROM oauth_states WHERE state = ? AND provider = 'desktop-code'",
+    )
+      .bind(key)
+      .first<{
+        return_to: string;
+        expires_at: string;
+        code_verifier: string;
+      }>();
+    // single use, whatever happens next
+    if (row)
+      await env.DB.prepare('DELETE FROM oauth_states WHERE state = ?')
+        .bind(key)
+        .run();
+    if (
+      !row ||
+      row.expires_at < now().toISOString() ||
+      (await pkceChallenge(body.verifier)) !== row.code_verifier
+    )
+      throw new HttpError(
+        401,
+        'token_invalid',
+        'That sign-in code is not valid',
+      );
+    const owner = JSON.parse(row.return_to) as OwnerIdentity & {
+      uid: string;
+      sub: string;
+    };
+    // recheck: the allowlist may have changed since the browser step
+    const subject = ownerSubject(parseAllowlist(env.OWNER_ALLOWLIST), owner);
+    if (!subject) throw new HttpError(403, 'owner_only', OWNER_ONLY_MESSAGE);
+    return issueDesktopTokens(env, { ...owner, sub: subject });
+  }
+
+  async function desktopRefresh(request: Request, env: Env, revoke = false) {
+    if (await rateLimited(env, 'auth', clientKey(request)))
+      throw new HttpError(429, 'rate_limited', 'Too many sign-in attempts');
+    const body = desktopRefreshSchema.parse(await readJson(request, 4_000));
+    const id = await sha256(`desktop-refresh:${body.refresh_token}`);
+    const row = await env.DB.prepare(
+      "SELECT user_id, expires_at, provider FROM auth_sessions WHERE id = ? AND provider LIKE 'desktop:%'",
+    )
+      .bind(id)
+      .first<{ user_id: string; expires_at: string; provider: string }>();
+    // rotation: a refresh token works once
+    if (row)
+      await env.DB.prepare('DELETE FROM auth_sessions WHERE id = ?')
+        .bind(id)
+        .run();
+    if (revoke) return noContent();
+    if (!row || row.expires_at < now().toISOString())
+      throw new HttpError(
+        401,
+        'token_invalid',
+        'Your kimo sign-in expired; sign in again',
+      );
+    let stored: OwnerIdentity & { sub?: string };
+    try {
+      stored = JSON.parse(row.provider.slice('desktop:'.length));
+    } catch {
+      throw new HttpError(
+        401,
+        'token_invalid',
+        'Your kimo sign-in expired; sign in again',
+      );
+    }
+    const owner: OwnerIdentity = {
+      provider: stored.provider === 'github' ? 'github' : 'google',
+      providerId: String(stored.providerId ?? ''),
+      email: String(stored.email ?? ''),
+      ...(stored.login ? { login: String(stored.login) } : {}),
+    };
+    const subject = ownerSubject(parseAllowlist(env.OWNER_ALLOWLIST), owner);
+    if (!subject) throw new HttpError(403, 'owner_only', OWNER_ONLY_MESSAGE);
+    return issueDesktopTokens(env, {
+      ...owner,
+      uid: row.user_id,
+      sub: subject,
+    });
+  }
+
+  /**
+   * Who pays for one desktop AI/SAM/image call: the user's own key from the
+   * X-AI-* headers (passed through for this call only, never kimo's key),
+   * or, with no key, kimo's Meta key for an allowlisted owner's signed
+   * token. Anything else is 401/403 before any upstream call.
+   */
+  async function desktopPayer(
+    request: Request,
+    env: Env,
+    bucket: 'desktop' | 'sam' | 'desktop_image',
+  ): Promise<{ owner: string | null; byok: ReturnType<typeof userAiConfig> }> {
+    const byok = userAiConfig(request.headers);
+    if (byok) {
+      if (await rateLimited(env, 'desktop_byok', clientKey(request)))
+        throw new HttpError(
+          429,
+          'rate_limited',
+          'Too many AI steps; wait a few minutes',
+        );
+      return { owner: null, byok };
+    }
+    const claims = await requireOwnerToken(
+      request,
+      env,
+      Math.floor(now().getTime() / 1000),
+    );
+    if (await rateLimited(env, bucket, `owner:${claims.sub}`))
+      throw new HttpError(
+        429,
+        'rate_limited',
+        'Too many AI steps; wait a few minutes',
+      );
+    return { owner: claims.sub, byok: null };
+  }
+
   /**
    * AI proxy for the kimo desktop app (apps/desktop). The app runs kimo-mcp,
    * FFmpeg and whisper on the user's PC; only the edit prompt and sampled
@@ -634,28 +927,32 @@ export function createApp(options: AppOptions = {}) {
    * key never ships in the app, and the shared AI budget still applies.
    */
   async function desktopAi(request: Request, env: Env): Promise<Response> {
-    if (request.headers.get('X-Kimo-Desktop') !== '1')
-      throw new HttpError(403, 'forbidden_origin', 'Desktop app only');
-    if (await rateLimited(env, 'desktop', clientKey(request)))
-      throw new HttpError(
-        429,
-        'rate_limited',
-        'Too many AI steps; wait a few minutes',
-      );
-    const body = desktopAiSchema.parse(await request.json());
-    const base = aiConfig(env);
-    if (!base)
-      throw new HttpError(
-        503,
-        'ai_unavailable',
-        "AI editing isn't switched on yet",
-      );
-    await assertBudget(env);
-    const config = meteredConfig(env, base);
-    const review = body.kind === 'review';
+    const payer = await desktopPayer(request, env, 'desktop');
+    const body = desktopAiSchema.parse(await readJson(request, 6_000_000));
+    let config;
+    if (payer.byok) config = payer.byok;
+    else {
+      const base = aiConfig(env);
+      if (!base)
+        throw new HttpError(
+          503,
+          'ai_unavailable',
+          "AI editing isn't switched on yet",
+        );
+      await assertBudget(env);
+      config = meteredConfig(env, base);
+    }
+    const visual = body.kind !== 'build' && body.kind !== 'explain';
+    const review = visual;
+    const lead =
+      body.kind === 'review'
+        ? REVIEW_PROMPT
+        : body.kind === 'pick'
+          ? PICK_PROMPT
+          : DESCRIBE_PROMPT;
     const content: string | Record<string, unknown>[] = review
       ? [
-          { type: 'text', text: `${REVIEW_PROMPT}\n${body.text}` },
+          { type: 'text', text: `${lead}\n${body.text}` },
           ...body.images.flatMap((image) => [
             { type: 'text', text: image.label },
             { type: 'image_url', image_url: { url: image.url } },
@@ -663,16 +960,20 @@ export function createApp(options: AppOptions = {}) {
         ]
       : body.text;
     const answer = await chatJson(
-      review
+      review && config.source === 'kimo'
         ? {
             ...config,
             model: (env.META_MEDIA_MODEL ?? '').trim() || config.model,
           }
         : config,
       fetcher,
-      review
+      body.kind === 'review'
         ? 'you are kimo, a world-class video editor checking your own render.'
-        : BUILD_PROMPT,
+        : body.kind === 'explain'
+          ? EXPLAIN_PROMPT
+          : body.kind === 'build'
+            ? BUILD_PROMPT
+            : 'you are kimo, a world-class video editor choosing on-screen visuals.',
       content,
       review ? 4_000 : 6_000,
     ).catch((error: unknown) => {
@@ -697,15 +998,14 @@ export function createApp(options: AppOptions = {}) {
     env: Env,
     path: string,
   ): Promise<Response> {
-    if (request.headers.get('X-Kimo-Desktop') !== '1')
-      throw new HttpError(403, 'forbidden_origin', 'Desktop app only');
-    if (await rateLimited(env, 'sam', clientKey(request)))
+    const payer = await desktopPayer(request, env, 'sam');
+    if (payer.byok && payer.byok.provider !== 'meta')
       throw new HttpError(
-        429,
-        'rate_limited',
-        'Too many SAM steps; wait a few minutes',
+        400,
+        'sam_needs_meta_key',
+        'Subject tracking needs a Meta AI key',
       );
-    const base = aiConfig(env);
+    const base = payer.byok ?? aiConfig(env);
     if (!base)
       throw new HttpError(
         503,
@@ -716,7 +1016,7 @@ export function createApp(options: AppOptions = {}) {
       const body = samDeleteSchema.parse(await request.json());
       return json(await samDelete(base, fetcher, body.file_id));
     }
-    await assertBudget(env);
+    if (!payer.byok) await assertBudget(env);
     if (path === '/v1/desktop/sam/file')
       return json(await samUpload(request, base, fetcher));
     if (path !== '/v1/desktop/sam')
@@ -725,11 +1025,98 @@ export function createApp(options: AppOptions = {}) {
     return samSegment(env, base, fetcher, body);
   }
 
+  /**
+   * Opt-in explainer illustration (Phase 7, off by default): one image from
+   * the configured image model. Owners only on kimo's key (budgeted), or the
+   * user's own OpenAI-compatible key. 501 until META_IMAGE_MODEL is set.
+   */
+  async function desktopImage(request: Request, env: Env): Promise<Response> {
+    const payer = await desktopPayer(request, env, 'desktop_image');
+    const body = desktopImageSchema.parse(await readJson(request, 8_000));
+    let config;
+    if (payer.byok) {
+      if (payer.byok.wire !== 'openai')
+        throw new HttpError(
+          400,
+          'image_unsupported',
+          'Use an OpenAI-compatible key for images',
+        );
+      config = payer.byok;
+    } else {
+      const base = aiConfig(env);
+      const model = (env.META_IMAGE_MODEL ?? '').trim();
+      if (!base || !model)
+        throw new HttpError(
+          501,
+          'image_unavailable',
+          'AI images are not switched on',
+        );
+      await assertBudget(env);
+      config = { ...base, model };
+    }
+    let response: Response;
+    try {
+      response = await fetcher(`${config.baseUrl}/images/generations`, {
+        method: 'POST',
+        redirect: 'manual',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.key}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          prompt: `${body.prompt.replace(/[\p{Cc}\p{Cf}]/gu, ' ')}. Style: ${body.style}. No text, no logos, no real people.`,
+          n: 1,
+          size: '1024x1024',
+          response_format: 'b64_json',
+        }),
+        signal: AbortSignal.timeout(90_000),
+      });
+    } catch {
+      throw new HttpError(502, 'ai_upstream', 'The image model did not answer');
+    }
+    if (response.status === 401 || response.status === 403)
+      throw new HttpError(
+        400,
+        'ai_key_rejected',
+        'The provider refused that key',
+      );
+    if (!response.ok)
+      throw new HttpError(502, 'ai_upstream', 'The image model did not answer');
+    const data = (await response.json().catch(() => ({}))) as {
+      data?: { b64_json?: unknown }[];
+    };
+    const b64 = data.data?.[0]?.b64_json;
+    if (typeof b64 !== 'string' || b64.length > 8_000_000)
+      throw new HttpError(502, 'ai_upstream', 'The image model did not answer');
+    if (!payer.byok)
+      await recordUsage(env, 'image-generation', { prompt: 1, completion: 0 });
+    return json({ image: `data:image/png;base64,${b64}` });
+  }
+
   async function route(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
     const method = request.method;
 
+    if (path === '/v1/desktop/auth/start' && method === 'GET')
+      return startDesktopSignIn(request, env);
+    if (path === '/v1/desktop/auth/token' && method === 'POST')
+      return desktopToken(request, env);
+    if (path === '/v1/desktop/auth/refresh' && method === 'POST')
+      return desktopRefresh(request, env);
+    if (path === '/v1/desktop/auth/signout' && method === 'POST')
+      return desktopRefresh(request, env, true);
+    if (path === '/v1/desktop/auth/me' && method === 'GET') {
+      const claims = await requireOwnerToken(
+        request,
+        env,
+        Math.floor(now().getTime() / 1000),
+      );
+      return json({ owner: true, subject: claims.sub, expires_at: claims.exp });
+    }
+    if (path === '/v1/desktop/image' && method === 'POST')
+      return desktopImage(request, env);
     if (path === '/v1/desktop/ai' && method === 'POST')
       return desktopAi(request, env);
     if (path.startsWith('/v1/desktop/sam') && method === 'POST')

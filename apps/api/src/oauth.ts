@@ -13,6 +13,8 @@ export interface OAuthIdentity {
   email: string;
   name: string;
   avatarUrl: string | null;
+  /** GitHub login (GitHub only); used for the owner allowlist, never stored. */
+  login?: string;
 }
 
 interface ProviderConfig {
@@ -258,6 +260,7 @@ export async function exchangeCode(
       email: cleanEmail(primary?.email),
       name: cleanName(user.name) || cleanName(user.login),
       avatarUrl: cleanAvatar(user.avatar_url),
+      login: user.login.slice(0, 64),
     };
   }
   const token = tokenSchema.safeParse(
