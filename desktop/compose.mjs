@@ -21,6 +21,7 @@ import {
   curveSampler,
 } from './edl.mjs';
 import { rectFilter, splineExpr } from './sam.mjs';
+import { coverGeometry, zoomCap, cameraRect, clipCameraAt } from './camera.mjs';
 import { subtitles } from './compose-text.mjs';
 import {
   planTransitions,
@@ -108,42 +109,26 @@ async function ffmpegRun(ffmpeg, args, { signal, onProgress, cwd } = {}) {
   );
   await processDone(child, signal, onProgress);
 }
-export function cameraRectsForClip(clip, source, canvas, plan) {
-  const W = Math.abs(source.rotation ?? 0) % 180 === 90 ? source.h : source.w,
-    H = Math.abs(source.rotation ?? 0) % 180 === 90 ? source.w : source.h;
-  const aspect = canvas.w / canvas.h;
-  let cw = W,
-    ch = H;
-  if (clip.fit !== 'contain') {
-    if (W / H > aspect) cw = H * aspect;
-    else ch = W / aspect;
-  }
-  const keys = clip.camera?.length
-    ? clip.camera
-    : [{ t: 0, x: 0.5, y: 0.5, zoom: 1, ease: 'cubic' }];
-  const curve = (key) => ({
-    base: keys[0][key],
-    keys: keys.map((k) => ({ t: k.t, v: k[key], ease: k.ease ?? 'cubic' })),
-  });
-  const zoomAt = curveSampler(curve('zoom'), 1),
-    xAt = curveSampler(curve('x'), 0.5),
-    yAt = curveSampler(curve('y'), 0.5);
+/**
+ * One float crop rectangle per planned output frame: camera keys sampled per
+ * frame (eased, log-space zoom), subject follow and micro drift, the upscale
+ * cap, a soft clamp to the source, then the transition envelope (camera.mjs).
+ */
+export function cameraRectsForClip(clip, source, canvas, plan, onCap) {
+  const geom = coverGeometry(source, canvas, clip.fit);
+  const cap = zoomCap(geom, canvas);
+  const at = clipCameraAt(clip, geom);
   const length = (clip.out - clip.in) / (clip.speed ?? 1);
-  return plan.indices.map((_, i) => {
+  let capped = false;
+  const rects = plan.indices.map((_, i) => {
     const t = (plan.start + i) / rate(canvas.fps) - clip.at,
       env = transitionEnvelope(clip._fx, t, length),
-      z = zoomAt(t) * env.zoom,
-      w = cw / z,
-      h = ch / z;
-    const x = xAt(t) * W + env.dx * w - w / 2,
-      y = yAt(t) * H - h / 2;
-    return [
-      Math.max(0, Math.min(W - w, x)),
-      Math.max(0, Math.min(H - h, y)),
-      w,
-      h,
-    ];
+      s = at(t);
+    if (s.zoom > cap + 1e-6) capped = true;
+    return cameraRect(s, geom, canvas, { cap, zoomMul: env.zoom, dx: env.dx });
   });
+  if (capped) onCap?.(cap, geom);
+  return rects;
 }
 function geometry(clip, source, canvas, plan) {
   // Normalize before resampling in both strategies. Otherwise RGB sources can
@@ -226,6 +211,26 @@ function geometry(clip, source, canvas, plan) {
     filters.push(
       `avgblur=sizeX=${Math.max(2, Math.round(canvas.w / 40))}:sizeY=1:enable='${blurFrames}'`,
     );
+  // Zoom-through: radial-ish blur from a Gaussian on its strongest frames on top of the eased scale.
+  const zoomStrong = frameRanges(envelopes, (e) => e.zblur > 0.5),
+    zoomLight = frameRanges(envelopes, (e) => e.zblur > 0.12 && e.zblur <= 0.5);
+  if (zoomStrong)
+    filters.push(
+      `gblur=sigma=${safe(Math.max(1, canvas.h / 90))}:steps=2:enable='${zoomStrong}'`,
+    );
+  if (zoomLight)
+    filters.push(
+      `gblur=sigma=${safe(Math.max(0.6, canvas.h / 260))}:steps=1:enable='${zoomLight}'`,
+    );
+  // Dip to white lifts the picture toward white on its own frames only.
+  const whites = plan.indices.map((_, i) => envelopes[i].white);
+  const whiteFrames = frameRanges(whites, (v) => v > 0.001);
+  if (whiteFrames) {
+    const k = splineExpr(whites, 'N', 0.001);
+    filters.push(
+      `geq=lum='lum(X,Y)+(235-lum(X,Y))*(${k})':cb='cb(X,Y)+(128-cb(X,Y))*(${k})':cr='cr(X,Y)+(128-cr(X,Y))*(${k})':a='alpha(X,Y)':enable='${whiteFrames}'`,
+    );
+  }
   const opacity = plan.indices.map((_, i) =>
     Math.max(
       0,
@@ -628,10 +633,13 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
         `atrim=end_sample=${Math.round(length * 48000)}`,
         'asetpts=PTS-STARTPTS',
       );
-      const fade = Math.min(0.01, length / 3);
+      // 10 ms equal-power edges; J/L-cut audio fades over its lead/trail
+      const edge = (v) => (v > 0.01 ? Math.min(v, length / 2) : Math.min(0.01, length / 3)),
+        fadeIn = edge(c.fade_in),
+        fadeOut = edge(c.fade_out);
       chain.push(
-        `afade=t=in:st=0:d=${safe(fade)}:curve=qsin`,
-        `afade=t=out:st=${safe(length - fade)}:d=${safe(fade)}:curve=qsin`,
+        `afade=t=in:st=0:d=${safe(fadeIn)}:curve=qsin`,
+        `afade=t=out:st=${safe(length - fadeOut)}:d=${safe(fadeOut)}:curve=qsin`,
         `adelay=${Math.round(c.at * 48000)}S:all=1`,
       );
       filters.push(`[${argsIndex}:a:0]${chain.join(',')}[a${input}]`);
@@ -736,6 +744,48 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
     { signal },
   );
   return output;
+}
+/**
+ * Speed ramps slow b-roll to `min` speed. When the source has fewer than 2x
+ * the canvas frames per second, the ramped range is motion-interpolated once
+ * (minterpolate mci/aobmc/vsbmc) to an integer multiple of the source rate, so
+ * the original frames stay exact and only the slow part gets new frames.
+ * Otherwise the real frames are used.
+ */
+async function interpolateRamps(edl, { ffmpeg, ffprobe, dir, signal, emit, warn }) {
+  const canvasFps = rate(edl.canvas.fps);
+  for (const track of edl.video)
+    for (const clip of track.clips) {
+      if (!clip.ramp || !(clip.ramp.min < 1)) continue;
+      const source = edl.sources.find((s) => s.id === clip.src);
+      if (!source || source.kind === 'image') continue;
+      const srcFps = rate(source.fps);
+      if (srcFps >= 2 * canvasFps) continue;
+      const k = Math.max(2, Math.ceil(canvasFps / clip.ramp.min / srcFps - 1e-9));
+      const [num, den = 1] = String(source.fps).split('/').map(Number);
+      const outRate = `${num * k}/${den}`;
+      const from = Math.max(0, clip.in - 1 / srcFps),
+        length = clip.out - clip.in + 2 / srcFps;
+      const path = join(dir, `ramp-${clip.id.replace(/[^a-z0-9_-]/gi, '_')}.mkv`);
+      const opId = randomUUID().slice(0, 8),
+        t0 = Date.now();
+      emit({ t: 'op', id: opId, opId, tool: 'speed_ramp', phase: 'start', title: `speed_ramp ${clip.id} · 1 → ${clip.ramp.min} → 1 · minterpolate ${srcFps.toFixed(2)} → ${(srcFps * k).toFixed(2)} fps`, why: 'slow motion needs real in-between frames when the source rate is low', at: t0 });
+      try {
+        await ffmpegRun(ffmpeg, ['-ss', String(from), '-t', String(length), '-i', source.path, '-an', '-vf', `minterpolate=fps=${outRate}:mi_mode=mci:mc_mode=aobmc:vsbmc=1,format=yuv444p`, '-c:v', 'ffv1', '-level', '3', path], { signal });
+        const info = await inspect(ffprobe, path);
+        const video = info.streams.find((s) => s.codec_type === 'video');
+        const id = `${source.id}#ramp:${clip.id}`;
+        edl.sources.push({ ...source, id, path, fps: outRate, frames: Number(video?.nb_frames) || undefined, duration: Number(info.format?.duration) || length, rotation: 0, w: video?.width ?? source.w, h: video?.height ?? source.h, signature: `${statSync(path).size}:${statSync(path).mtimeMs}` });
+        clip.in = +(clip.in - from).toFixed(9);
+        clip.out = +(clip.out - from).toFixed(9);
+        clip.src = id;
+        emit({ t: 'op', id: opId, phase: 'end', ok: true, ms: Date.now() - t0, result: `${k}x interpolated frames for the slow part` });
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        emit({ t: 'op', id: opId, phase: 'end', ok: false, ms: Date.now() - t0, error: String(error.message).slice(0, 200) });
+        warn(`${clip.id}: motion interpolation failed; the ramp holds real frames`);
+      }
+    }
 }
 export async function compose({
   edl,
@@ -918,6 +968,16 @@ export async function compose({
       const st = statSync(source.path);
       source.signature = `${st.size}:${st.mtimeMs}`;
     }
+    for (const clip of edl.video.flatMap((t) => t.clips)) {
+      const source = edl.sources.find((s) => s.id === clip.src);
+      if (!source || !clip.camera?.length) continue;
+      const geom = coverGeometry(source, edl.canvas, clip.fit);
+      if (Math.max(...clip.camera.map((k) => k.zoom)) > zoomCap(geom, edl.canvas) + 1e-6)
+        warn(
+          `tight punch limited: source is ${Math.round(Math.min(geom.W, geom.H))}p (crop kept at or above 75% of the output)`,
+        );
+    }
+    await interpolateRamps(edl, { ffmpeg, ffprobe, dir, signal, emit, warn });
     const clips = edl.video.flatMap((t) => t.clips);
     // Caption/shape cues share ASS passes; they are not separate graph nodes.
     // Count conservative source/transform stacks and the ASS passes around images.

@@ -1275,12 +1275,19 @@ test(
             break;
           }
         assert.ok(Number.isFinite(edge), 'visible edge');
+        // Phase 4 camera model: cubic in-out ease, log-space zoom, 2 % soft clamp
         const u = n / 30,
-          s = u * u * (3 - 2 * u),
-          z = 1 + 0.2 * s,
+          s = u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2,
+          z = Math.exp(Math.log(1.2) * s),
           cx = w * (0.5 + 0.02 * s),
-          crop = w / z;
-        const expected = ((127.5 - (cx - crop / 2)) / crop) * w;
+          crop = w / z,
+          hi = w - crop,
+          band = Math.min(0.02 * w, hi / 2);
+        let left = cx - crop / 2;
+        if (!(hi > 0)) left = hi / 2;
+        else if (left < band) left = band * Math.exp((left - band) / band);
+        else if (left > hi - band) left = hi - band * Math.exp((hi - band - left) / band);
+        const expected = ((127.5 - left) / crop) * w;
         residual.push(edge - expected);
       }
       const mean = residual.reduce((a, b) => a + b, 0) / residual.length;

@@ -103,6 +103,21 @@ export function curveSampler(curve, fallback = 0) {
     .sort((a, b) => a.t - b.t);
   return (time) => curveValue(curve, time, fallback, keys);
 }
+/**
+ * Speed ramp (Phase 4): clip-local playback rate 1 → min → 1 over
+ * [at, at+dur] with a sin² bell. Returns the source seconds consumed (at
+ * speed 1) by clip-local time t. The clip keeps its timeline length; a ramp
+ * consumes less source than its in/out range allows.
+ */
+export function rampOffset(ramp, t) {
+  if (!ramp || !(ramp.dur > 0) || !(ramp.min > 0 && ramp.min < 1)) return t;
+  const a = ramp.at ?? 0;
+  const d = ramp.dur;
+  const u = Math.max(0, Math.min(1, (t - a) / d));
+  // ∫0^u sin²(πv) dv = u/2 − sin(2πu)/(4π)
+  const bell = d * (u / 2 - Math.sin(2 * Math.PI * u) / (4 * Math.PI));
+  return t - (1 - ramp.min) * bell;
+}
 export function framePlan(clip, source, fps, from = 0, to = Infinity) {
   const f = rate(fps),
     s = rate(source.fps || fps),
@@ -121,7 +136,14 @@ export function framePlan(clip, source, fps, from = 0, to = Infinity) {
             : source.duration > 0
               ? Math.ceil(source.duration * s - 1e-7) - 1
               : Infinity,
-          Math.round(((start + i) / f - clip.at) * speed * s + clip.in * s),
+          Math.round(
+            (clip.ramp
+              ? rampOffset(clip.ramp, (start + i) / f - clip.at)
+              : (start + i) / f - clip.at) *
+              speed *
+              s +
+              clip.in * s,
+          ),
         ),
   );
   const stride = indices.length > 1 ? indices[1] - indices[0] : 1;
@@ -249,6 +271,19 @@ export function validate(edl) {
             if (c.duck[k] != null && !(finite(c.duck[k]) && c.duck[k] >= 0))
               fail(at + `.duck.${k}`, 'nonnegative number required');
         }
+        if (
+          c.ramp != null &&
+          !(
+            finite(c.ramp.at) &&
+            c.ramp.at >= 0 &&
+            finite(c.ramp.dur) &&
+            c.ramp.dur > 0 &&
+            finite(c.ramp.min) &&
+            c.ramp.min > 0 &&
+            c.ramp.min <= 1
+          )
+        )
+          fail(at + '.ramp', 'at >= 0, dur > 0 and 0 < min <= 1 required');
         for (const [ki, k] of (c.camera ?? []).entries())
           if (
             !finite(k.t) ||

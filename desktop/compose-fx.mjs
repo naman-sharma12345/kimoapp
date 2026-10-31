@@ -12,6 +12,7 @@ const smoother = (u) => {
 };
 const easeIn = (u) => clamp01(u) ** 3;
 const easeOut = (u) => 1 - (1 - clamp01(u)) ** 3;
+const expoIn = (u) => (u <= 0 ? 0 : 2 ** (10 * clamp01(u) - 10));
 
 /** Accepts the EDL shape plus the aliases native projects use. */
 export function normalizeTransition(t) {
@@ -19,7 +20,7 @@ export function normalizeTransition(t) {
   const kind = String(t.kind ?? t.type ?? 'cut').toLowerCase();
   const dur = Number(t.dur ?? t.duration ?? 0);
   if (kind === 'cut' || !(dur > 0)) return null;
-  return { kind, dur };
+  return { kind, dur, ...(String(t.color ?? '').toLowerCase() === 'white' ? { color: 'white' } : {}) };
 }
 
 const clipEnd = (c) => c.at + (c.out - c.in) / (c.speed ?? 1);
@@ -52,12 +53,12 @@ export function planTransitions(edl, fps) {
       const length = clipEnd(clip) - clip.at;
       if (adjacent) {
         const half = Math.min(t.dur / 2, length / 2, (clipEnd(prev) - prev.at) / 2);
-        clip._fx = { ...clip._fx, in: { kind, d: half } };
-        prev._fx = { ...prev._fx, out: { kind, d: half } };
+        clip._fx = { ...clip._fx, in: { kind, d: half, ...(t.color ? { color: t.color } : {}) } };
+        prev._fx = { ...prev._fx, out: { kind, d: half, ...(t.color ? { color: t.color } : {}) } };
       } else
         clip._fx = {
           ...clip._fx,
-          in: { kind, d: Math.min(t.dur, length / 2) },
+          in: { kind, d: Math.min(t.dur, length / 2), ...(t.color ? { color: t.color } : {}) },
         };
     });
   }
@@ -67,16 +68,24 @@ export function planTransitions(edl, fps) {
 /**
  * Multiplicative envelope for clip-local time t (seconds from clip start) on a
  * clip lasting `length` seconds. zoom/alpha multiply; dx shifts the camera
- * centre in crop widths; blur is 0..1 horizontal motion-blur strength.
+ * centre in crop widths; blur is 0..1 horizontal motion-blur strength (whip);
+ * zblur is 0..1 zoom-blur strength (zoom-through); white is 0..1 lift toward
+ * white for a dip to white.
  */
 export function transitionEnvelope(fx, t, length) {
-  const env = { alpha: 1, zoom: 1, dx: 0, blur: 0 };
+  const env = { alpha: 1, zoom: 1, dx: 0, blur: 0, zblur: 0, white: 0 };
   if (!fx) return env;
   const apply = (side, u) => {
     // u: 0 at the cut, 1 at the far edge of the transition (fully settled).
     const k = 1 - u;
-    if (side.kind === 'dip') env.alpha *= smoother(u);
-    else if (side.kind === 'zoom') env.zoom *= 1 + 0.3 * smoother(k);
+    if (side.kind === 'dip' && side.color === 'white') env.white = Math.max(env.white, 1 - smoother(u));
+    else if (side.kind === 'dip') env.alpha *= smoother(u);
+    else if (side.kind === 'zoom') {
+      // zoom-through: both sides scale with expo easing toward the cut (out: expo-in, in: expo-out)
+      const w = expoIn(k);
+      env.zoom *= 1 + 0.4 * w;
+      env.zblur = Math.max(env.zblur, w);
+    }
     else if (side.kind === 'whip') {
       const w = side === fx.out ? easeIn(k) : 1 - easeOut(u);
       env.zoom *= 1 + 0.5 * Math.min(1, w * 1.6);
