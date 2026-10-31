@@ -56,3 +56,22 @@ Replacement raw benchmark candidates (test acquisition only, not installed):
   dataset case/output must carry the full roles, credits and three required
   hashtags in test/bench/clips/raw-v2/CREDITS.md; no CC licence is asserted for it.
   Source and permission: https://cinestudy.org/2026/02/20/edit-this-podcast-documentary/
+
+## Caption fonts (SIL Open Font License 1.1)
+
+Bundled unmodified in `fonts/` for the caption and title styles; each licence text is in `fonts/licenses/`.
+The OFL allows bundling and redistribution with software; the fonts are not sold on their own.
+
+- Montserrat ExtraBold, Montserrat Black — Copyright 2024 The Montserrat.Git Project Authors
+  (https://github.com/JulietaUla/Montserrat). Files: https://github.com/JulietaUla/Montserrat/tree/master/fonts/ttf
+  Licence: SIL OFL 1.1, https://github.com/JulietaUla/Montserrat/blob/master/OFL.txt (`fonts/licenses/Montserrat-OFL.txt`).
+- Geist SemiBold, Geist Bold, Geist Black — Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font).
+  Files: https://github.com/vercel/geist-font/tree/main/fonts/Geist/ttf
+  Licence: SIL OFL 1.1, https://github.com/vercel/geist-font/blob/main/OFL.txt (`fonts/licenses/Geist-OFL.txt`).
+- Bangers Regular — Copyright 2010 The Bangers Project Authors (https://github.com/googlefonts/bangers).
+  File: https://github.com/google/fonts/blob/main/ofl/bangers/Bangers-Regular.ttf
+  Licence: SIL OFL 1.1, https://github.com/google/fonts/blob/main/ofl/bangers/OFL.txt (`fonts/licenses/Bangers-OFL.txt`).
+- Noto Sans Devanagari Bold, Noto Sans Devanagari Black — Copyright 2022 The Noto Project Authors
+  (https://github.com/notofonts/devanagari). Files (hinted TTF):
+  https://github.com/notofonts/notofonts.github.io/tree/main/fonts/NotoSansDevanagari/hinted/ttf
+  Licence: SIL OFL 1.1, https://github.com/notofonts/devanagari/blob/main/OFL.txt (`fonts/licenses/Noto-OFL.txt`).
