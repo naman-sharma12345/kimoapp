@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Undo2, X, Check } from 'lucide-react';
+import { Undo2, X, Check, Sparkles } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
 import { kimo, fmtTime, fmtTc, busy } from './lib.js';
 import { toTimeline } from '../../edl.mjs';
 
-const clipKind = (c) => (/^text:/.test(c.src ?? '') ? 'text' : /\.(mp3|wav|m4a|aac|flac|ogg)$/i.test(c.src ?? '') ? 'audio' : /\.(png|jpe?g|webp|gif)$/i.test(c.src ?? '') ? 'image' : /\./.test(c.src ?? '') ? 'video' : 'fx');
+const clipKind = (c) => (c.explain ? 'explain' : /^text:/.test(c.src ?? '') ? 'text' : /\.(mp3|wav|m4a|aac|flac|ogg)$/i.test(c.src ?? '') ? 'audio' : /\.(png|jpe?g|webp|gif)$/i.test(c.src ?? '') ? 'image' : /\./.test(c.src ?? '') ? 'video' : 'fx');
 const tlDuration = (t) => Math.max(1, Number(t?.duration) || 0, ...(t?.tracks_bottom_to_top ?? []).flatMap((k) => k.clips.map((c) => c.end)));
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const trackLabel = (k, i, counts) => {
@@ -13,6 +13,100 @@ const trackLabel = (k, i, counts) => {
   counts[kind] = (counts[kind] ?? 0) + 1;
   return `${kind}${counts[kind]}`;
 };
+// Phase 7 explainer beats: what the beat editor can change (main.cjs and edit.mjs enforce the same limits)
+const SWITCH_KINDS = ['list', 'flow', 'timeline'];
+const LAYOUTS = [
+  ['side', 'beside the speaker'],
+  ['top', 'above the speaker'],
+  ['overlay', 'over the shot'],
+  ['full', 'full screen'],
+  ['pip', 'full screen + speaker bubble'],
+];
+const TEXT_KEYS = ['label', 'question', 'term', 'keyword', 'caption', 'quote', 'text'];
+const beatText = (props) => TEXT_KEYS.map((k) => props?.[k]).find((v) => typeof v === 'string' && v);
+const beatLabel = (c, props) => `${c.explain.kind}${props?.title || beatText(props) ? ` · ${props.title || beatText(props)}` : ''}`;
+
+/** Inline editor for one explainer beat on the GFX track. */
+function BeatEditor({ clip, props, onSave, onRegenerate, canRegenerate }) {
+  const [title, setTitle] = useState(props?.title ?? '');
+  const [items, setItems] = useState((props?.items ?? []).map((i) => i?.text ?? '').filter(Boolean).join('\n'));
+  const [text, setText] = useState(beatText(props) ?? '');
+  const [kind, setKind] = useState(clip.explain.kind);
+  const [mode, setMode] = useState(clip.explain.mode ?? props?.mode ?? '');
+  const hasItems = (props?.items ?? []).some((i) => typeof i?.text === 'string');
+  const save = () => {
+    const args = {};
+    if (typeof props?.title === 'string' && title.trim() !== props.title) args.title = title.trim();
+    const list = items.split('\n').map((x) => x.trim()).filter(Boolean);
+    if (hasItems && list.length && list.join('\n') !== (props.items ?? []).map((i) => i?.text ?? '').filter(Boolean).join('\n')) args.items = list;
+    if (!hasItems && beatText(props) != null && text.trim() && text.trim() !== beatText(props)) args.text = text.trim();
+    if (kind !== clip.explain.kind && SWITCH_KINDS.includes(kind)) args.kind = kind;
+    if (mode && mode !== (clip.explain.mode ?? props?.mode)) args.mode = mode;
+    onSave(args);
+  };
+  return (
+    <div className="desk-beat" role="group" aria-label={`explainer beat ${clip.explain.kind}`}>
+      <div className="desk-beat-side">
+        {typeof props?.title === 'string' ? (
+          <label className="ui-field">
+            <span>title</span>
+            <input className="ui-input" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+        ) : null}
+        {!hasItems && beatText(props) != null ? (
+          <label className="ui-field">
+            <span>text</span>
+            <input className="ui-input" value={text} maxLength={280} onChange={(e) => setText(e.target.value)} />
+          </label>
+        ) : null}
+        <span className="desk-fine mono">
+          {clip.start.toFixed(2)}–{clip.end.toFixed(2)} s · {clip.explain.ticks?.length ?? 0} item{clip.explain.ticks?.length === 1 ? '' : 's'} on their words
+        </span>
+      </div>
+      {hasItems ? (
+        <label className="ui-field">
+          <span>items, one a line (up to 12, they stay on their words)</span>
+          <textarea className="ui-textarea" value={items} onChange={(e) => setItems(e.target.value)} />
+        </label>
+      ) : (
+        <span />
+      )}
+      <div className="desk-beat-side">
+        {SWITCH_KINDS.includes(clip.explain.kind) ? (
+          <label className="ui-field">
+            <span>shape</span>
+            <select value={kind} onChange={(e) => setKind(e.target.value)} aria-label="beat shape">
+              {SWITCH_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {clip.explain.mode || props?.mode ? (
+          <label className="ui-field">
+            <span>layout</span>
+            <select value={mode} onChange={(e) => setMode(e.target.value)} aria-label="beat layout">
+              {LAYOUTS.map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        <Button size="xs" variant="primary" icon={Check} onClick={save}>
+          keep beat changes
+        </Button>
+        <Button size="xs" variant="ghost" icon={Sparkles} disabled={!canRegenerate} onClick={onRegenerate} tooltip="re-runs the visual director on this part (needs ai access)">
+          regenerate this part
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const label = (c) => (clipKind(c) === 'text' ? c.src.replace(/^text:\s*/, '') : String(c.src || c.id).split(/[\\/]/).pop());
 
 export function Timeline({ project, live, video, time, orig, guard, notify, setLibrary }) {
@@ -71,7 +165,8 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
   const pushEdit = (list, op) => {
     const i = list.findIndex((e) => e.tool === op.tool && e.args.clip_id === op.args.clip_id && op.tool !== 'delete_clip');
     const n = [...list];
-    if (i >= 0) n[i] = op;
+    // beat edits accumulate (title now, layout later); other tools keep only the latest
+    if (i >= 0) n[i] = op.tool === 'edit_explain' ? { tool: op.tool, args: { ...n[i].args, ...op.args } } : op;
     else n.push(op);
     return n;
   };
@@ -163,6 +258,25 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
     setDraft(t);
     setSelected(null);
   };
+  const edlNow = live?.data?.edl ?? project.edl;
+  const beatProps = (id) => edlNow?.overlays?.find((o) => o.id === id)?.props ?? null;
+  const saveBeat = (c, args) => {
+    if (!Object.keys(args).length || !canEdit()) return;
+    const t = snapshot();
+    const hit = findClip(c.id, t).c;
+    if (args.kind) hit.explain = { ...hit.explain, kind: args.kind };
+    if (args.mode) hit.explain = { ...hit.explain, mode: args.mode };
+    if (args.title || args.text) hit.src = `graphic: ${hit.explain.kind} · ${args.title || args.text}`;
+    hit.edited = true;
+    setDraft(t);
+    setEdits((n) => pushEdit(n, { tool: 'edit_explain', args: { clip_id: c.id, ...args } }));
+  };
+  const regenerate = guard(async (c) => {
+    if (!canEdit()) return;
+    if (edits.length) throw new Error('apply or discard your timeline edits first');
+    const p = await kimo.regenerateVisuals({ id: project.id, from: +c.start.toFixed(3), to: +c.end.toFixed(3) });
+    if (p) setLibrary((l) => l.map((x) => (x.id === p.id ? { ...x, ...p } : x)));
+  });
   const undoEdit = () => {
     setUndo((u) => {
       const s = u.at(-1);
@@ -209,6 +323,7 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
     if (v?.src) v.currentTime = Math.max(0, ((e.clientX - r.left) / r.width) * dur);
   };
   const n = tracks.reduce((a, k) => a + k.clips.length, 0);
+  const selectedBeat = selected ? tracks.flatMap((k) => k.clips).find((c) => c.id === selected && c.explain) ?? null : null;
   const counts = {};
   const rows = [...tracks].map((k, i) => ({ k, label: trackLabel(k, i, counts) })).reverse();
   const at = orig ? 0 : time || 0;
@@ -220,7 +335,7 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
         <span className="desk-fine mono">{tracks.length ? `${fmtTc(dur)} · ${n} clip${n === 1 ? '' : 's'} · ${tracks.length} track${tracks.length === 1 ? '' : 's'}` : ''}</span>
         {edits.length ? <span className="desk-unsaved">{edits.length} unsaved edit{edits.length === 1 ? '' : 's'}</span> : null}
         <span className="studio-spacer" />
-        <span className="studio-tool-hint">drag to move · drag edges to trim · captions snap to words · delete removes · double-click a caption to edit</span>
+        <span className="studio-tool-hint">drag to move · drag edges to trim · captions snap to words · delete removes · double-click a caption to edit · select a visual to edit its beat</span>
         <Button size="xs" variant="ghost" icon={Undo2} disabled={!undo.length} onClick={undoEdit} tooltip="undo timeline edit" shortcut="Ctrl Z">
           undo
         </Button>
@@ -253,13 +368,14 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
               <div key={k.track_id} className="desk-tl-track">
                 {k.clips.map((c) => {
                   const kind = clipKind(c);
+                  const text = kind === 'explain' ? beatLabel(c, beatProps(c.id)) : label(c);
                   return (
                     <div
                       key={c.id}
                       className="desk-clip"
                       role="button"
                       tabIndex={0}
-                      aria-label={`${label(c)} · ${c.start.toFixed(2)}–${c.end.toFixed(2)} s`}
+                      aria-label={`${text} · ${c.start.toFixed(2)}–${c.end.toFixed(2)} s`}
                       onKeyDown={(e) => {
                         if (e.target.tagName === 'INPUT') return;
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -292,8 +408,11 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
                           onBlur={(e) => commitText(c, e.currentTarget.value.trim())}
                         />
                       ) : (
-                        <span>{label(c)}</span>
+                        <span>{text}</span>
                       )}
+                      {kind === 'explain'
+                        ? (c.explain.ticks ?? []).map((tk, j) => <i key={j} className="desk-clip-tick" aria-hidden style={{ left: `${Math.min(100, (tk / Math.max(0.01, c.end - c.start)) * 100)}%` }} />)
+                        : null}
                     </div>
                   );
                 })}
@@ -305,6 +424,9 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
       ) : (
         <div className="desk-tl-empty">clips, titles and captions appear here as kimo adds them.</div>
       )}
+      {selectedBeat ? (
+        <BeatEditor key={selectedBeat.id} clip={selectedBeat} props={beatProps(selectedBeat.id)} onSave={(args) => saveBeat(selectedBeat, args)} onRegenerate={() => regenerate(selectedBeat)} canRegenerate={!isBusy && Boolean(kimo.regenerateVisuals)} />
+      ) : null}
     </section>
   );
 }
