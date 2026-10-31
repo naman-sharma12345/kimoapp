@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "about": "Filler words per language for the transcript cut planner. 'always' entries are fillers wherever they occur; 'conditional' entries are fillers only under the named rule (see desktop/transcript.mjs tagFillers). Matching is case-insensitive on punctuation-stripped tokens; multi-word entries match consecutive words.",
+  "en": {
+    "always": ["um", "umm", "ummm", "uh", "uhh", "uhm", "erm", "er", "hmm", "hmmm", "mm", "mhm", "ah", "eh"],
+    "conditional": {
+      "you know": "bounded",
+      "i mean": "bounded",
+      "like": "isolated_or_repeated",
+      "sort of": "not_modifying",
+      "kind of": "not_modifying",
+      "basically": "opener",
+      "so": "opener_pause",
+      "okay so": "opener",
+      "right": "tag"
+    }
+  },
+  "hi": {
+    "always": ["um", "umm", "uh", "uhh", "hmm", "matlab ki", "अं", "उम्म", "हम्म"],
+    "conditional": {
+      "matlab": "bounded",
+      "मतलब": "bounded",
+      "toh": "opener",
+      "to": "opener_pause",
+      "तो": "opener",
+      "na": "tag",
+      "naa": "tag",
+      "ना": "tag",
+      "haan": "isolated_or_repeated",
+      "haa": "isolated_or_repeated",
+      "हाँ": "isolated_or_repeated",
+      "हां": "isolated_or_repeated",
+      "accha": "opener",
+      "acha": "opener",
+      "achha": "opener",
+      "अच्छा": "opener",
+      "basically": "opener",
+      "you know": "bounded",
+      "like": "isolated_or_repeated",
+      "yaar": "tag",
+      "यार": "tag"
+    },
+    "markers": ["hai", "hain", "nahi", "nahin", "kya", "kyun", "mein", "main", "hum", "aap", "tum", "kaise", "bahut", "aur", "lekin", "toh", "matlab", "yaar", "accha", "acha", "kar", "karna", "raha", "rahe", "rahi", "tha", "thi", "ho", "gaya", "wala", "wali", "ki", "ka", "ke", "se", "ko", "bhi", "sab", "abhi", "dekho", "chalo", "doston", "bhai"]
+  },
+  "greetings": ["hey guys", "hi guys", "hello guys", "hey everyone", "hi everyone", "hello everyone", "what's up guys", "whats up guys", "welcome back", "welcome to my channel", "in this video", "in today's video", "in todays video", "namaste doston", "namaskar doston", "hello doston", "hi doston", "kaise ho doston", "aaj ki video", "is video mein", "नमस्ते दोस्तों", "आज की वीडियो"]
+}
