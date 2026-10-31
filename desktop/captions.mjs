@@ -712,6 +712,11 @@ export function applyCaptions(edl, config, ctx = {}) {
   if (plain.length)
     for (const o of built.overlays)
       for (const w of o.props.words) if (w.accent && plain.some((n) => w.at < n.end + 0.05 && w.until > n.at - 0.05 && /\d/.test(w.w))) delete w.accent;
+  // Phase 7: words an explainer visual already shows lose the caption accent (one emphasis channel at a time)
+  const quiet = edl.explain?.no_accent ?? [];
+  if (quiet.length)
+    for (const o of built.overlays)
+      for (const w of o.props.words) if (w.accent && quiet.some((n) => w.at < n.end + 0.02 && w.until > n.at - 0.02 && Math.abs(w.at - n.at) < 0.15)) delete w.accent;
   const kept = built.overlays.filter((o) => !edited.some((e) => e.at < o.at + o.dur && e.at + e.dur > o.at));
   const overlays = [...kept, ...edited].sort((a, b) => a.at - b.at);
   const ids = new Set(edl.overlays.map((o) => o.id));

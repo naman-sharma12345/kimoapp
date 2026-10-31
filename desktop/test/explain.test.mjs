@@ -260,3 +260,65 @@ test('director: model decides (mocked), taste rules hold, two-pass pick, toggles
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('plan: beats become EDL overlays on time, off the face, with camera room, SFX, caption no-accent and a valid EDL', { timeout: 60000 }, async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { direct } = await import('../explain/director.mjs');
+  const { AssetCache } = await import('../explain/assets.mjs');
+  const { anchorBeats, applyExplain, countFaceOverlaps } = await import('../explain/plan.mjs');
+  const { validate } = await import('../edl.mjs');
+  const { applyCaptions } = await import('../captions.mjs');
+  const { toolPaths } = await import('./bench/run.mjs');
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-explain-plan-'));
+  try {
+    const text = 'okay so here is the thing there are three reasons it failed first no users second too slow and third we ran out of money and honestly 40 percent of startups fail exactly here so think about that for a moment before you build anything new';
+    const words = W(text, 0.38, 0.6);
+    for (const canvas of [{ w: 1920, h: 1080 }, { w: 1080, h: 1920 }]) {
+      const path = 'C:/v/talk.mp4';
+      const edl = {
+        edl_version: 1,
+        canvas: { ...canvas, fps: 30 },
+        sources: [{ id: 'a', path, kind: 'video', fps: 30, w: 1920, h: 1080, duration: 30, audio: true }],
+        video: [{ track: 'V1', clips: [{ id: 'c1', src: 'a', in: 0, out: 9, at: 0, speed: 1, fit: 'cover' }, { id: 'c2', src: 'a', in: 9, out: 20, at: 9, speed: 1, fit: 'cover' }] }],
+        audio: [],
+        overlays: [{ id: 'gfx-stat-1', kind: 'graphic', at: 15.5, dur: 1.7, track: 'graphics', props: { element: 'stat', value: '40%', label: 'fail' } }],
+        master: { lufs: -14, true_peak: -1 },
+      };
+      const ctx = { words: { [path]: words }, heads: { [path]: { static: { cx: 0.5, top: 0.18, chin: 0.48, eyes: 0.31, gaze: 0, source: 'sam' } } } };
+      const d = await direct({ words, canvas, template: 'explainer', ffmpeg: toolPaths().ffmpeg, assetCache: new AssetCache(join(dir, 'cache')) });
+      assert.ok(d.beats.some((b) => b.kind === 'list'), `cues give a list (${d.beats.map((b) => b.kind)})`);
+      applyExplain(edl, { enabled: true, beats: anchorBeats(d.beats, words), template: 'explainer', ffmpeg: toolPaths().ffmpeg, sfxDir: join(dir, 'sfx'), tone: d.cues.tone }, ctx);
+      validate(edl);
+      const ex = edl.overlays.filter((o) => o.props?.explain_plan && o.kind === 'graphic' && o.props.element !== 'ex_pip');
+      assert.ok(ex.length >= 2, `${ex.length} explainer overlays`);
+      const list = ex.find((o) => o.props.element === 'ex_list');
+      // items enter 2 frames before their words (±1 frame)
+      for (const [k, it] of list.props.items.entries()) {
+        const spoken = words[d.beats.find((b) => b.kind === 'list').items[k].say_word_idx].start;
+        const f = Math.round((list.at + it.t) * 30);
+        assert.ok(Math.abs(f - (Math.round(spoken * 30) - 2)) <= 1, `item ${k} frame ${f}`);
+      }
+      // never two explainers at once
+      const sorted = [...ex].sort((a, b) => a.at - b.at);
+      for (let i = 1; i < sorted.length; i++) assert.ok(sorted[i].at >= sorted[i - 1].at + sorted[i - 1].dur - 1e-6, 'no overlap');
+      assert.equal(countFaceOverlaps(edl, ctx, ex), 0, 'never over the face');
+      assert.equal(edl.explain.metrics.explain_face_overlap, 0);
+      // the Phase 6 number pop under the explainer moved or waited
+      assert.ok(!edl.overlays.some((o) => o.id === 'gfx-stat-1' && ex.some((x) => o.at < x.at + x.dur && x.at < o.at + o.dur)));
+      // side/top beats make room: camera keys written on the talking track
+      if (ex.some((o) => ['side', 'top'].includes(o.props.mode))) assert.ok(edl.video[0].clips.some((c) => /explain/.test(c.camera_by ?? '')));
+      assert.ok(edl.audio.some((t) => t.role === 'SFX' && t.clips.length > 0), 'item ticks on the SFX bus');
+      assert.ok(edl.explain.no_accent.length > 0);
+      applyCaptions(edl, { enabled: true, style: 'kimo' }, ctx);
+      validate(edl);
+      // re-applying is idempotent (snapshots run many times)
+      const n = edl.overlays.filter((o) => o.props?.explain_plan).length;
+      applyExplain(edl, { enabled: true, beats: anchorBeats(d.beats, words), template: 'explainer', ffmpeg: toolPaths().ffmpeg, sfxDir: join(dir, 'sfx') }, ctx);
+      assert.equal(edl.overlays.filter((o) => o.props?.explain_plan).length, n);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
