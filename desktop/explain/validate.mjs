@@ -140,11 +140,12 @@ export function validateBeats(rawBeats, ctx) {
     // never invent numbers, places or names
     const spoken = spokenNumberSet(windowWords(words, s, e));
     const invented = beatNumbers(b).filter((v) => !spoken.has(v) && !spoken.has(Math.round(v)) && !(v >= 1 && v <= 10 && b.kind === 'list'));
-    if (invented.length) {
+    if (invented.length && b.source !== 'user') {
       drop(b, `invented number ${invented[0]}`);
       continue;
     }
-    if (b.kind === 'map' && !b.items.every((p) => said(words, s, e, p.text))) {
+    // a visual the user asked for by name ("add a map of Delhi at 0:42") is theirs to place
+    if (b.kind === 'map' && b.source !== 'user' && !b.items.every((p) => said(words, s, e, p.text))) {
       drop(b, 'place not said');
       continue;
     }

@@ -116,7 +116,8 @@ export async function direct(opts) {
   let raw = null;
   if (ask) {
     try {
-      const text = pass1Text({ words, cues, template, canvas, tone: cues.tone, audience: opts.audience, note, toggles, density, offline: opts.offline, library, screens: opts.screens });
+      let text = pass1Text({ words, cues, template, canvas, tone: cues.tone, audience: opts.audience, note, toggles, density, offline: opts.offline, library, screens: opts.screens });
+      if (opts.regenerate) text += `\nREGENERATE (variant ${opts.regenerate.seed ?? 1}): propose fresh, different visuals between ${opts.regenerate.from} s and ${opts.regenerate.to} s; only beats in that range are used.`;
       const rec = await cachedAsk('explain', text);
       if (Array.isArray(rec?.beats)) raw = rec.beats.map((b) => ({ ...b, source: 'llm' }));
     } catch (error) {
@@ -126,9 +127,30 @@ export async function direct(opts) {
     }
   }
   if (!raw) raw = cues.candidates.map(cueToBeat);
-  for (const [i, b] of (opts.userBeats ?? []).entries()) raw.push({ ...b, id: b.id ?? `u${i + 1}`, source: 'user' });
+  for (const [i, b0] of (opts.userBeats ?? []).entries()) {
+    let b = { ...b0, id: b0.id ?? `u${i + 1}`, source: 'user' };
+    // "show a chart when I talk about revenue": the numbers said around that word
+    if (b.from_speech) {
+      const near = cues.numbers.filter((n) => n.i0 >= b.say_word_idx - 20 && n.i0 <= b.say_word_idx + 30).slice(0, 4);
+      if (near.length >= 2) b = { ...b, title: b.near ?? b.title, items: near.map((n) => ({ text: n.text, label: n.text, value: n.value, say_word_idx: n.i0 })), start_word_idx: Math.min(b.say_word_idx, near[0].i0), say_word_idx: near[0].i0, end_word_idx: Math.max(b.end_word_idx, near.at(-1).i1) };
+      else if (near.length === 1) b = { ...b, kind: 'stat', value: near[0].value, unit: near[0].unit, prefix: near[0].prefix, locale: near[0].locale, label: b.near ?? '', say_word_idx: near[0].i0, start_word_idx: near[0].i0, end_word_idx: near[0].i1 };
+      else continue;
+    }
+    // a user beat replaces whatever the director put on the same moment
+    raw = raw.filter((x) => !(x.start_word_idx <= b.end_word_idx && b.start_word_idx <= (x.end_word_idx ?? x.start_word_idx)));
+    raw.push(b);
+  }
+  if (opts.removed?.length) raw = raw.filter((b) => !opts.removed.some((r) => (r.id && r.id === b.id) || (r.kind && r.kind === String(b.kind ?? b.family ?? '').toLowerCase())));
   const total = opts.total ?? words.at(-1).end;
-  const v = validateBeats(raw, { words, template, canvas, toggles, density, offline: opts.offline, tone: cues.tone, allowMemes: opts.allowMemes || /\bmeme/i.test(note), total });
+  const vctx = { words, template, canvas, toggles, density, offline: opts.offline, tone: cues.tone, allowMemes: opts.allowMemes || /\bmeme/i.test(note), total };
+  let v;
+  if (opts.focus && DENSITY[opts.focus.density] != null) {
+    // "more visuals in the intro": a richer density inside the focus window only
+    const inside = (b) => words[b.say_word_idx ?? b.start_word_idx]?.start >= opts.focus.from && words[b.say_word_idx ?? b.start_word_idx]?.start < opts.focus.to;
+    const a = validateBeats(raw.filter(inside), { ...vctx, density: opts.focus.density, total: Math.min(total, opts.focus.to - opts.focus.from) });
+    const z = validateBeats(raw.filter((b) => !inside(b)), vctx);
+    v = { beats: [...a.beats, ...z.beats].sort((x, y) => x._at - y._at), dropped: [...a.dropped, ...z.dropped], trimmed: [...a.trimmed, ...z.trimmed] };
+  } else v = validateBeats(raw, vctx);
   let beats = v.beats;
   const dropped = [...v.dropped];
 
