@@ -75,7 +75,15 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
     else n.push(op);
     return n;
   };
+  // kimo caption chunks snap to word boundaries (onsets/ends from the transcript)
+  const bounds = (live?.data?.edl ?? project.edl)?.captions?.bounds ?? [];
   const snap = (v, t, ignore) => {
+    if (ignore && bounds.length && findClip(ignore, t)?.c?.caption) {
+      let best = v;
+      let d = 0.25;
+      for (const b of bounds) if (Math.abs(b - v) < d) (d = Math.abs(b - v)), (best = b);
+      return Math.max(0, best);
+    }
     let best = Math.round(v * 20) / 20;
     for (const k of t.tracks_bottom_to_top) for (const c of k.clips) if (c.id !== ignore) for (const e of [c.start, c.end]) if (Math.abs(e - v) < 0.08) best = e;
     return Math.max(0, best);
@@ -212,7 +220,7 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
         <span className="desk-fine mono">{tracks.length ? `${fmtTc(dur)} · ${n} clip${n === 1 ? '' : 's'} · ${tracks.length} track${tracks.length === 1 ? '' : 's'}` : ''}</span>
         {edits.length ? <span className="desk-unsaved">{edits.length} unsaved edit{edits.length === 1 ? '' : 's'}</span> : null}
         <span className="studio-spacer" />
-        <span className="studio-tool-hint">drag to move · drag edges to trim · delete removes · double-click a caption to edit</span>
+        <span className="studio-tool-hint">drag to move · drag edges to trim · captions snap to words · delete removes · double-click a caption to edit</span>
         <Button size="xs" variant="ghost" icon={Undo2} disabled={!undo.length} onClick={undoEdit} tooltip="undo timeline edit" shortcut="Ctrl Z">
           undo
         </Button>

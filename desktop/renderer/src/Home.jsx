@@ -142,6 +142,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
   const [note, setNote] = useState('');
   const [preset, setPreset] = useState(localStorage.preset || 'youtube');
   const [style, setStyle] = useState(localStorage.style || 'auto');
+  const [captionStyle, setCaptionStyle] = useState(localStorage.captionStyle || 'auto');
   const [mode, setMode] = useState(localStorage.mode || 'ai');
   const [batch, setBatch] = useState(false);
   const [over, setOver] = useState(false);
@@ -151,6 +152,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
   const noteRef = useRef(null);
   const presets = status?.presets ?? {};
   const styles = status?.styles ?? { auto: 'Auto' };
+  const captionStyles = status?.captionStyles ?? { auto: 'Auto' };
 
   const addFiles = (files) =>
     setStaged((s) => {
@@ -190,10 +192,11 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
     if (samChoice?.effect === 'bg_image' && !samChoice.image) throw new Error('choose a background image first');
     localStorage.preset = preset;
     localStorage.style = style;
+    localStorage.captionStyle = captionStyle;
     localStorage.mode = mode;
     setStarting(true);
     try {
-      const made = await kimo.create({ files: staged, note: note.trim(), preset, style, mode, batch: batch && staged.length > 1, sam: samChoice });
+      const made = await kimo.create({ files: staged, note: note.trim(), preset, style, captionStyle, mode, batch: batch && staged.length > 1, sam: samChoice });
       setLibrary((l) => [...made, ...l.filter((x) => !made.some((m) => m.id === x.id))]);
       setStaged([]);
       setNote('');
@@ -301,6 +304,16 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
                 <span>style</span>
                 <select value={style} onChange={(e) => setStyle(e.target.value)} disabled={mode !== 'ai'}>
                   {Object.entries(styles).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="desk-select" data-disabled={mode === 'sam' || undefined}>
+                <span>captions</span>
+                <select value={captionStyle} onChange={(e) => setCaptionStyle(e.target.value)} disabled={mode === 'sam'} aria-label="caption style">
+                  {Object.entries(captionStyles).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
                     </option>

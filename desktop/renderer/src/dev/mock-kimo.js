@@ -111,7 +111,7 @@
   };
   window.kimo = {
     mediaUrl: (p) => M + String(p).split(/[\\/]/).pop().replace(/\.mp4$/, '.webm') + '?',
-    status: async () => ({ version: '0.3.1', kimo: true, ffmpeg: '7.1-full_build-www.gyan.dev', whisper: true, model: window.__noModel ? false : true, gpu: 'h264_nvenc', presets, styles }),
+    status: async () => ({ version: '0.3.1', kimo: true, ffmpeg: '7.1-full_build-www.gyan.dev', whisper: true, model: window.__noModel ? false : true, gpu: 'h264_nvenc', presets, styles, captionStyles: { auto: 'Auto (from the style)', kimo: 'kimo', hormozi: 'Hormozi', mrbeast: 'MrBeast', 'ali-abdaal': 'Ali Abdaal', mkbhd: 'MKBHD', karaoke: 'Karaoke', 'boxed-highlight': 'Boxed highlight', 'doc-subtitle': 'Documentary subtitle' } }),
     library: async () => library.map((p) => ({ ...p })),
     edl: async (id) => structuredClone(library.find(p=>p.id===id)?.edl??null),
     log: async (id) => log[id] ?? [],
