@@ -9,7 +9,7 @@
   "private": true,
   "main": "main.cjs",
   "scripts": {
-    "test": "node --test --test-concurrency=1 test/transcript.test.mjs test/cutplan.test.mjs test/edl.test.mjs test/compose.test.mjs test/compose-fx.test.mjs test/pipeline.test.mjs test/bench/cache.test.mjs test/bench/metrics.test.mjs test/bench/resources.test.mjs test/bench/encoding.test.mjs",
+    "test": "node --test --test-concurrency=1 test/transcript.test.mjs test/cutplan.test.mjs test/edl.test.mjs test/compose.test.mjs test/compose-fx.test.mjs test/camera.test.mjs test/camera-render.test.mjs test/pipeline.test.mjs test/bench/cache.test.mjs test/bench/metrics.test.mjs test/bench/resources.test.mjs test/bench/encoding.test.mjs",
     "bench:fetch": "node test/bench/fetch-clips.mjs",
     "bench": "node test/bench/run.mjs",
     "start": "electron .",
@@ -57,6 +57,8 @@
       "judgment.mjs",
       "joins.mjs",
       "speakers.mjs",
+      "camera.mjs",
+      "camera-probe.mjs",
       "data/**",
       "renderer/**",
       "!renderer/src/**",

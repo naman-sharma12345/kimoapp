@@ -6,7 +6,9 @@ import { spawnBackground as spawn, execFileBackground as execFile, acquireExclus
 import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { samEffect, SAM_EFFECTS, motionJitter } from './sam.mjs';
+import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks } from './sam.mjs';
+import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
+import { headTrack, screenRegions } from './camera-probe.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
 import { pictureTools } from './picture-tools.mjs';
 import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
@@ -15,6 +17,7 @@ import { planCut, applyCutPlan, plannerBrief, loadSavedPlan, storablePlan } from
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
 const MAX_ROUNDS = 7;
+const PODCAST_NOTE = /podcast|interview|two (people|speakers|hosts)|conversation|guest/i;
 const MAX_PASSES = 3;
 const CALL_TIMEOUT_MS = 30 * 60_000; // long 4K renders are fine locally
 
@@ -24,8 +27,10 @@ export const ENGINE_TOOLS = [
   'add_title', 'add_text', 'add_glow_text', 'auto_captions', 'caption_from_words',
   'edit_caption', 'finish_audio', 'lint_edit', 'timeline_summary', 'add_track',
   'add_clip', 'trim_clip', 'move_clip', 'delete_clip', 'set_property', 'set_audio',
-  'add_smart_punch', 'add_punch_ins', 'auto_reframe', 'stabilize', 'place_broll', 'undo',
+  'auto_reframe', 'stabilize', 'place_broll', 'undo',
 ];
+// Phase 4: the picture's punch-ins/zooms come from the app's camera director
+// (camera.mjs); kimo's add_punch_ins / add_smart_punch are no longer offered.
 
 /** SAM 3.1 tools the planner may call; each renders a new media file and imports it. */
 export const SAM_TOOLS = ['sam_reframe', 'sam_text_behind', 'sam_background', 'sam_redact'];
@@ -182,7 +187,7 @@ function parseCalls(raw) {
       args: item?.args && typeof item.args === 'object' && !Array.isArray(item.args) ? item.args : {},
       why: typeof item?.why === 'string' ? item.why.slice(0, 160) : undefined,
     }))
-    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name))
+    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name) || CAMERA_TOOLS.includes(c.name))
     .slice(0, 8);
 }
 function argsLine(args) {
@@ -259,7 +264,7 @@ export const STYLES = {
   },
   energetic: {
     label: 'Energetic (MrBeast-style)',
-    guide: 'high-energy youtube pacing: zero dead air (max_pause 0.2), a bold hook_box title in the first 2.5 s, add_punch_ins pattern alternate scale 1.18-1.25 on the talking track, impact or pop captions 1-3 words per line with keyword colours, punchy grade (auto_grade strength 0.9), loud clean mix.',
+    guide: 'high-energy youtube pacing: zero dead air (max_pause 0.2), a bold hook_box title in the first 2.5 s, snap punches on every jump cut (the camera director does them at energy 5), impact or pop captions 1-3 words per line with keyword colours, punchy grade (auto_grade strength 0.9), loud clean mix.',
     captions: { style: 'impact', max_words_per_line: 2, keywords: true, highlight: true },
     title: 'hook_box',
     punch: 1.22,
@@ -267,7 +272,7 @@ export const STYLES = {
   },
   documentary: {
     label: 'Documentary',
-    guide: 'measured documentary feel: keep natural breaths (max_pause 0.45), a cinematic or lower_third title, clean captions 2 lines, gentle grade (strength 0.6), slow add_smart_punch zoom 1.08-1.12 on long shots instead of hard punches, music low under speech (-20 dB).',
+    guide: 'measured documentary feel: keep natural breaths (max_pause 0.45), a cinematic or lower_third title, clean captions 2 lines, gentle grade (strength 0.6), slow breathing pushes on long shots instead of hard punches (camera director, energy 2), music low under speech (-20 dB).',
     captions: { style: 'clean', max_words_per_line: 6, lines: 2 },
     title: 'cinematic',
     punch: 1.08,
@@ -275,7 +280,7 @@ export const STYLES = {
   },
   podcast: {
     label: 'Podcast clip',
-    guide: 'podcast highlight clip: open on the most quotable line, remove silences and fillers (max_pause 0.25), add_punch_ins alternate scale 1.12 focus on the face, karaoke or boxed captions with keyword colours, a lower_third with the topic, grade 0.75.',
+    guide: 'podcast highlight clip: open on the most quotable line, remove silences and fillers (max_pause 0.25), speaker framing on whoever talks (camera director), karaoke or boxed captions with keyword colours, a lower_third with the topic, grade 0.75.',
     captions: { style: 'karaoke', max_words_per_line: 4, keywords: true, highlight: true },
     title: 'lower_third',
     punch: 1.12,
@@ -283,7 +288,7 @@ export const STYLES = {
   },
   cinematic: {
     label: 'Cinematic',
-    guide: 'cinematic: deliberate pacing, an elegant or cinematic title, minimal clean captions, rich grade (strength 0.85, target_luma 0.38), slow push-ins with add_smart_punch zoom 1.1, music swells under speech at -16 dB.',
+    guide: 'cinematic: deliberate pacing, an elegant or cinematic title, minimal clean captions, rich grade (strength 0.85, target_luma 0.38), slow push-ins (camera director, energy 1), music swells under speech at -16 dB.',
     captions: { style: 'clean', max_words_per_line: 5, lines: 1 },
     title: 'cinematic',
     punch: 1.1,
@@ -291,7 +296,7 @@ export const STYLES = {
   },
   tutorial: {
     label: 'Tutorial / explainer',
-    guide: 'tutorial: clarity first, cut dead air (max_pause 0.3) but keep every step, boxed or clean captions 2 lines for legibility, a lower_third naming the topic, add_punch_ins with ease 0.4 scale 1.1 to emphasise key moments, neutral grade 0.7.',
+    guide: 'tutorial: clarity first, cut dead air (max_pause 0.3) but keep every step, boxed or clean captions 2 lines for legibility, a lower_third naming the topic, punch in on the clicked region of screen recordings (camera director), neutral grade 0.7.',
     captions: { style: 'boxed', max_words_per_line: 5, lines: 2 },
     title: 'lower_third',
     punch: 1.1,
@@ -307,7 +312,7 @@ function expertGuide(P, S, files, cut) {
 - hook: the first 2-3 s decide retention. ${cut ? `the cut already opens on ${cut.hook ? 'the strongest line (cold open)' : 'the first spoken word'}; keep it first.` : 'start on speech or the most striking moment, never on dead air.'} put a 3-6 word hook on its own top track starting at 0.3 s or earlier, for 2-2.5 s, with add_title style "${S.title}" (short, specific, curiosity, no clickbait lies${cut?.judgment?.hook_text ? `; use "${cut.judgment.hook_text}"` : ''}).
 - pacing: ${cut ? 'dead air, fillers, stutters and retakes are already removed by the transcript cut planner (word-accurate). do not re-cut the talking track; spend your calls on framing, captions, titles, grade and sound.' : talking ? `auto_rough_cut every talking clip in story order with max_pause ${S.max_pause ?? 0.3} and pad 0.05; read the returned segments and re-run with drop [{asset_id,index}] for false starts, repeats and filler-only segments (um, uh, like).` : 'cut to the beat or keep shots 1.5-4 s.'}
 - cadence: a visual change (cut, punch, b-roll, graphic) every 1.5-4 s on talking footage, never more than 6 s static.
-- energy: ${S.punch > 1.12 ? `add_punch_ins on the talking track (pattern alternate, scale ${S.punch}, focus on the face) for jump-cut rhythm` : `add_smart_punch zoom ${S.punch + 0.05} on long single shots, or add_punch_ins scale ${S.punch} with ease 0.4`}. if there are extra non-speech video files, place_broll them over the talking track (min_shot 1.2, max_shot 3).
+- camera: the app's camera director already frames the talking track: a framing change (wide / medium / tight) at every jump cut, pushes landing on emphasis words, snap punches on numbers and punchlines at high energy, wide section openers, speaker framing for podcasts and punch-ins on the clicked region of screen recordings, all eased and smooth. never punch or zoom the talking track yourself (set_property scale/x/y on it is overridden). use camera_style only to change the energy, camera_emphasis for an extra beat, camera_hold to keep a moment still, transition for section changes (mostly hard cuts), speed_ramp only on b-roll. if there are extra non-speech video files, place_broll them over the talking track (min_shot 1.2, max_shot 3); their sound gets J/L-cuts automatically.
 - captions: auto_captions style "${S.captions.style}", max_words_per_line ${S.captions.max_words_per_line}${S.captions.lines ? `, lines ${S.captions.lines}` : ''}, keywords true, highlight true, position auto, hint = names/terms from the note. captions must stay inside the title-safe area${vertical ? ' (vertical: keep text out of the bottom 20% and right 15% where shorts/reels ui sits; position middle is safest)' : ''}.
 - look: auto_grade every media clip (style strength as given). never stack two grades.
 - sound: finish_audio last with target_lufs -14 (music under speech ${S.label.startsWith('Doc') ? -20 : -16} db when there is music). the app enforces true-peak -1 dBTP on delivery.
@@ -596,7 +601,7 @@ export async function youtubeMaster({
 const VISUAL = new Set([
   'auto_rough_cut', 'cut_to_beat', 'add_clip', 'trim_clip', 'move_clip', 'delete_clip', 'set_property',
   'add_title', 'add_text', 'add_glow_text', 'auto_captions', 'caption_from_words', 'edit_caption',
-  'auto_grade', 'add_smart_punch', 'add_punch_ins', 'auto_reframe', 'stabilize', 'place_broll', 'undo',
+  'auto_grade', 'auto_reframe', 'stabilize', 'place_broll', 'undo', ...CAMERA_TOOLS,
 ]);
 const STRUCTURE = new Set([...VISUAL, 'add_track', 'import_media', 'project_set', 'load_project']);
 /** Ops the timeline editor may send (validated before they reach kimo). */
@@ -701,7 +706,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       const caps = (timeline.tracks_bottom_to_top ?? []).flatMap((t) => t.clips).filter((c) => /^text:/.test(c.src ?? ''));
       const pick = name === 'edit_caption' ? caps.find((c) => c.id === args.clip_id) : caps[Math.min(1, caps.length - 1)];
       if (pick) at = pick.start + Math.min(0.3, (pick.end - pick.start) / 2);
-    } else if (['trim_clip', 'move_clip', 'set_property', 'add_smart_punch', 'auto_reframe', 'stabilize'].includes(name) && args.clip_id) {
+    } else if (['trim_clip', 'move_clip', 'set_property', 'auto_reframe', 'stabilize'].includes(name) && args.clip_id) {
       const c = (timeline.tracks_bottom_to_top ?? []).flatMap((t) => t.clips).find((x) => x.id === args.clip_id);
       if (c) at = c.start + Math.min(0.8, (c.end - c.start) / 2);
     }
@@ -732,7 +737,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         emit({ t: 'progress', phase: 'render', label: 'rendering with kimo', f, eta: Math.max(1, (est - el) / 1000), bytes, estimated: true });
       }, 500);
     }
-    const result = await (SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
+    const result = await (CAMERA_TOOLS.includes(name) ? cameraTool(name, args) : SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
     const failed = Boolean(result?.isError);
     const text = resultText(result);
     history.push(`${name}(${JSON.stringify(args).slice(0, 400)}) => ${failed ? 'ERROR ' : ''}${text}`);
@@ -754,6 +759,54 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       if (image) emit({ t: 'frame', time: args.time, image });
     }
     return result;
+  };
+  // ---------- Phase 4 camera director: inputs measured once on this PC, keys written on every snapshot ----------
+  const norm = (p) => String(p ?? '').replaceAll('\\', '/');
+  const cameraCtx = () => (pictures.camera ??= { ctx: { energy: energyFor(style, { w: P.width, h: P.height }), maxStatic: maxStaticFor({ w: P.width, h: P.height }), overrides: {} } }).ctx;
+  const cameraTool = async (name, args) => {
+    const ctx = cameraCtx();
+    const r = cameraToolCall((ctx.overrides ??= {}), name, args);
+    return { ...(r.ok ? {} : { isError: true }), content: [{ type: 'text', text: r.text }] };
+  };
+  const prepareCamera = async () => {
+    if (legacy_kimo_render) return;
+    const saved = appEdl?.camera_plan ?? null;
+    const canvas = { w: P.width, h: P.height };
+    const skip = new Set((cut?.clips ?? []).filter((c) => c.kind === 'broll' || c.screen).map((c) => norm(c.file.path)));
+    const talking = files.filter((f) => f.kind === 'video' && !skip.has(norm(f.path)));
+    const opId = randomUUID().slice(0, 8);
+    const t0 = Date.now();
+    emit({ t: 'op', id: opId, phase: 'start', tool: 'camera_probe', title: `camera · where the subject is in ${talking.length} clip${talking.length === 1 ? '' : 's'} (on this PC)`, why: 'framing, head placement and look room follow the person, not the frame centre', at: t0 });
+    try {
+      const cacheDir = env?.KIMO_CACHE_DIR || join(dir, 'cache');
+      const inputs = cut ? cameraInputsFromCut(cut.plan, cut.clips) : { words: saved?.words ?? {}, emphasis: saved?.emphasis ?? [], chapters: saved?.chapters ?? [] };
+      const heads = { ...(saved?.heads ?? {}) };
+      for (const f of talking) {
+        const key = norm(f.path);
+        if (heads[key] !== undefined) continue;
+        const samTracks = cachedPersonTracks(join(dir, 'sam'), f.path, f.duration);
+        heads[key] = await headTrack({ ffmpeg, file: f, samTracks, cacheDir, signal }).catch((e) => {
+          if (signal?.aborted) throw e;
+          return null;
+        });
+      }
+      let screens = saved?.screenRegions ?? {};
+      if (cut) {
+        const screenPaths = new Set(cut.clips.filter((c) => c.screen).map((c) => norm(c.file.path)));
+        const ranges = (pictures.cutPlan?.keep ?? []).filter((k) => k.clip_id && screenPaths.has(norm(k.src_path))).map((k) => {
+          const f = files.find((x) => norm(x.path) === norm(k.src_path));
+          return { clip_id: k.clip_id, path: k.src_path, in: k.in, out: k.out, width: f?.width, height: f?.height };
+        });
+        if (ranges.length) screens = await screenRegions({ ffmpeg, clips: ranges, cacheDir, signal });
+      }
+      pictures.camera = { ctx: { energy: energyFor(style, canvas), maxStatic: maxStaticFor(canvas), podcast: style === 'podcast' || PODCAST_NOTE.test(note ?? ''), ...inputs, heads, screenRegions: screens, overrides: pictures.camera?.ctx?.overrides ?? saved?.overrides ?? {} } };
+      const found = Object.values(heads).filter(Boolean);
+      emit({ t: 'op', id: opId, phase: 'end', ok: true, ms: Date.now() - t0, result: `energy ${pictures.camera.ctx.energy} · ${found.length}/${talking.length} subject tracks (${[...new Set(found.map((h) => h.source))].join(', ') || 'frame centre'})${Object.keys(screens).length ? ` · ${Object.values(screens).flat().length} screen regions` : ''}${inputs.emphasis.length ? ` · ${inputs.emphasis.length} emphasis words` : ''}` });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      emit({ t: 'op', id: opId, phase: 'end', ok: false, ms: Date.now() - t0, error: String(error.message).slice(0, 200) });
+      cameraCtx();
+    }
   };
   // ---------- SAM 3.1: every step is a live op with progress + a preview ----------
   const samStep = async (tool, title, fn, summary) => {
@@ -949,6 +1002,8 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         at += a.duration;
       }
       }
+      await prepareCamera();
+      await refreshTimeline();
       if (mode === 'sam') {
         await call('finish_audio', { target_lufs: -14, keep_ambience: true });
         await check(1);
@@ -959,6 +1014,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       await check(1);
       }
     } else if (mode === 'manual') {
+      if (!suppliedEdl && appEdl?.camera_plan) pictures.camera = { ctx: appEdl.camera_plan };
       if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
     } else {
@@ -988,6 +1044,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           ];
         }
       }
+      await prepareCamera();
       const context = mode === 'followup'
         ? [
           `this is a FOLLOW-UP on an existing, already-loaded kimo project. the user's request: ${note}`,
@@ -996,7 +1053,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `canvas: ${P.width}x${P.height}. files:\n${fileLines}`,
           ...brief,
           expertGuide(P, S, files, brief.length ? (loadSavedPlan(projectFile) ?? {}) : null),
-          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}`,
         ]
         : [
           `user's note: ${note || 'make a great video from these'}`,
@@ -1004,7 +1061,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `files:\n${fileLines}`,
           ...brief,
           expertGuide(P, S, files, cut?.plan ?? null),
-          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}`,
         ];
       await buildRounds(mode === 'followup' ? 4 : MAX_ROUNDS, context);
       for (let pass = 1; pass <= MAX_PASSES; pass++) {
@@ -1107,7 +1164,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     const keepMaster=legacy_kimo_render||process.env.KIMO_COMPOSE_KEEP_MASTER==='1'||output===out;
     if(!keepMaster&&existsSync(out))unlinkSync(out);
-    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
+    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, camera: pictures.lastEdl?.camera_report ?? null, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
   } finally {
     try { mcp.kill(); } finally { release(); }
   }

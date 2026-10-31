@@ -191,13 +191,17 @@ test(
         assert.ok(aroll, `${mode}: A-roll track in the EDL`);
         assert.equal(aroll.clips.length, 2, mode);
         assert.ok(edl.cut_plan?.keep?.length === 2, `${mode}: cut plan rides on the EDL`);
+        // Phase 4: the A-roll camera comes from the app's camera director, never kimo's punch tools
+        assert.ok(aroll.clips.every((c) => c.camera_by === 'director' && c.camera?.length), `${mode}: director camera keys`);
+        assert.ok(edl.camera_plan && edl.camera_report?.shots >= 2, `${mode}: camera plan and report ride on the EDL`);
+        assert.notEqual(aroll.clips[0].camera_framing[0], aroll.clips[1].camera_framing[0], `${mode}: framing changes at the jump cut`);
         assert.ok(result.cutPlan.summary.pauses >= 1, mode);
         assert.ok(result.duration < 2.3, `${mode}: ${result.duration}`);
         const ended = (tool) => {
           const start = events.find((e) => e.t === 'op' && e.tool === tool && e.phase === 'start');
           return events.find((e) => e.t === 'op' && e.phase === 'end' && (start ? e.id === start.id : e.tool === tool));
         };
-        for (const tool of ['transcribe', 'cut_plan', 'apply_cut', 'compose']) assert.ok(ended(tool)?.ok, `${mode}: ${tool} op`);
+        for (const tool of ['transcribe', 'cut_plan', 'apply_cut', 'camera_probe', 'camera_director', 'compose']) assert.ok(ended(tool)?.ok, `${mode}: ${tool} op`);
         assert.match(ended('cut_plan').result, /^removed \d+ pauses? \([\d.]+ s\)/);
         const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
         assert.ok(!calls.some((c) => c.name === 'auto_rough_cut'), `${mode}: the planner may not re-cut`);

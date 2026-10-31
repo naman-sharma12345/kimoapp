@@ -206,8 +206,8 @@ export function plannerBrief(plan, { trackId, broll = [] } = {}) {
       .slice(0, 80)
       .map((k) => `${k.clip_id} @${k.at.toFixed(2)}${k.zoom && k.zoom !== 1 ? ` [punched ${k.zoom}]` : ''}: ${k.text.slice(0, 90)}`)
       .join('\n')}${segs.length > 80 ? `\n… ${segs.length - 80} more` : ''}`,
-    plan.screen_punch?.length ? `screen-recording segments (timeline s) to punch in on the region being clicked: ${plan.screen_punch.slice(0, 30).map((p) => p.at.toFixed(2)).join(', ')}.` : '',
-    cover.length ? `jump cuts that still need cover (timeline s): ${cover.slice(0, 40).map((j) => j.at.toFixed(2)).join(', ')}. make each one read as a framing change: add_punch_ins on the talking track (alternate scale, focus on the face) or place_broll over it. never leave a jump cut as a twitch.` : 'every jump cut is already framed.',
+    plan.screen_punch?.length ? `screen-recording segments (timeline s); the camera director punches in on the region being clicked: ${plan.screen_punch.slice(0, 30).map((p) => p.at.toFixed(2)).join(', ')}.` : '',
+    cover.length ? `jump cuts (timeline s): ${cover.slice(0, 40).map((j) => j.at.toFixed(2)).join(', ')}. the app's camera director frames every one of them (a framing change on the cut) and pushes into the emphasis words; do not punch or zoom the talking track. place_broll over a cut only where b-roll genuinely helps.` : 'every jump cut is framed by the camera director.',
     plan.judgment?.hook_text ? `hook title text (on-screen by 0.3 s, ≤ 6 words): "${plan.judgment.hook_text}"` : '',
     emph.length ? `emphasis words for captions/keywords: ${emph.join(', ')}` : '',
     broll.length ? `b-roll clips (no speech) already imported: ${broll.map((b) => `${b.asset_id} (${b.path.split(/[\\/]/).pop()}, ${Number(b.duration).toFixed(1)} s)`).join(', ')}. place_broll them over the talking track at the jump cuts or over abstract talk.` : '',
