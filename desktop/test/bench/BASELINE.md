@@ -76,3 +76,121 @@ Actual contact sheets and ten first-second samples were inspected for both outpu
 16. The preserved failed recording leaves before-video/project-state pairing uncertain; the new raw comparison must export both sides from the same saved state.
 
 No full listening review is inferred from these stills. These outputs remain legacy evidence and do not close the user's new-raw-dataset acceptance.
+
+## Raw-v2 native before review (31 October 2026)
+
+Before videos are native exports of the identical saved offline-control projects, with no paid calls. Evidence is under baselines/raw-v2-before/ID/ASPECT with full per-case credit sidecars. Actual native and initial app sheets plus first-second frames were inspected for the cases below. The final app render uses numeric native font weight and measurement-v3 corrections; its hashes/visual checks are recorded separately when collected. Original natural footage is preserved, including captured camera movement and static screen spans. Native TUT-1/VLOG-1/POD-1 landscape exports hit the1800-second cap; their failure JSON is retained instead of inventing missing comparisons.
+
+### TH-1 indoor interview
+
+1. Both native aspects start on the same downcast gaze and hand-to-face gesture.
+2. This is a continuous source selection, without an independently chosen editorial hook.
+3. Native Montserrat captions are heavy, outlined and immediately visible.
+4. Initial app captions were visibly thinner; the numeric900weight mapping has been corrected for final verification.
+5. Both versions retain the same yellow active-word and green keyword treatments.
+6. Portrait centre cropping pushes the speaker's face against the right edge.
+7. Parts of the head and hand leave that portrait crop.
+8. The landscape view retains comfortable surrounding context and the publisher mark.
+9. The first-second caption progresses from individual words to a short dialogue group.
+10. Caption lines sit across upper chest/low face depending on gesture and crop.
+11. The sampled full minute keeps one framing, with no deliberate punch/b-roll variety.
+12. Several pauses remain visible as caption-free spans; rendering does not remove dead air.
+13. Some source content is nearly static, making downsampled frame identity ambiguous.
+14. The old matcher therefore cannot certify complete zero-repeat coverage for this case.
+15. Contact-sheet black padding after the final occupied row is not a black video tail.
+16. Still inspection does not establish complete listening quality or every inter-frame transition.
+
+### TH-2 outdoor walk-and-talk
+
+1. The source opens on a fence, a passing fairgoer and a cropped host's shoulder.
+2. Both native and initial app versions preserve that weak opening.
+3. The foreground host enters a clear view around two seconds into the selection.
+4. Portrait cropping is especially tight and sometimes cuts the host's face or cap.
+5. Wide framing gives the moving camera and surrounding fair more context.
+6. Large source camera dips/turns are visible around the middle and late selection.
+7. They must not be labeled compositor-induced shake merely because whole-image motion is high.
+8. Captions are visible from the first second with active yellow and keyword green.
+9. In portrait they can cover the mouth/neck as the captured camera position changes.
+10. Initial app letter weight was lighter than native; numeric native weight is preserved for the final render.
+11. The same source angle changes and dialogue order remain in both versions.
+12. This offline control does not add a new hook, b-roll choice or pacing cut.
+13. The previous one-repeat result is an expected EOF hold caused by fractional-frame duration rounding; the corrected matcher now uses the actual source frame count.
+14. H264/BT709/AAC/CFR/GOP properties were present; the earlier delivery failure came from the separate whole-content motion check.
+15. Natural gestures and background movement make this more observable than the static tutorial.
+16. Full audio listening is not inferred from the sampled sheets and first-second frames.
+
+### TUT-1 screen tutorial
+
+1. The native portrait view retains the central Blender viewport and cube.
+2. The original lower-right facecam is outside this centre crop.
+3. Most side controls are also removed, limiting instructional clarity.
+4. The viewport remains almost unchanged for much of the selected interval.
+5. The preferences panel appears in the later middle portion.
+6. The first-second strip already contains large dialogue captions.
+7. Captions contrast against the grey UI but cover useful viewport space.
+8. Visible native captions include fillers such as “UM” and “UH”.
+9. Source cube/view rotation becomes clearer near the end of the selection.
+10. Those source changes should not be mistaken for new compositor punch-ins.
+11. No independent hook title, callout or editing-cadence improvement is present in this offline control.
+12. Static source frames make exact frame identity ambiguous after downsampling.
+13. Barcode calibration remains separate evidence and cannot turn missing natural-frame coverage into a pass.
+14. The native landscape export hit the1800-second cap, so its full before image/score comparison is unavailable.
+15. The saved input still includes facecam and full UI; the cropped result is an editorial limitation of the control.
+16. These images do not establish complete narration intelligibility or listening quality.
+
+### VLOG-1 raw event excerpts
+
+1. This control concatenates six declared10-second excerpts from two raw camera rolls.
+2. It opens with the same awkward fence/shoulder view as the host source.
+3. The first second includes active captions but no authored hook.
+4. At roughly ten seconds it switches to the microphone interview.
+5. The portrait crop often places people against opposite frame edges.
+6. Some guest gestures and costume details are cut off.
+7. Later input boundaries change the camera position and source context.
+8. Around the forty-second area the view moves toward the timber building.
+9. Chapel interiors and the costumed group provide real contextual footage.
+10. The final excerpt visibly moves back toward foliage outside.
+11. Exposure and colour vary with the captured outdoor/interior lighting.
+12. Large native captions remain repetitive over these different source compositions.
+13. Joins are benchmark preparation choices, not evidence of fresh AI story selection.
+14. The native landscape export exceeded the1800-second cap; no missing before score is supplied.
+15. Full Cinestudy credits and required hashtags accompany the evidence.
+16. Sound transitions and complete listening quality are not judged from the stills.
+
+### POD-1 two-person outdoor interview
+
+1. The native portrait crop places the interviewer partly outside the left edge.
+2. The guest is frequently outside or against the right edge.
+3. Much of the centre is empty background between the participants.
+4. The first caption is conversational filler, not a strong editorial hook.
+5. The held microphone stays visible through many sampled cells.
+6. Guest gestures enter the crop, but a comfortable two-person composition is lost.
+7. Native captions are strongly outlined and visibly heavy.
+8. Yellow active words and green keywords are present.
+9. Some longer caption groups cross near the reserved portrait side region.
+10. Source camera adjustments and passers-by remain visible.
+11. There is no deliberate shot/reaction alternation in this control.
+12. This is an outdoor podcast/documentary source, not a studio multicamera edit.
+13. Its full-width prepared source contains both people; portrait framing is the limitation.
+14. The native landscape reference timed out after1800seconds and remains unavailable.
+15. A successful numeric delivery gate would not make that portrait composition good.
+16. Complete dialogue listening and speaker attribution are not inferred from images.
+
+### MUSIC-1 independent video and music stem
+
+1. Both native aspects show the same continuous aerial wave/rock source.
+2. The portrait crop concentrates on the central breaking wave and rock surface.
+3. Landscape retains more coastline context and horizontal wave structure.
+4. The first-second cells contain continuous foam movement.
+5. Full sheets show recurring waves evolving across the selected twenty seconds.
+6. There are no source dialogue captions or new text graphics.
+7. No deliberate picture cut or punch sequence is authored in this control.
+8. The source video is silent; audio comes from a separately imported CC0 composer stem.
+9. This is a declared manual soundtrack fixture, not an AI music-match decision.
+10. The native before exports completed in both aspects.
+11. Aerial capture/wave motion is distinct from compositor-induced camera shake.
+12. Bright foam and dark rocks provide useful colour/range stress.
+13. Empty contact-sheet cells after the twentieth sample are layout padding.
+14. Before/after loudness and timing are measured from each final audio stream.
+15. These images do not establish subjective soundtrack fit or complete listening quality.
+16. Pexels and composer attribution, licences and exact source/stem hashes are retained.
