@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('kimo', {
   samPreview: (opts) => ipcRenderer.invoke('sam:preview', opts),
   pickImage: () => ipcRenderer.invoke('pickImage'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
+  // AI access: owner sign-in (system browser) or your own key, held in memory only
+  authStatus: () => ipcRenderer.invoke('auth:status'),
+  signIn: (provider) => ipcRenderer.invoke('auth:signin', provider),
+  signOut: () => ipcRenderer.invoke('auth:signout'),
+  setKey: (input) => ipcRenderer.invoke('byok:set', input),
+  clearKey: () => ipcRenderer.invoke('byok:clear'),
   onProject: on('project'),
   onEvent: on('event'),
   onProgress: on('progress'),

@@ -1502,3 +1502,22 @@ button {
   background: var(--ink-3);
   color: var(--cream-38);
 }
+
+/* Phase 7: ai access (own key, memory only; kimo team sign-in) */
+.desk-byok {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+}
+.desk-byok .ui-input {
+  min-width: 0;
+}
+.desk-ai-note {
+  color: var(--accent, #ff6a1a);
+}
+.desk-locked-hint {
+  display: block;
+  margin-top: 6px;
+}

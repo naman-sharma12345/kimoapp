@@ -1,8 +1,99 @@
-import { useState } from 'react';
-import { RefreshCw, Download, FileText, RotateCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { RefreshCw, Download, FileText, RotateCw, KeyRound, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
 import { Progress } from '@web/components/ui/progress';
-import { kimo } from './lib.js';
+import { kimo, cleanErr } from './lib.js';
+
+const PROVIDERS = [
+  { value: 'openai', label: 'OpenAI', model: 'gpt-4.1-mini' },
+  { value: 'anthropic', label: 'Anthropic', model: 'claude-sonnet-4-5' },
+  { value: 'gemini', label: 'Gemini', model: 'gemini-2.5-flash' },
+  { value: 'meta', label: 'Meta (also unlocks subject effects)', model: 'muse-spark-1.3' },
+  { value: 'groq', label: 'Groq', model: 'llama-3.3-70b-versatile' },
+  { value: 'openrouter', label: 'OpenRouter', model: 'openai/gpt-4.1-mini' },
+  { value: 'custom', label: 'Custom (OpenAI-compatible)', model: '' },
+];
+
+/** AI access: kimo-team sign-in, or the user's own key (held in memory only, never saved). */
+export function AiAccess({ guard }) {
+  const [access, setAccess] = useState(null);
+  const [form, setForm] = useState({ provider: 'openai', key: '', model: PROVIDERS[0].model, baseUrl: '' });
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState('');
+  useEffect(() => {
+    kimo.authStatus?.().then(setAccess).catch(() => undefined);
+  }, []);
+  const act = (label, fn) =>
+    guard(async () => {
+      setBusy(label);
+      setNote('');
+      try {
+        setAccess(await fn());
+      } catch (e) {
+        setNote(cleanErr(e));
+      } finally {
+        setBusy('');
+      }
+    });
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v, ...(k === 'provider' ? { model: PROVIDERS.find((p) => p.value === v)?.model ?? '' } : {}) }));
+  return (
+    <>
+      <div className="desk-section-label">ai access</div>
+      <p className="desk-fine">
+        ai edits, explainer visuals and subject effects need an ai key. kimo&apos;s own key is reserved for the kimo team; bring your own and it stays in this app&apos;s memory only, never saved, and is gone when you quit. captions, manual edits and exports work without any key.
+      </p>
+      <div className="desk-set-group">
+        <Row ok={Boolean(access?.byok)} title="your own key" detail={access?.byok ? `${access.byok.provider} · ${access.byok.model} · …${access.byok.last4} (memory only)` : 'not set'}>
+          {access?.byok ? (
+            <Button size="sm" variant="ghost" onClick={act('clear', () => kimo.clearKey())}>
+              forget key
+            </Button>
+          ) : null}
+        </Row>
+        {!access?.byok ? (
+          <div className="desk-byok">
+            <label className="desk-select">
+              <select value={form.provider} onChange={(e) => set('provider', e.target.value)} aria-label="ai provider">
+                {PROVIDERS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <input className="ui-input" type="password" autoComplete="off" spellCheck={false} placeholder="paste your api key" value={form.key} onChange={(e) => set('key', e.target.value)} aria-label="api key" />
+            <input className="ui-input" placeholder="model" value={form.model} onChange={(e) => set('model', e.target.value)} aria-label="model" />
+            {form.provider === 'custom' ? <input className="ui-input" placeholder="https://… base url" value={form.baseUrl} onChange={(e) => set('baseUrl', e.target.value)} aria-label="base url" /> : null}
+            <Button size="sm" variant="primary" icon={KeyRound} loading={busy === 'key'} onClick={act('key', async () => {
+              const r = await kimo.setKey(form);
+              setForm((f) => ({ ...f, key: '' }));
+              return r;
+            })}>
+              use this key
+            </Button>
+          </div>
+        ) : null}
+        <Row ok={access?.owner} title="kimo team sign-in" detail={access?.owner ? `signed in${access.subject ? ` as ${access.subject}` : ''}` : 'only for the kimo team; opens your browser'}>
+          {access?.owner ? (
+            <Button size="sm" variant="ghost" icon={LogOut} loading={busy === 'out'} onClick={act('out', () => kimo.signOut())}>
+              sign out
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" icon={LogIn} loading={busy === 'github'} onClick={act('github', () => kimo.signIn('github'))}>
+                github
+              </Button>
+              <Button size="sm" variant="ghost" icon={LogIn} loading={busy === 'google'} onClick={act('google', () => kimo.signIn('google'))}>
+                google
+              </Button>
+            </>
+          )}
+        </Row>
+      </div>
+      {note ? <p className="desk-fine desk-ai-note" role="status">{note}</p> : null}
+    </>
+  );
+}
 
 function Row({ ok, title, detail, children }) {
   return (
@@ -55,6 +146,8 @@ export function Settings({ status: s, refresh, model, downloadModel, update, gua
           </Row>
         </div>
 
+        <AiAccess guard={guard} />
+
         <div className="desk-section-label">formats</div>
         <div className="desk-formats">
           {presets.map((p) => (
@@ -91,7 +184,7 @@ export function Settings({ status: s, refresh, model, downloadModel, update, gua
 
         <div className="desk-section-label">privacy</div>
         <p className="desk-fine desk-privacy">
-          your footage stays on this pc. ai edits send transcripts and a few small frames for planning and checking. subject effects upload a downscaled (≤720p, silent) copy of the processed segment to meta via kimo, and it is deleted after. no sign-in is needed.
+          your footage stays on this pc. ai edits send transcripts and a few small frames for planning and checking. subject effects upload a downscaled (≤720p, silent) copy of the processed segment to meta via kimo, and it is deleted after. your own ai key is sent with each ai call over https and never stored, logged or written to disk.
         </p>
       </section>
     </div>

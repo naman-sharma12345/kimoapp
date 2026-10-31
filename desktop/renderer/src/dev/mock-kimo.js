@@ -139,6 +139,13 @@
     samPreview: async () => ({ image: M + 'f3.jpg', objects: 2 }),
     pickImage: async () => 'C:/Users/naman/Pictures/bg.jpg',
     installUpdate: async () => {},
+    authStatus: async () => ({ owner: false, subject: null, byok: null, ai: false }),
+    signIn: async () => {
+      throw new Error("kimo's built-in AI is reserved for the kimo team. Add your own AI key in Settings.");
+    },
+    signOut: async () => ({ owner: false, subject: null, byok: null, ai: false }),
+    setKey: async (f) => ({ owner: false, subject: null, byok: { provider: f.provider, model: f.model, last4: String(f.key).slice(-4) }, ai: true }),
+    clearKey: async () => ({ owner: false, subject: null, byok: null, ai: false }),
     onProject: on('project'), onEvent: on('event'), onProgress: on('progress'), onUpdate: on('update'),
   };
   // simulate the live edit of p1

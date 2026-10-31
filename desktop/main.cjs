@@ -1,7 +1,7 @@
 // kimo desktop (Windows): the real kimo v6 engine, FFmpeg and whisper bundled
 // and run on this PC. Media stays local; only prompts and sampled frames go
 // to the kimo AI proxy at api.getkimo.tech.
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, protocol, net, clipboard, safeStorage } = require('electron');
 const { join, extname, basename } = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
@@ -40,6 +40,19 @@ const engineEnv = () => {
 
 let engine; // engine.mjs (ESM)
 const loadEngine = async () => (engine ??= await import(pathToFileURL(join(__dirname, 'engine.mjs')).href));
+// Phase 7 key lockdown: owner sign-in (system browser, loopback + PKCE) or the user's own key (memory only)
+let authModule = null;
+const loadAuth = async () => (authModule ??= await import(pathToFileURL(join(__dirname, 'kimo-auth.mjs')).href));
+// only the owner's refresh token is kept, encrypted with the OS keychain (DPAPI on Windows); a user's own AI key is never written anywhere
+const authStore = () => {
+  const file = join(data(), 'auth.bin');
+  const ok = () => { try { return safeStorage.isEncryptionAvailable(); } catch { return false; } };
+  return {
+    load: () => (ok() && fs.existsSync(file) ? safeStorage.decryptString(fs.readFileSync(file)) : null),
+    save: (text) => { if (ok()) fs.writeFileSync(file, safeStorage.encryptString(text)); },
+    clear: () => fs.rmSync(file, { force: true }),
+  };
+};
 // Phase 6 graphics: a hidden offscreen Chromium window renders the motion graphics (graphics/render.html)
 let graphicsHost = null;
 const registerGraphicsHost = async () => {
@@ -136,6 +149,7 @@ async function pump() {
   running = { id: next.id, controller };
   next.status = 'running';
   next.error = undefined;
+  next.errorCode = undefined;
   const job = next.job ?? { mode: next.mode, note: next.note };
   // a follow-up or timeline edit continues the log; a fresh edit starts it over
   next.log = job.mode === 'followup' || job.mode === 'manual' ? (next.log ?? []).slice(-300) : [];
@@ -144,6 +158,11 @@ async function pump() {
   update(next);
   const dir = projectDir(next.id);
   try {
+    // AI steps need an owner sign-in or the user's own key; say so plainly instead of failing mid-edit
+    if (['ai', 'followup', 'sam'].includes(job.mode)) {
+      const auth = await loadAuth();
+      if (!auth.hasAiAccess()) throw new auth.AiLockedError();
+    }
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
@@ -175,6 +194,7 @@ async function pump() {
   } catch (err) {
     next.status = controller.signal.aborted ? 'stopped' : 'failed';
     next.error = controller.signal.aborted ? 'stopped' : String(err.message || err).slice(0, 600);
+    if (err?.code && ['ai_locked', 'owner_only', 'sign_in_required', 'token_invalid'].includes(err.code)) next.errorCode = 'ai_locked';
     log('edit failed', next.id, err.stack || err);
   } finally {
     next.log = next.log.slice(-500);
@@ -318,7 +338,18 @@ async function smoke(clip, outPath) {
         /* optional artifact */
       }
     }
-    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && report.graphics.ok && (!report.cutPlan || chunks.length > 0));
+    // key lockdown: with no owner sign-in and no own key, an AI step stops locally with the clear message (no network call)
+    {
+      const auth = await loadAuth();
+      let locked = null;
+      try {
+        await auth.aiHeaders();
+      } catch (err) {
+        locked = err;
+      }
+      report.lockdown = { ok: Boolean(locked && auth.isLockedError(locked)), message: String(locked?.message ?? 'aiHeaders returned without a sign-in').slice(0, 200) };
+    }
+    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && report.graphics.ok && report.lockdown.ok && (!report.cutPlan || chunks.length > 0));
     const samAt = process.argv.indexOf('--smoke-sam');
     if (samAt > 0) {
       // SAM 3.1 end to end on Windows: proxy upload → track → 9:16 follow reframe + text behind the subject → kimo render
@@ -346,6 +377,9 @@ async function smoke(clip, outPath) {
         report.sam.ok = r4.duration > 1 && Boolean(motion?.ok);
       } catch (err) {
         report.sam.error = String(err.stack || err);
+        // without an owner sign-in or own key SAM is locked by design (Phase 7); that is a pass, not a crash
+        const locked = (await loadAuth()).isLockedError(err);
+        if (locked) report.sam.locked = true;
         for (const f of ['sam-graph.txt', 'sam-font-used.txt']) {
           try {
             report.sam[f] = fs.readFileSync(join(data(), 'smoke-sam', 'sam', f), 'utf8').slice(0, 4000);
@@ -353,7 +387,7 @@ async function smoke(clip, outPath) {
             /* not written */
           }
         }
-        report.sam.ok = false;
+        report.sam.ok = locked;
       }
       report.ok = report.ok && report.sam.ok;
       flush();
@@ -423,6 +457,12 @@ app.whenReady().then(async () => {
     return smoke(process.argv[smokeAt + 1], outAt > 0 ? process.argv[outAt + 1] : join(data(), 'smoke.json'));
   }
   loadLibrary();
+  (await loadAuth()).configureAuth({ store: authStore() });
+  ipcMain.handle('auth:status', async () => (await loadAuth()).accessStatus());
+  ipcMain.handle('auth:signin', async (_e, provider) => (await loadAuth()).signIn(provider === 'google' ? 'google' : 'github', { openExternal: (url) => shell.openExternal(url) }));
+  ipcMain.handle('auth:signout', async () => (await loadAuth()).signOut());
+  ipcMain.handle('byok:set', async (_e, input) => (await loadAuth()).setByok(input));
+  ipcMain.handle('byok:clear', async () => (await loadAuth()).clearByok());
   protocol.handle('kimo-media', (req) => {
     const file = decodeURIComponent(new URL(req.url).searchParams.get('p') || '');
     const known = library.some((p) => p.output === file || p.files.some((f) => f.path === file) || file.startsWith(projectDir(p.id)));

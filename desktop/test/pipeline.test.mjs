@@ -8,6 +8,9 @@ import { runEdit, PRESETS, probe } from '../engine.mjs';
 import { command } from './bench/io.mjs';
 import { toolPaths } from './bench/run.mjs';
 import { applyEdits } from '../edl.mjs';
+// Phase 7 lockdown: AI calls need an owner token or the user's own key; the
+// upstream is mocked here, so a run-time test token stands in for the sign-in.
+process.env.KIMO_DESKTOP_TOKEN = 'kd1.test.test';
 const tools = toolPaths();
 test('legacy picture rendering cannot be enabled from a normal app call', async () => {
   const previous = process.env.KIMO_BENCH_LEGACY;

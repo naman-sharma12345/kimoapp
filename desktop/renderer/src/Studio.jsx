@@ -610,7 +610,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
           <header className="studio-panel-header desk-viewer-head">
             <span className="desk-viewer-title">{p.name}</span>
             <span className="desk-chip" data-status={p.status} title={p.error || ''}>
-              {p.status === 'failed' ? `failed: ${String(p.error || '').slice(0, 60)}` : STATUS[p.status]}
+              {p.status === 'failed' ? (p.errorCode === 'ai_locked' ? 'needs an ai key: settings → ai access' : `failed: ${String(p.error || '').slice(0, 60)}`) : STATUS[p.status]}
             </span>
             <span className="studio-spacer" />
             {isBusy ? (

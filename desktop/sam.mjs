@@ -9,6 +9,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, statS
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { decodeMaskToRaster, parseImageStream, parseVideoStream } from '@meta-sam/parser';
+import { aiHeaders, proxyError } from './kimo-auth.mjs';
 
 export const SAM_URL =
   process.env.KIMO_SAM_URL || (process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai').replace(/\/ai$/, '/sam');
@@ -52,18 +53,18 @@ const probeJson = (ffprobe, path) =>
 
 async function call(path, init, signal) {
   for (let attempt = 0; attempt < 3; attempt++) {
+    const auth = await aiHeaders();
     let r;
     try {
-      r = await fetch(`${SAM_URL}${path}`, { ...init, headers: { 'X-Kimo-Desktop': '1', ...init.headers }, signal: AbortSignal.any([signal, AbortSignal.timeout(10 * 60_000)].filter(Boolean)) });
+      r = await fetch(`${SAM_URL}${path}`, { ...init, headers: { ...auth, ...init.headers }, signal: AbortSignal.any([signal, AbortSignal.timeout(10 * 60_000)].filter(Boolean)) });
     } catch (e) {
       if (signal?.aborted) throw new Error('cancelled');
       if (attempt === 2) throw new Error(`can't reach kimo SAM (${e.message}); check your internet`);
       continue;
     }
     if (r.ok) return r;
-    const body = await r.json().catch(() => ({}));
-    const message = body?.error?.message || `kimo SAM answered ${r.status}`;
-    if (r.status < 500 || attempt === 2) throw new Error(message);
+    const error = await proxyError(r, 'kimo SAM');
+    if (r.status < 500 || attempt === 2) throw error;
     await new Promise((res) => setTimeout(res, 2500 * (attempt + 1)));
   }
   throw new Error('kimo SAM is unavailable');

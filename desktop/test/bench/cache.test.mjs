@@ -10,6 +10,9 @@ import { escapeHtml, reviewHtml } from './report.mjs';
 import { relocatePaths } from './portable.mjs';
 import { ai } from '../../engine.mjs';
 import { mergeLedger } from './merge-ledger.mjs';
+// Phase 7 lockdown: AI calls need an owner token or the user's own key; the
+// upstream is mocked here, so a run-time test token stands in for the sign-in.
+process.env.KIMO_DESKTOP_TOKEN = 'kd1.test.test';
 
 test('restoring a cumulative ledger never resets, doubles or raises authorization', () => {
   const current = {

@@ -14,6 +14,7 @@ import { pictureTools } from './picture-tools.mjs';
 import { pickCaptionStyle, pickHookStyle, noteHints, captionStyles, captionStyle as captionStyleOf, CAPTION_ENGINE } from './captions.mjs';
 import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
 import { planCut, applyCutPlan, plannerBrief, loadSavedPlan, storablePlan } from './cutstage.mjs';
+import { aiHeaders, proxyError } from './kimo-auth.mjs';
 import { GRAPHIC_TOOLS, GRAPHIC_TOOL_TEXT, graphicToolCall } from './graphics/plan.mjs';
 import { describeClips, matchSentences, outputSentences } from './broll.mjs';
 import { outputWords } from './captions.mjs';
@@ -204,11 +205,13 @@ function argsLine(args) {
 
 export async function ai(kind, text, images = [], signal) {
   for (let attempt = 0; attempt < 3; attempt++) {
+    // throws AiLockedError (a clear message, no network call) without a sign-in or own key
+    const auth = await aiHeaders();
     let response;
     try {
       response = await fetch(AI_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Kimo-Desktop': '1' },
+        headers: { 'Content-Type': 'application/json', ...auth },
         body: JSON.stringify({
           kind,
           text: text.slice(0, 60_000),
@@ -223,9 +226,8 @@ export async function ai(kind, text, images = [], signal) {
       continue;
     }
     if (response.ok) return (await response.json()).record ?? {};
-    const body = await response.json().catch(() => ({}));
-    const message = body?.error?.message || `kimo AI answered ${response.status}`;
-    if (response.status < 500 || attempt === 2) throw new Error(message);
+    const error = await proxyError(response, 'kimo AI');
+    if (response.status < 500 || attempt === 2) throw error;
     await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
   }
   return {};
