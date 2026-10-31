@@ -42,14 +42,15 @@ export function panelRect(canvas, mode, { face = null, size = 'm' } = {}) {
     return { x: Math.round(sa.x0 + (W - w) / 2), y: Math.round(sa.y0), w, h, side: 'top' };
   }
   if (mode === 'overlay') {
-    const w = Math.round((vertical ? 0.62 : 0.3) * canvas.w * (size === 'l' ? 1.2 : 1));
+    const w = Math.round((vertical ? 0.62 : 0.3) * canvas.w * (size === 'l' ? 1.2 : size === 's' ? 0.75 : 1));
     const h = Math.round(w * (vertical ? 0.52 : 0.5));
     // beside the face, on the side with more room; above it on vertical canvases
     let x;
     let y;
     if (vertical) {
       x = sa.x0 + (W - w) / 2;
-      y = face ? Math.max(sa.y0, face.y0 - h - 24 * u) : sa.y0 + H * 0.05;
+      // above the head when there is room, else on the chest below the chin (never over the face)
+      y = !face ? sa.y0 + H * 0.05 : face.y0 - h - 24 * u >= sa.y0 ? face.y0 - h - 24 * u : Math.min(sa.y1 - h, face.y1 + 24 * u);
     } else {
       const right = face ? sa.x1 - face.x1 : W / 2;
       const left = face ? face.x0 - sa.x0 : W / 2;

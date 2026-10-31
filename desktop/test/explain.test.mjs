@@ -82,3 +82,38 @@ test('pip: the speaker is composited in a rounded bubble over a full-screen visu
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('layout: modes keep the face clear (reframed), full ≤ 25 %, pip for long beats, graphics yield', async () => {
+  const L = await import('../explain/layout.mjs');
+  const wide = { w: 1920, h: 1080 };
+  const tall = { w: 1080, h: 1920 };
+  const geomW = { W: 1920, H: 1080, cw: 1920, ch: 1080 };
+  const geomT = { W: 1920, H: 1080, cw: 607.5, ch: 1080 };
+  const head = { cx: 0.5, top: 0.2, chin: 0.5 };
+  for (const [canvas, geom] of [[wide, geomW], [tall, geomT]]) {
+    const state = { x: 0.5, y: 0.5, zoom: 1 };
+    const face = L.projectFace(head, geom, state, canvas);
+    for (const kind of ['list', 'compare', 'stat', 'definition', 'quote', 'meme', 'photo']) {
+      const r = L.placeBeat({ kind, items: [{}, {}] }, { canvas, dur: 3.5, fullLeft: 0, samples: [{ face, head, geom, state }] });
+      assert.ok(r.mode, `${kind} placed on ${canvas.w}x${canvas.h}`);
+      if (r.mode === 'pip' || r.mode === 'full') continue;
+      const f = r.reframe ? L.projectFace(head, geom, r.reframe, canvas) : face;
+      assert.equal(L.faceOverlap(r.panel, f), 0, `${kind} ${r.mode} clear of the face`);
+    }
+  }
+  // full only for complex beats and within the 25 % budget
+  assert.equal(L.modeOrder({ kind: 'map', items: [{}] }, { canvas: wide, dur: 4, fullLeft: 10 })[0], 'full');
+  assert.ok(!L.modeOrder({ kind: 'map', items: [{}] }, { canvas: wide, dur: 4, fullLeft: 2 }).includes('full'));
+  assert.ok(!L.modeOrder({ kind: 'list', items: [{}, {}] }, { canvas: wide, dur: 4, fullLeft: 100 }).includes('full'));
+  assert.equal(L.modeOrder({ kind: 'list', items: [{}, {}] }, { canvas: tall, dur: 7, template: 'explainer' })[0], 'pip');
+  // decorative graphics move or wait, the hook title blocks
+  const ov = [
+    { id: 'h', kind: 'graphic', at: 0.15, dur: 2, props: { element: 'hook_title' } },
+    { id: 's', kind: 'graphic', at: 5.2, dur: 1.5, props: { element: 'stat' } },
+    { id: 'k', kind: 'graphic', at: 9, dur: 1.3, props: { element: 'sticker' } },
+  ];
+  const r = L.resolveGraphics(ov, [{ id: 'b1', at: 1, end: 4 }, { id: 'b2', at: 6, end: 9.2 }], { total: 30 });
+  assert.deepEqual(r.blocked, ['b1']);
+  assert.ok(r.removed.includes('s'));
+  assert.ok(r.moved.includes('k') && ov.find((o) => o.id === 'k').at >= 9.6 - 1e-9);
+});
