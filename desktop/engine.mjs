@@ -1053,7 +1053,11 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     } else if (mode === 'manual') {
       if (!suppliedEdl && appEdl?.camera_plan) pictures.camera = { ctx: appEdl.camera_plan };
       // engine-op timeline edits rebuild the picture from the planner project: keep the saved captions (and their edits)
-      if (!suppliedEdl && appEdl?.captions) pictures.enableCaptions({ style: appEdl.captions.style, hook_style: appEdl.captions.hook_style, hints: appEdl.captions.hints ?? [], keep: appEdl.overlays.filter((o) => o.props?.engine === CAPTION_ENGINE && o.props.edited) });
+      const capEdl = appEdl ?? (existsSync(savedEdl) ? (() => { try { return JSON.parse(readFileSync(savedEdl, 'utf8')); } catch { return null; } })() : null);
+      if (!suppliedEdl && capEdl?.captions) {
+        if (!pictures.camera && capEdl.camera_plan) pictures.camera = { ctx: capEdl.camera_plan };
+        pictures.enableCaptions({ style: capEdl.captions.style, hook_style: capEdl.captions.hook_style, hints: capEdl.captions.hints ?? [], keep: capEdl.overlays.filter((o) => o.props?.engine === CAPTION_ENGINE && o.props.edited) });
+      }
       if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
     } else {
