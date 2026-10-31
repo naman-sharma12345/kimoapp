@@ -310,7 +310,7 @@ async function smoke(clip, outPath) {
     report.stage = 'graphics';
     flush();
     const { graphicsSelfTest } = await import(pathToFileURL(join(__dirname, 'graphics', 'selftest.mjs')).href);
-    report.graphics = await graphicsSelfTest({ ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, dir: join(data(), 'smoke', 'graphics'), clip: files[0] });
+    report.graphics = await graphicsSelfTest({ ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, dir: join(data(), 'smoke', 'graphics'), clip: files[0]?.path ?? clip });
     if (report.graphics.compose?.ok) {
       try {
         fs.copyFileSync(join(data(), 'smoke', 'graphics', 'graphics-selftest.mkv'), join(outPath, '..', 'graphics-selftest.mkv'));
