@@ -22,6 +22,13 @@ import {
 } from './edl.mjs';
 import { rectFilter, splineExpr } from './sam.mjs';
 import { subtitles } from './compose-text.mjs';
+import {
+  planTransitions,
+  transitionEnvelope,
+  frameRanges,
+  maskFilter,
+  normalizeMask,
+} from './compose-fx.mjs';
 
 const stop = (signal) => {
   if (signal?.aborted) throw new Error('cancelled');
@@ -121,12 +128,14 @@ export function cameraRectsForClip(clip, source, canvas, plan) {
   const zoomAt = curveSampler(curve('zoom'), 1),
     xAt = curveSampler(curve('x'), 0.5),
     yAt = curveSampler(curve('y'), 0.5);
+  const length = (clip.out - clip.in) / (clip.speed ?? 1);
   return plan.indices.map((_, i) => {
     const t = (plan.start + i) / rate(canvas.fps) - clip.at,
-      z = zoomAt(t),
+      env = transitionEnvelope(clip._fx, t, length),
+      z = zoomAt(t) * env.zoom,
       w = cw / z,
       h = ch / z;
-    const x = xAt(t) * W - w / 2,
+    const x = xAt(t) * W + env.dx * w - w / 2,
       y = yAt(t) * H - h / 2;
     return [
       Math.max(0, Math.min(W - w, x)),
@@ -203,6 +212,20 @@ function geometry(clip, source, canvas, plan) {
     'format=yuva444p',
     'setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709',
   );
+  const length = (clip.out - clip.in) / (clip.speed ?? 1);
+  const envelopes = plan.indices.map((_, i) =>
+    transitionEnvelope(
+      clip._fx,
+      (plan.start + i) / rate(canvas.fps) - clip.at,
+      length,
+    ),
+  );
+  // Whip transitions streak horizontally only on their own frames.
+  const blurFrames = frameRanges(envelopes, (e) => e.blur > 0.15);
+  if (blurFrames)
+    filters.push(
+      `avgblur=sizeX=${Math.max(2, Math.round(canvas.w / 40))}:sizeY=1:enable='${blurFrames}'`,
+    );
   const opacity = plan.indices.map((_, i) =>
     Math.max(
       0,
@@ -212,15 +235,22 @@ function geometry(clip, source, canvas, plan) {
           clip.opacity,
           (plan.start + i) / rate(canvas.fps) - clip.at,
           1,
-        ),
+        ) * envelopes[i].alpha,
       ),
     ),
   );
-  if (opacity.some((v) => v < 1))
+  // geq is per-pixel; evaluate it only on frames that are actually translucent.
+  const translucent = frameRanges(opacity, (v) => v < 1);
+  if (translucent)
     filters.push(
-      `geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='alpha(X,Y)*(${splineExpr(opacity, 'N', 0.001)})'`,
+      `geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='alpha(X,Y)*(${splineExpr(opacity, 'N', 0.001)})':enable='${translucent}'`,
     );
-  return filters.join(',');
+  const label = createHash('sha1')
+    .update(`${clip.id}:${plan.start}:${plan.end}`)
+    .digest('hex')
+    .slice(0, 10);
+  const mask = maskFilter(clip.mask, canvas, label);
+  return filters.join(',') + (mask ?? '');
 }
 async function* frames(stream, size) {
   let frame = Buffer.allocUnsafe(size),
@@ -707,6 +737,37 @@ export async function compose({
   }
   validate(edl);
   stop(signal);
+  const warnOnce = new Set();
+  const warn = (title) => {
+    if (warnOnce.has(title)) return;
+    warnOnce.add(title);
+    emit({
+      t: 'op',
+      tool: 'compose_warning',
+      phase: 'end',
+      warning: true,
+      ok: true,
+      title,
+      at: Date.now(),
+    });
+  };
+  for (const message of planTransitions(edl, rate(edl.canvas.fps)))
+    warn(message);
+  for (const clip of edl.video.flatMap((t) => t.clips)) {
+    if (clip.mask && !normalizeMask(clip.mask))
+      warn(
+        `${clip.id}: mask ${JSON.stringify(clip.mask).slice(0, 80)} is not a rect/ellipse EDL mask; rendered unmasked`,
+      );
+    if (clip.blend && clip.blend !== 'normal')
+      warn(`${clip.id}: blend ${clip.blend} not implemented; rendered normal`);
+    if (clip.grade?.native)
+      warn(`${clip.id}: native grade graph retained in EDL; not rendered yet`);
+    if (clip.grade?.look)
+      warn(`${clip.id}: grade look ${clip.grade.look} not rendered yet`);
+    for (const effect of clip.grade?.effects ?? [])
+      if (effect.kind !== 'primaries')
+        warn(`${clip.id}: effect ${effect.kind} retained in EDL; not rendered`);
+  }
   dir = dir ?? join(resolve(output, '..'), '.compose');
   await mkdir(dir, { recursive: true });
   const workspace = resolve(dir);
@@ -802,6 +863,7 @@ export async function compose({
           nodes +
           18 +
           (clip.fit === 'contain' ? 3 : 0) +
+          (normalizeMask(clip.mask) ? 6 : 0) +
           (clip.grade?.effects?.filter((e) => e.kind === 'primaries').length ??
             0) *
             6,
@@ -930,22 +992,6 @@ export async function compose({
         graph.push(
           `[${base}][${top}]overlay=eof_action=pass:repeatlast=0:format=auto:enable='gte(t,${safe((plan.start - from - 0.25) / fps)})*lt(t,${safe((plan.end - from - 0.25) / fps)})',setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[${next}]`,
         );
-        if (
-          clip.mask ||
-          (clip.blend && clip.blend !== 'normal') ||
-          clip.grade?.native ||
-          clip.grade?.effects?.length ||
-          clip.transition_in
-        )
-          emit({
-            t: 'op',
-            tool: 'compose_warning',
-            phase: 'end',
-            warning: true,
-            ok: true,
-            title: `${clip.id}: native grade/mask/blend/transition retained in EDL; unsupported effects require an explicit compositor implementation`,
-            at: Date.now(),
-          });
         base = next;
         input++;
         layer++;
