@@ -25,11 +25,11 @@ export const entryFrame = (onset, fps) => Math.max(0, toFrame(onset, fps) - LEAD
 /**
  * Times for one beat. beat: {start_word_idx, end_word_idx, say_word_idx,
  * items: [{say_word_idx}]}, words: output-timeline words [{start, end}].
- * opts: {fps, total, nextAt (next beat's start, s), sentenceEnd (s)}.
+ * opts: {fps, total, nextAt (next beat's start, s), sentenceEnd (s), lead (s)}.
  * Returns {at, dur, startFrame, endFrame, items: [t relative to at], entries
  * (absolute frames), say (absolute s of the key word)}.
  */
-export function beatTiming(beat, words, { fps, total = Infinity, nextAt = Infinity, sentenceEnd = null } = {}) {
+export function beatTiming(beat, words, { fps, total = Infinity, nextAt = Infinity, sentenceEnd = null, lead = 0 } = {}) {
   const n = words.length;
   const idx = (i, d) => (Number.isInteger(i) && i >= 0 && i < n ? i : d);
   const s = idx(beat.start_word_idx, 0);
@@ -40,7 +40,8 @@ export function beatTiming(beat, words, { fps, total = Infinity, nextAt = Infini
   // 3-frame stagger when words are too close to read apart
   const entries = [];
   for (const f of raw) entries.push(entries.length ? Math.max(f, entries.at(-1) + STAGGER_FRAMES) : f);
-  const startFrame = Math.min(entryFrame(words[s].start, fps), entries[0]);
+  // lead: seconds the visual needs before its first item (the stat count-up lands on its word)
+  const startFrame = Math.max(0, Math.min(entryFrame(words[s].start, fps), entries[0] - Math.round(lead * fps)));
   const lastWordEnd = Math.max(words[e].end, words[say].end);
   let leave = lastWordEnd + TAIL_S;
   if (sentenceEnd != null && sentenceEnd > leave) leave = Math.min(sentenceEnd + 0.3, lastWordEnd + 2.5);

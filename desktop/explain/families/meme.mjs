@@ -4,7 +4,7 @@
 // this_is_fine (text + emoji parody). Top/bottom text ≤ 8 words, written by
 // the model in the speaker's language. A user's own meme image can fill a
 // row (props.assets).
-import { drawPanel, visualAlpha, fitText, wrapLines, text, scale, panelLayout, graphicEase, clamp01, withAlpha, roundRectPath } from './common.mjs';
+import { drawPanel, visualAlpha, fitText, wrapLines, text, scale, panelLayout, graphicEase, clamp01, withAlpha, roundRectPath, reveal } from './common.mjs';
 import { panelOf } from '../panel.mjs';
 
 export const MEME_FORMATS = ['expectation_reality', 'nobody_me', 'two_choice', 'this_is_fine'];
@@ -32,8 +32,7 @@ export default {
     ctx.globalAlpha = a;
     drawPanel(ctx, L.P, { ...th, colors: { ...th.colors, panel: '#FFFFFF' } }, canvas, { alpha: 0.97 });
     for (let i = 0; i < 2; i++) {
-      const enter = (props.items?.[i]?.t ?? i * 0.6) - 0.05;
-      const r = graphicEase('back_out')(clamp01(((t - enter) * fps) / 8));
+      const r = reveal(t, props.items?.[i]?.t ?? i * 0.6, fps, 8, 'back_out');
       if (r <= 0) continue;
       const y = L.P.y + L.pad + i * (L.rowH + L.pad);
       const ex = L.P.x + L.pad;
