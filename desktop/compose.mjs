@@ -845,6 +845,7 @@ export async function compose({
       frame == null
         ? `compose ${total} frames at ${edl.canvas.fps} fps`
         : `compose frame ${frame}`,
+    why: 'frame-exact picture from the EDL at the source frame rate',
     at: started,
   });
   try {
@@ -1120,8 +1121,11 @@ export async function compose({
               done = from + n;
             emit({
               t: 'progress',
+              id,
+              opId: id,
+              tool: 'compose',
               phase: 'compose',
-              label: 'compositing picture',
+              label: `compositing frame ${done}/${total} · ${(done / Math.max(0.001, elapsed)).toFixed(1)} fps`,
               frame: done,
               total,
               f: done / total,
