@@ -1,0 +1,1863 @@
+{
+  "version": 3,
+  "values": {
+    "aspect": "16:9",
+    "duration_s": 60.1,
+    "first_speech_s": 0.03,
+    "hook_text": true,
+    "dead_air_ratio": 0.09409007199062444,
+    "filler_count": 0,
+    "repeat_takes": 0,
+    "median_shot_s": 60.026633,
+    "max_static_s": 60.026633,
+    "edl_boundaries": [
+      0,
+      60.026633
+    ],
+    "scene_cuts": [
+      60.026693
+    ],
+    "framing_variety": 1,
+    "content_motion_jitter_px": 0.51,
+    "repeated_frames": 0,
+    "skipped_frames": 0,
+    "frame_match_coverage": 0.1811111111111111,
+    "frame_match": [
+      {
+        "id": "clip3",
+        "repeated_frames": 0,
+        "skipped_frames": 0,
+        "compared": 326,
+        "total": 1799,
+        "coverage": 0.18131256952169078,
+        "mean_mad": 0.6369389523794997,
+        "incorrect_frames": 0,
+        "camera": {
+          "jitter_px": 0.008975197535864047,
+          "measured": 1793,
+          "eligible": 1793,
+          "coverage": 1,
+          "mean_fit_rmse": 0.764965541260407
+        }
+      }
+    ],
+    "jitter_px": 0.008975197535864047,
+    "camera_registration_coverage": 0.9994425863991081,
+    "caption_min_word_s": 0.19000000000000483,
+    "caption_safe": false,
+    "caption_face_overlap": 0,
+    "lufs": -14,
+    "true_peak": -1.5,
+    "lra": 4.3,
+    "duck_depth_db": null,
+    "sfx_count_per_min": 0,
+    "clip_delta_e": null,
+    "clipped_pct": 4.4574729711598176,
+    "closed_gop": true,
+    "cfr_ok": true,
+    "delivery_ok": false
+  },
+  "checks": [
+    {
+      "name": "first_speech_s",
+      "value": 0.03,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.4,
+        "unit": "s",
+        "speechOnly": true
+      },
+      "estimated": false
+    },
+    {
+      "name": "hook_text",
+      "value": true,
+      "status": "pass",
+      "target": {
+        "equals": true,
+        "description": "Title or caption visible in 0-3s with at most six words"
+      },
+      "estimated": false
+    },
+    {
+      "name": "dead_air_ratio",
+      "value": 0.09409007199062444,
+      "status": "fail",
+      "target": {
+        "maxExclusive": 0.03,
+        "speechOnly": true
+      },
+      "estimated": false
+    },
+    {
+      "name": "filler_count",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "repeat_takes",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "median_shot_s",
+      "value": 60.026633,
+      "status": "fail",
+      "target": {
+        "min": 1.5,
+        "max": 4,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "max_static_s",
+      "value": 60.026633,
+      "status": "fail",
+      "target": {
+        "max": 6,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "framing_variety",
+      "value": 1,
+      "status": "fail",
+      "target": {
+        "min": 3,
+        "unit": "buckets/30s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "jitter_px",
+      "value": 0.008975197535864047,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.5,
+        "unit": "px/frame at 1080 short side"
+      },
+      "estimated": false
+    },
+    {
+      "name": "repeated_frames",
+      "value": 0,
+      "status": "unavailable",
+      "target": {
+        "equals": 0,
+        "requiresCoverage": 0.95
+      },
+      "estimated": false
+    },
+    {
+      "name": "skipped_frames",
+      "value": 0,
+      "status": "unavailable",
+      "target": {
+        "equals": 0,
+        "requiresCoverage": 0.95
+      },
+      "estimated": false
+    },
+    {
+      "name": "caption_min_word_s",
+      "value": 0.19000000000000483,
+      "status": "pass",
+      "target": {
+        "min": 0.18,
+        "speechOnly": true,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "caption_safe",
+      "value": false,
+      "status": "fail",
+      "target": {
+        "equals": true,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "caption_face_overlap",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 2,
+        "speechOnly": true,
+        "unit": "%"
+      },
+      "estimated": true
+    },
+    {
+      "name": "lufs",
+      "value": -14,
+      "status": "pass",
+      "target": {
+        "min": -15,
+        "max": -13,
+        "unit": "LUFS"
+      },
+      "estimated": false
+    },
+    {
+      "name": "true_peak",
+      "value": -1.5,
+      "status": "pass",
+      "target": {
+        "max": -1,
+        "unit": "dBTP"
+      },
+      "estimated": false
+    },
+    {
+      "name": "lra",
+      "value": 4.3,
+      "status": "pass",
+      "target": {
+        "min": 4,
+        "max": 9,
+        "unit": "LU"
+      },
+      "estimated": false
+    },
+    {
+      "name": "duck_depth_db",
+      "value": null,
+      "status": "not applicable",
+      "target": {
+        "min": 12,
+        "max": 20,
+        "speechOnly": true,
+        "musicOnly": true,
+        "unit": "dB"
+      },
+      "estimated": true
+    },
+    {
+      "name": "sfx_count_per_min",
+      "value": 0,
+      "status": "fail",
+      "target": {
+        "min": 6,
+        "max": 20,
+        "landscapeMin": 3,
+        "landscapeMax": 10
+      },
+      "estimated": false
+    },
+    {
+      "name": "clip_delta_e",
+      "value": null,
+      "status": "unavailable",
+      "target": {
+        "maxExclusive": 4,
+        "unit": "CIEDE2000"
+      },
+      "estimated": true
+    },
+    {
+      "name": "clipped_pct",
+      "value": 4.4574729711598176,
+      "status": "fail",
+      "target": {
+        "maxExclusive": 0.5,
+        "unit": "%"
+      },
+      "estimated": false
+    },
+    {
+      "name": "delivery_ok",
+      "value": false,
+      "status": "fail",
+      "target": {
+        "equals": true
+      },
+      "estimated": false
+    }
+  ],
+  "creator": {
+    "score": 62.7,
+    "groups": {
+      "hook": 1,
+      "dead_air": 0.7626293629976871,
+      "filler": 1,
+      "cadence": 0,
+      "framing": 0.3333333333333333,
+      "motion": 0.5,
+      "captions": 0.6666666666666666,
+      "sound": 0.8928571428571428,
+      "colour": 0.2917119488863254
+    },
+    "missing": [
+      "duck_depth_db",
+      "clip_delta_e"
+    ],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "evidence": {
+    "speech": "Whisper full token timestamps on FINAL audio; token join and filler context are estimates",
+    "captions": "Engine editorial caption ids; conservative font envelopes; skin/centre subject heuristic at 1 fps. Not face-detector certification.",
+    "colour": "CIEDE2000 on per-clip sampled midtone RGB means; full-frame full-range luma clipping.",
+    "duck": "Estimated from saved music/background-audio volume and duck-gain envelopes; source dynamics are unknown. Unavailable if no bed or speech/gap windows exist.",
+    "frame": "108x192 grey affine-photometric MAD +/-3 source frames (best/second cost ratio <=0.9 and absolute separation >=0.02) with float perspective alignment; no integer crop approximation. EDL cuts are excluded. Text envelopes are masked on both source and output; unknown animated geometry is unmeasured. Expected indices use the global grid, source rate and speed, clamped to exact ffprobe nb_frames when available. Intended EOF/rate-conversion/slow-motion holds are not judder. Animated mappings and ambiguous static frames reduce coverage.",
+    "camera": "Source-referenced small-translation least squares with affine brightness fit on 108x192 decoded grey frames; masked overlay envelopes and gradient neighbours. SG7 high-frequency residual normalized to 1080 short side. Flat/aperture/poor fits are unavailable; requires 95% eligible coverage. Physical source motion cancels against the same expected source frame. This estimate does not certify source-frame identity. The old whole-picture measure remains content_motion_jitter_px. Compare measurement version-3 before and after only.",
+    "delivery": "Format qualityChecks (excluding whole-content motion) plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR. Motion retains its separate source-referenced gates."
+  },
+  "events": [
+    {
+      "id": "clip3",
+      "track": "track2",
+      "kind": "cut",
+      "start": 0,
+      "end": 60.026633,
+      "path": "D:\\a\\_temp\\kimo-bench-data\\raw-v2\\media\\TH-1\\1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false
+    },
+    {
+      "id": "clip5",
+      "track": "track4",
+      "kind": "caption",
+      "start": 0,
+      "end": 0.37600000000000006,
+      "text": "Could the threat",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.022083333333333344,
+        "y": 0.6929398148148148,
+        "w": 0.9558333333333333,
+        "h": 0.21412037037037038
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip6",
+      "track": "track4",
+      "kind": "caption",
+      "start": 0.37600000000000006,
+      "end": 1.79,
+      "text": "to democracy be",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.03984375000000001,
+        "y": 0.6900462962962963,
+        "w": 0.9203125,
+        "h": 0.2199074074074074
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip7",
+      "track": "track4",
+      "kind": "caption",
+      "start": 1.79,
+      "end": 2.495,
+      "text": "smaller than you",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.03241666666666665,
+        "y": 0.6952546296296297,
+        "w": 0.9351666666666667,
+        "h": 0.20949074074074073
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip8",
+      "track": "track4",
+      "kind": "caption",
+      "start": 2.495,
+      "end": 3.08,
+      "text": "think?-",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.24005208333333333,
+        "y": 0.6668981481481482,
+        "w": 0.5198958333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip9",
+      "track": "track4",
+      "kind": "caption",
+      "start": 3.856,
+      "end": 6.58,
+      "text": "Well, I think",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip10",
+      "track": "track4",
+      "kind": "caption",
+      "start": 6.58,
+      "end": 6.84,
+      "text": "the obvious",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip11",
+      "track": "track4",
+      "kind": "caption",
+      "start": 6.84,
+      "end": 7.625,
+      "text": "things happen,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.007229166666666675,
+        "y": 0.6738425925925926,
+        "w": 0.9855416666666666,
+        "h": 0.2523148148148148
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip12",
+      "track": "track4",
+      "kind": "caption",
+      "start": 7.625,
+      "end": 7.930000000000001,
+      "text": "John.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.3143229166666667,
+        "y": 0.6668981481481482,
+        "w": 0.37135416666666665,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip13",
+      "track": "track4",
+      "kind": "caption",
+      "start": 7.930000000000001,
+      "end": 8.79,
+      "text": "I think that",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip14",
+      "track": "track4",
+      "kind": "caption",
+      "start": 9.546,
+      "end": 11.205999999999998,
+      "text": "this is sort",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip15",
+      "track": "track4",
+      "kind": "caption",
+      "start": 11.205999999999998,
+      "end": 11.865,
+      "text": "of the last",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip16",
+      "track": "track4",
+      "kind": "caption",
+      "start": 11.865,
+      "end": 12.805,
+      "text": "gasp,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.3143229166666667,
+        "y": 0.6668981481481482,
+        "w": 0.37135416666666665,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip17",
+      "track": "track4",
+      "kind": "caption",
+      "start": 13.295,
+      "end": 14.01,
+      "text": "or maybe the",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip18",
+      "track": "track4",
+      "kind": "caption",
+      "start": 14.01,
+      "end": 15.535,
+      "text": "first big gasp",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.019895833333333335,
+        "y": 0.6668981481481482,
+        "w": 1.0397916666666667,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip19",
+      "track": "track4",
+      "kind": "caption",
+      "start": 15.535,
+      "end": 16.675,
+      "text": "of the mega",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip20",
+      "track": "track4",
+      "kind": "caption",
+      "start": 16.675,
+      "end": 17.615000000000002,
+      "text": "Republicans.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip21",
+      "track": "track4",
+      "kind": "caption",
+      "start": 17.615000000000002,
+      "end": 19.045,
+      "text": "And I think",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip22",
+      "track": "track4",
+      "kind": "caption",
+      "start": 19.045,
+      "end": 19.555,
+      "text": "Trump has",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.16578125,
+        "y": 0.6668981481481482,
+        "w": 0.6684375,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip23",
+      "track": "track4",
+      "kind": "caption",
+      "start": 19.555,
+      "end": 20.435,
+      "text": "concluded that",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05017708333333337,
+        "y": 0.6848379629629631,
+        "w": 0.8996458333333333,
+        "h": 0.23032407407407407
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip24",
+      "track": "track4",
+      "kind": "caption",
+      "start": 20.435,
+      "end": 21.265,
+      "text": "he has to",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.16578125,
+        "y": 0.6668981481481482,
+        "w": 0.6684375,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip25",
+      "track": "track4",
+      "kind": "caption",
+      "start": 21.265,
+      "end": 23.046,
+      "text": "win and he'll",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip26",
+      "track": "track4",
+      "kind": "caption",
+      "start": 23.046,
+      "end": 23.695,
+      "text": "pull out all",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip27",
+      "track": "track4",
+      "kind": "caption",
+      "start": 23.695,
+      "end": 24.665000000000003,
+      "text": "the stops.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12864583333333335,
+        "y": 0.6668981481481482,
+        "w": 0.7427083333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip28",
+      "track": "track4",
+      "kind": "caption",
+      "start": 24.916,
+      "end": 25.2,
+      "text": "I mean,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.24005208333333333,
+        "y": 0.6668981481481482,
+        "w": 0.5198958333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip29",
+      "track": "track4",
+      "kind": "caption",
+      "start": 25.2,
+      "end": 25.776,
+      "text": "the quotes he",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip30",
+      "track": "track4",
+      "kind": "caption",
+      "start": 25.776,
+      "end": 28.39,
+      "text": "uses are just,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.019895833333333335,
+        "y": 0.6668981481481482,
+        "w": 1.0397916666666667,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip31",
+      "track": "track4",
+      "kind": "caption",
+      "start": 28.39,
+      "end": 28.93,
+      "text": "I never thought",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.01078125000000002,
+        "y": 0.6831018518518519,
+        "w": 0.9784375,
+        "h": 0.2337962962962963
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip32",
+      "track": "track4",
+      "kind": "caption",
+      "start": 28.93,
+      "end": 29.445,
+      "text": "I'd hear a",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12864583333333335,
+        "y": 0.6668981481481482,
+        "w": 0.7427083333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip33",
+      "track": "track4",
+      "kind": "caption",
+      "start": 29.445,
+      "end": 30.01,
+      "text": "president say",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip34",
+      "track": "track4",
+      "kind": "caption",
+      "start": 30.01,
+      "end": 30.400000000000002,
+      "text": "some of the",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip35",
+      "track": "track4",
+      "kind": "caption",
+      "start": 30.400000000000002,
+      "end": 31.78,
+      "text": "stuff he says.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.019895833333333335,
+        "y": 0.6668981481481482,
+        "w": 1.0397916666666667,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip36",
+      "track": "track4",
+      "kind": "caption",
+      "start": 31.78,
+      "end": 32,
+      "text": "And so,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.24005208333333333,
+        "y": 0.6668981481481482,
+        "w": 0.5198958333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip37",
+      "track": "track4",
+      "kind": "caption",
+      "start": 32,
+      "end": 33.736000000000004,
+      "text": "I think that,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip38",
+      "track": "track4",
+      "kind": "caption",
+      "start": 33.736000000000004,
+      "end": 34.855000000000004,
+      "text": "and you see",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip39",
+      "track": "track4",
+      "kind": "caption",
+      "start": 34.855000000000004,
+      "end": 35.446,
+      "text": "what's happening",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.03500000000000003,
+        "y": 0.6958333333333334,
+        "w": 0.9299999999999999,
+        "h": 0.20833333333333334
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip40",
+      "track": "track4",
+      "kind": "caption",
+      "start": 35.446,
+      "end": 36.376,
+      "text": "in terms of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip41",
+      "track": "track4",
+      "kind": "caption",
+      "start": 36.376,
+      "end": 37.376000000000005,
+      "text": "what the mega",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05082291666666666,
+        "y": 0.6761574074074075,
+        "w": 0.8983541666666667,
+        "h": 0.24768518518518517
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip42",
+      "track": "track4",
+      "kind": "caption",
+      "start": 37.376000000000005,
+      "end": 38.03,
+      "text": "Republicans are",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.022890624999999998,
+        "y": 0.6859953703703704,
+        "w": 0.95421875,
+        "h": 0.22800925925925927
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip43",
+      "track": "track4",
+      "kind": "caption",
+      "start": 38.03,
+      "end": 38.39,
+      "text": "doing in the",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip44",
+      "track": "track4",
+      "kind": "caption",
+      "start": 38.39,
+      "end": 38.9,
+      "text": "House, they",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip45",
+      "track": "track4",
+      "kind": "caption",
+      "start": 38.9,
+      "end": 39.325,
+      "text": "don't make up",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip46",
+      "track": "track4",
+      "kind": "caption",
+      "start": 39.325,
+      "end": 39.95,
+      "text": "a majority of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.017239583333333364,
+        "y": 0.6668981481481482,
+        "w": 0.9655208333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip47",
+      "track": "track4",
+      "kind": "caption",
+      "start": 39.95,
+      "end": 40.565000000000005,
+      "text": "the House,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12864583333333335,
+        "y": 0.6668981481481482,
+        "w": 0.7427083333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip48",
+      "track": "track4",
+      "kind": "caption",
+      "start": 41.056,
+      "end": 41.595,
+      "text": "but they're",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip49",
+      "track": "track4",
+      "kind": "caption",
+      "start": 41.595,
+      "end": 41.785000000000004,
+      "text": "bringing",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.2029166666666667,
+        "y": 0.6668981481481482,
+        "w": 0.5941666666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip50",
+      "track": "track4",
+      "kind": "caption",
+      "start": 41.785000000000004,
+      "end": 42.275,
+      "text": "everything to a",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.008359375000000002,
+        "y": 0.6825231481481482,
+        "w": 0.98328125,
+        "h": 0.2349537037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip51",
+      "track": "track4",
+      "kind": "caption",
+      "start": 42.275,
+      "end": 42.68,
+      "text": "screeching",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12864583333333335,
+        "y": 0.6668981481481482,
+        "w": 0.7427083333333333,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip52",
+      "track": "track4",
+      "kind": "caption",
+      "start": 42.68,
+      "end": 43.410000000000004,
+      "text": "halt.-",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.27718750000000003,
+        "y": 0.6668981481481482,
+        "w": 0.445625,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip53",
+      "track": "track4",
+      "kind": "caption",
+      "start": 44.18,
+      "end": 44.795,
+      "text": "As you think",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip54",
+      "track": "track4",
+      "kind": "caption",
+      "start": 44.795,
+      "end": 45.660000000000004,
+      "text": "about the threat",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.02466666666666667,
+        "y": 0.6935185185185185,
+        "w": 0.9506666666666667,
+        "h": 0.21296296296296297
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip55",
+      "track": "track4",
+      "kind": "caption",
+      "start": 45.660000000000004,
+      "end": 46.855000000000004,
+      "text": "to democracy,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.03822916666666665,
+        "y": 0.6726851851851852,
+        "w": 0.9235416666666667,
+        "h": 0.25462962962962965
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip56",
+      "track": "track4",
+      "kind": "caption",
+      "start": 46.855000000000004,
+      "end": 47.495,
+      "text": "do you think",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip57",
+      "track": "track4",
+      "kind": "caption",
+      "start": 47.495,
+      "end": 47.92,
+      "text": "of it",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.3143229166666667,
+        "y": 0.6668981481481482,
+        "w": 0.37135416666666665,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip58",
+      "track": "track4",
+      "kind": "caption",
+      "start": 47.92,
+      "end": 49.39,
+      "text": "specifically as",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.018281250000000027,
+        "y": 0.6761574074074075,
+        "w": 1.0365625,
+        "h": 0.24768518518518517
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip59",
+      "track": "track4",
+      "kind": "caption",
+      "start": 49.39,
+      "end": 50.555,
+      "text": "the refusal to",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.004968749999999966,
+        "y": 0.6732638888888889,
+        "w": 0.9900625000000001,
+        "h": 0.2534722222222222
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip60",
+      "track": "track4",
+      "kind": "caption",
+      "start": 50.555,
+      "end": 51.7,
+      "text": "accept election",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.013203125000000038,
+        "y": 0.6836805555555556,
+        "w": 0.9735937499999999,
+        "h": 0.2326388888888889
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip61",
+      "track": "track4",
+      "kind": "caption",
+      "start": 51.7,
+      "end": 53.01,
+      "text": "defeats and",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip62",
+      "track": "track4",
+      "kind": "caption",
+      "start": 53.01,
+      "end": 53.4,
+      "text": "peaceful",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.2029166666666667,
+        "y": 0.6668981481481482,
+        "w": 0.5941666666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip63",
+      "track": "track4",
+      "kind": "caption",
+      "start": 53.4,
+      "end": 53.985,
+      "text": "transfer of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip64",
+      "track": "track4",
+      "kind": "caption",
+      "start": 53.985,
+      "end": 55.295,
+      "text": "power, or is",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05437500000000001,
+        "y": 0.6668981481481482,
+        "w": 0.89125,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip65",
+      "track": "track4",
+      "kind": "caption",
+      "start": 55.295,
+      "end": 56.405,
+      "text": "it more broadly",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.02046874999999998,
+        "y": 0.6854166666666667,
+        "w": 0.9590625,
+        "h": 0.22916666666666666
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip66",
+      "track": "track4",
+      "kind": "caption",
+      "start": 56.405,
+      "end": 57.035000000000004,
+      "text": "encompassing",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.058250000000000024,
+        "y": 0.6680555555555556,
+        "w": 0.8835,
+        "h": 0.2638888888888889
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip67",
+      "track": "track4",
+      "kind": "caption",
+      "start": 57.035000000000004,
+      "end": 57.38,
+      "text": "some of the",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip68",
+      "track": "track4",
+      "kind": "caption",
+      "start": 57.38,
+      "end": 58.11,
+      "text": "long standing",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.03193229166666672,
+        "y": 0.6709490740740741,
+        "w": 0.9361354166666666,
+        "h": 0.25810185185185186
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip69",
+      "track": "track4",
+      "kind": "caption",
+      "start": 58.11,
+      "end": 58.885999999999996,
+      "text": "features of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0915104166666667,
+        "y": 0.6668981481481482,
+        "w": 0.8169791666666666,
+        "h": 0.2662037037037037
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip70",
+      "track": "track4",
+      "kind": "caption",
+      "start": 58.885999999999996,
+      "end": 60.105000000000004,
+      "text": "democracy like",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.034354166666666686,
+        "y": 0.680787037037037,
+        "w": 0.9312916666666666,
+        "h": 0.23842592592592593
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    }
+  ],
+  "analysis": {
+    "frozen": [
+      0.734067,
+      0.867534,
+      1.034368,
+      1.368035,
+      1.835169,
+      2.135469,
+      2.235569,
+      2.402402,
+      2.569236,
+      2.802803,
+      3.069736,
+      3.403403,
+      3.770437,
+      3.903904,
+      4.070737,
+      4.304304,
+      4.604605,
+      4.804805,
+      5.038372,
+      5.338672,
+      5.739072,
+      6.039373,
+      6.27294,
+      6.906907,
+      7.140474,
+      7.474141,
+      7.674341,
+      8.041375,
+      8.208208,
+      8.341675,
+      8.775442,
+      9.042376,
+      9.60961,
+      10.910911,
+      11.077744,
+      11.344678,
+      11.544878,
+      11.745078,
+      11.911912,
+      12.012012,
+      12.112112,
+      12.245579,
+      12.512513,
+      12.679346,
+      12.779446,
+      12.912913,
+      13.113113,
+      13.34668,
+      13.513514,
+      13.813814,
+      14.080747,
+      14.247581,
+      14.447781,
+      14.681348,
+      14.981648,
+      15.315315,
+      15.582249,
+      15.715716,
+      15.882549,
+      16.016016,
+      16.28295,
+      16.750083,
+      16.98365,
+      17.350684,
+      17.684351,
+      18.218218,
+      18.451785,
+      18.585252,
+      18.785452,
+      19.119119,
+      19.352686,
+      19.61962,
+      20.086753,
+      20.487154,
+      20.754087,
+      20.987654,
+      21.121121,
+      21.321321,
+      21.521522,
+      22.088755,
+      22.355689,
+      22.822823,
+      22.95629,
+      23.15649,
+      23.323323,
+      23.45679,
+      23.623624,
+      23.857191,
+      24.324324,
+      24.524525,
+      24.657991,
+      24.824825,
+      25.091758,
+      25.325325,
+      25.558892,
+      25.825826,
+      25.959293,
+      26.326326,
+      26.659993,
+      26.960294,
+      27.193861,
+      27.394061,
+      27.761094,
+      27.927928,
+      28.395062,
+      28.661995,
+      28.862196,
+      28.962296,
+      29.262596,
+      29.52953,
+      29.662996,
+      29.763096,
+      29.896563,
+      30.163497,
+      30.463797,
+      30.697364,
+      31.364698,
+      31.598265,
+      31.931932,
+      32.032032,
+      32.232232,
+      32.532533,
+      33.199867,
+      33.800467,
+      34.534535,
+      34.734735,
+      34.901568,
+      35.001668,
+      35.168502,
+      35.468802,
+      35.669002,
+      35.902569,
+      36.236236,
+      36.436436,
+      36.770103,
+      36.970304,
+      37.437437,
+      37.737738,
+      38.271605,
+      38.438438,
+      38.538539,
+      39.172506,
+      39.339339,
+      39.472806,
+      39.773106,
+      40.073407,
+      40.573907,
+      41.107774,
+      41.241241,
+      41.408075,
+      41.675008,
+      41.841842,
+      42.042042,
+      42.175509,
+      42.342342,
+      42.742743,
+      43.410077,
+      43.977311,
+      44.344344,
+      44.577911,
+      44.844845,
+      45.211879,
+      45.445445,
+      45.745746,
+      45.979313,
+      46.780113,
+      47.080414,
+      47.280614,
+      47.580914,
+      47.981315,
+      48.381715,
+      48.748749,
+      49.215883,
+      49.482816,
+      49.783116,
+      50.083417,
+      50.617284,
+      51.284618,
+      51.751752,
+      52.452452,
+      52.852853,
+      53.08642,
+      53.453453,
+      53.720387,
+      54.054054,
+      54.888222,
+      55.188522,
+      55.321989,
+      55.488822,
+      55.855856,
+      56.489823,
+      57.12379,
+      57.290624,
+      57.424091,
+      57.691024,
+      58.191525,
+      58.425092,
+      58.958959,
+      59.426093,
+      59.65966
+    ],
+    "silences": []
+  }
+}

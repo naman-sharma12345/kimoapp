@@ -1,0 +1,196 @@
+{
+  "artifact": {
+    "id": 13040427586,
+    "name": "raw-v2-evidence-41193701206-POD-1",
+    "digest": "sha256:943bff48fb1ceda05774f8b90d6bcb4f6c47ac935c471d159d19d2e14a1386b8",
+    "size_in_bytes": 17411459
+  },
+  "fetchedBytes": 15494738,
+  "files": [
+    {
+      "name": "16x9/CREDITS.txt",
+      "bytes": 542,
+      "sha256": "3da628724333eeb5be58b6a4b167f3c3de4b7b05ea835e7733f331534928e618"
+    },
+    {
+      "name": "16x9/edit.edl.json",
+      "bytes": 1991926,
+      "sha256": "fae7919e1c4eefe6a2f23c6cb1c698114a2b1f1a5f8fc9830d3d0eaaf90f415e"
+    },
+    {
+      "name": "16x9/compose-metrics.json",
+      "bytes": 41497,
+      "sha256": "989fc505945198562aa1ac27cd3de8ebebfb6086573e9139196b783ecfe9919a"
+    },
+    {
+      "name": "16x9/compose-words.json",
+      "bytes": 10803,
+      "sha256": "57046efe94ceeb59ff1d955ea343911982439f81ecc6c95fe4b04ee931f497cf"
+    },
+    {
+      "name": "16x9/hook.jpg",
+      "bytes": 141924,
+      "sha256": "b846a8066053f695f3fc0e37f4a70870f665f7568a4788b8b853c40532e5b219"
+    },
+    {
+      "name": "16x9/legacy-metrics.json",
+      "bytes": 41777,
+      "sha256": "c4bddd9b6393f670a7e01b7ef02ebd7c4b10cc261495f23cc3160c4f9a706c1a"
+    },
+    {
+      "name": "16x9/legacy-review/hook.jpg",
+      "bytes": 143312,
+      "sha256": "41697dc14f6ac3ac00183695cfb7f1114ee3e0e69bc5b944edf5871952f13cef"
+    },
+    {
+      "name": "16x9/legacy-review/sheet.jpg",
+      "bytes": 599768,
+      "sha256": "7aab0deca36de3ccaa8448051b4322885c451e48370a27a1fa03274971ca5a03"
+    },
+    {
+      "name": "16x9/legacy-run.json",
+      "bytes": 318,
+      "sha256": "35a8dc131e19b448f89bc0e53ea4065c9c8eb147bab524547ab84a189e6658a0"
+    },
+    {
+      "name": "16x9/legacy-words-provenance.json",
+      "bytes": 153,
+      "sha256": "0c819cd51e6412ac4d919abf3e64a24babee9d7d7d7710d0732a6888a8a1c798"
+    },
+    {
+      "name": "16x9/legacy-words.json",
+      "bytes": 9171,
+      "sha256": "b7174729ddea6c6b15df5cab6668160015e7331a18bda1cfc4b805ea6ff8afed"
+    },
+    {
+      "name": "16x9/ops.jsonl",
+      "bytes": 309745,
+      "sha256": "21843a7715844a4190a58e1b1749310caec042433639d4eaaf729ce074a5890a"
+    },
+    {
+      "name": "16x9/legacy-review/strip.mp4",
+      "bytes": 2841631,
+      "sha256": "8171b9d5d6c803af36a9181b3dfab218e96f6f88b65f8cef802892ffa53f4e52"
+    },
+    {
+      "name": "16x9/planner-current.kimo.json",
+      "bytes": 753179,
+      "sha256": "a97983f079986b549f8f83c644b631dacfa2ee4d70ca21a5c6a3be0ee1b99c20"
+    },
+    {
+      "name": "16x9/project.kimo.json",
+      "bytes": 753179,
+      "sha256": "a97983f079986b549f8f83c644b631dacfa2ee4d70ca21a5c6a3be0ee1b99c20"
+    },
+    {
+      "name": "16x9/run.json",
+      "bytes": 807,
+      "sha256": "8de1471e311642fb09ce40b8567a52d9dd9d9ae75effdcd08748c68cd2bce706"
+    },
+    {
+      "name": "16x9/sheet.jpg",
+      "bytes": 596704,
+      "sha256": "b3b9278dd03b92aa8705a416c7cdfd0036b72dcc62ff6b1492f5bae24d42d9f1"
+    },
+    {
+      "name": "9x16/compose-metrics.json",
+      "bytes": 41721,
+      "sha256": "51b5024506a594447f9c627e1cb67f7d428e1ab38e4197174e2a2967a3ec5d65"
+    },
+    {
+      "name": "9x16/compose-words.json",
+      "bytes": 10803,
+      "sha256": "57046efe94ceeb59ff1d955ea343911982439f81ecc6c95fe4b04ee931f497cf"
+    },
+    {
+      "name": "9x16/CREDITS.txt",
+      "bytes": 542,
+      "sha256": "3da628724333eeb5be58b6a4b167f3c3de4b7b05ea835e7733f331534928e618"
+    },
+    {
+      "name": "9x16/edit.edl.json",
+      "bytes": 1991518,
+      "sha256": "801340bb9a306eb056b2f7f1946e3b3e3c7547f5c7db172fad187682510f2de3"
+    },
+    {
+      "name": "16x9/strip.mp4",
+      "bytes": 2873761,
+      "sha256": "31d5294a01f5726fd27bc0e170bf4288ab1c57dde37ee34640f367289cd037a4"
+    },
+    {
+      "name": "9x16/hook.jpg",
+      "bytes": 339297,
+      "sha256": "241f366f6a28270074919a5081b079b4362784cab2518470629e3db50ff250e4"
+    },
+    {
+      "name": "9x16/legacy-review/hook.jpg",
+      "bytes": 338989,
+      "sha256": "9f8288bc81c9668146d7f439c0f52646249fde3330a55048657cc811edcd2843"
+    },
+    {
+      "name": "9x16/legacy-metrics.json",
+      "bytes": 41845,
+      "sha256": "9443ac5cf52e1944edd0cfb363a05ef0d44203e86dec8df69bf02b0522c3f436"
+    },
+    {
+      "name": "9x16/legacy-review/sheet.jpg",
+      "bytes": 1397208,
+      "sha256": "c35a55489eb7bc6786859542bad2a46c4262c18622e08d8bf1484c2091e74f80"
+    },
+    {
+      "name": "9x16/legacy-run.json",
+      "bytes": 217,
+      "sha256": "a04ec28135bd8e9690633831655449725bf23bc5fc15afee83b57eddcce90481"
+    },
+    {
+      "name": "9x16/legacy-words.json",
+      "bytes": 8642,
+      "sha256": "1ee1703777e5b660229f5497c780c3ecf98de07dc730f5ff7309086ddf66567a"
+    },
+    {
+      "name": "9x16/ops.jsonl",
+      "bytes": 309342,
+      "sha256": "1e3e6f192d7deceed03f516d438144ba055e9c9581e006a3b989faf7a588cae9"
+    },
+    {
+      "name": "9x16/planner-current.kimo.json",
+      "bytes": 753043,
+      "sha256": "072a9147278b2f304ab56838b9464cde1a4bf20073d3d1aa71bb5b7c8c6e8dc3"
+    },
+    {
+      "name": "9x16/legacy-review/strip.mp4",
+      "bytes": 2214578,
+      "sha256": "3336ccf952533d3c9a94a59e049cd9e26581e0bbcc3d0d605ed9dee8a504ff32"
+    },
+    {
+      "name": "9x16/project.kimo.json",
+      "bytes": 753043,
+      "sha256": "072a9147278b2f304ab56838b9464cde1a4bf20073d3d1aa71bb5b7c8c6e8dc3"
+    },
+    {
+      "name": "9x16/run.json",
+      "bytes": 807,
+      "sha256": "99d2a0bd2667165ccf2cf52598b9444ff5c17e738578555d65e41abd85f7be68"
+    },
+    {
+      "name": "9x16/sheet.jpg",
+      "bytes": 1396941,
+      "sha256": "90e952f01d62a67aa26f6b7b72877ad9240e62e9c5628d4d05ae8c16efe3986e"
+    },
+    {
+      "name": "CREDITS.txt",
+      "bytes": 542,
+      "sha256": "3da628724333eeb5be58b6a4b167f3c3de4b7b05ea835e7733f331534928e618"
+    },
+    {
+      "name": "prepared.json",
+      "bytes": 9176,
+      "sha256": "30e6edb4345157126a3ba27c45fb947933eb2e1d995a8f28d2c9561e38a3338a"
+    },
+    {
+      "name": "9x16/strip.mp4",
+      "bytes": 2279363,
+      "sha256": "fe6a39c103daab4a20fb0674ff28527cffa2e723c5583816cbdaa30364578b2c"
+    }
+  ]
+}

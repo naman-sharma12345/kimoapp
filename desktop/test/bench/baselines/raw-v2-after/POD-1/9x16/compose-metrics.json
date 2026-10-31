@@ -1,0 +1,1720 @@
+{
+  "version": 3,
+  "values": {
+    "aspect": "9:16",
+    "duration_s": 60.1,
+    "first_speech_s": 0,
+    "hook_text": true,
+    "dead_air_ratio": 0,
+    "filler_count": 4,
+    "repeat_takes": 0,
+    "median_shot_s": 30.05,
+    "max_static_s": 60.018292,
+    "edl_boundaries": [
+      0,
+      60.018292
+    ],
+    "scene_cuts": [],
+    "framing_variety": 1,
+    "content_motion_jitter_px": 0.39,
+    "repeated_frames": 0,
+    "skipped_frames": 0,
+    "frame_match_coverage": 0.9979166666666667,
+    "frame_match": [
+      {
+        "id": "clip3",
+        "repeated_frames": 0,
+        "skipped_frames": 0,
+        "compared": 1437,
+        "total": 1440,
+        "coverage": 0.9986101459346769,
+        "mean_mad": 0.6415378231435587,
+        "incorrect_frames": 0,
+        "camera": {
+          "jitter_px": 0.006593784602522829,
+          "measured": 1434,
+          "eligible": 1434,
+          "coverage": 1,
+          "mean_fit_rmse": 0.7774580359997193
+        }
+      }
+    ],
+    "jitter_px": 0.006593784602522829,
+    "camera_registration_coverage": 1,
+    "caption_min_word_s": 0.24600000000000222,
+    "caption_safe": false,
+    "caption_face_overlap": 0,
+    "lufs": -14,
+    "true_peak": -1.5,
+    "lra": 6.2,
+    "duck_depth_db": null,
+    "sfx_count_per_min": 0,
+    "clip_delta_e": null,
+    "clipped_pct": 0.23352431827342024,
+    "closed_gop": true,
+    "cfr_ok": true,
+    "delivery_ok": true
+  },
+  "checks": [
+    {
+      "name": "first_speech_s",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.4,
+        "unit": "s",
+        "speechOnly": true
+      },
+      "estimated": false
+    },
+    {
+      "name": "hook_text",
+      "value": true,
+      "status": "pass",
+      "target": {
+        "equals": true,
+        "description": "Title or caption visible in 0-3s with at most six words"
+      },
+      "estimated": false
+    },
+    {
+      "name": "dead_air_ratio",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.03,
+        "speechOnly": true
+      },
+      "estimated": false
+    },
+    {
+      "name": "filler_count",
+      "value": 4,
+      "status": "fail",
+      "target": {
+        "equals": 0,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "repeat_takes",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "median_shot_s",
+      "value": 30.05,
+      "status": "fail",
+      "target": {
+        "min": 1.5,
+        "max": 4,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "max_static_s",
+      "value": 60.018292,
+      "status": "fail",
+      "target": {
+        "max": 6,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "framing_variety",
+      "value": 1,
+      "status": "fail",
+      "target": {
+        "min": 3,
+        "unit": "buckets/30s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "jitter_px",
+      "value": 0.006593784602522829,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.5,
+        "unit": "px/frame at 1080 short side"
+      },
+      "estimated": false
+    },
+    {
+      "name": "repeated_frames",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "requiresCoverage": 0.95
+      },
+      "estimated": false
+    },
+    {
+      "name": "skipped_frames",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "equals": 0,
+        "requiresCoverage": 0.95
+      },
+      "estimated": false
+    },
+    {
+      "name": "caption_min_word_s",
+      "value": 0.24600000000000222,
+      "status": "pass",
+      "target": {
+        "min": 0.18,
+        "speechOnly": true,
+        "unit": "s"
+      },
+      "estimated": false
+    },
+    {
+      "name": "caption_safe",
+      "value": false,
+      "status": "fail",
+      "target": {
+        "equals": true,
+        "speechOnly": true
+      },
+      "estimated": true
+    },
+    {
+      "name": "caption_face_overlap",
+      "value": 0,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 2,
+        "speechOnly": true,
+        "unit": "%"
+      },
+      "estimated": true
+    },
+    {
+      "name": "lufs",
+      "value": -14,
+      "status": "pass",
+      "target": {
+        "min": -15,
+        "max": -13,
+        "unit": "LUFS"
+      },
+      "estimated": false
+    },
+    {
+      "name": "true_peak",
+      "value": -1.5,
+      "status": "pass",
+      "target": {
+        "max": -1,
+        "unit": "dBTP"
+      },
+      "estimated": false
+    },
+    {
+      "name": "lra",
+      "value": 6.2,
+      "status": "pass",
+      "target": {
+        "min": 4,
+        "max": 9,
+        "unit": "LU"
+      },
+      "estimated": false
+    },
+    {
+      "name": "duck_depth_db",
+      "value": null,
+      "status": "not applicable",
+      "target": {
+        "min": 12,
+        "max": 20,
+        "speechOnly": true,
+        "musicOnly": true,
+        "unit": "dB"
+      },
+      "estimated": true
+    },
+    {
+      "name": "sfx_count_per_min",
+      "value": 0,
+      "status": "fail",
+      "target": {
+        "min": 6,
+        "max": 20,
+        "landscapeMin": 3,
+        "landscapeMax": 10
+      },
+      "estimated": false
+    },
+    {
+      "name": "clip_delta_e",
+      "value": null,
+      "status": "unavailable",
+      "target": {
+        "maxExclusive": 4,
+        "unit": "CIEDE2000"
+      },
+      "estimated": true
+    },
+    {
+      "name": "clipped_pct",
+      "value": 0.23352431827342024,
+      "status": "pass",
+      "target": {
+        "maxExclusive": 0.5,
+        "unit": "%"
+      },
+      "estimated": false
+    },
+    {
+      "name": "delivery_ok",
+      "value": true,
+      "status": "pass",
+      "target": {
+        "equals": true
+      },
+      "estimated": false
+    }
+  ],
+  "creator": {
+    "score": 72.3,
+    "groups": {
+      "hook": 1,
+      "dead_air": 1,
+      "filler": 0.75,
+      "cadence": 0,
+      "framing": 0.3333333333333333,
+      "motion": 1,
+      "captions": 0.6666666666666666,
+      "sound": 0.8928571428571428,
+      "colour": 0.5
+    },
+    "missing": [
+      "duck_depth_db",
+      "clip_delta_e"
+    ],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "evidence": {
+    "speech": "Whisper full token timestamps on FINAL audio; token join and filler context are estimates",
+    "captions": "Engine editorial caption ids; conservative font envelopes; skin/centre subject heuristic at 1 fps. Not face-detector certification.",
+    "colour": "CIEDE2000 on per-clip sampled midtone RGB means; full-frame full-range luma clipping.",
+    "duck": "Estimated from saved music/background-audio volume and duck-gain envelopes; source dynamics are unknown. Unavailable if no bed or speech/gap windows exist.",
+    "frame": "108x192 grey affine-photometric MAD +/-3 source frames (best/second cost ratio <=0.9 and absolute separation >=0.02) with float perspective alignment; no integer crop approximation. EDL cuts are excluded. Text envelopes are masked on both source and output; unknown animated geometry is unmeasured. Expected indices use the global grid, source rate and speed, clamped to exact ffprobe nb_frames when available. Intended EOF/rate-conversion/slow-motion holds are not judder. Animated mappings and ambiguous static frames reduce coverage.",
+    "camera": "Source-referenced small-translation least squares with affine brightness fit on 108x192 decoded grey frames; masked overlay envelopes and gradient neighbours. SG7 high-frequency residual normalized to 1080 short side. Flat/aperture/poor fits are unavailable; requires 95% eligible coverage. Physical source motion cancels against the same expected source frame. This estimate does not certify source-frame identity. The old whole-picture measure remains content_motion_jitter_px. Compare measurement version-3 before and after only.",
+    "delivery": "Format qualityChecks (excluding whole-content motion) plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR. Motion retains its separate source-referenced gates."
+  },
+  "events": [
+    {
+      "id": "clip3",
+      "track": "track2",
+      "kind": "cut",
+      "start": 0,
+      "end": 60.018292,
+      "path": "D:\\a\\_temp\\kimo-bench-data\\raw-v2\\media\\POD-1\\1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false
+    },
+    {
+      "id": "clip5",
+      "track": "track4",
+      "kind": "caption",
+      "start": 0,
+      "end": 0.44600000000000006,
+      "text": "You know,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.16416666666666668,
+        "y": 0.6576822916666666,
+        "w": 0.6716666666666666,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip6",
+      "track": "track4",
+      "kind": "caption",
+      "start": 0.44600000000000006,
+      "end": 0.776,
+      "text": "the old mill",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip7",
+      "track": "track4",
+      "kind": "caption",
+      "start": 0.776,
+      "end": 1.665,
+      "text": "was lined up",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip8",
+      "track": "track4",
+      "kind": "caption",
+      "start": 1.665,
+      "end": 2.216,
+      "text": "and it was",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip9",
+      "track": "track4",
+      "kind": "caption",
+      "start": 2.216,
+      "end": 2.97,
+      "text": "like an old",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip10",
+      "track": "track4",
+      "kind": "caption",
+      "start": 2.97,
+      "end": 4.216,
+      "text": "military land.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.014370370370370367,
+        "y": 0.6583333333333333,
+        "w": 1.0287407407407407,
+        "h": 0.08333333333333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip11",
+      "track": "track4",
+      "kind": "caption",
+      "start": 4.216,
+      "end": 4.946,
+      "text": "Well, how many",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.05394444444444446,
+        "y": 0.6638671875,
+        "w": 0.8921111111111111,
+        "h": 0.072265625
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip12",
+      "track": "track4",
+      "kind": "caption",
+      "start": 4.946,
+      "end": 5.57,
+      "text": "years have you",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.02983333333333338,
+        "y": 0.6619140625,
+        "w": 0.9403333333333332,
+        "h": 0.076171875
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip13",
+      "track": "track4",
+      "kind": "caption",
+      "start": 5.57,
+      "end": 6.0200000000000005,
+      "text": "been with",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.16416666666666668,
+        "y": 0.6576822916666666,
+        "w": 0.6716666666666666,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip14",
+      "track": "track4",
+      "kind": "caption",
+      "start": 6.0200000000000005,
+      "end": 6.995,
+      "text": "Renfest?",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.20148148148148148,
+        "y": 0.6576822916666666,
+        "w": 0.597037037037037,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip15",
+      "track": "track4",
+      "kind": "caption",
+      "start": 6.995,
+      "end": 8.14,
+      "text": "Twenty-one.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip16",
+      "track": "track4",
+      "kind": "caption",
+      "start": 8.14,
+      "end": 8.795999999999998,
+      "text": "Twenty-one",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip17",
+      "track": "track4",
+      "kind": "caption",
+      "start": 8.795999999999998,
+      "end": 9.895999999999999,
+      "text": "years.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.2761111111111111,
+        "y": 0.6576822916666666,
+        "w": 0.4477777777777778,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip18",
+      "track": "track4",
+      "kind": "caption",
+      "start": 9.895999999999999,
+      "end": 10.606,
+      "text": "So you started",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.021796296296296258,
+        "y": 0.6612630208333333,
+        "w": 0.9564074074074075,
+        "h": 0.07747395833333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip19",
+      "track": "track4",
+      "kind": "caption",
+      "start": 10.606,
+      "end": 11.135,
+      "text": "in the early",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip20",
+      "track": "track4",
+      "kind": "caption",
+      "start": 11.135,
+      "end": 12.515,
+      "text": "2000s then?",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip21",
+      "track": "track4",
+      "kind": "caption",
+      "start": 12.515,
+      "end": 13.485,
+      "text": "2004.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.3134259259259259,
+        "y": 0.6576822916666666,
+        "w": 0.3731481481481482,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip22",
+      "track": "track4",
+      "kind": "caption",
+      "start": 13.946,
+      "end": 14.63,
+      "text": "Wow.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.35074074074074074,
+        "y": 0.6576822916666666,
+        "w": 0.2985185185185185,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip23",
+      "track": "track4",
+      "kind": "caption",
+      "start": 15.356,
+      "end": 18.356,
+      "text": "And, uh...",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip24",
+      "track": "track4",
+      "kind": "caption",
+      "start": 18.356,
+      "end": 19.725,
+      "text": "How much has",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.06944444444444442,
+        "y": 0.6593098958333333,
+        "w": 0.8611111111111112,
+        "h": 0.08138020833333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip25",
+      "track": "track4",
+      "kind": "caption",
+      "start": 19.725,
+      "end": 20.665,
+      "text": "it expanded in",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.010351851851851834,
+        "y": 0.6586588541666666,
+        "w": 1.0207037037037037,
+        "h": 0.08268229166666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip26",
+      "track": "track4",
+      "kind": "caption",
+      "start": 20.665,
+      "end": 21.126,
+      "text": "the twenty-one",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.04188888888888892,
+        "y": 0.662890625,
+        "w": 0.9162222222222222,
+        "h": 0.07421875
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip27",
+      "track": "track4",
+      "kind": "caption",
+      "start": 21.126,
+      "end": 22.876,
+      "text": "years?",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.2761111111111111,
+        "y": 0.6576822916666666,
+        "w": 0.4477777777777778,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip28",
+      "track": "track4",
+      "kind": "caption",
+      "start": 22.876,
+      "end": 24.096,
+      "text": "Unbelievable.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip29",
+      "track": "track4",
+      "kind": "caption",
+      "start": 24.096,
+      "end": 24.546,
+      "text": "We've got the",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip30",
+      "track": "track4",
+      "kind": "caption",
+      "start": 24.546,
+      "end": 25.39,
+      "text": "five acres of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip31",
+      "track": "track4",
+      "kind": "caption",
+      "start": 25.39,
+      "end": 25.92,
+      "text": "Windsor Woods",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08580555555555558,
+        "y": 0.6638671875,
+        "w": 0.8283888888888888,
+        "h": 0.072265625
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip32",
+      "track": "track4",
+      "kind": "caption",
+      "start": 25.92,
+      "end": 27.816000000000003,
+      "text": "over here.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip33",
+      "track": "track4",
+      "kind": "caption",
+      "start": 27.816000000000003,
+      "end": 29.116,
+      "text": "It was kind",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip34",
+      "track": "track4",
+      "kind": "caption",
+      "start": 29.116,
+      "end": 29.566000000000003,
+      "text": "of there for",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip35",
+      "track": "track4",
+      "kind": "caption",
+      "start": 29.566000000000003,
+      "end": 30.735,
+      "text": "a while.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.20148148148148148,
+        "y": 0.6576822916666666,
+        "w": 0.597037037037037,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip36",
+      "track": "track4",
+      "kind": "caption",
+      "start": 30.735,
+      "end": 31.316000000000003,
+      "text": "The original",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip37",
+      "track": "track4",
+      "kind": "caption",
+      "start": 31.316000000000003,
+      "end": 32.176,
+      "text": "owner",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.3134259259259259,
+        "y": 0.6576822916666666,
+        "w": 0.3731481481481482,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip38",
+      "track": "track4",
+      "kind": "caption",
+      "start": 32.176,
+      "end": 33.26,
+      "text": "really didn't",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip39",
+      "track": "track4",
+      "kind": "caption",
+      "start": 33.26,
+      "end": 34.7,
+      "text": "care, so it",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip40",
+      "track": "track4",
+      "kind": "caption",
+      "start": 34.7,
+      "end": 35.155,
+      "text": "was like,\"We",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip41",
+      "track": "track4",
+      "kind": "caption",
+      "start": 35.155,
+      "end": 35.736000000000004,
+      "text": "come in for",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip42",
+      "track": "track4",
+      "kind": "caption",
+      "start": 35.736000000000004,
+      "end": 36.146,
+      "text": "rehearsals.\"",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip43",
+      "track": "track4",
+      "kind": "caption",
+      "start": 36.146,
+      "end": 37.256,
+      "text": "It was like,\"Oh",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.03388888888888886,
+        "y": 0.6596354166666666,
+        "w": 1.0677777777777777,
+        "h": 0.08072916666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip44",
+      "track": "track4",
+      "kind": "caption",
+      "start": 37.256,
+      "end": 37.835,
+      "text": "yeah, no,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.16416666666666668,
+        "y": 0.6576822916666666,
+        "w": 0.6716666666666666,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip45",
+      "track": "track4",
+      "kind": "caption",
+      "start": 37.835,
+      "end": 38.27,
+      "text": "you're a",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.20148148148148148,
+        "y": 0.6576822916666666,
+        "w": 0.597037037037037,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip46",
+      "track": "track4",
+      "kind": "caption",
+      "start": 38.27,
+      "end": 38.906,
+      "text": "Renfair, you",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip47",
+      "track": "track4",
+      "kind": "caption",
+      "start": 38.906,
+      "end": 39.926,
+      "text": "know, kind of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.01863888888888887,
+        "y": 0.6580078125,
+        "w": 0.9627222222222223,
+        "h": 0.083984375
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip48",
+      "track": "track4",
+      "kind": "caption",
+      "start": 39.926,
+      "end": 41.07,
+      "text": "there buzzes all",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.004000000000000059,
+        "y": 0.66484375,
+        "w": 0.9919999999999999,
+        "h": 0.0703125
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip49",
+      "track": "track4",
+      "kind": "caption",
+      "start": 41.07,
+      "end": 41.926,
+      "text": "down.\"",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.2761111111111111,
+        "y": 0.6576822916666666,
+        "w": 0.4477777777777778,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip50",
+      "track": "track4",
+      "kind": "caption",
+      "start": 41.926,
+      "end": 42.72,
+      "text": "The new owners",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.06198148148148147,
+        "y": 0.6645182291666666,
+        "w": 0.8760370370370371,
+        "h": 0.07096354166666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip51",
+      "track": "track4",
+      "kind": "caption",
+      "start": 42.72,
+      "end": 43.516,
+      "text": "took over,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip52",
+      "track": "track4",
+      "kind": "caption",
+      "start": 43.516,
+      "end": 44.1,
+      "text": "and I think",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip53",
+      "track": "track4",
+      "kind": "caption",
+      "start": 44.1,
+      "end": 44.735,
+      "text": "people think I'm",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.028148148148148144,
+        "y": 0.6625651041666666,
+        "w": 1.0562962962962963,
+        "h": 0.07486979166666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip54",
+      "track": "track4",
+      "kind": "caption",
+      "start": 44.735,
+      "end": 45.976,
+      "text": "nuts for saying this.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.024416666666666642,
+        "y": 0.6716796875,
+        "w": 1.0488333333333333,
+        "h": 0.056640625
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip55",
+      "track": "track4",
+      "kind": "caption",
+      "start": 45.976,
+      "end": 46.845,
+      "text": "The first day",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip56",
+      "track": "track4",
+      "kind": "caption",
+      "start": 46.845,
+      "end": 47.555,
+      "text": "of rehearsals",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.02983333333333338,
+        "y": 0.658984375,
+        "w": 0.9403333333333332,
+        "h": 0.08203125
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip57",
+      "track": "track4",
+      "kind": "caption",
+      "start": 47.555,
+      "end": 47.936,
+      "text": "happened when",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.07461111111111107,
+        "y": 0.662890625,
+        "w": 0.8507777777777779,
+        "h": 0.07421875
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip58",
+      "track": "track4",
+      "kind": "caption",
+      "start": 47.936,
+      "end": 49.176,
+      "text": "they took over.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.009166666666666656,
+        "y": 0.662890625,
+        "w": 0.9816666666666667,
+        "h": 0.07421875
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip59",
+      "track": "track4",
+      "kind": "caption",
+      "start": 49.176,
+      "end": 49.766000000000005,
+      "text": "You walked in",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.033564814814814825,
+        "y": 0.6593098958333333,
+        "w": 0.9328703703703703,
+        "h": 0.08138020833333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip60",
+      "track": "track4",
+      "kind": "caption",
+      "start": 49.766000000000005,
+      "end": 50.69,
+      "text": "the back gate,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.0023148148148147696,
+        "y": 0.6593098958333333,
+        "w": 1.0046296296296295,
+        "h": 0.08138020833333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip61",
+      "track": "track4",
+      "kind": "caption",
+      "start": 50.69,
+      "end": 50.936,
+      "text": "you had to",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip62",
+      "track": "track4",
+      "kind": "caption",
+      "start": 50.936,
+      "end": 51.775999999999996,
+      "text": "feel the energy",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.0005555555555555869,
+        "y": 0.6622395833333333,
+        "w": 0.9988888888888888,
+        "h": 0.07552083333333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip63",
+      "track": "track4",
+      "kind": "caption",
+      "start": 51.775999999999996,
+      "end": 52.406000000000006,
+      "text": "coming out of",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.02237037037037032,
+        "y": 0.6583333333333333,
+        "w": 0.9552592592592594,
+        "h": 0.08333333333333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip64",
+      "track": "track4",
+      "kind": "caption",
+      "start": 52.406000000000006,
+      "end": 53.055,
+      "text": "the ground.",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.08953703703703703,
+        "y": 0.6576822916666666,
+        "w": 0.820925925925926,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip65",
+      "track": "track4",
+      "kind": "caption",
+      "start": 53.556,
+      "end": 54.095,
+      "text": "Yeah, you can",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip66",
+      "track": "track4",
+      "kind": "caption",
+      "start": 54.095,
+      "end": 54.595,
+      "text": "tell, though,",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.014907407407407425,
+        "y": 0.6576822916666666,
+        "w": 0.9701851851851852,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip67",
+      "track": "track4",
+      "kind": "caption",
+      "start": 54.595,
+      "end": 55.316,
+      "text": "there is a",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip68",
+      "track": "track4",
+      "kind": "caption",
+      "start": 55.316,
+      "end": 56.39,
+      "text": "mood that comes",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6661458333333333,
+        "w": 0.8955555555555555,
+        "h": 0.06770833333333333
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip69",
+      "track": "track4",
+      "kind": "caption",
+      "start": 56.39,
+      "end": 56.97,
+      "text": "from stuff like",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": -0.008055555555555594,
+        "y": 0.6615885416666666,
+        "w": 1.0161111111111112,
+        "h": 0.07682291666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip70",
+      "track": "track4",
+      "kind": "caption",
+      "start": 56.97,
+      "end": 57.986000000000004,
+      "text": "that, right?",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.052222222222222225,
+        "y": 0.6576822916666666,
+        "w": 0.8955555555555555,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip71",
+      "track": "track4",
+      "kind": "caption",
+      "start": 57.986000000000004,
+      "end": 58.805,
+      "text": "when people are",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.043611111111111156,
+        "y": 0.6654947916666666,
+        "w": 0.9127777777777777,
+        "h": 0.06901041666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip72",
+      "track": "track4",
+      "kind": "caption",
+      "start": 58.805,
+      "end": 59.67,
+      "text": "into it as",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    },
+    {
+      "id": "clip73",
+      "track": "track4",
+      "kind": "caption",
+      "start": 59.67,
+      "end": 60.330000000000005,
+      "text": "opposed to",
+      "in_point": 0,
+      "speed": 1,
+      "zoom": 1,
+      "muted": false,
+      "music": false,
+      "box": {
+        "x": 0.12685185185185183,
+        "y": 0.6576822916666666,
+        "w": 0.7462962962962963,
+        "h": 0.08463541666666667
+      },
+      "geometry": "estimated font envelope, not raster bounds"
+    }
+  ],
+  "analysis": {
+    "frozen": [],
+    "silences": []
+  }
+}

@@ -2,6 +2,8 @@
 
 The desktop pipeline converts the planner's native project into an EDL and owns the final picture, previews, review sheets and thumbnails. The engine executable remains a read-only toolbox. AI, captions, follow-up, manual, SAM and queued batch jobs share this route. No web application behavior changes.
 
+The raw-v2 timeline companions in `test/bench/calibrate-raw.mjs` independently decode asset/frame barcodes from delivered H.264 for the twelve saved raw timelines. They preserve the actual clip timing, source rates, order and fixed cameras, using one-tenth canvas/source raster and generated pictures/silence. Run 41191170102 passes all twelve cases with zero wrong indices, repeats or skips. These companions establish mechanical frame selection; they do not replace full-resolution footage reviews, Creator Scores, audio measurements or insufficient-confidence natural-picture matching. Independent seven-rate tests additionally exercise speed changes and punches.
+
 ## EDL version 1
 
 `edl.mjs` provides `validate`, `fromKimoProject`, `framePlan`, `applyEdits`, `toTimeline`, `toKimoProject` and `publicEdl`. The saved `edit.edl.json` is authoritative for manual editing. Native data is retained for resuming planner tools, and stripped from renderer IPC payloads. IPC accepts whitelisted operations on known clip IDs; it does not accept replacement source paths from the window.

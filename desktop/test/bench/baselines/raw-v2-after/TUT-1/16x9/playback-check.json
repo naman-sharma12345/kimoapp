@@ -1,0 +1,28 @@
+{
+  "id": "TUT-1",
+  "aspect": "16x9",
+  "duration": 10,
+  "seeks": [
+    {
+      "at": 0.1,
+      "ready": 4,
+      "error": null,
+      "decoded": 19
+    },
+    {
+      "at": 5,
+      "ready": 4,
+      "error": null,
+      "decoded": 173
+    },
+    {
+      "at": 9.7,
+      "ready": 4,
+      "error": null,
+      "decoded": 218
+    }
+  ],
+  "requests": 0,
+  "errors": [],
+  "scope": "Hosted final-output 10-second strip briefly played muted and sought at three positions. Not full-video playback, subjective audio review, or frame-identity certification."
+}

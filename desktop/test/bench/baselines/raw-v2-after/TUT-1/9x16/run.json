@@ -1,0 +1,23 @@
+{
+  "commit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "clip": "TUT-1",
+  "dataset": "raw-v2",
+  "aspect": "9:16",
+  "mode": "captions",
+  "scope": "Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit",
+  "sourceHashes": [
+    "8968d9428e58e42f10a83137b3bdcd9a6b631f39b5832f2f281844cff84330ea"
+  ],
+  "finalHash": "49005287351a869dad91d5eebebe744d3f336ee7bd256100b0052574a51fbfa7",
+  "elapsedMs": 635274,
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0,
+  "edl": "D:\\a\\_temp\\kimo-bench-data\\out\\phase02-raw-v2\\TUT-1\\9x16\\edit.edl.json",
+  "composed": true,
+  "datasetLimitations": "Screen capture with facecam lower right. Static UI can make frame matching ambiguous; portrait centre crop is an editorial limitation.",
+  "priorRender": {
+    "commit": "c268c41f78af6249b0564bd262cd588ed8c37a4c",
+    "finalHash": "e67065a1080a650f8f6bd0bc7333e9bac1880181446f1ac4c61cb48d7e6ee35b"
+  },
+  "recomposed": true
+}

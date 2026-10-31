@@ -1,0 +1,23 @@
+{
+  "commit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "clip": "POD-1",
+  "dataset": "raw-v2",
+  "aspect": "9:16",
+  "mode": "captions",
+  "scope": "Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit",
+  "sourceHashes": [
+    "856ab1c0b74d236ad6239e8d34281e33230caee89e650e72bf24d9af50b7949d"
+  ],
+  "finalHash": "49e02f869563f69fccdb53c5fc86b79a8046baf5af8346dde6fcf71819b4838f",
+  "elapsedMs": 833401,
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0,
+  "edl": "D:\\a\\_temp\\kimo-bench-data\\out\\phase02-raw-v2\\POD-1\\9x16\\edit.edl.json",
+  "composed": true,
+  "datasetLimitations": "Two-person podcast/documentary conversation with microphone. Outdoor setting with physical camera reframing, not a studio podcast. Public Drive playback rendition.",
+  "priorRender": {
+    "commit": "c268c41f78af6249b0564bd262cd588ed8c37a4c",
+    "finalHash": "e60b7177e616245289293544c4dbba8fe8d6116bd4835f90816b80735653edd2"
+  },
+  "recomposed": true
+}

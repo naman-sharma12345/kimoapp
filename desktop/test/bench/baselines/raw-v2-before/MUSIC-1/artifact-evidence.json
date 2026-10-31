@@ -1,0 +1,201 @@
+{
+  "artifact": {
+    "id": 13007272060,
+    "name": "raw-v2-evidence-41101109503-MUSIC-1",
+    "digest": "sha256:d8b614aff3ca7dddacab1d49e2624cdd9cae949f1b7310095975aa2ea3b4e1f4",
+    "size_in_bytes": 11553850
+  },
+  "fetchedBytes": 10507088,
+  "files": [
+    {
+      "name": "16x9/CREDITS.txt",
+      "bytes": 352,
+      "sha256": "83d930c4d5e646e17f954834252fb9f359110ab989a7958d234abf2c1c6afdd4"
+    },
+    {
+      "name": "16x9/compose-metrics.json",
+      "bytes": 9126,
+      "sha256": "908d8d2b2007c45c74de39e4c1d13f55d83f1bfdff946ce889a1360b3a12af37"
+    },
+    {
+      "name": "16x9/compose-words.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "name": "16x9/edit.edl.json",
+      "bytes": 17210,
+      "sha256": "4507f5b03e9c855bddc58d79a0e05d98750b17c1d0a6afb69b77641a4cd1508b"
+    },
+    {
+      "name": "16x9/legacy-metrics.json",
+      "bytes": 9133,
+      "sha256": "fe776ce1245cc025aaad1c60a2339fa278d9f6398ff456c12ca51bf4342e971a"
+    },
+    {
+      "name": "16x9/legacy-review/hook.jpg",
+      "bytes": 99903,
+      "sha256": "1ab4069ed1915d7a04a76d6ebd0808e0020c3c9f3674efb0c8a692a5c992c865"
+    },
+    {
+      "name": "16x9/hook.jpg",
+      "bytes": 99949,
+      "sha256": "4b9543d1a3444cb24d91926b8bab8f70c588c844731ba6c8cc4f28c60b8c03b2"
+    },
+    {
+      "name": "16x9/legacy-review/sheet.jpg",
+      "bytes": 143444,
+      "sha256": "bc4a3022fbbbcebe52c0db9744d9332bbd28e8f9fc22d4b1c6eef92c67b03a0d"
+    },
+    {
+      "name": "16x9/legacy-run.json",
+      "bytes": 215,
+      "sha256": "c0a961444d180a7c5250b5935f80f297dec7dcc8fbacf1afeb2f492c188d4408"
+    },
+    {
+      "name": "16x9/legacy-words.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "name": "16x9/ops.jsonl",
+      "bytes": 41030,
+      "sha256": "4e8065bee65a1d3fbbae0a5b29fad244b72c9f2cfb3273e7e1dab9df8c3fd089"
+    },
+    {
+      "name": "16x9/planner-current.kimo.json",
+      "bytes": 5786,
+      "sha256": "ec59a00bf6bebba4c633e10bdc41052807fe1e0398f1d303a36ffdfda8bbc7fd"
+    },
+    {
+      "name": "16x9/project.kimo.json",
+      "bytes": 5786,
+      "sha256": "ec59a00bf6bebba4c633e10bdc41052807fe1e0398f1d303a36ffdfda8bbc7fd"
+    },
+    {
+      "name": "16x9/run.json",
+      "bytes": 849,
+      "sha256": "9decbb6788c9ffa1f491099688022096f840638bf52e1836190cac5513d87bc0"
+    },
+    {
+      "name": "16x9/sheet.jpg",
+      "bytes": 143407,
+      "sha256": "a496ea42d527f95273181e447bb88e6b55cfc8e976826c5795efbe1008e5d106"
+    },
+    {
+      "name": "16x9/soundtrack.kimo.json",
+      "bytes": 5786,
+      "sha256": "ec59a00bf6bebba4c633e10bdc41052807fe1e0398f1d303a36ffdfda8bbc7fd"
+    },
+    {
+      "name": "16x9/legacy-review/strip.mp4",
+      "bytes": 2522439,
+      "sha256": "85684c9b52d0ed332cfc7a726f81fe1173aa6da538f4aef895035bfb93fe999c"
+    },
+    {
+      "name": "9x16/compose-metrics.json",
+      "bytes": 9083,
+      "sha256": "0ba346a34017709150232ed4a900a5e6f0ab9d4021b22b4057e0fa4e50edcfd1"
+    },
+    {
+      "name": "9x16/compose-words.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "name": "9x16/CREDITS.txt",
+      "bytes": 352,
+      "sha256": "83d930c4d5e646e17f954834252fb9f359110ab989a7958d234abf2c1c6afdd4"
+    },
+    {
+      "name": "9x16/edit.edl.json",
+      "bytes": 17210,
+      "sha256": "ecaa44d01274690adec441e2c76781588949a31121900b3a7edf879e3eaf9a51"
+    },
+    {
+      "name": "9x16/hook.jpg",
+      "bytes": 233637,
+      "sha256": "4a1feca39e8f3bfaab8db2075339d57c07f413b985a08fc47ed5a5b6663f37ce"
+    },
+    {
+      "name": "9x16/legacy-metrics.json",
+      "bytes": 9094,
+      "sha256": "234c4efcc9a187fd57e45b8248f29923305ba31bf13e0126b59df25409eab631"
+    },
+    {
+      "name": "9x16/legacy-review/hook.jpg",
+      "bytes": 232601,
+      "sha256": "bdcf1393a784bd24850b188b149eb1685790a2e2c8ff172a44434c15983e760f"
+    },
+    {
+      "name": "9x16/legacy-review/sheet.jpg",
+      "bytes": 333404,
+      "sha256": "b3404efcdd526ec6895f0b699265d8ed08292c965a78f886685f8542a6bee663"
+    },
+    {
+      "name": "16x9/strip.mp4",
+      "bytes": 2538389,
+      "sha256": "12068ad3a2b1bfefe05bea6d6d99d4b9aec08f335788d4014542bb5eafb9ea3f"
+    },
+    {
+      "name": "9x16/legacy-run.json",
+      "bytes": 216,
+      "sha256": "8bc80e750e19ae9612f10d0be3b183d6da46252bbcc44e1b9b56aae17f420309"
+    },
+    {
+      "name": "9x16/legacy-words.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "name": "9x16/ops.jsonl",
+      "bytes": 41488,
+      "sha256": "d93342f878d6807d493bf298dd023790212a854fe48c061ce3c1165a0f16ae32"
+    },
+    {
+      "name": "9x16/planner-current.kimo.json",
+      "bytes": 5786,
+      "sha256": "5e5f8dc055bf638b19a887082be1be8fed2b6f369ab64b36bb1ccfcc75636ae3"
+    },
+    {
+      "name": "9x16/project.kimo.json",
+      "bytes": 5786,
+      "sha256": "5e5f8dc055bf638b19a887082be1be8fed2b6f369ab64b36bb1ccfcc75636ae3"
+    },
+    {
+      "name": "9x16/run.json",
+      "bytes": 849,
+      "sha256": "4b4cee4e87dda3fccc639e95a7d21cd5c48308268438f9c340dc4d79d9a43b40"
+    },
+    {
+      "name": "9x16/legacy-review/strip.mp4",
+      "bytes": 1879443,
+      "sha256": "0468b5403655e182dda60ebb64daa15faff835fa50deea660a74f7e60df4ed94"
+    },
+    {
+      "name": "9x16/soundtrack.kimo.json",
+      "bytes": 5786,
+      "sha256": "5e5f8dc055bf638b19a887082be1be8fed2b6f369ab64b36bb1ccfcc75636ae3"
+    },
+    {
+      "name": "9x16/sheet.jpg",
+      "bytes": 333711,
+      "sha256": "a803c5481605226cf6a82cff9c0fd6e438314f281f0c33680f46b88759b22eff"
+    },
+    {
+      "name": "CREDITS.txt",
+      "bytes": 352,
+      "sha256": "83d930c4d5e646e17f954834252fb9f359110ab989a7958d234abf2c1c6afdd4"
+    },
+    {
+      "name": "prepared.json",
+      "bytes": 6347,
+      "sha256": "ed86a41c577a73c8bb8e08c969399f88b2cbd34127c1c939e7559db0bd631cd6"
+    },
+    {
+      "name": "9x16/strip.mp4",
+      "bytes": 1911588,
+      "sha256": "059c27fc645164aa0865890ed5e31584d4d33467ba7dcd4d506719ca1ae1452a"
+    }
+  ]
+}

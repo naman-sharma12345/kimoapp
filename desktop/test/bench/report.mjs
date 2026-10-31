@@ -98,11 +98,19 @@ export function reviewHtml({ title, metrics, ops }) {
           : typeof value === 'number'
             ? +value.toFixed(4)
             : value;
+      const min =
+        metrics.values.aspect === '16:9'
+          ? (target.landscapeMin ?? target.min)
+          : target.min;
+      const max =
+        metrics.values.aspect === '16:9'
+          ? (target.landscapeMax ?? target.max)
+          : target.max;
       const band = Object.hasOwn(target, 'equals')
         ? String(target.equals)
         : [
-            target.min != null ? `>= ${target.min}` : '',
-            target.max != null ? `<= ${target.max}` : '',
+            min != null ? `>= ${min}` : '',
+            max != null ? `<= ${max}` : '',
             target.maxExclusive != null ? `< ${target.maxExclusive}` : '',
           ]
             .filter(Boolean)

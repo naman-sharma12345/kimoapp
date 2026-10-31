@@ -65,6 +65,10 @@ if (m.version === 4) {
     correctedCoverage: corrected.camera_registration_coverage,
     scoreBeforeCorrection: priorScore,
   };
+  m.evidence.camera = m.evidence.camera.replace(
+    'Compare measurement version-3 before and after only.',
+    'Compare measurement version4 before and after only.',
+  );
   m.evidence.camera +=
     ' Version4 corrects only the aggregate frame denominator from the original saved registration counts; the original version3 file is retained separately.';
   await writeJson(output, m);

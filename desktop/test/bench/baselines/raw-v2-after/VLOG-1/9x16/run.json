@@ -1,0 +1,28 @@
+{
+  "commit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "clip": "VLOG-1",
+  "dataset": "raw-v2",
+  "aspect": "9:16",
+  "mode": "captions",
+  "scope": "Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit",
+  "sourceHashes": [
+    "90fc16a61ffaefaf6cf7f1fc86f8c6c44ea7b1a877e64d35928e3b186897e5b5",
+    "8adab3284277dddf1534821c82ba061f637dc1a1f8465045a2273e4e782a7bfd",
+    "f342936955edf5bc16265f551085dfd0f5c4ea61ad8afb800d0168e19127c326",
+    "04311125fcaef5b55730947c542101a321ad0fa5777b8dd547b0578dfea9e65b",
+    "3d042f70feeaf0695f85bdcd7ea866319de24bd60212c49183a2bce5d963bb69",
+    "28041b0f68802a7f4cb66007650e48f0858dacb6ab07df14aeab1167d7f96232"
+  ],
+  "finalHash": "ac0490fc32d0c15409026215960404310c09ae4f625a936cd931b2a9515a0436",
+  "elapsedMs": 674333,
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0,
+  "edl": "D:\\a\\_temp\\kimo-bench-data\\out\\phase02-raw-v2\\VLOG-1\\9x16\\edit.edl.json",
+  "composed": true,
+  "datasetLimitations": "Six separately prepared raw shot excerpts from the same event host/interview camera rolls; they are not six independent camera-original files. Speech, walkaway/exterior and chapel context shots. Exact boundaries still require selected-preview review. Dedicated b-roll file was unavailable after two HTTP429 responses.",
+  "priorRender": {
+    "commit": "c268c41f78af6249b0564bd262cd588ed8c37a4c",
+    "finalHash": "a764e3398168e70d9cb77e9f12aebabb0bd45dd2af5dcf6bb0bc13acb09fea6c"
+  },
+  "recomposed": true
+}

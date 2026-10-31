@@ -1,0 +1,24 @@
+{
+  "commit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "clip": "MUSIC-1",
+  "dataset": "raw-v2",
+  "aspect": "9:16",
+  "mode": "manual",
+  "scope": "Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit",
+  "sourceHashes": [
+    "f217624147a5316058007fbb1d91c3c7253318c9a422b118f3b0b60282079cd6",
+    "d5ec74e7f90f0b407f68e44ef791b28af30b47e5252414bdb289ae371fc59173"
+  ],
+  "finalHash": "09338a25887785eec5fc6cdfe5729dd9fbb9d4edc5383632d1799fc50fd7d752",
+  "elapsedMs": 212952,
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0,
+  "edl": "D:\\a\\_temp\\kimo-bench-data\\out\\phase02-raw-v2\\MUSIC-1\\9x16\\edit.edl.json",
+  "composed": true,
+  "datasetLimitations": "Silent original video plus independently imported CC0 music stem; declared manual offline soundtrack fixture, no AI editing claims.",
+  "priorRender": {
+    "commit": "c268c41f78af6249b0564bd262cd588ed8c37a4c",
+    "finalHash": "8b0b57d3c0703089ac2b74683d337bfffa58a6e6678f899e0a52ac18d2005aee"
+  },
+  "recomposed": true
+}

@@ -1,0 +1,23 @@
+{
+  "commit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "clip": "TH-1",
+  "dataset": "raw-v2",
+  "aspect": "9:16",
+  "mode": "captions",
+  "scope": "Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit",
+  "sourceHashes": [
+    "a4b8937e22f40122b9fc6721e8f82e1d6dc86f60d3802d063e878f8e4f7d388a"
+  ],
+  "finalHash": "da9f9308992d94c5d987bcabf616e8783fb13fb6d011a331fc5d99491b349d0e",
+  "elapsedMs": 430065,
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0,
+  "edl": "D:\\a\\_temp\\kimo-bench-data\\out\\phase02-raw-v2\\TH-1\\9x16\\edit.edl.json",
+  "composed": true,
+  "datasetLimitations": "Single fixed camera. Publisher watermark; Commons licence review pending. Static background makes frame identity ambiguous; no assumption of zero repeats from missing coverage.",
+  "priorRender": {
+    "commit": "c268c41f78af6249b0564bd262cd588ed8c37a4c",
+    "finalHash": "75ed52bd76e7579433af4c5a5928c1b3cbc84114e1d664d129f146d82e6718fb"
+  },
+  "recomposed": true
+}

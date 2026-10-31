@@ -1,0 +1,23 @@
+{
+  "commit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "clip": "TH-2",
+  "dataset": "raw-v2",
+  "aspect": "16:9",
+  "mode": "captions",
+  "scope": "Full prepared footage, offline editorial control; not a replay of the incomplete Phase 1 AI edit",
+  "sourceHashes": [
+    "cf10cae9a0d07b0c132189d1d2104328bbe4952f2159cea912eb88e68a1566d2"
+  ],
+  "finalHash": "461f3fc7b882ea634fb9eb24f57116de977486f4ce3683e02bbd7cfcf6d155be",
+  "elapsedMs": 554200,
+  "networkAttempts": 0,
+  "reservedUsdDelta": 0,
+  "edl": "D:\\a\\_temp\\kimo-bench-data\\out\\phase02-raw-v2\\TH-2\\16x9\\edit.edl.json",
+  "composed": true,
+  "datasetLimitations": "Two hosts on a handheld selfie camera with walking/pauses. Physical capture motion must be distinguished from compositor camera jitter. Publisher public Drive playback rendition, not camera-original bytes.",
+  "priorRender": {
+    "commit": "c268c41f78af6249b0564bd262cd588ed8c37a4c",
+    "finalHash": "8613d080f07c5dc163b0b009a03a568d7428e2779ac85c27d4589488ccbdd19b"
+  },
+  "recomposed": true
+}

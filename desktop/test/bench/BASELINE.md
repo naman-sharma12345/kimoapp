@@ -79,14 +79,14 @@ No full listening review is inferred from these stills. These outputs remain leg
 
 ## Raw-v2 native before review (31 October 2026)
 
-Before videos are native exports of the identical saved offline-control projects, with no paid calls. Evidence is under baselines/raw-v2-before/ID/ASPECT with full per-case credit sidecars. Actual native and initial app sheets plus first-second frames were inspected for the cases below. The final app render uses numeric native font weight and measurement-v3 corrections; its hashes/visual checks are recorded separately when collected. Original natural footage is preserved, including captured camera movement and static screen spans. Native TUT-1/VLOG-1/POD-1 landscape exports hit the1800-second cap; their failure JSON is retained instead of inventing missing comparisons.
+Before videos are native exports of the identical saved offline-control projects, with no paid calls. Evidence is under baselines/raw-v2-before/ID/ASPECT with full per-case credit sidecars. Actual native and initial app sheets plus first-second frames were inspected for the cases below. The final app render uses numeric native font weight and measurement-v3 corrections; its hashes/visual checks are recorded separately when collected. Original natural footage is preserved, including captured camera movement and static screen spans. Native TUT-1/VLOG-1/POD-1 landscape exports hit the 1800-second cap; their failure JSON is retained instead of inventing missing comparisons.
 
 ### TH-1 indoor interview
 
 1. Both native aspects start on the same downcast gaze and hand-to-face gesture.
 2. This is a continuous source selection, without an independently chosen editorial hook.
 3. Native Montserrat captions are heavy, outlined and immediately visible.
-4. Initial app captions were visibly thinner; the numeric900weight mapping has been corrected for final verification.
+4. Initial app captions were visibly thinner; the numeric weight 900 mapping has been corrected for final verification.
 5. Both versions retain the same yellow active-word and green keyword treatments.
 6. Portrait centre cropping pushes the speaker's face against the right edge.
 7. Parts of the head and hand leave that portrait crop.
@@ -134,13 +134,13 @@ Before videos are native exports of the identical saved offline-control projects
 11. No independent hook title, callout or editing-cadence improvement is present in this offline control.
 12. Static source frames make exact frame identity ambiguous after downsampling.
 13. Barcode calibration remains separate evidence and cannot turn missing natural-frame coverage into a pass.
-14. The native landscape export hit the1800-second cap, so its full before image/score comparison is unavailable.
+14. The native landscape export hit the 1800-second cap, so its full before image/score comparison is unavailable.
 15. The saved input still includes facecam and full UI; the cropped result is an editorial limitation of the control.
 16. These images do not establish complete narration intelligibility or listening quality.
 
 ### VLOG-1 raw event excerpts
 
-1. This control concatenates six declared10-second excerpts from two raw camera rolls.
+1. This control concatenates six declared 10-second excerpts from two raw camera rolls.
 2. It opens with the same awkward fence/shoulder view as the host source.
 3. The first second includes active captions but no authored hook.
 4. At roughly ten seconds it switches to the microphone interview.
@@ -153,7 +153,7 @@ Before videos are native exports of the identical saved offline-control projects
 11. Exposure and colour vary with the captured outdoor/interior lighting.
 12. Large native captions remain repetitive over these different source compositions.
 13. Joins are benchmark preparation choices, not evidence of fresh AI story selection.
-14. The native landscape export exceeded the1800-second cap; no missing before score is supplied.
+14. The initial native landscape export exceeded 1800 seconds; its full recovered reference now retains both participants and the building/chapel context.
 15. Full Cinestudy credits and required hashtags accompany the evidence.
 16. Sound transitions and complete listening quality are not judged from the stills.
 
@@ -172,7 +172,7 @@ Before videos are native exports of the identical saved offline-control projects
 11. There is no deliberate shot/reaction alternation in this control.
 12. This is an outdoor podcast/documentary source, not a studio multicamera edit.
 13. Its full-width prepared source contains both people; portrait framing is the limitation.
-14. The native landscape reference timed out after1800seconds and remains unavailable.
+14. The initial native landscape reference timed out; the full retry preserves both speakers in landscape with much better spatial context than portrait.
 15. A successful numeric delivery gate would not make that portrait composition good.
 16. Complete dialogue listening and speaker attribution are not inferred from images.
 
@@ -194,3 +194,121 @@ Before videos are native exports of the identical saved offline-control projects
 14. Before/after loudness and timing are measured from each final audio stream.
 15. These images do not establish subjective soundtrack fit or complete listening quality.
 16. Pexels and composer attribution, licences and exact source/stem hashes are retained.
+
+## Raw-v2 final app render review (31 October 2026)
+
+These observations use the actual final contact sheets and ten first-second frames from current-code run `41189542616`, with small stripped previews briefly played muted and sought at three positions. They do not assert full listening quality or complete video playback. Exact metrics, output hashes and artifact proofs are retained with the after evidence. Static or ambiguous natural pictures remain unavailable for strict frame-identity acceptance even when the separate barcode companion passes.
+
+### TH-2 final app: outdoor walk-and-talk
+
+1. The actual final first second still opens on a passer-by, fence and part of the host's shoulder.
+2. Portrait framing removes the host's face for most of that opening; a correct renderer cannot repair this saved editorial choice.
+3. The host's face becomes clear around two seconds, then frequently presses against the portrait edges.
+4. Landscape keeps more fairground context and allows the camera's movement more room.
+5. The full sheet preserves the same location turns and dialogue order as the native reference.
+6. Around seconds fourteen and eighteen the portrait captions cross the host's mouth or lower face.
+7. Later source reframing sometimes leaves only part of the host's face inside portrait.
+8. Final captions retain yellow active words and green keywords with black outlines.
+9. The app's letter strokes remain visibly lighter than the native render despite preserving the numeric weight request; exact text raster parity is not established.
+10. Caption groups, timing and first-second word reveal are present in both aspects.
+11. The control adds no new hook title, story cut or alternate framing decision.
+12. Both final aspects have zero observed repeats/skips at 99.907% natural frame-match coverage.
+13. Source-referenced camera residuals are 0.00850/0.00873 px for portrait/landscape; captured handheld movement remains visible.
+14. Both app delivery gates pass; uniform version 4 Creator Scores rise 78.3→78.6 and 72.6→73.6.
+15. Both ten-second preview strips played and sought without media/page errors or HTTP requests; browsers were closed.
+16. Those bounded muted checks do not establish full dialogue intelligibility, soundtrack quality or every natural frame transition.
+
+### TUT-1 final app: Blender tutorial
+
+1. The actual portrait sheet keeps the cube and central viewport but loses the source facecam.
+2. Landscape preserves the full interface and the lower-right facecam throughout the sampled selection.
+3. The first second begins mid-explanation, with word captions already appearing and no authored tutorial hook.
+4. Most of the first forty-seven seconds show a largely unchanged cube and viewport.
+5. The preferences window appears around seconds forty-eight to fifty-eight.
+6. View/cube rotation becomes clearer over the closing ten seconds.
+7. Those movements are source operations, not added camera punches or editing variety.
+8. White/yellow/green captions are outlined and readable against the grey viewport.
+9. Long landscape caption groups occupy much of the lower interface and compete with the facecam region.
+10. Visible caption fillers such as “UM” and “UH” remain; this control does not perform a new editorial clean-up.
+11. App strokes remain lighter than native; exact native variable-font rendering is not certified.
+12. Natural frame matching covers only 8.00%/7.83% in portrait/landscape, so the 4/0 repeat candidates are not certified whole-video counts.
+13. The independent saved-timeline barcode companions pass every delivered frame in both aspects; this remains separate from natural-picture matching.
+14. Estimated source-referenced camera residuals are 0.00551/0.00360 px; Creator Score is 54.7 in both aspects.
+15. The native portrait score is 54.5; native landscape timed out and no full before comparison is invented.
+16. Both ten-second preview strips decode/play/seek without errors or HTTP; muted partial playback does not establish full narration quality.
+
+### TH-1 final app: indoor interview
+
+1. The actual first second keeps the speaker's downcast gaze and hand-to-face gesture.
+2. This begins mid-dialogue and supplies no independently chosen hook title.
+3. Portrait continues to cut the right side of the head and some gestures.
+4. Landscape retains the body, background context and original publisher mark.
+5. The dialogue caption reveal is already active during the opening gesture.
+6. Yellow active words and green keywords remain visible on white outlined text.
+7. App letter strokes still look lighter than the native variable-font raster; numeric weight preservation is not pixel-identical text rendering.
+8. Portrait captions sometimes cross near the chin or upper chest, while landscape lines use much of the lower width.
+9. The full sampled minute stays on the same angle without new punches, b-roll or cut-cadence decisions.
+10. Caption-free spans and hesitations remain in this offline control.
+11. Both final aspects have zero repeat/skip candidates, but only 64.72%/29.56% natural matching coverage; these are not certified whole-video zero counts.
+12. Source-referenced residual jitter is 0.00853/0.00759 px with 99.94% camera-registration coverage.
+13. Delivery passes in both final app aspects.
+14. Uniform version 4 portrait Creator Score declines 63.5→62.9 while landscape rises 62.7→62.9; an across-the-board improvement is not claimed.
+15. Both ten-second strips briefly play and seek without errors or HTTP; all owned browser processes close.
+16. Complete dialogue listening and exact identity of visually static source frames remain outside those bounded visual checks.
+
+### MUSIC-1 final app: waves with a separate music stem
+
+1. Both actual final aspects show the same continuous wave/rock shot selected in the frozen inputs.
+2. Portrait focuses on the central rock and breaking white foam; landscape retains more of the coastline.
+3. The first-second frames show evolving foam and water, with no authored hook graphic.
+4. Full sheets show recurrent waves across the twenty-second selection rather than an added edit sequence.
+5. There are no new captions, titles, image inserts or deliberate picture cuts in this manual control.
+6. The source video is silent; the output uses the separately imported CC0 composer stem.
+7. This demonstrates the saved manual audio/picture route, not an AI music-selection decision.
+8. Bright foam and dark rock remain visibly distinct in the sampled final images.
+9. The overall view and source ordering agree with the native reference in both aspects.
+10. The contact-sheet empty cells after the twentieth sample are layout padding.
+11. Both app finals have zero observed repeats/skips, at 100% portrait and 98.40% landscape frame-match coverage.
+12. Estimated source-referenced residuals are 0.00997/0.00974 px; the original aggregate coverage had a one-frame denominator error and is corrected from saved registration counts in the final report.
+13. Both app delivery gates pass; measured audio is −14 LUFS and −1.5 dBTP.
+14. Uniform scores rise 34.3→46.9 and 46.8→46.9; the native portrait's low matching confidence contributes to its conservative score.
+15. Both ten-second strips play and seek without errors or HTTP; browsers close afterward.
+16. Muted partial playback and loudness values do not certify complete soundtrack fit, listening quality or human perception of every transition.
+
+### VLOG-1 final app: six raw event excerpts
+
+1. The actual first second retains the host source's awkward fence, passer-by and cropped shoulder.
+2. The first ten seconds become a close host view; there is no newly authored hook title.
+3. At roughly ten seconds the selection switches to the outdoor microphone interview.
+4. Portrait repeatedly pushes participants or gestures outside opposite frame edges.
+5. Landscape keeps the two-person relationship and fairground surroundings much more clearly.
+6. Around twenty and thirty seconds the prepared input boundaries change camera position and emphasis.
+7. The later building/chapel approach supplies real context, followed by the costumed group inside.
+8. The closing samples move back toward foliage, matching the frozen sixth input.
+9. Exposure and colour vary with the original outdoor/interior lighting.
+10. Captions retain active yellow and keyword green, with app strokes still lighter than native.
+11. Some longer groups compete with costume/gesture details; technical smoothness does not establish good caption placement.
+12. These joins are declared benchmark preparation choices from two camera rolls, not six independent originals or new AI story decisions.
+13. Both final aspects have zero observed repeats/skips at 99.17% frame-match coverage; residuals are 0.00699/0.00748 px.
+14. Both app delivery gates pass; portrait Creator Score rises 72.2→80.0 and the recovered landscape comparison rises 79.2→80.3.
+15. Both ten-second strips briefly play and seek without errors or HTTP, and the browser closes.
+16. Muted partial playback does not certify every join's sound quality, full intelligibility or complete human-perceived continuity.
+
+### POD-1 final app: two-person outdoor interview
+
+1. The actual opening portrait crop leaves the interviewer partly outside the left edge and the guest mostly beyond the right edge.
+2. Empty background occupies much of the centre of that portrait composition.
+3. Landscape preserves both speakers, their microphone and the fairground context.
+4. The first-second captions begin with “YOU KNOW”, followed by the existing explanation, without a deliberate hook.
+5. The full sheet shows the guest's costume, medals and gestures, but portrait loses many of those details.
+6. Passers-by and captured camera adjustments remain in the background.
+7. This is an outdoor conversation, not a studio multicamera podcast.
+8. There is no new reaction-cut sequence or speaker-aware reframe in this offline control.
+9. Large white/yellow/green caption groups remain readable, but their changing widths compete with bodies and hands.
+10. Some sampled caption groups contain “UH” and other fillers; rendering does not clean the dialogue.
+11. The app's native weight request is preserved, while letter strokes still look lighter than the engine's raster.
+12. Both final aspects have zero observed repeats/skips at 99.79% frame-match coverage.
+13. Source-referenced residuals are 0.00659/0.00660 px and both app delivery gates pass.
+14. Portrait Creator Score rises 56.6→72.3; the recovered landscape comparison declines 73.0→72.3, so improvement is not claimed for every aspect.
+15. Both short strips play and seek without media/page errors or HTTP, with owned browsers closed afterward.
+16. These bounded muted checks do not establish complete dialogue intelligibility or subjective podcast editing quality.

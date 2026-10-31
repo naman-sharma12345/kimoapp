@@ -1,0 +1,45 @@
+{
+  "implementationCommit": "9fa6f21722768738562b18d95b618da8a01351bf",
+  "companionCommit": "80adf9fba9894c83617804e78313dcdb90cc21e5",
+  "desktopTests": {
+    "windows": {
+      "job": 124518867326,
+      "tests": 82,
+      "passed": 82,
+      "failed": 0
+    },
+    "linux": {
+      "job": 124518867448,
+      "tests": 82,
+      "passed": 82,
+      "failed": 0
+    }
+  },
+  "rootChecks": {
+    "job": 124518867737,
+    "command": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "requiredCommandPassed": true,
+    "tests": 300,
+    "wholeJobPassed": false,
+    "laterFailure": "Existing web landing bundle: 166342 gzip bytes exceeds 120000"
+  },
+  "electronSmoke": {
+    "run": 41189545211,
+    "job": 124503300729,
+    "passed": true,
+    "installerOrRelease": false
+  },
+  "companion": {
+    "run": 41191170102,
+    "job": 124508087866,
+    "cases": 12,
+    "observedFrames": 17018,
+    "wrongIndices": 0,
+    "unintendedRepeats": 0,
+    "unintendedSkips": 0,
+    "passed": true
+  },
+  "scope": "Actual GitHub job logs and completed check-runs, not queued job snapshots. Companion timing proof is separate from natural-picture quality and insufficient-confidence matches. No paid calls or local full-footage rendering. Broader web browser/performance jobs remain outside the passed required command.",
+  "measurementCommit": "f205cc1e870bfcec3cb035b30836309ebc8bae00",
+  "testCommit": "962df6db0fb70f26e488e71845fad5873b56452c"
+}

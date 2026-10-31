@@ -1,0 +1,9 @@
+{
+  "originalRun": "41101109503",
+  "finalRun": "41189542616",
+  "originalBytesSha256": "394a64930f8163b1f69ac582977fe1c9173378cc3bd19a80ac54ca39bc7944d4",
+  "finalBytesSha256": "8234ae0c3811b5678c4fcadac20cec6bb0669a20d16937d261e58b7bdac926c6",
+  "identicalParsedEdl": true,
+  "semanticSha256": "caf65727ed3af4a61a4701d32e4b8ff225c8fbebb2fa62a322b1d6aa49db89d4",
+  "scope": "Only JSON whitespace differs. Identical parsed EDL links original barcode-companion timing to final natural render."
+}

@@ -1,0 +1,36 @@
+{
+  "artifactId": "13011246890",
+  "artifactName": "raw-v2-comparison-41101109503-POD-1",
+  "entry": "16x9/legacy.mp4",
+  "entryBytes": 50355987,
+  "method": 0,
+  "boxes": [
+    {
+      "type": "ftyp",
+      "at": 0,
+      "size": 32
+    },
+    {
+      "type": "free",
+      "at": 32,
+      "size": 8
+    },
+    {
+      "type": "mdat",
+      "at": 40,
+      "size": 50343965
+    },
+    {
+      "type": "moov",
+      "at": 50344005,
+      "size": 11982
+    }
+  ],
+  "scope": "Bounded archive/container-header inspection only; no footage decoded, no whole-video validity claim.",
+  "moovPresent": true,
+  "movieDuration": 36.70337003670337,
+  "fetchedBytes": 69385,
+  "expectedFullDuration": 60.018292,
+  "fullBaselineUsable": false,
+  "reason": "Preserved native container movie duration is shorter than the frozen full clip after the export timeout. Header inspection is not a decoded/full-media validity certificate."
+}

@@ -1,0 +1,10 @@
+{
+  "run": "41193701206",
+  "commit": "bd9e8f324b61a8127915824ecdf1b730ba86ecdc",
+  "fullArtifact": 13040208324,
+  "smallArtifact": 13040427586,
+  "sameFrozenProject": true,
+  "projectSha256": "a97983f079986b549f8f83c644b631dacfa2ee4d70ca21a5c6a3be0ee1b99c20",
+  "nativeFinalSha256": "051b5cd159d576a0ad1803c2a43283c72ccee6ed2edcd79ae468e8edb7cb233e",
+  "scope": "Only the full native landscape reference was recovered. Clean final app output remains from41189542616; no old app metrics from the native-only seed are used."
+}

@@ -1,0 +1,136 @@
+{
+  "artifact": {
+    "id": 13038563893,
+    "name": "raw-v2-calibration-41191170102",
+    "digest": "sha256:a3a2f0b1ba8dd3802aa4586ab89cc31b51ffafca5a9b8d3d3780f0e95e470339",
+    "size_in_bytes": 244879670
+  },
+  "fetchedBytes": 95231,
+  "files": [
+    {
+      "name": "MUSIC-1/16x9/CREDITS.txt",
+      "bytes": 352,
+      "sha256": "83d930c4d5e646e17f954834252fb9f359110ab989a7958d234abf2c1c6afdd4"
+    },
+    {
+      "name": "MUSIC-1/9x16/CREDITS.txt",
+      "bytes": 352,
+      "sha256": "83d930c4d5e646e17f954834252fb9f359110ab989a7958d234abf2c1c6afdd4"
+    },
+    {
+      "name": "MUSIC-1/16x9/result.json",
+      "bytes": 713,
+      "sha256": "a6ba31a1226389e7ecda7882419fadd3786d05ae10f6d60905c936946285a9e8"
+    },
+    {
+      "name": "MUSIC-1/9x16/result.json",
+      "bytes": 713,
+      "sha256": "542bc1ed90c0ebf05bfd93baf1d0c74d2514cc20ad6a27554ef213e149bb8525"
+    },
+    {
+      "name": "POD-1/16x9/CREDITS.txt",
+      "bytes": 542,
+      "sha256": "3da628724333eeb5be58b6a4b167f3c3de4b7b05ea835e7733f331534928e618"
+    },
+    {
+      "name": "POD-1/16x9/result.json",
+      "bytes": 726,
+      "sha256": "93bb7b2e8a989904ca74bfde3e08dc1723361f6370fa774abf849a15e7a6500b"
+    },
+    {
+      "name": "POD-1/9x16/CREDITS.txt",
+      "bytes": 542,
+      "sha256": "3da628724333eeb5be58b6a4b167f3c3de4b7b05ea835e7733f331534928e618"
+    },
+    {
+      "name": "POD-1/9x16/result.json",
+      "bytes": 726,
+      "sha256": "e02f60770f4d23d73b855557f6071fdf077600b15286c7a1193f3bc354a010e8"
+    },
+    {
+      "name": "summary.json",
+      "bytes": 10134,
+      "sha256": "51022fb362a32da6cb1c9342e0d0b8dbe832d94b68a12787dd2ac826b19cdc82"
+    },
+    {
+      "name": "TH-1/16x9/CREDITS.txt",
+      "bytes": 239,
+      "sha256": "d597e889d15aedeb4b050f53294e8b7a4474647d94c884d443e7bd6a42cdbc34"
+    },
+    {
+      "name": "TH-1/16x9/result.json",
+      "bytes": 725,
+      "sha256": "ab4a892a6538e17bebbeb84205dd1bab0c5f730b17f8b6b3f5c413799bf1f5be"
+    },
+    {
+      "name": "TH-1/9x16/CREDITS.txt",
+      "bytes": 239,
+      "sha256": "d597e889d15aedeb4b050f53294e8b7a4474647d94c884d443e7bd6a42cdbc34"
+    },
+    {
+      "name": "TH-2/16x9/CREDITS.txt",
+      "bytes": 543,
+      "sha256": "cf608501160208fbf29c67289216b4c863ddbada3134c96e95d4bef0d1263b0b"
+    },
+    {
+      "name": "TH-1/9x16/result.json",
+      "bytes": 725,
+      "sha256": "74438516ed8fc1ec2c81e2b3a832a95a6cbd57ba136936dacd6fbd67731931de"
+    },
+    {
+      "name": "TH-2/9x16/CREDITS.txt",
+      "bytes": 543,
+      "sha256": "cf608501160208fbf29c67289216b4c863ddbada3134c96e95d4bef0d1263b0b"
+    },
+    {
+      "name": "TH-2/16x9/result.json",
+      "bytes": 725,
+      "sha256": "c60dfeb833512d62846f6e79beecb735e227f6a60b378ea7d9e2f88a191adf1d"
+    },
+    {
+      "name": "TUT-1/16x9/CREDITS.txt",
+      "bytes": 224,
+      "sha256": "c2a5910a7faf2a06fe5b82cc1a7d5cf041b6a13078dcbab4a6f9a6ed4fc47d56"
+    },
+    {
+      "name": "TH-2/9x16/result.json",
+      "bytes": 725,
+      "sha256": "c66c4260be8d7de69b9da5161453cb43c7a7178f4977faca3683650719788458"
+    },
+    {
+      "name": "TUT-1/9x16/CREDITS.txt",
+      "bytes": 224,
+      "sha256": "c2a5910a7faf2a06fe5b82cc1a7d5cf041b6a13078dcbab4a6f9a6ed4fc47d56"
+    },
+    {
+      "name": "TUT-1/16x9/result.json",
+      "bytes": 714,
+      "sha256": "736348a8cd4ebc31bb81be03f24ba2e78072033d385d7f601edbc5528ec032b0"
+    },
+    {
+      "name": "VLOG-1/16x9/CREDITS.txt",
+      "bytes": 1086,
+      "sha256": "557fbbbdfe24ca434b7a108569e7f8613b8a950555843fd615746e4562c538ef"
+    },
+    {
+      "name": "TUT-1/9x16/result.json",
+      "bytes": 714,
+      "sha256": "843e9de59590b36838d90e03407b8a54347e60966e5de645a4809d78da0c1142"
+    },
+    {
+      "name": "VLOG-1/9x16/CREDITS.txt",
+      "bytes": 1086,
+      "sha256": "557fbbbdfe24ca434b7a108569e7f8613b8a950555843fd615746e4562c538ef"
+    },
+    {
+      "name": "VLOG-1/16x9/result.json",
+      "bytes": 727,
+      "sha256": "aa91064742142778de0414be8b4e5bae5abb9869957fb908fdd36254f0105295"
+    },
+    {
+      "name": "VLOG-1/9x16/result.json",
+      "bytes": 727,
+      "sha256": "a8dde052ba4ed0c49d1b65abf4f56d2bcada604a9b85d82346033def10788fa9"
+    }
+  ]
+}

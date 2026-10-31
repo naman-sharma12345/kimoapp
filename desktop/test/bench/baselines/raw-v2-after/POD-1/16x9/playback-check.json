@@ -1,0 +1,28 @@
+{
+  "id": "POD-1",
+  "aspect": "16x9",
+  "duration": 10.01,
+  "seeks": [
+    {
+      "at": 0.1,
+      "ready": 4,
+      "error": null,
+      "decoded": 17
+    },
+    {
+      "at": 5,
+      "ready": 4,
+      "error": null,
+      "decoded": 140
+    },
+    {
+      "at": 9.71,
+      "ready": 4,
+      "error": null,
+      "decoded": 376
+    }
+  ],
+  "requests": 0,
+  "errors": [],
+  "scope": "Hosted final-output 10-second strip briefly played muted and sought at three positions. Not full-video playback, subjective audio review, or frame-identity certification."
+}

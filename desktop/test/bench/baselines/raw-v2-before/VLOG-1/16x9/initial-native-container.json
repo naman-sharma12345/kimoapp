@@ -1,0 +1,36 @@
+{
+  "artifactId": "13010505626",
+  "artifactName": "raw-v2-comparison-41101109503-VLOG-1",
+  "entry": "16x9/legacy.mp4",
+  "entryBytes": 76681392,
+  "method": 0,
+  "boxes": [
+    {
+      "type": "ftyp",
+      "at": 0,
+      "size": 32
+    },
+    {
+      "type": "free",
+      "at": 32,
+      "size": 8
+    },
+    {
+      "type": "mdat",
+      "at": 40,
+      "size": 76670298
+    },
+    {
+      "type": "moov",
+      "at": 76670338,
+      "size": 11054
+    }
+  ],
+  "scope": "Bounded archive/container-header inspection only; no footage decoded, no whole-video validity claim.",
+  "moovPresent": true,
+  "movieDuration": 49.382716049382715,
+  "fetchedBytes": 69385,
+  "expectedFullDuration": 60.06,
+  "fullBaselineUsable": false,
+  "reason": "Preserved native container movie duration is shorter than the frozen full clip after the export timeout. Header inspection is not a decoded/full-media validity certificate."
+}
