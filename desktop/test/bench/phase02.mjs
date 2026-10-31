@@ -429,12 +429,35 @@ try {
             throw new Error(JSON.stringify(reply));
           const nativeMs = Date.now() - start;
           const measured = await measure(tools.ffmpeg, tools.ffprobe, legacy);
+          const videoInfo = JSON.parse(
+            (
+              await command(tools.ffprobe, [
+                '-v',
+                'error',
+                '-select_streams',
+                'v:0',
+                '-show_entries',
+                'stream=duration,nb_frames,avg_frame_rate',
+                '-of',
+                'json',
+                legacy,
+              ])
+            ).stdout.toString(),
+          ).streams?.[0];
+          const [rateN, rateD = 1] = String(videoInfo?.avg_frame_rate || '0')
+            .split('/')
+            .map(Number);
+          const nativeVideoDuration =
+            Number(videoInfo?.duration) ||
+            Number(videoInfo?.nb_frames) / (rateN / rateD);
+          // Native audio/container tails are retained and measured, not mistaken for incomplete pictures.
           if (
             dataset === 'raw-v2' &&
-            Math.abs(measured.duration - result.duration) > 0.15
+            (!Number.isFinite(nativeVideoDuration) ||
+              nativeVideoDuration + 0.15 < result.duration)
           )
             throw new Error(
-              `Incomplete native reference: ${measured.duration}s versus ${result.duration}s full timeline`,
+              `Incomplete native video: ${nativeVideoDuration}s versus ${result.duration}s full timeline`,
             );
           const upload = join(dir, 'legacy-final.mp4');
           await youtubeMaster({
@@ -453,6 +476,7 @@ try {
             sameProject: true,
             nativeTimeoutMs,
             nativeExportDuration: measured.duration,
+            nativeVideoDuration,
           });
           if (existsSync(join(dir, 'legacy-failure.json')))
             await unlink(join(dir, 'legacy-failure.json'));
