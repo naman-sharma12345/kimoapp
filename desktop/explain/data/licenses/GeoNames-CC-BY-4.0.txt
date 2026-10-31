@@ -1,0 +1,5 @@
+cities.json is derived from the GeoNames "cities15000" dump (https://download.geonames.org/export/dump/),
+licensed under Creative Commons Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Attribution: GeoNames (https://www.geonames.org). Changes: kept name, ASCII name, country code,
+latitude, longitude and population for the ~1,900 most populous cities (plus the 250 largest Indian cities),
+rounded to 0.01 degrees.

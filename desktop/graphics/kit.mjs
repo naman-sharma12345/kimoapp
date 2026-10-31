@@ -17,6 +17,7 @@ export const FONT_FACES = Object.freeze([
   { family: 'Instrument Serif', weight: 400, style: 'italic', file: 'InstrumentSerif-Italic.ttf' },
   { family: 'Noto Sans Devanagari', weight: 700, style: 'normal', file: 'NotoSansDevanagari-Bold.ttf' },
   { family: 'Noto Sans Devanagari', weight: 900, style: 'normal', file: 'NotoSansDevanagari-Black.ttf' },
+  { family: 'Geist Mono', weight: 600, style: 'normal', file: 'GeistMono-SemiBold.ttf' },
 ]);
 
 /** CSS font shorthand for a theme font spec at a pixel size. */

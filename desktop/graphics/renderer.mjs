@@ -132,9 +132,22 @@ export const graphicsHost = () => HOST;
 let BOOK = null;
 const IMAGES = new Map();
 function softImages(kind, props) {
-  if (kind !== 'sticker' || !STICKERS.includes(props.emoji)) return {};
-  if (!IMAGES.has(props.emoji)) IMAGES.set(props.emoji, decodePng(join(emojiDir(), `${props.emoji}.png`)));
-  return { [props.emoji]: IMAGES.get(props.emoji) };
+  const out = {};
+  if (kind === 'sticker' && STICKERS.includes(props.emoji)) {
+    if (!IMAGES.has(props.emoji)) IMAGES.set(props.emoji, decodePng(join(emojiDir(), `${props.emoji}.png`)));
+    out[props.emoji] = IMAGES.get(props.emoji);
+  }
+  // Phase 7 explainer assets: PNGs prepared by explain/assets.mjs ({key, path, url}); bundled emoji by name
+  for (const a of Array.isArray(props.assets) ? props.assets : []) {
+    const path = a.emoji && STICKERS.includes(a.emoji) ? join(emojiDir(), `${a.emoji}.png`) : a.path;
+    if (!path || !existsSync(path)) continue;
+    if (!IMAGES.has(path)) {
+      if (IMAGES.size > 64) IMAGES.clear();
+      IMAGES.set(path, decodePng(path));
+    }
+    out[a.key] = IMAGES.get(path);
+  }
+  return out;
 }
 /** Soft backend: renders frames in this process. */
 export function softFrame(job, frame) {

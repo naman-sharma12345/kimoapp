@@ -10,8 +10,9 @@ import chapter from './chapter-card.mjs';
 import sticker from './sticker.mjs';
 import textBehind from './text-behind.mjs';
 import cta from './cta-card.mjs';
+import { EXPLAIN_ELEMENTS } from '../../explain/families/index.mjs';
 
-export const ELEMENTS = Object.freeze({
+const KIT = {
   hook_title: hook,
   lower_third: lowerThird,
   stat,
@@ -22,5 +23,8 @@ export const ELEMENTS = Object.freeze({
   sticker,
   text_behind: textBehind,
   cta,
-});
-export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENTS));
+};
+// Phase 7 explainer families (explain/families/*.mjs) render through the same kit
+export const ELEMENTS = Object.freeze({ ...KIT, ...EXPLAIN_ELEMENTS });
+/** The Phase 6 kit kinds (the planner's `graphic` tool); explainer kinds are planned by explain/. */
+export const ELEMENT_KINDS = Object.freeze(Object.keys(KIT));

@@ -87,3 +87,30 @@ The OFL allows bundling and redistribution with software; the fonts are not sold
   https://github.com/google/fonts/blob/main/ofl/notocoloremoji/NotoColorEmoji-Regular.ttf with
   `test/bench/tools/extract-emoji.py` (offline tool; not run by the app).
   Licence: SIL OFL 1.1, https://github.com/google/fonts/blob/main/ofl/notocoloremoji/OFL.txt (`graphics/emoji/NotoColorEmoji-OFL.txt`).
+
+## Phase 7 explainer data (`explain/data/`)
+
+Generated offline by `explain/tools/build-data.mjs` (dev tool, not run by the app) from the sources below; licence texts are in `explain/data/licenses/`. Total size about 2.5 MB.
+
+- `icons.json` — line icons from **Lucide** 0.548.0 (https://lucide.dev, https://github.com/lucide-icons/lucide), ISC licence
+  (https://github.com/lucide-icons/lucide/blob/main/LICENSE; `explain/data/licenses/Lucide-ISC.txt`), and **Tabler Icons** 3.35.0
+  outline set (https://tabler.io/icons, https://github.com/tabler/tabler-icons), MIT licence
+  (https://github.com/tabler/tabler-icons/blob/main/LICENSE; `explain/data/licenses/Tabler-MIT.txt`). SVG nodes converted to path data; names and tags kept for the keyword index.
+- `brands.json` — 187 brand marks from **Simple Icons** 15.17.0 (https://simpleicons.org, https://github.com/simple-icons/simple-icons), CC0 1.0
+  (https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md; `explain/data/licenses/SimpleIcons-CC0.md`). Brand marks remain trademarks of their owners; kimo shows them only when the speaker names the brand.
+- `world.json` — **Natural Earth** 1:50m admin-0 countries (https://www.naturalearthdata.com), public domain (`explain/data/licenses/NaturalEarth-PD.txt`).
+- `cities.json` — **GeoNames** cities15000 subset (https://www.geonames.org, https://download.geonames.org/export/dump/), CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/; `explain/data/licenses/GeoNames-CC-BY-4.0.txt`). Credit: "City data © GeoNames (CC BY 4.0)".
+
+## Geist Mono (SIL Open Font License 1.1)
+
+- `fonts/GeistMono-SemiBold.ttf` — Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font), file from the `geist` npm package 1.8.2
+  (`dist/fonts/geist-mono/GeistMono-SemiBold.ttf`). Licence: SIL OFL 1.1 (`fonts/licenses/Geist-OFL.txt`). Used by the explainer code card.
+
+## Sound gags and UI ticks (`explain/sfx.mjs`)
+
+Synthesised at run time by kimo with FFmpeg's `lavfi` generators from parameters in the source (no recordings, no third-party audio). kimo dedicates them to the public domain (CC0 1.0).
+
+## Fetched explainer assets
+
+Images found through Openverse (https://openverse.org, API https://api.openverse.org) and Wikimedia Commons (https://commons.wikimedia.org, API https://commons.wikimedia.org/w/api.php) are keyless searches filtered to CC0, public domain, CC BY and CC BY-SA. Each asset keeps its licence, creator and source URL in the project, and every export writes them to `ATTRIBUTIONS.txt` beside the video (also offered as a YouTube description block). Nothing is bundled from these sources.

@@ -40,6 +40,20 @@ async function image(name) {
   return state.images.get(name);
 }
 
+async function asset(url) {
+  if (!state.images.has(url))
+    state.images.set(
+      url,
+      new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`asset ${url} failed to load`));
+        img.src = url;
+      }),
+    );
+  return state.images.get(url);
+}
+
 function base64(bytes) {
   let s = '';
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
@@ -56,6 +70,14 @@ async function render(job, frames, encoding = 'base64') {
   // willReadFrequently keeps the canvas on the CPU rasteriser: deterministic and fast to read back
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const images = job.kind === 'sticker' && job.props?.emoji ? { [job.props.emoji]: await image(job.props.emoji) } : {};
+  // Phase 7 explainer assets ({key, url} file URLs of prepared PNGs, or bundled emoji by name)
+  for (const a of Array.isArray(job.props?.assets) ? job.props.assets : []) {
+    try {
+      images[a.key] = a.emoji ? await image(a.emoji) : await asset(a.url);
+    } catch {
+      /* missing asset: the family draws its placeholder */
+    }
+  }
   const layer = () => {
     const c = document.createElement('canvas');
     c.width = job.box.w;
