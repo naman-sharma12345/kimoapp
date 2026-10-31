@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { runEdit, PRESETS, probe } from '../engine.mjs';
@@ -204,7 +205,8 @@ test(
           const start = events.find((e) => e.t === 'op' && e.tool === tool && e.phase === 'start');
           return events.find((e) => e.t === 'op' && e.phase === 'end' && (start ? e.id === start.id : e.tool === tool));
         };
-        for (const tool of ['transcribe', 'cut_plan', 'apply_cut', 'camera_probe', 'camera_director', 'compose']) assert.ok(ended(tool)?.ok, `${mode}: ${tool} op`);
+        for (const tool of ['transcribe', 'cut_plan', 'apply_cut', 'camera_probe', 'camera_director', 'explain', 'compose']) assert.ok(ended(tool)?.ok, `${mode}: ${tool} op`);
+        assert.ok(existsSync(join(dir, mode, 'ATTRIBUTIONS.txt')) || !edl.explain, `${mode}: credits beside the export`);
         assert.match(ended('cut_plan').result, /^removed \d+ pauses? \([\d.]+ s\)/);
         const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
         assert.ok(!calls.some((c) => c.name === 'auto_rough_cut'), `${mode}: the planner may not re-cut`);

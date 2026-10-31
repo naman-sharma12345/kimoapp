@@ -4,7 +4,7 @@
 // the clip segment they process (see sam.mjs).
 import { spawnBackground as spawn, execFileBackground as execFile, acquireExclusive } from './resources.cjs';
 import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
@@ -14,10 +14,15 @@ import { pictureTools } from './picture-tools.mjs';
 import { pickCaptionStyle, pickHookStyle, noteHints, captionStyles, captionStyle as captionStyleOf, CAPTION_ENGINE } from './captions.mjs';
 import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
 import { planCut, applyCutPlan, plannerBrief, loadSavedPlan, storablePlan } from './cutstage.mjs';
-import { aiHeaders, proxyError } from './kimo-auth.mjs';
+import { aiHeaders, proxyError, hasAiAccess } from './kimo-auth.mjs';
 import { GRAPHIC_TOOLS, GRAPHIC_TOOL_TEXT, graphicToolCall } from './graphics/plan.mjs';
 import { describeClips, matchSentences, outputSentences } from './broll.mjs';
 import { outputWords } from './captions.mjs';
+import { direct, directorSummary } from './explain/director.mjs';
+import { anchorBeats } from './explain/plan.mjs';
+import { EXPLAIN_TOOLS, EXPLAIN_TOOL_TEXT, explainToolCall, notePatches, placeUserBeats } from './explain/tools.mjs';
+import { AssetCache, defaultAssetCache, attributionsText } from './explain/assets.mjs';
+import { score as libraryScore } from './explain/sources/library.mjs';
 import { createHash } from 'node:crypto';
 
 export const AI_URL =
@@ -195,7 +200,7 @@ function parseCalls(raw) {
       args: item?.args && typeof item.args === 'object' && !Array.isArray(item.args) ? item.args : {},
       why: typeof item?.why === 'string' ? item.why.slice(0, 160) : undefined,
     }))
-    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name) || CAMERA_TOOLS.includes(c.name) || GRAPHIC_TOOLS.includes(c.name))
+    .filter((c) => ENGINE_TOOLS.includes(c.name) || SAM_TOOLS.includes(c.name) || CAMERA_TOOLS.includes(c.name) || GRAPHIC_TOOLS.includes(c.name) || EXPLAIN_TOOLS.includes(c.name))
     .slice(0, 8);
 }
 function argsLine(args) {
@@ -302,6 +307,15 @@ export const STYLES = {
     title: 'cinematic',
     punch: 1.1,
     max_pause: 0.4,
+  },
+  explainer: {
+    label: 'Explainer (visuals while you talk)',
+    guide: 'explainer: the screen shows what the speaker says while they say it (the app\'s visual director adds lists, stats, charts, maps, diagrams, real photos at a high density, pip / side layouts preferred). keep dead air out (max_pause 0.3), clean ali-abdaal captions, a clean look (grade 0.7), calm framing (camera energy 3), music low (-20 dB, tech).',
+    captions: { style: 'clean', max_words_per_line: 5, lines: 2, caption_id: 'ali-abdaal' },
+    title: 'lower_third',
+    punch: 1.1,
+    max_pause: 0.3,
+    explain: { density: 'rich', layout: 'pip' },
   },
   tutorial: {
     label: 'Tutorial / explainer',
@@ -645,7 +659,7 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle, explain: explainOpts }) {
   if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
@@ -750,7 +764,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         emit({ t: 'progress', phase: 'render', label: 'rendering with kimo', f, eta: Math.max(1, (est - el) / 1000), bytes, estimated: true });
       }, 500);
     }
-    const result = await (CAMERA_TOOLS.includes(name) ? cameraTool(name, args) : GRAPHIC_TOOLS.includes(name) ? graphicsTool(name, args) : SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
+    const result = await (CAMERA_TOOLS.includes(name) ? cameraTool(name, args) : GRAPHIC_TOOLS.includes(name) ? graphicsTool(name, args) : EXPLAIN_TOOLS.includes(name) ? explainTool(name, args) : SAM_TOOLS.includes(name) ? samTool(name, args) : !legacy_kimo_render && pictures.handles.has(name) ? pictures.call(name,args) : mcp.call(name, args)).finally(() => clearInterval(ticker));
     const failed = Boolean(result?.isError);
     const text = resultText(result);
     history.push(`${name}(${JSON.stringify(args).slice(0, 400)}) => ${failed ? 'ERROR ' : ''}${text}`);
@@ -918,6 +932,85 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     await refreshTimeline();
     return { content: [{ type: 'text', text }] };
+  };
+  // ---------- Phase 7 explainers: the visual director shows what is said while it is said ----------
+  const NO_EXPLAIN = /\b(no|without|turn off|skip)\s+(the\s+|any\s+)?(explainers?|explainer visuals)\b/i;
+  let explainRuns = 0;
+  /** Starts (or re-runs) the visual director; withAi uses the locked proxy when signed in or with an own key. */
+  const startExplain = async (withAi, { fromTool = false, saved: given = null } = {}) => {
+    if (legacy_kimo_render) return;
+    const ctx = pictures.camera?.ctx;
+    if (!Object.values(ctx?.words ?? {}).some((w) => w?.length)) return;
+    const saved = pictures.explain ?? given ?? appEdl?.explain?.config ?? null;
+    const opt = explainOpts ?? {};
+    const state = structuredClone(saved?.state ?? {});
+    const patches = fromTool ? { changes: [], redirect: true } : notePatches(state, mode === 'followup' || mode === 'manual' ? note : `${note ?? ''}`);
+    const off = opt.enabled === false || (NO_EXPLAIN.test(note ?? '') && mode !== 'manual') || state.density === 'off';
+    const cacheDir = env?.KIMO_CACHE_DIR || join(dir, 'cache');
+    const base = { template: style || 'auto', theme: state.theme ?? null, layoutHint: state.layoutHint ?? S.explain?.layout ?? null, state, ffmpeg, sfxDir: join(cacheDir, 'sfx'), sfx: !/\bno (sfx|sound effects|sounds)\b/i.test(note ?? '') };
+    if (off) {
+      pictures.explain = { ...base, enabled: false, beats: [] };
+      return;
+    }
+    // follow-ups and timeline re-renders keep the saved plan unless the note changes it
+    const reuse = saved?.beats && !patches.redirect && !(state.userBeats?.length > (saved.state?.userBeats?.length ?? 0)) && (mode === 'followup' || mode === 'manual');
+    if (reuse || (mode === 'manual' && saved?.beats)) {
+      pictures.explain = { ...saved, ...base, enabled: true };
+      return;
+    }
+    if (mode === 'manual') return;
+    const ai0 = withAi && hasAiAccess() && explainRuns < 3;
+    explainRuns++;
+    const id = randomUUID().slice(0, 8);
+    const t0 = Date.now();
+    emit({ t: 'op', id, phase: 'start', tool: 'explain', title: `explainer · visual director${ai0 ? ' (AI, cached)' : ' (speech cues, on this PC)'}${patches.changes.length ? ` · ${patches.changes.join(', ')}` : ''}`, why: 'what you say is shown on screen as you say it: lists, numbers, maps, diagrams, real images, memes', at: t0 });
+    try {
+      const snap = await pictures.snapshot();
+      const words = outputWords(snap, ctx);
+      if (!words.length) throw new Error('no transcript words');
+      const total = snap.video.flatMap((t) => t.clips).reduce((m, c) => Math.max(m, c.at + (c.out - c.in) / (c.speed ?? 1)), 0);
+      const projectAssets = [...new Set(files.map((f) => join(dirname(f.path), 'assets')))];
+      const appData = process.env.APPDATA ? join(process.env.APPDATA, 'kimo') : join(cacheDir, '..');
+      const keep = new Set((pictures.cutPlan?.screen_punch ?? []).map((x) => x.clip_id));
+      const screens = snap.video.flatMap((t, ti) => t.clips.map((c) => ({ t0: c.at, t1: c.at + (c.out - c.in) / (c.speed ?? 1), what: keep.has(c.id) ? 'screen recording' : ti === 0 ? 'talking head' : 'b-roll' })));
+      const density = state.density ?? opt.density ?? S.explain?.density ?? 'normal';
+      const toggles = { ...(opt.toggles ?? {}), ...(state.toggles ?? {}) };
+      const result = await direct({
+        words, canvas: { w: P.width, h: P.height }, template: style || 'auto', note, toggles, density, offline: Boolean(opt.offline), audience: opt.audience, total,
+        screens, libraryDirs: [join(dir, 'assets'), ...projectAssets, process.env.KIMO_MY_ASSETS || join(appData, 'My assets')],
+        userBeats: placeUserBeats(state.userBeats ?? [], words).beats, removed: state.removed, focus: state.focus, regenerate: state.regenerate, allowMemes: state.allowMemes,
+        ask: ai0 ? (kind, text, images) => ai(kind, text, images, signal) : null,
+        cacheDir: join(cacheDir, 'explain-ai'), assetCache: new AssetCache(env?.KIMO_ASSET_CACHE || defaultAssetCache()), ffmpeg, signal, emit,
+      });
+      let beats = anchorBeats(result.beats, words);
+      if (state.regenerate && saved?.beats?.length) {
+        const r = state.regenerate;
+        const inside = (b) => b._anchor?.say != null && b._anchor.say >= r.from && b._anchor.say < r.to;
+        beats = [...saved.beats.filter((b) => !inside(b)), ...beats.filter(inside)];
+      }
+      // b-roll beats: the user's own non-speech clips through the Phase 6 b-roll planner
+      for (const b of result.beats.filter((x) => x.kind === 'broll')) {
+        const q = b.asset_query?.q ?? b.caption ?? '';
+        const clip = (pictures.broll?.clips ?? []).map((c) => ({ c, s: libraryScore(q, { name: c.path.split(/[\\/]/).pop(), caption: c.description ?? '' }) })).sort((a, z) => z.s - a.s)[0];
+        if (clip?.s >= 0.5) ((graphicsConfig().state.broll ??= [])).push({ at: words[b.say_word_idx].start, dur: 2.5, clip: clip.c.path, in: 0 });
+      }
+      pictures.explain = { ...base, enabled: true, beats, tone: result.cues?.tone ?? null, toggles, density, report: result.report, dropped: result.dropped.slice(0, 60) };
+      emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: directorSummary(result.beats, result.report) });
+      history.push(`explainer => ${directorSummary(result.beats, result.report)}`);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      emit({ t: 'op', id, phase: 'end', ok: false, ms: Date.now() - t0, error: String(error.message).slice(0, 200) });
+    }
+  };
+  const explainTool = async (name, args) => {
+    pictures.explain ??= { enabled: true, beats: [], state: {} };
+    const st = (pictures.explain.state ??= {});
+    const r = explainToolCall(st, name, args);
+    if (!r.ok) return { isError: true, content: [{ type: 'text', text: r.text }] };
+    await startExplain(true, { fromTool: true });
+    await refreshTimeline();
+    const placed = (await pictures.snapshot()).explain?.placed ?? [];
+    return { content: [{ type: 'text', text: JSON.stringify({ ...JSON.parse(r.text), visuals: placed.map((p) => `${p.id} ${p.kind} @${p.at}s ${p.mode}`).slice(0, 20) }) }] };
   };
   // ---------- Phase 5 captions: kimo's own caption engine from the Phase 3 transcript words ----------
   /**
@@ -1151,6 +1244,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         // offline: b-roll from file names at jump cuts, graphics from the template (no AI)
         await startBroll(false);
         startGraphics();
+        await startExplain(false);
       }
       await refreshTimeline();
       if (mode === 'sam') {
@@ -1175,6 +1269,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         if (!pictures.camera && capEdl.camera_plan) pictures.camera = { ctx: capEdl.camera_plan };
         startGraphics(capEdl);
       }
+      if (!suppliedEdl && capEdl?.explain?.config) await startExplain(false, { saved: capEdl.explain.config });
       if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
     } else {
@@ -1207,6 +1302,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       await prepareCamera();
       if (mode !== 'followup') await startBroll(true);
       startGraphics();
+      await startExplain(true);
       const captionsOn = !NO_CAPTIONS.test(note ?? '') || (mode === 'followup' && appEdl?.captions) ? await startCaptions() : false;
       const captionBrief = captionsOn && pictures.captions?.enabled
         ? `captions: ALREADY DONE by the app's caption engine (style "${pictures.captions.style}", word-timed from the transcript, keyword accent, placed below the chin inside the safe area, yields to hook titles, lower thirds and callouts). do not call caption_from_words. call auto_captions only to switch style: one of ${[...captionStyles().values()].filter((x) => x.kind === 'caption').map((x) => x.id).join(', ')}. edit_caption with a cap### clip id changes words. the hook title is drawn by the app's graphics kit${pictures.graphics?.hookStyle && pictures.graphics.hookStyle !== 'planner' ? ` with the "${pictures.graphics.hookStyle}" effect` : ''}.`
@@ -1219,7 +1315,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `canvas: ${P.width}x${P.height}. files:\n${fileLines}`,
           ...brief,
           expertGuide(P, S, files, brief.length ? (loadSavedPlan(projectFile) ?? {}) : null),
-          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}\n${GRAPHIC_TOOL_TEXT}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}\n${GRAPHIC_TOOL_TEXT}\n${EXPLAIN_TOOL_TEXT}`,
         ]
         : [
           `user's note: ${note || 'make a great video from these'}`,
@@ -1227,7 +1323,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           `files:\n${fileLines}`,
           ...brief,
           expertGuide(P, S, files, cut?.plan ?? null),
-          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}\n${GRAPHIC_TOOL_TEXT}`,
+          `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}\n${GRAPHIC_TOOL_TEXT}\n${EXPLAIN_TOOL_TEXT}`,
         ];
       if (captionBrief) context.splice(context.length - 1, 0, captionBrief);
       await buildRounds(mode === 'followup' ? 4 : MAX_ROUNDS, context);
@@ -1329,9 +1425,17 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       };
       emit({ t: 'youtube', youtube });
     }
+    // Phase 7: credits for every fetched asset (and the map data) beside the export, and in the description
+    let attributions = null;
+    const credits = pictures.lastEdl?.explain?.attributions ?? [];
+    if (pictures.lastEdl?.explain) {
+      attributions = join(dir, 'ATTRIBUTIONS.txt');
+      writeFileSync(attributions, attributionsText(credits, { title: files[0]?.path?.split(/[\\/]/).pop() ?? 'kimo video' }));
+      if (youtube && credits.length) youtube.description = `${youtube.description}\n\nCredits:\n${attributionsText(credits).split('\n').filter((l) => l.startsWith('- ')).join('\n')}`.slice(0, 4900);
+    }
     const keepMaster=legacy_kimo_render||process.env.KIMO_COMPOSE_KEEP_MASTER==='1'||output===out;
     if(!keepMaster&&existsSync(out))unlinkSync(out);
-    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, camera: pictures.lastEdl?.camera_report ?? null, captions: pictures.lastEdl?.captions?.stats ?? null, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
+    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, camera: pictures.lastEdl?.camera_report ?? null, captions: pictures.lastEdl?.captions?.stats ?? null, explain: pictures.lastEdl?.explain ? { placed: pictures.lastEdl.explain.placed.length, metrics: pictures.lastEdl.explain.metrics, report: pictures.lastEdl.explain.report } : null, attributions, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
   } finally {
     try { mcp.kill(); } finally { release(); }
   }

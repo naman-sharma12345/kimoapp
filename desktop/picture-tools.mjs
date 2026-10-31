@@ -13,6 +13,7 @@ import { applyCaptions, captionStyle, pickCaptionStyle, CAPTION_ENGINE } from '.
 import { editCaptionChunk } from './caption-edits.mjs';
 import { applyGraphics } from './graphics/plan.mjs';
 import { planBroll, applyBroll } from './broll.mjs';
+import { applyExplain } from './explain/plan.mjs';
 
 /** Implements picture operations locally. The planner remains a read-only black-box toolbox. */
 export function pictureTools({
@@ -47,12 +48,14 @@ export function pictureTools({
     broll: null,
     graphics: null,
     graphicsReport: null,
+    // Phase 7 explainers ({enabled, beats (anchored), template, theme, state, report, ...}); applied on every snapshot
+    explain: null,
     handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit']),
   };
   api.snapshot = async () => {
     const edl = await snapshotEdl();
     if (api.cutPlan) edl.cut_plan = api.cutPlan;
-    return captioned(graphicked(directed(brolled(edl))));
+    return captioned(explained(graphicked(directed(brolled(edl)))));
   };
   const skipped = (stage, error) => {
     const title = `${stage} skipped: ${error.message}`.slice(0, 200);
@@ -84,6 +87,18 @@ export function pictureTools({
       api.graphicsReport = edl.graphics?.report ?? null;
     } catch (error) {
       skipped('graphics', error);
+    }
+    return edl;
+  };
+  /** Phase 7 explainers: the director's beats on the EDL (after the graphics kit, before captions so they yield). */
+  const explained = (edl) => {
+    if (!api.explain || (mode === 'manual' && suppliedEdl)) return edl;
+    try {
+      applyExplain(edl, api.explain, api.camera?.ctx ?? edl.camera_plan ?? {});
+      const { beats, state, template, theme, tone, toggles, density, report, dropped, sfx } = api.explain;
+      if (edl.explain) edl.explain.config = { beats, state, template, theme, tone, toggles, density, report, dropped, sfx };
+    } catch (error) {
+      skipped('explainers', error);
     }
     return edl;
   };
@@ -214,6 +229,13 @@ export function pictureTools({
           const kinds = Object.entries(g.by_kind ?? {}).map(([k, n]) => `${n} ${k.replace('_', ' ')}`).join(', ');
           emit({ t: 'op', id, phase: 'start', tool: 'graphics_plan', title: `graphics · ${g.count ?? 0} on screen${edl.broll?.inserts?.length ? ` · ${edl.broll.inserts.length} b-roll` : ''}`, why: 'hook title, lower thirds, number pops, callouts and b-roll, at most one graphic at a time', at: Date.now() });
           emit({ t: 'op', id, phase: 'end', ok: true, ms: 0, result: `${kinds || 'no graphics'}${g.overlaps ? ` · ${g.overlaps} overlaps` : ' · no overlaps'} · ${g.per_min ?? 0}/min (limit ${edl.graphics?.density_limit ?? '?'})${edl.graphics?.dropped?.length ? ` · ${edl.graphics.dropped.length} held back` : ''}${b.count ? ` · b-roll ${Math.round((b.share ?? 0) * 100)}% of runtime` : ''}${g.screen_cards ? ` · ${g.screen_cards} screen cards` : ''}` });
+        }
+        if (edl.explain) {
+          const x = edl.explain;
+          const id = Math.random().toString(16).slice(2, 10);
+          const kinds = x.placed.map((b) => b.kind.replace(/_/g, ' '));
+          emit({ t: 'op', id, phase: 'start', tool: 'explain_plan', title: `explainer: ${kinds.length} visual${kinds.length === 1 ? '' : 's'}${kinds.length ? `: ${kinds.join(', ')}` : ''}`, why: 'what the speaker says, shown on screen as they say it', at: Date.now() });
+          emit({ t: 'op', id, phase: 'end', ok: true, ms: 0, result: `${x.placed.filter((b) => b.mode === 'pip').length} in a speaker bubble · ${x.sfx.length} sounds · face overlap ${x.metrics.explain_face_overlap}${x.dropped.length ? ` · ${x.dropped.length} held back` : ''}${x.attributions.length ? ` · ${x.attributions.length} credit${x.attributions.length === 1 ? '' : 's'}` : ''}` });
         }
         writeFileSync(savedEdl, JSON.stringify(edl, null, 2));
         const result = await compose({
