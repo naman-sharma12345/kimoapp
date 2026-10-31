@@ -276,6 +276,8 @@ async function smoke(clip, outPath) {
     const live = { timeline: 0, preview: 0, progress: 0 };
     const r = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, note: '', preset: 'square', mode: 'captions', ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: (ev) => (ev.t === 'op' && ops.push(ev), ev.t in live && live[ev.t]++) });
     report.render = { edl: r.edl?.edl_version === 1, composed: ops.some(o => o.tool === 'compose' && o.phase === 'end' && o.ok), output: r.output, bytes: fs.statSync(r.output).size, duration: r.duration, live, quality: r.quality, projectFile: Boolean(r.projectFile), ops: ops.filter((o) => o.phase === 'end').map((o) => `${o.ok ? 'ok' : 'ERR'} ${o.ms}ms ${o.error || ''}`) };
+    // the captions-mode EDL, read before the manual re-render below rewrites edit.edl.json
+    const savedEdl = r.edlFile && fs.existsSync(r.edlFile) ? JSON.parse(fs.readFileSync(r.edlFile, 'utf8')) : null;
     // timeline editor path: trim the first clip on the saved project and re-render
     const first = r.timeline?.tracks_bottom_to_top?.[0]?.clips?.[0];
     report.stage = 'manual';
@@ -289,7 +291,6 @@ async function smoke(clip, outPath) {
     // Phase 5: kimo's own captions, and libass picks only the bundled fonts (no fallback) on this PC
     report.stage = 'caption-fonts';
     flush();
-    const savedEdl = r.edlFile && fs.existsSync(r.edlFile) ? JSON.parse(fs.readFileSync(r.edlFile, 'utf8')) : null;
     const chunks = (savedEdl?.overlays ?? []).filter((o) => o.props?.engine === 'kimo-captions');
     const { fontSelfTest } = await import(pathToFileURL(join(__dirname, 'caption-selftest.mjs')).href);
     const fonts = await fontSelfTest({ ffmpeg: p.ffmpeg, dir: join(data(), 'smoke', 'caption-fonts'), edl: savedEdl });
