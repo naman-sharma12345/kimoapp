@@ -137,3 +137,85 @@ test(
     }
   },
 );
+test(
+  'the transcript cut plan becomes the composed EDL (captions offline, AI cold open)',
+  { timeout: 180000 },
+  async () => {
+    const { analyzeAudio, buildTranscript, extractSpeechWav, wavSamples } = await import('../transcript.mjs');
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-cutplan-'));
+    const original = globalThis.fetch;
+    const asked = [];
+    globalThis.fetch = async (_url, init) => {
+      const body = JSON.parse(init.body);
+      asked.push(body.text.slice(0, 40));
+      if (body.text.startsWith('JUDGMENT TASK'))
+        return Response.json({ record: { done: true, calls: [], judgment: { hook: { sentence: 1, trim_words: [0, 0], hook_text: 'again' }, order: [1, 0] } } });
+      return Response.json({
+        record: body.kind === 'build' ? { done: true, calls: [{ tool: 'auto_rough_cut', args: {} }, { tool: 'lint_edit', args: {} }] } : { verdict: 'clean', calls: [], faults: [] },
+      });
+    };
+    PRESETS.fixture = { width: 192, height: 128, mbps: 2, label: 'synthetic fixture' };
+    try {
+      // speech-like tone bursts at the word times, silence elsewhere
+      const input = join(dir, 'talk.mkv');
+      await command(tools.ffmpeg, ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=192x128:rate=25:duration=3', '-f', 'lavfi', '-i', "aevalsrc='0.3*sin(2*PI*180*t)*(between(t,0.2,0.8)+between(t,0.85,1.2)+between(t,2.2,2.8))':s=48000:d=3", '-c:v', 'ffv1', '-c:a', 'pcm_s16le', '-shortest', input]);
+      const file = await probe(tools.ffprobe, input);
+      const words = [
+        { w: 'hello', start: 0.25, end: 0.75, conf: 0.9 },
+        { w: 'world.', start: 0.88, end: 1.15, conf: 0.9 },
+        { w: 'again.', start: 2.25, end: 2.75, conf: 0.9 },
+      ];
+      const transcribe = async ({ ffmpeg, input: path, src, workDir }) => {
+        const { mkdirSync } = await import('node:fs');
+        mkdirSync(workDir, { recursive: true });
+        const { samples } = wavSamples(await readFile(await extractSpeechWav(ffmpeg, path, join(workDir, 'a.wav'))));
+        return Object.defineProperty(buildTranscript({ words, whisperLang: 'en', analysis: analyzeAudio(samples), src, hash: 'fixture' }), 'samples', { value: samples });
+      };
+      for (const mode of ['captions', 'ai']) {
+        const events = [];
+        const log = join(dir, `${mode}-tools.jsonl`);
+        const result = await runEdit({
+          bin: [process.execPath, fileURLToPath(new URL('./fixtures/planner.mjs', import.meta.url))],
+          env: { ...tools.env, KIMO_TEST_SOURCE: input, KIMO_TEST_LOG: log, KIMO_TEST_REAL_CLIPS: '1', KIMO_TEST_DURATION: '3', KIMO_CACHE_DIR: join(dir, 'cache') },
+          dir: join(dir, mode),
+          files: [file],
+          preset: 'fixture',
+          mode,
+          transcribe,
+          ffmpeg: tools.ffmpeg,
+          ffprobe: tools.ffprobe,
+          emit: (e) => events.push(e),
+        });
+        const edl = JSON.parse(await readFile(result.edlFile, 'utf8'));
+        const aroll = edl.video.find((t) => t.clips.some((c) => c.id.startsWith('cut')));
+        assert.ok(aroll, `${mode}: A-roll track in the EDL`);
+        assert.equal(aroll.clips.length, 2, mode);
+        assert.ok(edl.cut_plan?.keep?.length === 2, `${mode}: cut plan rides on the EDL`);
+        assert.ok(result.cutPlan.summary.pauses >= 1, mode);
+        assert.ok(result.duration < 2.3, `${mode}: ${result.duration}`);
+        const ended = (tool) => {
+          const start = events.find((e) => e.t === 'op' && e.tool === tool && e.phase === 'start');
+          return events.find((e) => e.t === 'op' && e.phase === 'end' && (start ? e.id === start.id : e.tool === tool));
+        };
+        for (const tool of ['transcribe', 'cut_plan', 'apply_cut', 'compose']) assert.ok(ended(tool)?.ok, `${mode}: ${tool} op`);
+        assert.match(ended('cut_plan').result, /^removed \d+ pauses? \([\d.]+ s\)/);
+        const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
+        assert.ok(!calls.some((c) => c.name === 'auto_rough_cut'), `${mode}: the planner may not re-cut`);
+        if (mode === 'captions') {
+          // offline: no AI call at all; the forced punch frames the jump cut
+          assert.equal(asked.length, 0);
+          assert.equal(aroll.clips[0].in, 0.2);
+          assert.ok(aroll.clips[1].camera[0].zoom >= 1.1 && aroll.clips[1].camera[0].y < 0.5, JSON.stringify(aroll.clips[1].camera[0]));
+        } else {
+          assert.ok(asked[0].startsWith('JUDGMENT TASK'));
+          assert.equal(result.cutPlan.hook.text, 'again');
+          assert.ok(aroll.clips[0].in > 2, 'cold open: the hook line plays first');
+        }
+      }
+    } finally {
+      globalThis.fetch = original;
+      delete PRESETS.fixture;
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);

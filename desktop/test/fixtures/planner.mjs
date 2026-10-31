@@ -2,6 +2,11 @@
 import { createInterface } from 'node:readline';
 import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 const source = process.env.KIMO_TEST_SOURCE;
+// KIMO_TEST_REAL_CLIPS=1: add_track/add_clip/set_property really edit the project
+// (the cut-plan pipeline test lays its own A-roll track)
+const real = process.env.KIMO_TEST_REAL_CLIPS === '1';
+const sourceDuration = Number(process.env.KIMO_TEST_DURATION) || 1;
+let nextClip = 1;
 let project = {
   width: 192,
   height: 128,
@@ -12,7 +17,7 @@ let project = {
       path: source,
       width: 192,
       height: 128,
-      duration: 1,
+      duration: sourceDuration,
       fps: 25,
     },
   },
@@ -84,9 +89,24 @@ for await (const line of createInterface({ input: process.stdin })) {
           fps: a.fps,
         });
       if (name === 'import_media')
-        value = { asset_id: 's1', duration: 1, fps: 25 };
-      if (name === 'add_track') value = { track_id: 'V1' };
-      if (name === 'add_clip') value = { clip_id: 'clip1' };
+        value = { asset_id: 's1', duration: sourceDuration, fps: 25 };
+      if (name === 'add_track' && !real) value = { track_id: 'V1' };
+      if (name === 'add_clip' && !real) value = { clip_id: 'clip1' };
+      if (real && name === 'add_track') {
+        const id = `A${project.tracks.length}`;
+        project.tracks = project.tracks.filter((t) => t.id !== 'V1');
+        project.tracks.push({ id, clips: [] });
+        value = { track_id: id };
+      }
+      if (real && name === 'add_clip') {
+        const id = `cut${nextClip++}`;
+        project.tracks.find((t) => t.id === a.track_id).clips.push({ id, source: { type: 'media', asset: a.asset_id }, start: a.start, duration: a.duration, in_point: a.in_point ?? 0, speed: 1, props: { fit: { base: 1 } }, audio: { volume: { base: 1 } } });
+        value = { clip_id: id };
+      }
+      if (real && name === 'set_property') {
+        const c = project.tracks.flatMap((t) => t.clips).find((x) => x.id === a.clip_id);
+        c.props[a.property] = { base: a.value };
+      }
       if (name === 'timeline_summary')
         value = {
           duration: 1,

@@ -28,9 +28,17 @@ export function pictureTools({
   const warnings = new Set();
   const api = {
     lastEdl: null,
+    // Phase 3 transcript cut plan (keep segments by clip id, needs_cover joins, hook,
+    // emphasis): rides on the EDL so later phases and follow-ups read the same decisions
+    cutPlan: null,
     handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit']),
   };
   api.snapshot = async () => {
+    const edl = await snapshotEdl();
+    if (api.cutPlan) edl.cut_plan = api.cutPlan;
+    return edl;
+  };
+  const snapshotEdl = async () => {
     if (mode === 'manual' && suppliedEdl) return structuredClone(suppliedEdl);
     const path = join(dir, 'planner-current.kimo.json');
     const result = await mcp.call('save_project', { path });

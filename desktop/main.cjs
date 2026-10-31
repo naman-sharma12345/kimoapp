@@ -31,6 +31,8 @@ const engineEnv = () => {
     KIMO_MODELS: join(p.model, '..'),
     KIMO_WHISPER_BIN: p.whisper,
     KIMO_WHISPER_MODEL: p.model,
+    // transcripts and the transcript-judgment AI answers are cached by content hash here
+    KIMO_CACHE_DIR: join(data(), 'cache'),
     KIMO_TOOLS: 'director',
     KIMO_SPECTATOR: 'off',
   };
@@ -155,6 +157,7 @@ async function pump() {
     if (result.projectFile) next.projectFile = result.projectFile;
     if (result.edlFile) next.edlFile = result.edlFile;
     if (result.edl) next.edl = result.edl;
+    if (result.cutPlan) next.cutPlan = { summary: result.cutPlan.summary, metrics: result.cutPlan.metrics };
     next.renders = (next.renders ?? 0) + 1;
     next.took = Date.now() - next.started;
     if (result.speed) saveSettings({ speed: result.speed });
@@ -278,6 +281,7 @@ async function smoke(clip, outPath) {
       const r3 = await e.runEdit({ bin: p.kimo, env: engineEnv(), dir: join(data(), 'smoke'), files, preset: 'square', mode: 'manual', projectFile: r.projectFile, ops: [{ tool: 'trim_clip', args: { clip_id: first.id, duration: Math.max(1, (first.end - first.start) - 1) } }], ffmpeg: p.ffmpeg, ffprobe: p.ffprobe, emit: () => undefined });
       report.manual = { duration: r3.duration, expected: Math.max(1, (first.end - first.start) - 1) };
     }
+    report.cutPlan = r.cutPlan ? { summary: r.cutPlan.summary?.text, metrics: r.cutPlan.metrics } : null;
     report.captions = r.history.filter((h) => h.startsWith('auto_captions')).map((h) => h.slice(0, 600));
     report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed);
     const samAt = process.argv.indexOf('--smoke-sam');

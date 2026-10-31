@@ -10,6 +10,7 @@ import { samEffect, SAM_EFFECTS, motionJitter } from './sam.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
 import { pictureTools } from './picture-tools.mjs';
 import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
+import { planCut, applyCutPlan, plannerBrief, loadSavedPlan, storablePlan } from './cutstage.mjs';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -299,12 +300,13 @@ export const STYLES = {
 };
 
 /** What a top YouTube editor does, as rules the model follows with kimo's tools. */
-function expertGuide(P, S, files) {
+function expertGuide(P, S, files, cut) {
   const vertical = P.height > P.width;
   const talking = files.some((f) => f.kind === 'video');
   return `edit like a top youtube editor (the result must look professionally edited, not auto-generated):
-- hook: the first 2-3 s decide retention. start on speech or the most striking moment, never on dead air. put a 3-6 word hook on its own top track in the first 2.5 s with add_title style "${S.title}" (short, specific, curiosity, no clickbait lies).
-- pacing: ${talking ? `auto_rough_cut every talking clip in story order with max_pause ${S.max_pause ?? 0.3} and pad 0.05; read the returned segments and re-run with drop [{asset_id,index}] for false starts, repeats and filler-only segments (um, uh, like).` : 'cut to the beat or keep shots 1.5-4 s.'}
+- hook: the first 2-3 s decide retention. ${cut ? `the cut already opens on ${cut.hook ? 'the strongest line (cold open)' : 'the first spoken word'}; keep it first.` : 'start on speech or the most striking moment, never on dead air.'} put a 3-6 word hook on its own top track starting at 0.3 s or earlier, for 2-2.5 s, with add_title style "${S.title}" (short, specific, curiosity, no clickbait lies${cut?.judgment?.hook_text ? `; use "${cut.judgment.hook_text}"` : ''}).
+- pacing: ${cut ? 'dead air, fillers, stutters and retakes are already removed by the transcript cut planner (word-accurate). do not re-cut the talking track; spend your calls on framing, captions, titles, grade and sound.' : talking ? `auto_rough_cut every talking clip in story order with max_pause ${S.max_pause ?? 0.3} and pad 0.05; read the returned segments and re-run with drop [{asset_id,index}] for false starts, repeats and filler-only segments (um, uh, like).` : 'cut to the beat or keep shots 1.5-4 s.'}
+- cadence: a visual change (cut, punch, b-roll, graphic) every 1.5-4 s on talking footage, never more than 6 s static.
 - energy: ${S.punch > 1.12 ? `add_punch_ins on the talking track (pattern alternate, scale ${S.punch}, focus on the face) for jump-cut rhythm` : `add_smart_punch zoom ${S.punch + 0.05} on long single shots, or add_punch_ins scale ${S.punch} with ease 0.4`}. if there are extra non-speech video files, place_broll them over the talking track (min_shot 1.2, max_shot 3).
 - captions: auto_captions style "${S.captions.style}", max_words_per_line ${S.captions.max_words_per_line}${S.captions.lines ? `, lines ${S.captions.lines}` : ''}, keywords true, highlight true, position auto, hint = names/terms from the note. captions must stay inside the title-safe area${vertical ? ' (vertical: keep text out of the bottom 20% and right 15% where shorts/reels ui sits; position middle is safest)' : ''}.
 - look: auto_grade every media clip (style strength as given). never stack two grades.
@@ -625,7 +627,7 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe }) {
   if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
@@ -648,6 +650,37 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   const checks = [];
   let youtube = null;
   let reviewImages = [];
+  let cut = null; // Phase 3 transcript cut plan, when one was applied
+  const imported = new Set();
+  const jsonCall = async (name, args) => resultJson((await silent(name, args)) ?? {});
+  const runCut = async (askAi) => {
+    try {
+      return await planCut({ files, P, style, styleInfo: S, note, mode, env, dir, ffmpeg, signal, emit, askAi, transcribe });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      emit({ t: 'think', text: `transcript cut skipped (${error.message}); cutting the old way` });
+      return null;
+    }
+  };
+  /** Lays the plan on the timeline as one live op; returns the clip ids. */
+  const layCut = async (assets, laneMode) => {
+    const id = randomUUID().slice(0, 8);
+    const t0 = Date.now();
+    emit({ t: 'op', id, phase: 'start', tool: 'apply_cut', title: `apply_cut ${cut.plan.keep.length} segments → A-roll track`, why: 'the transcript cut becomes the timeline the compositor renders', at: t0 });
+    const r = await applyCutPlan({ plan: cut.plan, clips: cut.clips, assets: cut.clips.map((c) => assets.find((a) => a.path === c.file.path)), call: jsonCall, P, fps: canvasFps(files), mode: laneMode });
+    pictures.cutPlan = { track: r.track, keep: cut.plan.keep.map((k) => ({ clip_id: k.clip_id, src_path: cut.clips.find((c) => c.src === k.src)?.file.path, in: k.in, out: k.out, at: k.at, reason: k.reason, zoom: k.zoom, speaker: k.speaker, sentences: k.sentences })), needs_cover: cut.plan.needs_cover, screen_punch: cut.plan.keep.filter((k) => cut.clips.find((c) => c.src === k.src)?.screen).map((k) => ({ clip_id: k.clip_id, at: k.at, kind: 'screen_punch' })), hook: cut.plan.hook, judgment: cut.plan.judgment, summary: cut.plan.summary, metrics: cut.plan.metrics, broll: cut.plan.broll };
+    writeFileSync(join(dir, 'cutplan.json'), JSON.stringify(storablePlan(cut.plan), null, 1));
+    history.push(`apply_cut => ${cut.plan.summary.text}; A-roll track ${r.track} with ${r.clipIds.length} clips`);
+    emit({ t: 'op', id, phase: 'end', ok: r.clipIds.length > 0, ms: Date.now() - t0, result: `${r.clipIds.length} clips · ${r.duration.toFixed(2)} s on ${r.track}` });
+    await refreshTimeline();
+    return r;
+  };
+  const allowedCall = (c) => {
+    if (!cut) return true;
+    if (['auto_rough_cut', 'cut_to_beat', 'project_set'].includes(c.name)) return false;
+    if (c.name === 'import_media' && imported.has(String(c.args.path ?? '').replaceAll('\\', '/'))) return false;
+    return true;
+  };
   const silent = async (name, args) => {
     const r = !legacy_kimo_render && pictures.handles.has(name) ? await pictures.call(name,args) : await mcp.call(name, args);
     return r?.isError ? null : r;
@@ -854,6 +887,10 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       const planned = parseCalls(answer.calls);
       if (planned.length) emit({ t: 'think', text: `next: ${planned.map((c) => c.name).join(' → ')}` });
       for (const c of planned) {
+        if (!allowedCall(c)) {
+          emit({ t: 'think', text: `skipping ${c.name}: the transcript cut already did that` });
+          continue;
+        }
         if (c.name === 'project_set') Object.assign(c.args, { width: P.width, height: P.height, fps: canvasFps(files) });
         // kimo can file speech it doesn't classify as dialogue under "ambience" and mute it;
         // keep the sound unless the edit laid real b-roll over the talking track
@@ -893,16 +930,24 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       for (const f of files) {
         const r = await call('import_media', { path: f.path });
         const j = resultJson(r);
-        if (j.asset_id) assets.push({ id: j.asset_id, duration: Number(j.duration) || 0, fps: Number(j.fps) || 0, kind: f.kind });
+        if (j.asset_id) assets.push({ id: j.asset_id, duration: Number(j.duration) || 0, fps: Number(j.fps) || 0, kind: f.kind, path: f.path });
       }
       if (!assets.length) throw new Error('none of the files could be imported');
+      let clipIds = [];
+      // captions-only: the deterministic transcript cut runs offline (no AI call)
+      if (mode === 'captions') {
+        emit({ t: 'status', text: 'transcribing on this PC and cutting dead air, fillers and retakes' });
+        cut = await runCut(null);
+        if (cut) clipIds = (await layCut(assets, 'captions')).clipIds;
+      }
+      if (!cut) {
       const track = resultJson(await call('add_track', {})).track_id;
       let at = 0;
-      const clipIds = [];
       for (const a of assets.filter((x) => x.kind !== 'audio' && x.duration > 0)) {
         const j = resultJson(await call('add_clip', { track_id: track, source_type: 'media', asset_id: a.id, start: at, duration: a.duration, in_point: 0, fit: 'cover' }));
         if (j.clip_id) clipIds.push(j.clip_id);
         at += a.duration;
+      }
       }
       if (mode === 'sam') {
         await call('finish_audio', { target_lufs: -14, keep_ambience: true });
@@ -917,20 +962,48 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
     } else {
+      let brief = [];
+      if (mode === 'followup') {
+        const saved = loadSavedPlan(projectFile);
+        if (saved?.keep?.some((k) => k.clip_id)) brief = plannerBrief(saved);
+      } else {
+        // the transcript decides the cut; the AI only makes the judgment calls (one cached call)
+        emit({ t: 'status', text: 'transcribing on this PC and planning the cut from the words' });
+        cut = await runCut((text) => ai('build', text, [], signal));
+        if (cut) {
+          await call('project_set', { width: P.width, height: P.height, fps: canvasFps(files) }, 'canvas at the footage\'s own rate');
+          const assets = [];
+          for (const f of files) {
+            const j = resultJson(await call('import_media', { path: f.path }));
+            if (j.asset_id) {
+              assets.push({ id: j.asset_id, duration: Number(j.duration) || f.duration || 0, kind: f.kind, path: f.path });
+              imported.add(f.path.replaceAll('\\', '/'));
+            }
+          }
+          const laid = await layCut(assets, 'ai');
+          const broll = cut.clips.filter((c) => c.kind === 'broll').map((c) => ({ ...assets.find((a) => a.path === c.file.path), path: c.file.path, duration: c.duration })).filter((b) => b.id).map((b) => ({ asset_id: b.id, path: b.path, duration: b.duration }));
+          brief = [
+            `already done (do not repeat): project_set ${P.width}x${P.height}, import_media for every file (asset ids: ${assets.map((a) => `${a.id} = ${a.path.split(/[\\/]/).pop()}`).join(', ')}).`,
+            ...plannerBrief(cut.plan, { trackId: laid.track, broll }),
+          ];
+        }
+      }
       const context = mode === 'followup'
         ? [
           `this is a FOLLOW-UP on an existing, already-loaded kimo project. the user's request: ${note}`,
           'change only what the request asks; keep everything else. do NOT call project_set; do not re-import files that are already in the project; use the clip and track ids from the timeline below exactly. finish with finish_audio if you changed audio, then set done.',
           `current timeline: ${JSON.stringify(timeline ?? {}).slice(0, 6000)}`,
           `canvas: ${P.width}x${P.height}. files:\n${fileLines}`,
-          expertGuide(P, S, files),
+          ...brief,
+          expertGuide(P, S, files, brief.length ? (loadSavedPlan(projectFile) ?? {}) : null),
           `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
         ]
         : [
           `user's note: ${note || 'make a great video from these'}`,
           `canvas: ${P.width}x${P.height} at ${canvasFps(files)} fps (${P.label}; the footage's own rate, keep it). job folder: ${dir}`,
           `files:\n${fileLines}`,
-          expertGuide(P, S, files),
+          ...brief,
+          expertGuide(P, S, files, cut?.plan ?? null),
           `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}`,
         ];
       await buildRounds(mode === 'followup' ? 4 : MAX_ROUNDS, context);
@@ -967,7 +1040,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           ? `check ${pass}: clean. ${typeof review.message === 'string' ? review.message : ''}`.trim()
           : `check ${pass}: ${faults.length || 'some'} fault${faults.length === 1 ? '' : 's'}\n${faults.map((f) => `· ${f}`).join('\n')}` });
         if (clean || !fixes.length) break;
-        for (const c of fixes) await call(c.name, c.args, c.why);
+        for (const c of fixes) if (allowedCall(c)) await call(c.name, c.args, c.why);
         if (pass === MAX_PASSES) {
           emit({ t: 'say', text: 'final fixes applied · exporting once more' });
           await check(pass + 1);
@@ -1034,7 +1107,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     const keepMaster=legacy_kimo_render||process.env.KIMO_COMPOSE_KEEP_MASTER==='1'||output===out;
     if(!keepMaster&&existsSync(out))unlinkSync(out);
-    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec };
+    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
   } finally {
     try { mcp.kill(); } finally { release(); }
   }
