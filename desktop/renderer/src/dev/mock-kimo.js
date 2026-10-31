@@ -74,6 +74,8 @@
     return e;
   };
   for(const p of library)if(p.timeline)p.edl=mockEdl(p.timeline);
+  // Phase 7: one explainer beat (a list with three items on their words) on p2's GFX track
+  library[1].edl.overlays.push({ id: 'ex1', kind: 'graphic', track: 'graphics', at: 4, dur: 3.2, props: { element: 'ex_list', mode: 'side', title: '3 reasons it failed', items: [{ text: 'No users', t: 0.3 }, { text: 'Too slow', t: 1.1 }, { text: 'Ran out of money', t: 1.9 }], explain: { beat: 'b1', kind: 'list' } } });
   const ops = [
     ['probe', 'probe the footage', '318 s, 4K 30p, stereo'],
     ['transcribe', 'transcribe speech with whisper', 'offline, word timings'],
@@ -130,6 +132,7 @@
         if(op.tool==='move_clip')c.at=op.args.start;
         if(op.tool==='trim_clip'){if(c.props)c.dur=op.args.duration;else{c.in=op.args.in_point??c.in;c.out=c.in+op.args.duration*c.speed;}}
         if(op.tool==='edit_caption')c.props.text=op.args.text;
+        if(op.tool==='edit_explain'){if(op.args.title)c.props.title=op.args.title;if(op.args.items)c.props.items=op.args.items.map((text,k)=>({...(c.props.items[k]??{}),text}));if(op.args.kind){c.props.element='ex_'+op.args.kind;c.props.explain={...c.props.explain,kind:op.args.kind};}if(op.args.mode)c.props.mode=op.args.mode;}
         if(op.tool==='delete_clip'){for(const t of e.video)t.clips=t.clips.filter(x=>x!==c);e.overlays=e.overlays.filter(x=>x!==c);}
       }
       emit('project',structuredClone(p));return structuredClone(p);
@@ -145,6 +148,7 @@
     },
     signOut: async () => ({ owner: false, subject: null, byok: null, ai: false }),
     setKey: async (f) => ({ owner: false, subject: null, byok: { provider: f.provider, model: f.model, last4: String(f.key).slice(-4) }, ai: true }),
+    regenerateVisuals: async () => null,
     clearKey: async () => ({ owner: false, subject: null, byok: null, ai: false }),
     onProject: on('project'), onEvent: on('event'), onProgress: on('progress'), onUpdate: on('update'),
   };

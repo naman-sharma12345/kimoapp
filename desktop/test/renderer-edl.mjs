@@ -32,7 +32,7 @@ try {
     .filter({ hasText: 'podcast ep 12 cut' })
     .click();
   await page.locator('.desk-clip').first().waitFor();
-  assert.equal(await page.locator('.desk-clip').count(), 13);
+  assert.equal(await page.locator('.desk-clip').count(), 14);
   const caption = page.getByRole('button', { name: /^the road to manali ·/ });
   await caption.focus();
   await caption.press('Space');
@@ -64,7 +64,7 @@ try {
     path: join(root, 'docs/screens/phase-02-desktop-edl-edit.png'),
   });
   console.log(
-    'EDL timeline: 13 clips, keyboard caption edit persisted, visible focus, no JS errors or HTTP requests. Viewer media is intentionally absent in this IPC fixture.',
+    'EDL timeline: 14 clips (one explainer beat), keyboard caption edit persisted, visible focus, no JS errors or HTTP requests. Viewer media is intentionally absent in this IPC fixture.',
   );
 } finally {
   await browser.close();
