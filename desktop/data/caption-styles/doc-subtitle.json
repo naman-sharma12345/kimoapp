@@ -1,0 +1,71 @@
+{
+  "id": "doc-subtitle",
+  "name": "Documentary subtitle",
+  "description": "Netflix-style subtitles: white, two lines, bottom, 42 characters per line, at most 17 characters per second, no animation.",
+  "kind": "caption",
+  "font": {
+    "file": "Geist-SemiBold.ttf",
+    "family": "Geist SemiBold",
+    "weight": 600
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Bold.ttf",
+    "family": "Noto Sans Devanagari Bold",
+    "weight": 700
+  },
+  "size": 0.032,
+  "size_wide": 0.05,
+  "case": "asis",
+  "colors": {
+    "text": "#FFFFFF",
+    "active": "#FFFFFF",
+    "accent": "#FFFFFF",
+    "outline": "#000000",
+    "shadow": "#000000"
+  },
+  "outline": 0.0012,
+  "shadow": 0.0012,
+  "shadow_opacity": 0.6,
+  "box": null,
+  "line_spacing": 1.1,
+  "letter_spacing": 0,
+  "layout": {
+    "shorts": {
+      "max_words": 8,
+      "max_chars": 30,
+      "max_lines": 2,
+      "min_dur": 1.0
+    },
+    "wide": {
+      "max_words": 14,
+      "max_chars": 42,
+      "max_lines": 2,
+      "min_dur": 1.0
+    }
+  },
+  "position": "bottom",
+  "highlight": "none",
+  "animation": {
+    "in": {
+      "type": "none",
+      "frames": 0
+    },
+    "out": {
+      "type": "none",
+      "frames": 0
+    }
+  },
+  "accent": {
+    "enabled": false,
+    "max_per_chunk": 1,
+    "ratio": [
+      0,
+      0
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "keep",
+  "numbers": "keep",
+  "max_cps": 17
+}

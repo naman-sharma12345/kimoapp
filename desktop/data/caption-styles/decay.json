@@ -1,0 +1,75 @@
+{
+  "id": "decay",
+  "name": "Decay",
+  "description": "Hook/keyword title in the Vox-style erode look: resolves from a blur, then decays with growing blur, shrinking outline and jittered ghost copies.",
+  "kind": "title",
+  "font": {
+    "file": "Geist-Bold.ttf",
+    "family": "Geist Bold",
+    "weight": 700
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Bold.ttf",
+    "family": "Noto Sans Devanagari Bold",
+    "weight": 700
+  },
+  "size": 0.066,
+  "size_wide": 0.07,
+  "case": "upper",
+  "colors": {
+    "text": "#F5F1E7",
+    "active": "#F5F1E7",
+    "accent": "#FF5A24",
+    "outline": "#0E0D0C",
+    "shadow": "#000000"
+  },
+  "outline": 0.0025,
+  "shadow": 0.0,
+  "shadow_opacity": 0.0,
+  "box": null,
+  "line_spacing": 1.0,
+  "letter_spacing": 0.004,
+  "layout": {
+    "shorts": {
+      "max_words": 3,
+      "max_chars": 14,
+      "max_lines": 1,
+      "min_dur": 0.3
+    },
+    "wide": {
+      "max_words": 5,
+      "max_chars": 30,
+      "max_lines": 1,
+      "min_dur": 0.8
+    }
+  },
+  "position": "auto",
+  "highlight": "decay",
+  "animation": {
+    "in": {
+      "type": "blur-in",
+      "frames": 6,
+      "easing": "cubic-out",
+      "blur": 8
+    },
+    "out": {
+      "type": "decay",
+      "frames": 9,
+      "blur": 7,
+      "jitter": 0.004,
+      "ghosts": 3
+    }
+  },
+  "accent": {
+    "enabled": false,
+    "max_per_chunk": 1,
+    "ratio": [
+      0,
+      0
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "strip",
+  "numbers": "digits"
+}

@@ -1,0 +1,81 @@
+{
+  "id": "boxed-highlight",
+  "name": "Boxed highlight",
+  "description": "The current word sits on an accent rounded box (ASS vector shape) that slides word to word with \\move.",
+  "kind": "caption",
+  "font": {
+    "file": "Montserrat-ExtraBold.ttf",
+    "family": "Montserrat ExtraBold",
+    "weight": 800
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Black.ttf",
+    "family": "Noto Sans Devanagari Black",
+    "weight": 900
+  },
+  "size": 0.068,
+  "size_wide": 0.06,
+  "case": "upper",
+  "colors": {
+    "text": "#FFFFFF",
+    "active": "#111111",
+    "accent": "#FFE11A",
+    "box": "#FF5A24",
+    "outline": "#000000",
+    "shadow": "#000000"
+  },
+  "outline": 0.0045,
+  "shadow": 0.0,
+  "shadow_opacity": 0.0,
+  "box": null,
+  "highlight_box": {
+    "color": "#FF5A24",
+    "radius": 0.22,
+    "pad_x": 0.16,
+    "pad_y": 0.06,
+    "slide_frames": 3
+  },
+  "line_spacing": 1.12,
+  "letter_spacing": 0,
+  "layout": {
+    "shorts": {
+      "max_words": 3,
+      "max_chars": 16,
+      "max_lines": 2,
+      "min_dur": 0.4
+    },
+    "wide": {
+      "max_words": 6,
+      "max_chars": 36,
+      "max_lines": 1,
+      "min_dur": 0.8
+    }
+  },
+  "position": "auto",
+  "highlight": "box",
+  "animation": {
+    "in": {
+      "type": "pop",
+      "frames": 4,
+      "easing": "back-out",
+      "from": 0.9,
+      "peak": 1.03
+    },
+    "out": {
+      "type": "none",
+      "frames": 0
+    }
+  },
+  "accent": {
+    "enabled": true,
+    "max_per_chunk": 1,
+    "ratio": [
+      0.15,
+      0.3
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "strip",
+  "numbers": "digits"
+}

@@ -1,0 +1,85 @@
+{
+  "id": "mrbeast",
+  "name": "MrBeast",
+  "description": "Bangers (OFL Komika lookalike), white with a coloured stroke over a black stroke, 1-2 words, bounce, per-chunk rotation within 3 degrees, stroke colour cycles every chunk.",
+  "kind": "caption",
+  "font": {
+    "file": "Bangers-Regular.ttf",
+    "family": "Bangers",
+    "weight": 400
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Black.ttf",
+    "family": "Noto Sans Devanagari Black",
+    "weight": 900
+  },
+  "size": 0.11,
+  "size_wide": 0.1,
+  "case": "upper",
+  "colors": {
+    "text": "#FFFFFF",
+    "active": "#FFFFFF",
+    "accent": "#FFE11A",
+    "outline": "#000000",
+    "shadow": "#000000"
+  },
+  "outline": 0.0055,
+  "shadow": 0.0,
+  "shadow_opacity": 0.0,
+  "box": null,
+  "line_spacing": 1.0,
+  "letter_spacing": 0.0015,
+  "layout": {
+    "shorts": {
+      "max_words": 2,
+      "max_chars": 12,
+      "max_lines": 1,
+      "min_dur": 0.3
+    },
+    "wide": {
+      "max_words": 4,
+      "max_chars": 24,
+      "max_lines": 1,
+      "min_dur": 0.8
+    }
+  },
+  "position": "auto",
+  "highlight": "none",
+  "animation": {
+    "in": {
+      "type": "bounce",
+      "frames": 7,
+      "easing": "elastic",
+      "from": 0.6,
+      "peak": 1.15
+    },
+    "out": {
+      "type": "none",
+      "frames": 0
+    }
+  },
+  "word_fx": {
+    "rotate": 3,
+    "stroke_cycle": [
+      "#FF2D55",
+      "#1E90FF",
+      "#22C55E",
+      "#FFB800",
+      "#A855F7"
+    ],
+    "outer_stroke": "#000000",
+    "outer_scale": 2.1
+  },
+  "accent": {
+    "enabled": true,
+    "max_per_chunk": 1,
+    "ratio": [
+      0.2,
+      0.35
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "strip",
+  "numbers": "digits"
+}

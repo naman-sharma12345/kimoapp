@@ -1,3 +1,4 @@
+import { isCaptionChunk, editCaptionChunk, captionBounds } from './caption-edits.mjs';
 // App-owned, versioned edit decisions. This module is also safe in the renderer.
 const TRANSITION_KINDS = ['cut', 'dip', 'whip', 'zoom', 'morph'];
 export function rate(value) {
@@ -812,6 +813,7 @@ export function toTimeline(edl) {
       src: o.props.primitive ? 'generated' : `text: ${o.props.text ?? ''}`,
       start: o.at,
       end: o.at + o.dur,
+      ...(isCaptionChunk(o) ? { caption: true } : {}),
     });
   }
   for (const t of edl.audio) {
@@ -847,6 +849,11 @@ export function applyEdits(original, ops) {
     const linked = edl.audio
       .flatMap((t) => t.clips)
       .filter((a) => a.linked === c.id);
+    if (isCaptionChunk(c) && op.tool !== 'delete_clip') {
+      // kimo caption chunks: word-boundary snapping, no overlaps, word timings kept
+      editCaptionChunk(edl, c, op);
+      continue;
+    }
     if (op.tool === 'delete_clip') {
       for (const t of edl.video) t.clips = t.clips.filter((x) => x.id !== c.id);
       for (const t of edl.audio)
@@ -916,8 +923,9 @@ export function publicEdl(edl) {
     audio: tracks('audio'),
     overlays: edl.overlays.map((o) => ({
       ...pick(o, ['id', 'kind', 'at', 'dur', 'track', 'src']),
-      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height']),
+      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height', 'engine', 'style', 'edited', 'hidden']),
     })),
+    ...(edl.captions ? { captions: { style: edl.captions.style, hook_style: edl.captions.hook_style ?? null, bounds: captionBounds(edl), stats: edl.captions.stats } } : {}),
     master: { ...edl.master },
   };
 }

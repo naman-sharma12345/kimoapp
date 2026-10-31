@@ -1,0 +1,70 @@
+{
+  "id": "karaoke",
+  "name": "Karaoke",
+  "description": "Full chunk shown; the current word fills with the accent colour sweeping left to right (ASS \\kf).",
+  "kind": "caption",
+  "font": {
+    "file": "Montserrat-ExtraBold.ttf",
+    "family": "Montserrat ExtraBold",
+    "weight": 800
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Black.ttf",
+    "family": "Noto Sans Devanagari Black",
+    "weight": 900
+  },
+  "size": 0.066,
+  "size_wide": 0.06,
+  "case": "upper",
+  "colors": {
+    "text": "#FFFFFF",
+    "active": "#FFC21A",
+    "accent": "#FF5A24",
+    "outline": "#000000",
+    "shadow": "#000000"
+  },
+  "outline": 0.005,
+  "shadow": 0.002,
+  "shadow_opacity": 0.5,
+  "box": null,
+  "line_spacing": 1.05,
+  "letter_spacing": 0,
+  "layout": {
+    "shorts": {
+      "max_words": 4,
+      "max_chars": 16,
+      "max_lines": 2,
+      "min_dur": 0.5
+    },
+    "wide": {
+      "max_words": 7,
+      "max_chars": 42,
+      "max_lines": 1,
+      "min_dur": 0.8
+    }
+  },
+  "position": "auto",
+  "highlight": "karaoke",
+  "animation": {
+    "in": {
+      "type": "none",
+      "frames": 0
+    },
+    "out": {
+      "type": "none",
+      "frames": 0
+    }
+  },
+  "accent": {
+    "enabled": true,
+    "max_per_chunk": 1,
+    "ratio": [
+      0.15,
+      0.3
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "strip",
+  "numbers": "digits"
+}

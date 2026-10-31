@@ -1,0 +1,81 @@
+{
+  "id": "gold-sweep",
+  "name": "Gold sweep",
+  "description": "Hook/keyword title: two-band metallic gold fill with a bright light band sweeping left to right (animated \\clip on a blurred highlight copy).",
+  "kind": "title",
+  "font": {
+    "file": "Montserrat-Black.ttf",
+    "family": "Montserrat Black",
+    "weight": 900
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Black.ttf",
+    "family": "Noto Sans Devanagari Black",
+    "weight": 900
+  },
+  "size": 0.072,
+  "size_wide": 0.075,
+  "case": "upper",
+  "colors": {
+    "text": "#E9B949",
+    "gold_top": "#FFE08A",
+    "gold_bottom": "#C98A22",
+    "shine": "#FFFBEA",
+    "active": "#FFE08A",
+    "accent": "#FFF3C4",
+    "outline": "#3A2400",
+    "shadow": "#000000"
+  },
+  "outline": 0.0035,
+  "shadow": 0.003,
+  "shadow_opacity": 0.6,
+  "box": null,
+  "line_spacing": 1.0,
+  "letter_spacing": 0.002,
+  "layout": {
+    "shorts": {
+      "max_words": 3,
+      "max_chars": 14,
+      "max_lines": 1,
+      "min_dur": 0.3
+    },
+    "wide": {
+      "max_words": 5,
+      "max_chars": 30,
+      "max_lines": 1,
+      "min_dur": 0.8
+    }
+  },
+  "position": "auto",
+  "highlight": "gold",
+  "animation": {
+    "in": {
+      "type": "pop",
+      "frames": 4,
+      "easing": "back-out",
+      "from": 0.92,
+      "peak": 1.03
+    },
+    "out": {
+      "type": "fade",
+      "frames": 3
+    },
+    "sweep": {
+      "delay_ms": 120,
+      "ms": 650,
+      "band": 0.22
+    }
+  },
+  "accent": {
+    "enabled": false,
+    "max_per_chunk": 1,
+    "ratio": [
+      0,
+      0
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "strip",
+  "numbers": "digits"
+}

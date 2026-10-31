@@ -1,0 +1,76 @@
+{
+  "id": "echo-slide",
+  "name": "Echo slide",
+  "description": "Hook/keyword title: text slides in stretched with three fading echo copies trailing behind (stacked delayed ASS copies with \\move, \\fscx stretch and alpha).",
+  "kind": "title",
+  "font": {
+    "file": "Geist-Black.ttf",
+    "family": "Geist Black",
+    "weight": 900
+  },
+  "font_devanagari": {
+    "file": "NotoSansDevanagari-Black.ttf",
+    "family": "Noto Sans Devanagari Black",
+    "weight": 900
+  },
+  "size": 0.07,
+  "size_wide": 0.075,
+  "case": "upper",
+  "colors": {
+    "text": "#FFFFFF",
+    "active": "#FFFFFF",
+    "accent": "#FF5A24",
+    "echo": "#FF5A24",
+    "outline": "#0E0D0C",
+    "shadow": "#000000"
+  },
+  "outline": 0.004,
+  "shadow": 0.0,
+  "shadow_opacity": 0.0,
+  "box": null,
+  "line_spacing": 1.0,
+  "letter_spacing": 0.002,
+  "layout": {
+    "shorts": {
+      "max_words": 3,
+      "max_chars": 14,
+      "max_lines": 1,
+      "min_dur": 0.3
+    },
+    "wide": {
+      "max_words": 5,
+      "max_chars": 30,
+      "max_lines": 1,
+      "min_dur": 0.8
+    }
+  },
+  "position": "auto",
+  "highlight": "echo",
+  "animation": {
+    "in": {
+      "type": "echo",
+      "frames": 7,
+      "easing": "cubic-out",
+      "stretch": 1.6,
+      "offset": 0.14,
+      "copies": 3,
+      "delay_frames": 2
+    },
+    "out": {
+      "type": "fade",
+      "frames": 3
+    }
+  },
+  "accent": {
+    "enabled": true,
+    "max_per_chunk": 1,
+    "ratio": [
+      0.15,
+      0.3
+    ],
+    "numbers": true,
+    "names": true
+  },
+  "punctuation": "strip",
+  "numbers": "digits"
+}
