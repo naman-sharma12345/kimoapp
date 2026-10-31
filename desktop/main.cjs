@@ -64,6 +64,33 @@ const registerGraphicsHost = async () => {
   r.setGraphicsHost(graphicsHost);
   return graphicsHost;
 };
+// Phase 7 screenshots of things the speaker names: a hidden, sandboxed offscreen window per capture
+// (public https pages only, no node, no popups, downloads or permissions, a throwaway session)
+const registerScreenshotHost = async () => {
+  const shot = await import(pathToFileURL(join(__dirname, 'explain', 'sources', 'screenshot.mjs')).href);
+  shot.setScreenshotHost({
+    capture: async (url, { w = 1280, h = 800 } = {}) => {
+      if (!shot.publicUrl(url)) return null;
+      const bw = new BrowserWindow({ show: false, width: w, height: h, webPreferences: { offscreen: true, sandbox: true, nodeIntegration: false, contextIsolation: true, partition: 'kimo-screenshot', backgroundThrottling: false } });
+      const wc = bw.webContents;
+      wc.setWindowOpenHandler(() => ({ action: 'deny' }));
+      wc.session.setPermissionRequestHandler((_wc, _p, cb) => cb(false));
+      wc.session.on('will-download', (e) => e.preventDefault());
+      wc.on('will-navigate', (e, next) => { if (!shot.publicUrl(next)) e.preventDefault(); });
+      try {
+        await Promise.race([wc.loadURL(url), new Promise((_, j) => setTimeout(() => j(new Error('page took too long')), 20000))]);
+        await new Promise((r) => setTimeout(r, 1500));
+        const img = await wc.capturePage({ x: 0, y: 0, width: w, height: h });
+        return img.isEmpty() ? null : img.toPNG();
+      } catch (error) {
+        log('screenshot failed', url, error.message);
+        return null;
+      } finally {
+        bw.destroy();
+      }
+    },
+  });
+};
 let samMod;
 const loadSam = async () => (samMod ??= await import(pathToFileURL(join(__dirname, 'sam.mjs')).href));
 const logFile = () => join(data(), 'kimo.log');
@@ -166,7 +193,7 @@ async function pump() {
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, captionStyle: next.captionStyle, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,
+      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
@@ -187,6 +214,7 @@ async function pump() {
     if (result.projectFile) next.projectFile = result.projectFile;
     if (result.edlFile) next.edlFile = result.edlFile;
     if (result.edl) next.edl = result.edl;
+    next.attributions = result.attributions ?? undefined;
     if (result.cutPlan) next.cutPlan = { summary: result.cutPlan.summary, metrics: result.cutPlan.metrics };
     next.renders = (next.renders ?? 0) + 1;
     next.took = Date.now() - next.started;
@@ -205,12 +233,13 @@ async function pump() {
   }
 }
 
-function newProject({ files, note, preset, mode, name, style, sam, captionStyle }) {
+function newProject({ files, note, preset, mode, name, style, sam, captionStyle, explain }) {
   const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const p = {
     id, name: name || basename(files[0].path, extname(files[0].path)), created: Date.now(), updated: Date.now(),
     files, note: note || '', preset: preset || 'shorts', style: style || 'auto', captionStyle: cleanCaptionStyle(captionStyle), mode: mode || 'ai', status: 'queued', log: [], turns: [],
     sam: cleanSam(sam),
+    explain: cleanExplain(explain),
   };
   library.unshift(p);
   return p;
@@ -220,6 +249,14 @@ function newProject({ files, note, preset, mode, name, style, sam, captionStyle 
 const cleanCaptionStyle = (v) => (typeof v === 'string' && /^[a-z0-9-]{2,32}$/.test(v) ? v : 'auto');
 const SAM_EFFECTS = ['reframe', 'text_behind', 'bg_blur', 'bg_color', 'bg_image', 'cutout', 'redact'];
 /** Only known fields of the manual SAM choice reach the engine. */
+/** Home "Explain with visuals" settings: on/off, density, per-kind toggles, licence-safe switch. */
+const EXPLAIN_TOGGLES = ['diagrams', 'images', 'memes', 'emoji', 'screenshots', 'broll', 'gags', 'ai_images'];
+function cleanExplain(x) {
+  if (!x || typeof x !== 'object') return undefined;
+  const toggles = {};
+  for (const k of EXPLAIN_TOGGLES) if (typeof x.toggles?.[k] === 'boolean') toggles[k] = x.toggles[k];
+  return { enabled: x.enabled !== false, density: ['off', 'light', 'normal', 'rich'].includes(x.density) ? x.density : 'normal', toggles, offline: x.offline === true };
+}
 function cleanSam(sam) {
   if (!sam || !SAM_EFFECTS.includes(sam.effect)) return undefined;
   const str = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined);
@@ -452,6 +489,7 @@ app.on('second-instance', () => win && (win.isMinimized() && win.restore(), win.
 
 app.whenReady().then(async () => {
   await registerGraphicsHost().catch((error) => console.error('graphics host unavailable; the built-in canvas renders graphics', error));
+  await registerScreenshotHost().catch((error) => console.error('screenshots unavailable; explainers use cards instead', error));
   if (smokeAt >= 0) {
     const outAt = process.argv.indexOf('--smoke-out');
     return smoke(process.argv[smokeAt + 1], outAt > 0 ? process.argv[outAt + 1] : join(data(), 'smoke.json'));
@@ -483,17 +521,17 @@ app.whenReady().then(async () => {
     const r = await dialog.showOpenDialog(win, { properties: folders ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'], filters: folders ? [] : [{ name: 'Media', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mp3', 'wav', 'm4a', 'png', 'jpg', 'jpeg'] }] });
     return r.canceled ? [] : expand(r.filePaths);
   });
-  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style, sam, captionStyle }) => {
+  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style, sam, captionStyle, explain }) => {
     if (!files?.length) throw new Error('add a video first');
-    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style, sam, captionStyle })) : [newProject({ files, note, preset, mode, style, sam, captionStyle })];
+    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style, sam, captionStyle, explain })) : [newProject({ files, note, preset, mode, style, sam, captionStyle, explain })];
     saveLibrary();
     pump();
     return made.map(publicProject);
   });
-  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style, sam, captionStyle }) => {
+  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style, sam, captionStyle, explain }) => {
     const p = library.find((x) => x.id === id);
     if (!p || p.status === 'running') return null;
-    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, captionStyle: captionStyle === undefined ? p.captionStyle : cleanCaptionStyle(captionStyle), sam: sam === undefined ? p.sam : cleanSam(sam), status: 'queued', error: undefined, job: undefined });
+    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, captionStyle: captionStyle === undefined ? p.captionStyle : cleanCaptionStyle(captionStyle), sam: sam === undefined ? p.sam : cleanSam(sam), explain: explain === undefined ? p.explain : cleanExplain(explain), status: 'queued', error: undefined, job: undefined });
     p.history = [...(p.history ?? []), { at: Date.now(), note: p.note, preset: p.preset, mode: p.mode }].slice(-30);
     update(p);
     pump();
@@ -511,6 +549,20 @@ app.whenReady().then(async () => {
     pump();
     return publicProject(p);
   });
+  // Studio: "Regenerate visuals for this part" re-runs the visual director on a range (a follow-up job)
+  ipcMain.handle('explain:regenerate', (_e, { id, from, to }) => {
+    const p = library.find((x) => x.id === id);
+    const a = Number(from);
+    const b = Number(to);
+    if (!p || ['running', 'queued'].includes(p.status) || !(b > a) || a < 0) return null;
+    if (!p.projectFile || !fs.existsSync(p.projectFile)) throw new Error('re-run this edit once first');
+    const note = `regenerate visuals for this part (${a.toFixed(1)}–${b.toFixed(1)} s)`;
+    p.turns = [...(p.turns ?? []), { at: Date.now(), text: note }].slice(-50);
+    Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'followup', note } });
+    update(p);
+    pump();
+    return publicProject(p);
+  });
   // timeline editor: validated move/trim/delete/caption ops, then re-render
   ipcMain.handle('apply', async (_e, { id, ops }) => {
     const p = library.find((x) => x.id === id);
@@ -518,10 +570,17 @@ app.whenReady().then(async () => {
     if (!p.projectFile || !fs.existsSync(p.projectFile)) throw new Error('re-run this edit once first');
     const e = await loadEngine();
     const num = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 86400;
-    const clean = (Array.isArray(ops) ? ops : []).slice(0, 200).filter((o) => e.MANUAL_TOOLS.includes(o?.tool) && typeof o.args?.clip_id === 'string').map((o) => {
+    const clean = (Array.isArray(ops) ? ops : []).slice(0, 200).filter((o) => [...e.MANUAL_TOOLS, 'edit_explain'].includes(o?.tool) && typeof o.args?.clip_id === 'string').map((o) => {
       const a = { clip_id: o.args.clip_id.slice(0, 40) };
       for (const k of ['start', 'duration', 'in_point']) if (num(o.args[k])) a[k] = +o.args[k].toFixed(3);
       if (typeof o.args.text === 'string') a.text = o.args.text.slice(0, 300);
+      // explainer beat edits (Studio GFX track): title, items, family, layout
+      if (o.tool === 'edit_explain') {
+        if (typeof o.args.title === 'string') a.title = o.args.title.slice(0, 80);
+        if (Array.isArray(o.args.items)) a.items = o.args.items.filter((x) => typeof x === 'string').slice(0, 12).map((x) => x.slice(0, 80));
+        if (['list', 'flow', 'timeline'].includes(o.args.kind)) a.kind = o.args.kind;
+        if (['side', 'top', 'overlay', 'full', 'pip'].includes(o.args.mode)) a.mode = o.args.mode;
+      }
       return { tool: o.tool, args: a };
     });
     if (!clean.length) return null;
@@ -579,6 +638,8 @@ app.whenReady().then(async () => {
       gpu ??= await e.detectGpu(paths().ffmpeg).catch(() => null);
       await e.deliveryEncode({ ffmpeg: paths().ffmpeg, input: p.output, output: r.filePath, encoder: gpu, mbps: preset.mbps, duration: p.duration, onProgress: (f) => send('event', { id, t: 'progress', phase: 'save', label: `small copy${gpu ? ` on GPU (${gpu})` : ''}`, f }) });
     }
+    // Phase 7: credits for fetched assets and map data travel with every export
+    if (p.attributions && fs.existsSync(p.attributions)) await fs.promises.copyFile(p.attributions, r.filePath.replace(/\.mp4$/i, '') + '-ATTRIBUTIONS.txt').catch(() => undefined);
     shell.showItemInFolder(r.filePath);
     return r.filePath;
   });

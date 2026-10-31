@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('kimo', {
   save: (opts) => ipcRenderer.invoke('save', opts),
   followup: (opts) => ipcRenderer.invoke('followup', opts),
   apply: (opts) => ipcRenderer.invoke('apply', opts),
+  regenerateVisuals: (opts) => ipcRenderer.invoke('explain:regenerate', opts),
   edl: (id) => ipcRenderer.invoke('edl:get', id),
   saveThumb: (id) => ipcRenderer.invoke('saveThumb', id),
   copy: (text) => ipcRenderer.invoke('copy', text),
