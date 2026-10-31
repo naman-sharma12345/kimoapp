@@ -8,6 +8,7 @@ import { command, filterPath, probeFile } from './bench/io.mjs';
 import { compose, cameraRectsForClip } from '../compose.mjs';
 import { rate, frameCount, fromKimoProject } from '../edl.mjs';
 import { frameSourceMetrics, projectEdl } from './bench/analyze.mjs';
+import { rawBarcodeFilter, readRawBarcodes } from './bench/instrument-raw.mjs';
 import { toolPaths } from './bench/run.mjs';
 import { youtubeMaster, measure } from '../engine.mjs';
 const tools = toolPaths(),
@@ -18,6 +19,98 @@ const W = 192,
   block = 8,
   left = 32,
   top = 60;
+
+test(
+  'raw-footage frame-ID stripe survives both full-resolution aspect transforms and detects an injected repeat',
+  { timeout: 60000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-raw-stripe-'));
+    try {
+      const source = join(dir, 'counter.mp4');
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-filter_threads',
+        '1',
+        '-f',
+        'lavfi',
+        '-i',
+        'color=c=blue:s=1920x1080:r=25:d=0.2',
+        '-vf',
+        rawBarcodeFilter(3),
+        '-frames:v',
+        '5',
+        '-c:v',
+        'libx264',
+        '-threads',
+        '1',
+        '-preset',
+        'fast',
+        '-crf',
+        '18',
+        '-pix_fmt',
+        'yuv420p',
+        source,
+      ]);
+      for (const [width, height] of [
+        [1080, 1920],
+        [1920, 1080],
+      ]) {
+        const edl = fromKimoProject({
+          width,
+          height,
+          fps: 25,
+          assets: {
+            s: {
+              id: 's',
+              path: source,
+              width: 1920,
+              height: 1080,
+              duration: 0.2,
+              fps: 25,
+            },
+          },
+          tracks: [
+            {
+              id: 'v',
+              clips: [
+                {
+                  id: 'c',
+                  source: { type: 'media', asset: 's' },
+                  start: 0,
+                  duration: 0.2,
+                  in_point: 0,
+                  speed: 1,
+                  props: {},
+                },
+              ],
+            },
+          ],
+        });
+        const output = join(dir, `${width}.mkv`);
+        await compose({
+          edl,
+          ffmpeg,
+          ffprobe,
+          output,
+          dir: join(dir, `work-${width}`),
+        });
+        assert.deepEqual(
+          await readRawBarcodes(ffmpeg, output, edl.canvas),
+          [12288, 12289, 12290, 12291, 12292],
+        );
+        assert.deepEqual(
+          await readRawBarcodes(ffmpeg, output, edl.canvas, true),
+          [12288, 12288, 12290, 12291, 12292],
+        );
+      }
+    } finally {
+      assert.ok(dir.startsWith(join(tmpdir(), 'kimo-raw-stripe-')));
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
 
 // Independent oracle: do not use the compositor's framePlan for expected IDs.
 const oracleRate = (fps) => {
