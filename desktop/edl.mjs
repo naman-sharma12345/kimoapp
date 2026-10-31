@@ -1,4 +1,5 @@
 // App-owned, versioned edit decisions. This module is also safe in the renderer.
+const TRANSITION_KINDS = ['cut', 'dip', 'whip', 'zoom', 'morph'];
 export function rate(value) {
   if (!/^\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?$/.test(String(value)))
     throw new Error(`Invalid frame rate: ${value}`);
@@ -207,6 +208,47 @@ export function validate(edl) {
             'clips overlap on the same track; use a separate layer',
           );
         end = c.at + d;
+        if (family === 'video') {
+          const tr = c.transition_in;
+          if (tr != null) {
+            const kind = String(tr.kind ?? tr.type ?? 'cut');
+            if (!TRANSITION_KINDS.includes(kind))
+              fail(at + '.transition_in', `unknown transition ${kind}`);
+            const td = tr.dur ?? tr.duration ?? 0;
+            if (!finite(td) || td < 0)
+              fail(at + '.transition_in.dur', 'nonnegative seconds required');
+          }
+          if (
+            c.mask != null &&
+            c.mask.shape != null &&
+            (!['rect', 'ellipse'].includes(c.mask.shape) ||
+              ['x', 'y', 'w', 'h', 'radius', 'feather'].some(
+                (k) =>
+                  c.mask[k] != null && (!finite(c.mask[k]) || (k !== 'x' && k !== 'y' && c.mask[k] < 0)),
+              ))
+          )
+            fail(
+              at + '.mask',
+              'rect/ellipse shape with finite x/y and nonnegative w/h/radius/feather required',
+            );
+          if (
+            typeof c.opacity === 'number' &&
+            !(finite(c.opacity) && c.opacity >= 0 && c.opacity <= 1)
+          )
+            fail(at + '.opacity', 'opacity must be between 0 and 1');
+        }
+        if (c.duck != null) {
+          const under = c.duck.under ?? 'VOICE';
+          if (
+            !edl.audio.some(
+              (t) => t !== edl[family][ti] && (t.track === under || t.role === under),
+            )
+          )
+            fail(at + '.duck.under', `no audio track or role ${under}`);
+          for (const k of ['depth_db', 'attack_ms', 'release_ms'])
+            if (c.duck[k] != null && !(finite(c.duck[k]) && c.duck[k] >= 0))
+              fail(at + `.duck.${k}`, 'nonnegative number required');
+        }
         for (const [ki, k] of (c.camera ?? []).entries())
           if (
             !finite(k.t) ||
@@ -251,6 +293,10 @@ export function validate(edl) {
     if (o.src && !sources.has(o.src))
       fail(`overlays[${i}].src`, `unknown asset ${o.src}`);
   }
+  if (edl.master != null)
+    for (const k of ['lufs', 'true_peak'])
+      if (edl.master[k] != null && !finite(edl.master[k]))
+        fail(`master.${k}`, 'finite number required');
   if (!frameCount(edl)) fail('timeline', 'at least one frame required');
   return edl;
 }
@@ -263,6 +309,67 @@ const meaningful = (v) =>
   (!Array.isArray(v) || v.length > 0) &&
   (!(v && typeof v === 'object' && !Array.isArray(v)) ||
     Object.keys(v).length > 0);
+const NATIVE_TRANSITIONS = {
+  cut: 'cut',
+  none: 'cut',
+  dip: 'dip',
+  dip_to_black: 'dip',
+  fade: 'dip',
+  fade_black: 'dip',
+  whip: 'whip',
+  whip_pan: 'whip',
+  slide: 'whip',
+  push: 'whip',
+  zoom: 'zoom',
+  zoom_in: 'zoom',
+  punch: 'zoom',
+  morph: 'morph',
+  dissolve: 'morph',
+  crossfade: 'morph',
+  cross_dissolve: 'morph',
+};
+/** Native transition → EDL transition; unknown kinds are reported, not guessed. */
+export function nativeTransition(t, report = () => {}) {
+  if (!t || typeof t !== 'object') return null;
+  const raw = String(t.kind ?? t.type ?? t.name ?? 'cut')
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  const kind = NATIVE_TRANSITIONS[raw];
+  const dur = Number(t.dur ?? t.duration ?? 0);
+  if (!kind || !(Number.isFinite(dur) && dur >= 0)) {
+    report(t);
+    return null;
+  }
+  return kind === 'cut' ? null : { kind, dur };
+}
+/**
+ * Tags native audio tracks with the EDL roles VOICE / MUSIC / SFX (track ids
+ * stay native so planner resumes still match). Music beds get a sidechain duck
+ * under VOICE unless the planner already wrote its own level/duck envelope.
+ */
+export function assignAudioRoles(audio) {
+  const length = (c) => c.dur ?? (c.out - c.in) / (c.speed ?? 1);
+  for (const t of audio) {
+    const label = `${t.track} ${t.name ?? ''}`;
+    if (t.role) continue;
+    if (/music|bgm|song|score|\bbed\b/i.test(label)) t.role = 'MUSIC';
+    else if (/sfx|fx\b|foley|whoosh/i.test(label)) t.role = 'SFX';
+    else if (t.clips.every((c) => c.linked)) t.role = 'VOICE';
+    else if (t.clips.some((c) => length(c) >= 8)) t.role = 'MUSIC';
+    else t.role = 'SFX';
+  }
+  if (!audio.some((t) => t.role === 'VOICE')) return audio;
+  for (const t of audio) {
+    if (t.role !== 'MUSIC') continue;
+    for (const c of t.clips) {
+      const a = c.native_audio ?? {};
+      if (c.duck || a.duck_gain?.keys?.length || a.volume?.keys?.length)
+        continue;
+      c.duck = { under: 'VOICE', depth_db: 16, attack_ms: 60, release_ms: 350 };
+    }
+  }
+  return audio;
+}
 export function fromKimoProject(
   project,
   supplied = [],
@@ -388,6 +495,8 @@ export function fromKimoProject(
           warn(`${path}.props.${k}.expr`, v.expr);
       }
       const props = c.props ?? {};
+      // Native masks use the engine's own geometry; never reinterpret them.
+      if (meaningful(c.mask)) warn(`${path}.mask`, c.mask);
       if (
         props.reveal &&
         (curveValue(props.reveal, 0, 1) !== 1 ||
@@ -554,9 +663,11 @@ export function fromKimoProject(
             native: clone(c.grade_graph),
             effects: clone(c.effects ?? []),
           },
-          mask: clone(c.mask),
+          mask: null,
           blend: c.blend ?? 'normal',
-          transition_in: clone(c.transition_in),
+          transition_in: nativeTransition(c.transition_in, (v) =>
+            warn(`${path}.transition_in`, v),
+          ),
         });
       }
       if (!track.muted && !c.audio?.mute && source.kind !== 'image')
@@ -595,6 +706,7 @@ export function fromKimoProject(
     );
     if (at.clips.length) audio.push(at);
   }
+  assignAudioRoles(audio);
   for (const [key, value] of Object.entries(project))
     if (
       ![
@@ -746,7 +858,7 @@ export function publicEdl(edl) {
     ]);
   const tracks = (family) =>
     edl[family].map((t) => ({
-      ...pick(t, ['track', 'name']),
+      ...pick(t, ['track', 'name', 'role']),
       clips: t.clips.map(clip),
     }));
   return {

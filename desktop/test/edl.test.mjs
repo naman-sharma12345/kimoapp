@@ -256,3 +256,22 @@ test('timeline IPC preserves editing data without serializing renderer graphs', 
   assert.equal(full.video[0].clips[0].at, before);
   assert.equal(view.native_project, undefined);
 });
+
+test('native transitions map to EDL kinds and audio tracks get VOICE/MUSIC/SFX roles with a music duck', async () => {
+  const { nativeTransition, assignAudioRoles } = await import('../edl.mjs');
+  const reported = [];
+  assert.deepEqual(nativeTransition({ type: 'Cross Dissolve', duration: 0.3 }), { kind: 'morph', dur: 0.3 });
+  assert.deepEqual(nativeTransition({ kind: 'whip', dur: 0.2 }), { kind: 'whip', dur: 0.2 });
+  assert.equal(nativeTransition({ kind: 'cut' }), null);
+  assert.equal(nativeTransition({ kind: 'spiral', dur: 1 }, (v) => reported.push(v)), null);
+  assert.equal(reported.length, 1);
+  const audio = assignAudioRoles([
+    { track: 't1', clips: [{ id: 'a:audio', linked: 'a', in: 0, out: 5, at: 0 }] },
+    { track: 't2', name: 'Music', clips: [{ id: 'm', in: 0, out: 30, at: 0, native_audio: {} }] },
+    { track: 't3', clips: [{ id: 'w', in: 0, out: 0.4, at: 2 }] },
+    { track: 't4', clips: [{ id: 'm2', in: 0, out: 20, at: 0, native_audio: { volume: { keys: [{ t: 0, v: 0.2 }] } } }] },
+  ]);
+  assert.deepEqual(audio.map((t) => t.role), ['VOICE', 'MUSIC', 'SFX', 'MUSIC']);
+  assert.equal(audio[1].clips[0].duck.under, 'VOICE');
+  assert.equal(audio[3].clips[0].duck, undefined, 'planner-written envelope is respected');
+});
