@@ -158,3 +158,30 @@ test('sources: keyless search is licence-filtered, cached (2nd run: 0 network), 
   assert.equal(publicUrl('github.com/naman/kimo'), 'https://github.com/naman/kimo');
   for (const bad of ['http://localhost:3000', 'https://192.168.1.4/x', 'file:///etc/passwd', 'https://10.0.0.1', 'intranet']) assert.equal(publicUrl(bad), null, bad);
 });
+
+test('sfx: synthesised kit (own, CC0), ≥ 0.5 s apart, gags win over ticks, levels under voice', async (t) => {
+  const { planSfx, sfxFile, LEVELS, gagName } = await import('../explain/sfx.mjs');
+  const cues = planSfx([{ at: 1, kind: 'tick' }, { at: 1.2, kind: 'tick' }, { at: 2, kind: 'tick' }, { at: 2.1, kind: 'record_scratch' }, { at: 5, kind: 'whoosh' }, { at: 7, kind: 'laugh' }]);
+  assert.deepEqual(cues.map((c) => [c.at, c.name]), [[1, 'tick'], [2.1, 'record_scratch'], [5, 'whoosh'], [7, 'boing']]);
+  assert.ok(cues.every((c) => c.gain_db <= -6));
+  assert.equal(gagName('ooh'), 'ding');
+  assert.ok(LEVELS.tick <= -8);
+  const { spawnSync } = await import('node:child_process');
+  const { toolPaths } = await import('./bench/run.mjs');
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const ffmpeg = toolPaths().ffmpeg;
+  if (spawnSync(ffmpeg, ['-version']).status !== 0) return t.skip('FFmpeg not available');
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-sfx-'));
+  try {
+    for (const n of ['tick', 'whoosh', 'record_scratch']) {
+      const f = sfxFile(n, { ffmpeg, dir });
+      const r = spawnSync(ffmpeg, ['-i', f, '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' });
+      const peak = Number(/max_volume: (-?[\d.]+)/.exec(r.stderr)?.[1]);
+      assert.ok(peak < -3 && peak > -40, `${n} peak ${peak}`);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
