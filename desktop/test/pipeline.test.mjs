@@ -205,6 +205,35 @@ test(
         assert.match(ended('cut_plan').result, /^removed \d+ pauses? \([\d.]+ s\)/);
         const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
         assert.ok(!calls.some((c) => c.name === 'auto_rough_cut'), `${mode}: the planner may not re-cut`);
+        // Phase 5: kimo's own captions from the cut plan's words (no second whisper, no engine captions)
+        const caps = edl.overlays.filter((o) => o.props?.engine === 'kimo-captions');
+        assert.ok(caps.length >= 1 && edl.captions?.style, `${mode}: kimo caption chunks on the EDL`);
+        assert.ok(caps.flatMap((o) => o.props.words.map((w) => w.w.toLowerCase().replace(/[^a-z]/g, ''))).sort().join(' ') === 'again hello world', `${mode}: caption words`);
+        assert.ok(!calls.some((c) => c.name === 'auto_captions'), `${mode}: the engine's own captions are not used`);
+        assert.ok(ended('captions')?.ok, `${mode}: captions op`);
+        if (mode === 'captions') {
+          // Studio caption edit: re-renders the text pass over the cached base composite
+          const edited = applyEdits(edl, [{ tool: 'edit_caption', args: { clip_id: caps[0].id, text: 'hi there' } }]);
+          assert.equal(edited.overlays.find((o) => o.id === caps[0].id).props.text, 'hi there');
+          const manualEvents = [];
+          const again = await runEdit({
+            bin: [process.execPath, fileURLToPath(new URL('./fixtures/planner.mjs', import.meta.url))],
+            env: { ...tools.env, KIMO_TEST_SOURCE: input, KIMO_TEST_LOG: log, KIMO_TEST_REAL_CLIPS: '1', KIMO_TEST_DURATION: '3', KIMO_CACHE_DIR: join(dir, 'cache') },
+            dir: join(dir, mode),
+            files: [file],
+            preset: 'fixture',
+            mode: 'manual',
+            projectFile: result.projectFile,
+            edl: edited,
+            ops: [{ tool: 'edit_caption', args: { clip_id: caps[0].id, text: 'hi there' } }],
+            ffmpeg: tools.ffmpeg,
+            ffprobe: tools.ffprobe,
+            emit: (e) => manualEvents.push(e),
+          });
+          assert.ok(manualEvents.some((e) => e.t === 'op' && e.tool === 'caption_pass' && e.phase === 'end' && e.ok), 'caption edit reused the cached base composite');
+          const saved = JSON.parse(await readFile(again.edlFile, 'utf8'));
+          assert.equal(saved.overlays.find((o) => o.id === caps[0].id).props.text, 'hi there');
+        }
         if (mode === 'captions') {
           // offline: no AI call at all; the forced punch frames the jump cut
           assert.equal(asked.length, 0);
