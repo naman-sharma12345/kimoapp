@@ -9,6 +9,8 @@ import {
   rate,
 } from './edl.mjs';
 import { directCamera } from './camera.mjs';
+import { applyCaptions, captionStyle, pickCaptionStyle, CAPTION_ENGINE } from './captions.mjs';
+import { editCaptionChunk } from './caption-edits.mjs';
 
 /** Implements picture operations locally. The planner remains a read-only black-box toolbox. */
 export function pictureTools({
@@ -35,12 +37,57 @@ export function pictureTools({
     // Phase 4 camera director inputs ({ctx}); the director writes the A-roll camera keys on every snapshot
     camera: null,
     cameraReport: null,
+    // Phase 5 caption engine ({enabled, style, hook_style, hints, keep}); chunks are rebuilt on every snapshot
+    captions: null,
+    captionEdits: [],
+    captionReport: null,
     handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit']),
   };
   api.snapshot = async () => {
     const edl = await snapshotEdl();
     if (api.cutPlan) edl.cut_plan = api.cutPlan;
-    return directed(edl);
+    return captioned(directed(edl));
+  };
+  /** Turns the app caption engine on: the planner's caption tools now restyle/edit kimo captions locally. */
+  api.enableCaptions = (config) => {
+    api.captions = { enabled: true, ...config };
+    for (const n of ['auto_captions', 'caption_from_words', 'edit_caption']) api.handles.add(n);
+  };
+  const captioned = (edl) => {
+    if (!api.captions || (mode === 'manual' && suppliedEdl)) return edl;
+    const ctx = api.camera?.ctx ?? edl.camera_plan ?? {};
+    if (!Object.values(ctx.words ?? {}).some((w) => w?.length)) return edl;
+    try {
+      applyCaptions(edl, api.captions, ctx);
+      for (const op of api.captionEdits) {
+        const o = edl.overlays.find((x) => x.id === op.args.clip_id && x.props?.engine === CAPTION_ENGINE);
+        if (o) editCaptionChunk(edl, o, op);
+      }
+      api.captionReport = edl.captions?.stats ?? null;
+    } catch (error) {
+      const title = `captions skipped: ${error.message}`.slice(0, 200);
+      if (!warnings.has(title)) {
+        warnings.add(title);
+        emit({ t: 'op', phase: 'end', tool: 'caption_warning', title, warning: true, ok: true, at: Date.now() });
+      }
+    }
+    return edl;
+  };
+  const captionTool = async (name, args) => {
+    if (name === 'edit_caption') {
+      const edl = await api.snapshot();
+      const o = edl.overlays.find((x) => x.id === args.clip_id && x.props?.engine === CAPTION_ENGINE);
+      if (!o) return mcp.call(name, args);
+      if (typeof args.text === 'string' && args.text.trim()) api.captionEdits.push({ tool: 'edit_caption', args: { clip_id: args.clip_id, text: args.text } });
+      return { content: [{ type: 'text', text: JSON.stringify({ ok: true, clip_id: args.clip_id, text: args.text ?? o.props.text }) }] };
+    }
+    const canvas = (await snapshotEdl()).canvas;
+    // a style the user picked in the app wins over the planner's choice
+    const style = args.style && !api.captions?.locked ? pickCaptionStyle({ requested: args.style, canvas }) : api.captions?.style ?? 'kimo';
+    api.captions = { ...api.captions, enabled: true, style };
+    const edl = await api.snapshot();
+    const s = edl.captions?.stats ?? {};
+    return { content: [{ type: 'text', text: JSON.stringify({ engine: 'kimo captions (word-timed from the transcript, rendered by libass)', style: captionStyle(api.captions.style).id, chunks: s.chunks ?? 0, accent_share: s.accent_share, min_word_s: s.caption_min_word_s, safe: s.caption_safe, note: 'captions are placed below the chin, inside the safe area, and yield to hook titles automatically; use edit_caption with a cap### id to change words' }) }] };
   };
   const directed = (edl) => {
     const ctx = api.camera?.ctx ?? edl.camera_plan;
@@ -84,6 +131,14 @@ export function pictureTools({
     return { ...toTimeline(current), edl: publicEdl(current) };
   };
   api.call = async (name, args) => {
+    if (['auto_captions', 'caption_from_words', 'edit_caption'].includes(name)) {
+      try {
+        return await captionTool(name, args ?? {});
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        return { isError: true, content: [{ type: 'text', text: error.message }] };
+      }
+    }
     try {
       const edl = await api.snapshot(),
         meta = {
@@ -124,6 +179,8 @@ export function pictureTools({
           emit,
           fontsDir,
           assetRoot: dir,
+          // the base composite is kept so a caption-only edit re-renders just the text pass
+          cacheDir: join(dir, 'compose-cache'),
         });
         return {
           content: [

@@ -136,7 +136,7 @@ async function pump() {
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,
+      preset: next.preset, style: next.style, captionStyle: next.captionStyle, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
@@ -174,17 +174,19 @@ async function pump() {
   }
 }
 
-function newProject({ files, note, preset, mode, name, style, sam }) {
+function newProject({ files, note, preset, mode, name, style, sam, captionStyle }) {
   const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const p = {
     id, name: name || basename(files[0].path, extname(files[0].path)), created: Date.now(), updated: Date.now(),
-    files, note: note || '', preset: preset || 'shorts', style: style || 'auto', mode: mode || 'ai', status: 'queued', log: [], turns: [],
+    files, note: note || '', preset: preset || 'shorts', style: style || 'auto', captionStyle: cleanCaptionStyle(captionStyle), mode: mode || 'ai', status: 'queued', log: [], turns: [],
     sam: cleanSam(sam),
   };
   library.unshift(p);
   return p;
 }
 
+/** A caption style id from the UI (letters, digits, dashes) or 'auto'. */
+const cleanCaptionStyle = (v) => (typeof v === 'string' && /^[a-z0-9-]{2,32}$/.test(v) ? v : 'auto');
 const SAM_EFFECTS = ['reframe', 'text_behind', 'bg_blur', 'bg_color', 'bg_image', 'cutout', 'redact'];
 /** Only known fields of the manual SAM choice reach the engine. */
 function cleanSam(sam) {
@@ -234,6 +236,7 @@ async function status() {
     gpu,
     presets: e.PRESETS,
     styles: Object.fromEntries(Object.entries(e.STYLES).map(([k, v]) => [k, v.label])),
+    captionStyles: { auto: 'Auto (from the style)', ...e.CAPTION_STYLES() },
   };
 }
 
@@ -282,8 +285,16 @@ async function smoke(clip, outPath) {
       report.manual = { duration: r3.duration, expected: Math.max(1, (first.end - first.start) - 1) };
     }
     report.cutPlan = r.cutPlan ? { summary: r.cutPlan.summary?.text, metrics: r.cutPlan.metrics } : null;
-    report.captions = r.history.filter((h) => h.startsWith('auto_captions')).map((h) => h.slice(0, 600));
-    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed);
+    report.captions = r.history.filter((h) => h.startsWith('auto_captions') || h.startsWith('captions')).map((h) => h.slice(0, 600));
+    // Phase 5: kimo's own captions, and libass picks only the bundled fonts (no fallback) on this PC
+    report.stage = 'caption-fonts';
+    flush();
+    const savedEdl = r.edlFile && fs.existsSync(r.edlFile) ? JSON.parse(fs.readFileSync(r.edlFile, 'utf8')) : null;
+    const chunks = (savedEdl?.overlays ?? []).filter((o) => o.props?.engine === 'kimo-captions');
+    const { fontSelfTest } = await import(pathToFileURL(join(__dirname, 'caption-selftest.mjs')).href);
+    const fonts = await fontSelfTest({ ffmpeg: p.ffmpeg, dir: join(data(), 'smoke', 'caption-fonts'), edl: savedEdl });
+    report.captionEngine = { style: savedEdl?.captions?.style ?? null, chunks: chunks.length, text: chunks.map((o) => o.props.text).join(' | ').slice(0, 300), stats: savedEdl?.captions?.stats ?? null, engineCaptions: r.history.some((h) => h.startsWith('auto_captions')), fonts };
+    report.ok = Boolean(report.kimo.tools && report.render.bytes > 1000 && report.render.edl && report.render.composed && fonts.ok && (!report.cutPlan || chunks.length > 0));
     const samAt = process.argv.indexOf('--smoke-sam');
     if (samAt > 0) {
       // SAM 3.1 end to end on Windows: proxy upload → track → 9:16 follow reframe + text behind the subject → kimo render
@@ -405,17 +416,17 @@ app.whenReady().then(async () => {
     const r = await dialog.showOpenDialog(win, { properties: folders ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'], filters: folders ? [] : [{ name: 'Media', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mp3', 'wav', 'm4a', 'png', 'jpg', 'jpeg'] }] });
     return r.canceled ? [] : expand(r.filePaths);
   });
-  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style, sam }) => {
+  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style, sam, captionStyle }) => {
     if (!files?.length) throw new Error('add a video first');
-    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style, sam })) : [newProject({ files, note, preset, mode, style, sam })];
+    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style, sam, captionStyle })) : [newProject({ files, note, preset, mode, style, sam, captionStyle })];
     saveLibrary();
     pump();
     return made.map(publicProject);
   });
-  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style, sam }) => {
+  ipcMain.handle('rerun', (_e, { id, note, preset, mode, style, sam, captionStyle }) => {
     const p = library.find((x) => x.id === id);
     if (!p || p.status === 'running') return null;
-    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, sam: sam === undefined ? p.sam : cleanSam(sam), status: 'queued', error: undefined, job: undefined });
+    Object.assign(p, { note: note ?? p.note, preset: preset ?? p.preset, mode: mode ?? p.mode, style: style ?? p.style, captionStyle: captionStyle === undefined ? p.captionStyle : cleanCaptionStyle(captionStyle), sam: sam === undefined ? p.sam : cleanSam(sam), status: 'queued', error: undefined, job: undefined });
     p.history = [...(p.history ?? []), { at: Date.now(), note: p.note, preset: p.preset, mode: p.mode }].slice(-30);
     update(p);
     pump();

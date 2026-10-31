@@ -11,6 +11,7 @@ import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, en
 import { headTrack, screenRegions } from './camera-probe.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
 import { pictureTools } from './picture-tools.mjs';
+import { pickCaptionStyle, pickHookStyle, noteHints, captionStyles, captionStyle as captionStyleOf, CAPTION_ENGINE } from './captions.mjs';
 import { toKimoProject, toTimeline, publicEdl } from './edl.mjs';
 import { planCut, applyCutPlan, plannerBrief, loadSavedPlan, storablePlan } from './cutstage.mjs';
 
@@ -606,6 +607,9 @@ const VISUAL = new Set([
 const STRUCTURE = new Set([...VISUAL, 'add_track', 'import_media', 'project_set', 'load_project']);
 /** Ops the timeline editor may send (validated before they reach kimo). */
 export const MANUAL_TOOLS = ['move_clip', 'trim_clip', 'delete_clip', 'edit_caption', 'set_property'];
+const NO_CAPTIONS = /\b(no|without|skip|remove|drop|turn off)\s+(the\s+|any\s+)?(captions|subtitles)\b/i;
+/** Caption styles the app offers (id → name), for the UI picker. */
+export const CAPTION_STYLES = () => Object.fromEntries([...captionStyles().values()].filter((s) => s.kind === 'caption').map((s) => [s.id, s.name]));
 
 function validChapters(raw, duration) {
   const list = (Array.isArray(raw) ? raw : [])
@@ -632,7 +636,7 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle }) {
   if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
@@ -807,6 +811,39 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       emit({ t: 'op', id: opId, phase: 'end', ok: false, ms: Date.now() - t0, error: String(error.message).slice(0, 200) });
       cameraCtx();
     }
+  };
+  // ---------- Phase 5 captions: kimo's own caption engine from the Phase 3 transcript words ----------
+  /**
+   * Captions from the cut plan's word timestamps (whisper already ran once for the cut),
+   * re-timed onto the output, styled, placed and rendered by libass in the final text pass.
+   * Returns false when no transcript words exist (the caller falls back to the engine's captions).
+   */
+  const startCaptions = async () => {
+    if (legacy_kimo_render) return false;
+    const ctx = pictures.camera?.ctx;
+    if (!Object.values(ctx?.words ?? {}).some((w) => w?.length)) return false;
+    const saved = appEdl?.captions;
+    const locked = Boolean(captionStyle && captionStyle !== 'auto');
+    const canvas = { w: P.width, h: P.height };
+    const off = mode === 'followup' && NO_CAPTIONS.test(note ?? '');
+    const chosen = saved?.style && !locked && mode === 'followup' && !/caption|subtitle/i.test(note ?? '') ? saved.style : pickCaptionStyle({ requested: captionStyle, note, template: S, canvas });
+    const id = randomUUID().slice(0, 8);
+    const t0 = Date.now();
+    emit({ t: 'op', id, phase: 'start', tool: 'captions', title: off ? 'captions · removing them' : `captions · ${captionStyleOf(chosen).name} · word-timed from the transcript (on this PC)`, why: 'word-by-word captions with a keyword accent, inside the safe area and off the face', at: t0 });
+    pictures.enableCaptions({
+      enabled: !off,
+      style: chosen,
+      locked,
+      note,
+      hook_style: saved?.hook_style ?? pickHookStyle({ style, note }),
+      hints: noteHints(note),
+      keep: (appEdl?.overlays ?? []).filter((o) => o.props?.engine === CAPTION_ENGINE && o.props.edited),
+    });
+    await refreshTimeline();
+    const s = pictures.captionReport ?? {};
+    emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: off ? 'captions off' : `${s.chunks ?? 0} chunks · ${Math.round((s.accent_share ?? 0) * 100)}% with a keyword · min ${s.caption_min_word_s ?? '?'} s per word${s.caption_safe === false ? ' · some outside the safe area' : ''}${s.hidden ? ` · ${s.hidden} yield to graphics` : ''}` });
+    history.push(`captions => ${off ? 'off' : `${chosen}, ${s.chunks ?? 0} chunks`}`);
+    return true;
   };
   // ---------- SAM 3.1: every step is a live op with progress + a preview ----------
   const samStep = async (tool, title, fn, summary) => {
@@ -1008,13 +1045,15 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         await call('finish_audio', { target_lufs: -14, keep_ambience: true });
         await check(1);
       } else {
-      emit({ t: 'status', text: 'captions with whisper, on this PC' });
-      await call('auto_captions', { ...(clipIds.length ? { clip_ids: clipIds } : {}), style: S.captions.style, max_words_per_line: S.captions.max_words_per_line, keywords: true });
+      emit({ t: 'status', text: 'captions from the transcript, on this PC' });
+      if (!(await startCaptions())) await call('auto_captions', { ...(clipIds.length ? { clip_ids: clipIds } : {}), style: S.captions.style, max_words_per_line: S.captions.max_words_per_line, keywords: true });
       await call('finish_audio', { target_lufs: -14, keep_ambience: true });
       await check(1);
       }
     } else if (mode === 'manual') {
       if (!suppliedEdl && appEdl?.camera_plan) pictures.camera = { ctx: appEdl.camera_plan };
+      // engine-op timeline edits rebuild the picture from the planner project: keep the saved captions (and their edits)
+      if (!suppliedEdl && appEdl?.captions) pictures.enableCaptions({ style: appEdl.captions.style, hook_style: appEdl.captions.hook_style, hints: appEdl.captions.hints ?? [], keep: appEdl.overlays.filter((o) => o.props?.engine === CAPTION_ENGINE && o.props.edited) });
       if(!suppliedEdl)for (const o of ops ?? []) if (MANUAL_TOOLS.includes(o.tool)) await call(o.tool, o.args ?? {}, 'your timeline edit');
       await check(1);
     } else {
@@ -1045,6 +1084,10 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
         }
       }
       await prepareCamera();
+      const captionsOn = !NO_CAPTIONS.test(note ?? '') || (mode === 'followup' && appEdl?.captions) ? await startCaptions() : false;
+      const captionBrief = captionsOn && pictures.captions?.enabled
+        ? `captions: ALREADY DONE by the app's caption engine (style "${pictures.captions.style}", word-timed from the transcript, keyword accent, placed below the chin inside the safe area, yields to hook titles). do not call caption_from_words. call auto_captions only to switch style: one of ${[...captionStyles().values()].filter((x) => x.kind === 'caption').map((x) => x.id).join(', ')}. edit_caption with a cap### clip id changes words. a hook title (add_title, first 3 s) is drawn with the "${pictures.captions.hook_style ?? 'planner'}" title effect.`
+        : '';
       const context = mode === 'followup'
         ? [
           `this is a FOLLOW-UP on an existing, already-loaded kimo project. the user's request: ${note}`,
@@ -1063,6 +1106,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
           expertGuide(P, S, files, cut?.plan ?? null),
           `tools (* = required):\n${toolText}\n${SAM_TOOL_TEXT}\n${CAMERA_TOOL_TEXT}`,
         ];
+      if (captionBrief) context.splice(context.length - 1, 0, captionBrief);
       await buildRounds(mode === 'followup' ? 4 : MAX_ROUNDS, context);
       for (let pass = 1; pass <= MAX_PASSES; pass++) {
         emit({ t: 'say', text: `exporting · check ${pass} of ${MAX_PASSES}` });
@@ -1164,7 +1208,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     const keepMaster=legacy_kimo_render||process.env.KIMO_COMPOSE_KEEP_MASTER==='1'||output===out;
     if(!keepMaster&&existsSync(out))unlinkSync(out);
-    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, camera: pictures.lastEdl?.camera_report ?? null, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
+    return { output, master: keepMaster ? out : output, duration: mf.duration || duration, history, timeline: pictures.lastEdl ? { ...toTimeline(pictures.lastEdl), edl: publicEdl(pictures.lastEdl) } : timeline, edlFile: pictures.lastEdl ? savedEdl : null, edl: publicEdl(pictures.lastEdl), quality: { final: mf.loudnorm ? { ...mf, loudnorm: undefined } : mf, checks: qf, passes: checks.map((c) => ({ pass: c.pass, verdict: c.verdict, faults: c.faults, lufs: c.m.lufs, truePeak: c.m.truePeak, checks: c.qc })) }, youtube, projectFile: existsSync(saved) ? saved : null, speed: msPerSec, camera: pictures.lastEdl?.camera_report ?? null, captions: pictures.lastEdl?.captions?.stats ?? null, cutPlan: cut ? { summary: cut.plan.summary, metrics: cut.plan.metrics, hook: cut.plan.hook, needs_cover: cut.plan.needs_cover.length, file: join(dir, 'cutplan.json') } : null };
   } finally {
     try { mcp.kill(); } finally { release(); }
   }
