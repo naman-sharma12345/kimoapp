@@ -1,0 +1,92 @@
+{
+  "kimo": {
+    "name": "kimo",
+    "fonts": {
+      "display": { "family": "Geist", "weight": 900 },
+      "serif": { "family": "Instrument Serif", "weight": 400 },
+      "serif_italic": { "family": "Instrument Serif", "weight": 400, "style": "italic" },
+      "body": { "family": "Geist", "weight": 600 },
+      "label": { "family": "Geist", "weight": 700 }
+    },
+    "colors": { "text": "#F5F1E7", "ink": "#141210", "accent": "#FF5A24", "accent2": "#FFC23D", "panel": "#141210", "panel_alpha": 0.86, "muted": "#B9B2A6", "shadow": "#000000" },
+    "case": "upper",
+    "stroke": 0,
+    "radius": 0.018,
+    "hook": "pop"
+  },
+  "energetic": {
+    "name": "creator punch",
+    "fonts": {
+      "display": { "family": "Montserrat", "weight": 900 },
+      "serif": { "family": "Instrument Serif", "weight": 400 },
+      "serif_italic": { "family": "Instrument Serif", "weight": 400, "style": "italic" },
+      "body": { "family": "Montserrat", "weight": 800 },
+      "label": { "family": "Montserrat", "weight": 800 }
+    },
+    "colors": { "text": "#FFFFFF", "ink": "#000000", "accent": "#FFE11A", "accent2": "#2BE36B", "panel": "#0B0B0B", "panel_alpha": 0.9, "muted": "#D6D6D6", "shadow": "#000000" },
+    "case": "upper",
+    "stroke": 0.075,
+    "radius": 0.022,
+    "hook": "pop"
+  },
+  "documentary": {
+    "name": "documentary serif",
+    "fonts": {
+      "display": { "family": "Instrument Serif", "weight": 400 },
+      "serif": { "family": "Instrument Serif", "weight": 400 },
+      "serif_italic": { "family": "Instrument Serif", "weight": 400, "style": "italic" },
+      "body": { "family": "Geist", "weight": 600 },
+      "label": { "family": "Geist", "weight": 700 }
+    },
+    "colors": { "text": "#F4EFE6", "ink": "#0D0C0B", "accent": "#E9B949", "accent2": "#F4EFE6", "panel": "#0D0C0B", "panel_alpha": 0.78, "muted": "#C9C1B4", "shadow": "#000000" },
+    "case": "as-is",
+    "stroke": 0,
+    "radius": 0.006,
+    "hook": "decay"
+  },
+  "cinematic": {
+    "name": "cinematic gold",
+    "fonts": {
+      "display": { "family": "Instrument Serif", "weight": 400 },
+      "serif": { "family": "Instrument Serif", "weight": 400 },
+      "serif_italic": { "family": "Instrument Serif", "weight": 400, "style": "italic" },
+      "body": { "family": "Geist", "weight": 600 },
+      "label": { "family": "Geist", "weight": 700 }
+    },
+    "colors": { "text": "#F7F1E3", "ink": "#0A0908", "accent": "#D9A94A", "accent2": "#FFE6A8", "panel": "#0A0908", "panel_alpha": 0.8, "muted": "#CFC6B5", "shadow": "#000000" },
+    "case": "as-is",
+    "stroke": 0,
+    "radius": 0.004,
+    "hook": "gold-sweep"
+  },
+  "podcast": {
+    "name": "podcast clean",
+    "fonts": {
+      "display": { "family": "Geist", "weight": 900 },
+      "serif": { "family": "Instrument Serif", "weight": 400 },
+      "serif_italic": { "family": "Instrument Serif", "weight": 400, "style": "italic" },
+      "body": { "family": "Geist", "weight": 600 },
+      "label": { "family": "Geist", "weight": 700 }
+    },
+    "colors": { "text": "#FFFFFF", "ink": "#101010", "accent": "#FF5A24", "accent2": "#FFFFFF", "panel": "#101010", "panel_alpha": 0.86, "muted": "#BDBDBD", "shadow": "#000000" },
+    "case": "upper",
+    "stroke": 0,
+    "radius": 0.018,
+    "hook": "pop"
+  },
+  "tutorial": {
+    "name": "tutorial studio",
+    "fonts": {
+      "display": { "family": "Geist", "weight": 900 },
+      "serif": { "family": "Instrument Serif", "weight": 400 },
+      "serif_italic": { "family": "Instrument Serif", "weight": 400, "style": "italic" },
+      "body": { "family": "Geist", "weight": 600 },
+      "label": { "family": "Geist", "weight": 700 }
+    },
+    "colors": { "text": "#FFFFFF", "ink": "#0F1115", "accent": "#4C8DFF", "accent2": "#FFD43B", "panel": "#0F1115", "panel_alpha": 0.88, "muted": "#AEB6C4", "shadow": "#000000" },
+    "case": "as-is",
+    "stroke": 0,
+    "radius": 0.022,
+    "hook": "echo-slide"
+  }
+}

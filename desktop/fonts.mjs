@@ -25,6 +25,8 @@ export const BUNDLED_FONTS = Object.freeze({
   'Bangers-Regular.ttf': 'Bangers',
   'NotoSansDevanagari-Bold.ttf': 'Noto Sans Devanagari Bold',
   'NotoSansDevanagari-Black.ttf': 'Noto Sans Devanagari Black',
+  'InstrumentSerif-Regular.ttf': 'Instrument Serif',
+  'InstrumentSerif-Italic.ttf': 'Instrument Serif Italic',
 });
 /** PostScript names libass reports when it picks a bundled face. */
 export const BUNDLED_POSTSCRIPT = Object.freeze(Object.keys(BUNDLED_FONTS).map((f) => f.replace(/\.ttf$/, '')));

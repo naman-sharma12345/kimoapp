@@ -75,3 +75,15 @@ The OFL allows bundling and redistribution with software; the fonts are not sold
   (https://github.com/notofonts/devanagari). Files (hinted TTF):
   https://github.com/notofonts/notofonts.github.io/tree/main/fonts/NotoSansDevanagari/hinted/ttf
   Licence: SIL OFL 1.1, https://github.com/notofonts/devanagari/blob/main/OFL.txt (`fonts/licenses/Noto-OFL.txt`).
+- Instrument Serif Regular, Instrument Serif Italic — Copyright 2022 The Instrument Serif Project Authors
+  (https://github.com/Instrument/instrument-serif). Files: https://github.com/google/fonts/tree/main/ofl/instrumentserif
+  Licence: SIL OFL 1.1, https://github.com/google/fonts/blob/main/ofl/instrumentserif/OFL.txt (`fonts/licenses/InstrumentSerif-OFL.txt`).
+  Used by the Phase 6 graphics kit (chapter cards, documentary/cinematic titles).
+
+## Emoji stickers (SIL Open Font License 1.1)
+
+- `graphics/emoji/*.png` — 20 glyphs of Noto Color Emoji, Copyright 2021 Google Inc.
+  (https://github.com/googlefonts/noto-emoji). Rasterised at 160 px from the OFL-licensed font file
+  https://github.com/google/fonts/blob/main/ofl/notocoloremoji/NotoColorEmoji-Regular.ttf with
+  `test/bench/tools/extract-emoji.py` (offline tool; not run by the app).
+  Licence: SIL OFL 1.1, https://github.com/google/fonts/blob/main/ofl/notocoloremoji/OFL.txt (`graphics/emoji/NotoColorEmoji-OFL.txt`).
