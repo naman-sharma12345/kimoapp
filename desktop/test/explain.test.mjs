@@ -117,3 +117,44 @@ test('layout: modes keep the face clear (reframed), full ≤ 25 %, pip for long 
   assert.ok(r.removed.includes('s'));
   assert.ok(r.moved.includes('k') && ov.find((o) => o.id === 'k').at >= 9.6 - 1e-9);
 });
+
+test('sources: keyless search is licence-filtered, cached (2nd run: 0 network), capped; screenshots only public URLs', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { AssetCache, attributionsText, creditLine } = await import('../explain/assets.mjs');
+  const wm = await import('../explain/sources/wikimedia.mjs');
+  const ov = await import('../explain/sources/openverse.mjs');
+  const { publicUrl } = await import('../explain/sources/screenshot.mjs');
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-assets-'));
+  let calls = 0;
+  const page = (title, license, artist) => ({ title: `File:${title}.jpg`, index: 1, imageinfo: [{ mime: 'image/jpeg', url: `https://upload.example/${title}.jpg`, thumburl: `https://upload.example/t/${title}.jpg`, thumbwidth: 1024, thumbheight: 768, descriptionurl: `https://commons.example/${title}`, extmetadata: { License: { value: license }, Artist: { value: `<a>${artist}</a>` } } }] });
+  const fake = async (url) => {
+    calls++;
+    if (url.includes('openverse')) return { ok: true, json: async () => ({ results: [{ url: 'https://x.example/a.jpg', license: 'by', license_version: '2.0', creator: 'Ann', title: 'A', filetype: 'jpg' }, { url: 'https://x.example/b.jpg', license: 'by-nc', creator: 'B' }, { url: 'https://x.example/c.jpg', license: 'cc0', mature: true }] }) };
+    return { ok: true, json: async () => ({ query: { pages: [page('Taj', 'cc-by-sa-4.0', 'X'), page('Taj2', 'cc-by-4.0', 'Yann'), page('Taj3', 'cc0', 'Z')] } }) };
+  };
+  try {
+    const cache = new AssetCache(dir, { fetch: fake, maxSearches: 3 });
+    const a = await wm.search('Taj Mahal', { cache });
+    assert.deepEqual(a.map((x) => x.license), ['by', 'cc0'], 'no share-alike');
+    assert.equal(a[0].creator, 'Yann');
+    const b = await ov.search('Taj Mahal', { cache });
+    assert.deepEqual(b.map((x) => x.creator), ['Ann'], 'no NC, no mature');
+    assert.equal(creditLine(b[0]), 'Ann, CC BY 2.0 (Openverse)');
+    assert.match(attributionsText([b[0]]), /Ann, CC BY 2\.0/);
+    const n = calls;
+    const again = new AssetCache(dir, { fetch: fake });
+    await wm.search('Taj Mahal', { cache: again });
+    await ov.search('Taj Mahal', { cache: again });
+    assert.equal(calls, n, 'second run is served from the cache');
+    assert.equal(again.stats.network, 0);
+    await wm.search('q1', { cache });
+    assert.deepEqual(await wm.search('q2', { cache }), [], 'per-video search cap');
+    assert.equal(cache.stats.refused, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  assert.equal(publicUrl('github.com/naman/kimo'), 'https://github.com/naman/kimo');
+  for (const bad of ['http://localhost:3000', 'https://192.168.1.4/x', 'file:///etc/passwd', 'https://10.0.0.1', 'intranet']) assert.equal(publicUrl(bad), null, bad);
+});
