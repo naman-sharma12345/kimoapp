@@ -941,7 +941,9 @@ export function publicEdl(edl) {
     audio: tracks('audio'),
     overlays: edl.overlays.map((o) => ({
       ...pick(o, ['id', 'kind', 'at', 'dur', 'track', 'src']),
-      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height', 'engine', 'style', 'edited', 'hidden', 'element']),
+      props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height', 'engine', 'style', 'edited', 'hidden', 'element',
+        // Phase 7 explainer beats: what the Studio beat editor shows and edits (no panel geometry, assets or paths)
+        'explain', 'explain_plan', 'mode', 'title', 'items', 'label', 'question', 'term', 'keyword', 'caption', 'quote']),
     })),
     ...(edl.captions ? { captions: { style: edl.captions.style, hook_style: edl.captions.hook_style ?? null, bounds: captionBounds(edl), stats: edl.captions.stats } } : {}),
     master: { ...edl.master },
