@@ -69,7 +69,7 @@ function appearance(o, t, canvas) {
     return `{\\an7\\pos(${(x - (w * zoom) / 2).toFixed(3)},${(y - (h * zoom) / 2).toFixed(3)})\\org(${x.toFixed(3)},${y.toFixed(3)})\\fscx${(zoom * 100).toFixed(3)}\\fscy${(zoom * 100).toFixed(3)}\\frz${-curveValue(curves.rotation, t)}\\c${assColour(p.fill)}\\3c${assColour(p.stroke_color ?? [0, 0, 0])}\\bord${((p.stroke_width ?? 0) * scale).toFixed(3)}\\shad0\\alpha&H${byte(alpha)}&\\p1}${primitive(p, scale)}{\\p0}`;
   }
   const font = String(p.font ?? 'DejaVu Sans').replace(/[{},\\\r\n]/g, '');
-  const tags = `\\an5\\pos(${x.toFixed(3)},${y.toFixed(3)})\\fn${font}\\fs${size.toFixed(3)}\\b${fx.weight >= 600 ? 1 : 0}\\fscx${(zoom * 100).toFixed(3)}\\fscy${(zoom * 100).toFixed(3)}\\frz${-curveValue(curves.rotation, t)}\\bord${((p.stroke_width ?? 0) * scale).toFixed(3)}\\shad${((p.shadow ?? 0) * scale).toFixed(3)}\\fsp${((p.letter_spacing ?? 0) * scale).toFixed(3)}\\3c${assColour(p.stroke_color ?? [0, 0, 0])}\\alpha&H${byte(alpha)}&`;
+  const tags = `\\an5\\pos(${x.toFixed(3)},${y.toFixed(3)})\\fn${font}\\fs${size.toFixed(3)}\\b${Number.isFinite(fx.weight) ? Math.max(100, Math.min(900, Math.round(fx.weight))) : 400}\\fscx${(zoom * 100).toFixed(3)}\\fscy${(zoom * 100).toFixed(3)}\\frz${-curveValue(curves.rotation, t)}\\bord${((p.stroke_width ?? 0) * scale).toFixed(3)}\\shad${((p.shadow ?? 0) * scale).toFixed(3)}\\fsp${((p.letter_spacing ?? 0) * scale).toFixed(3)}\\3c${assColour(p.stroke_color ?? [0, 0, 0])}\\alpha&H${byte(alpha)}&`;
   const original = fx.uppercase
     ? String(p.text ?? '').toUpperCase()
     : String(p.text ?? '');
