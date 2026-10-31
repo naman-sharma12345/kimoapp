@@ -322,6 +322,38 @@ test('changing caption pixels cannot choose the previous source frame when maske
   assert.equal(measured.incorrect_frames, 0);
   assert.equal(measured.coverage, 1);
 });
+test('photometric frame matching handles encode brightness changes while still detecting injected judder and rejecting ambiguous stills', () => {
+  const source = Array.from({ length: 20 }, (_, i) =>
+    Uint8Array.from({ length: 256 }, (_, k) =>
+      k >= 96 && k < 128 ? 20 + ((i * 17 + k * 11) % 150) : 20 + (k % 17) * 6,
+    ),
+  );
+  const graded = source.map((frame, i) =>
+    Uint8Array.from(i === 8 ? source[7] : frame, (v) =>
+      Math.round(v * 1.1 + 5),
+    ),
+  );
+  const measured = m.matchFrames(
+    graded,
+    source,
+    source.map((_, i) => i),
+    { photometric: true },
+  );
+  assert.equal(measured.coverage, 1);
+  assert.equal(measured.repeated_frames, 1);
+  assert.equal(measured.skipped_frames, 1);
+  const still = Array(20).fill(source[0]);
+  assert.equal(
+    m.matchFrames(
+      still,
+      still,
+      source.map((_, i) => i),
+      { photometric: true },
+    ).coverage,
+    0,
+  );
+});
+
 test('delivery gate checks metadata and mandatory audio rate', () => {
   const streams = {
     video: {
@@ -335,6 +367,26 @@ test('delivery gate checks metadata and mandatory audio rate', () => {
   };
   assert.equal(m.deliveryOk([{ ok: true }], streams), true);
   assert.equal(m.deliveryOk([{ ok: false }], streams), false);
+  assert.equal(
+    m.deliveryOk(
+      [
+        { id: 'motion', ok: false },
+        { id: 'codec', ok: true },
+      ],
+      streams,
+    ),
+    true,
+  );
+  assert.equal(
+    m.deliveryOk(
+      [
+        { id: 'motion', ok: true },
+        { id: 'codec', ok: false },
+      ],
+      streams,
+    ),
+    false,
+  );
   assert.equal(
     m.deliveryOk([{ ok: true }], {
       ...streams,

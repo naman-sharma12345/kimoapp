@@ -20,6 +20,7 @@ import {
   readJson,
   writeJson,
   command,
+  sha256,
 } from './io.mjs';
 import { measureRun, transcribe } from './analyze.mjs';
 import { reviewMedia } from './report.mjs';
@@ -63,6 +64,29 @@ if (clip.music) paths.push(join(mediaRoot, 'music-bed.wav'));
 const files = await Promise.all(paths.map((p) => probe(tools.ffprobe, p)));
 if (files.some((f) => !f)) throw new Error('Exact prepared input is missing');
 const sourceHashes = await Promise.all(paths.map(hashFile));
+const audioHash = async (path) =>
+  sha256(
+    (
+      await command(tools.ffmpeg, [
+        '-v',
+        'error',
+        '-i',
+        path,
+        '-map',
+        '0:a:0',
+        '-vn',
+        '-ac',
+        '2',
+        '-ar',
+        '48000',
+        '-c:a',
+        'pcm_s16le',
+        '-f',
+        's16le',
+        'pipe:1',
+      ])
+    ).stdout,
+  );
 if (dataset === 'raw-v2') {
   const prepared = await readJson(join(mediaRoot, 'prepared.json'));
   if (
@@ -180,10 +204,13 @@ try {
       const elapsedMs = Date.now() - started;
       const project = await readJson(result.projectFile);
       const recomposed = onlyAnalysis && process.env.BENCH_RECOMPOSE === 'true';
+      let priorAudioHash = null;
       if (recomposed) {
         const previousHash = await hashFile(result.output);
         if (previousHash !== originalRun.finalHash)
           throw new Error('Recorded final hash changed before recompose');
+        if (clip.speech && existsSync(join(dir, 'compose-words.json')))
+          priorAudioHash = await audioHash(result.output);
         result.edl = fromKimoProject(project, files, { emit: log });
         await writeJson(result.edlFile, result.edl);
         const master = join(dir, 'recomposed.mkv');
@@ -206,16 +233,36 @@ try {
         });
         await unlink(master);
       }
-      const analyze = async (output, target) => {
+      const analyze = async (output, target, { reuseWords = false } = {}) => {
         // Measure each final's own audio and delivery with identical checks.
+        const wordsPath = join(dir, `${target}-words.json`);
+        const usingSavedWords = Boolean(
+          clip.speech && reuseWords && existsSync(wordsPath),
+        );
         const words = clip.speech
-          ? await transcribe({
-              ...tools,
-              input: output,
-              directory: join(DATA_ROOT, 'transcripts'),
-            })
+          ? usingSavedWords
+            ? await readJson(wordsPath)
+            : await transcribe({
+                ...tools,
+                input: output,
+                directory: join(DATA_ROOT, 'transcripts'),
+              })
           : [];
-        await writeJson(join(dir, `${target}-words.json`), words);
+        await writeJson(wordsPath, words);
+        await writeJson(join(dir, `${target}-words-provenance.json`), {
+          finalHash: await hashFile(output),
+          reused: usingSavedWords,
+          basis: !clip.speech
+            ? 'Speech-free case; no transcription requested'
+            : usingSavedWords
+              ? recomposed && target === 'compose'
+                ? 'Exact decoded 48k stereo PCM SHA256 unchanged'
+                : 'Preserved whole-video SHA256 verified unchanged'
+              : 'Local Whisper on this final audio',
+          ...(usingSavedWords && priorAudioHash && target === 'compose'
+            ? { pcmSha256: priorAudioHash }
+            : {}),
+        });
         const final = await measure(tools.ffmpeg, tools.ffprobe, output);
         const quality = qualityChecks(
           final,
@@ -248,7 +295,14 @@ try {
       };
       if (result.output !== join(dir, 'final.mp4'))
         await copyFile(result.output, join(dir, 'final.mp4'));
-      await analyze(result.output, 'compose');
+      const reuseComposedWords =
+        onlyAnalysis &&
+        (!recomposed ||
+          (priorAudioHash &&
+            priorAudioHash === (await audioHash(result.output))));
+      await analyze(result.output, 'compose', {
+        reuseWords: Boolean(reuseComposedWords),
+      });
       await reviewMedia({
         ffmpeg: tools.ffmpeg,
         output: result.output,
@@ -309,7 +363,7 @@ try {
           const legacyRun = await readJson(join(dir, 'legacy-run.json'));
           if ((await hashFile(legacy)) !== legacyRun.finalHash)
             throw new Error('Preserved native reference bytes changed');
-          await analyze(legacy, 'legacy');
+          await analyze(legacy, 'legacy', { reuseWords: true });
         }
       }
       if (

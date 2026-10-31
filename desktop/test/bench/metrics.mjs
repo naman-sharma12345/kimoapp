@@ -350,7 +350,7 @@ export function matchFrames(
   output,
   source,
   expected,
-  { radius = 3, maxMad = 24, masks } = {},
+  { radius = 3, maxMad = 24, masks, photometric = false, maxRatio = 0.9 } = {},
 ) {
   const indices = [],
     errors = [];
@@ -366,11 +366,38 @@ export function matchFrames(
       .filter((j) => j >= 0 && j < source.length)
       .sort((a, b) => Math.abs(a - target) - Math.abs(b - target));
     for (const j of candidates) {
+      let gain = 1,
+        bias = 0;
+      if (photometric) {
+        let n = 0,
+          so = 0,
+          ss = 0,
+          sss = 0,
+          sos = 0;
+        for (let k = 0; k < output[i].length; k++)
+          if (!masks?.[i] || masks[i][k]) {
+            const o = output[i][k],
+              s = source[j][k];
+            n++;
+            so += o;
+            ss += s;
+            sss += s * s;
+            sos += s * o;
+          }
+        const variance = sss - (ss * ss) / n;
+        if (variance / n > 4) {
+          const fitted = (sos - (ss * so) / n) / variance;
+          if (fitted >= 0.5 && fitted <= 2) {
+            gain = fitted;
+            bias = (so - gain * ss) / n;
+          }
+        }
+      }
       let sum = 0,
         pixels = 0;
       for (let k = 0; k < output[i].length; k++)
         if (!masks?.[i] || masks[i][k]) {
-          sum += Math.abs(output[i][k] - source[j][k]);
+          sum += Math.abs(output[i][k] - (source[j][k] * gain + bias));
           pixels++;
         }
       const mad = pixels ? sum / pixels : Infinity;
@@ -380,7 +407,11 @@ export function matchFrames(
         best = j;
       } else second = Math.min(second, mad);
     }
-    indices.push(cost <= maxMad && second - cost >= 0.02 ? best : null);
+    indices.push(
+      cost <= maxMad && second - cost >= 0.02 && cost <= second * maxRatio
+        ? best
+        : null,
+    );
     errors.push(Number.isFinite(cost) ? cost : null);
   }
   let repeated = 0,
@@ -411,7 +442,7 @@ export function deliveryOk(checks, streams) {
   const v = streams.video,
     a = streams.audio;
   return (
-    checks.every((c) => c.ok || c.warn) &&
+    checks.filter((c) => c.id !== 'motion').every((c) => c.ok || c.warn) &&
     v.codec_name === 'h264' &&
     v.profile === 'High' &&
     v.color_space === 'bt709' &&

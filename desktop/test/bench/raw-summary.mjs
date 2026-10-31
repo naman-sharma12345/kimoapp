@@ -17,7 +17,7 @@ for (const clip of frozen.cases)
       clip: clip.id,
       aspect,
       scope:
-        'Version-2 identical-project offline renderer comparison; not an AI editorial replay',
+        'Version-3 identical-project offline renderer comparison; not an AI editorial replay',
     };
     try {
       const run = await readJson(join(dir, 'run.json'));
@@ -37,9 +37,9 @@ for (const clip of frozen.cases)
       row.commit = run.commit;
       row.outputSha256 = run.finalHash;
       const after = await readJson(join(dir, 'compose-metrics.json'));
-      if (after.version !== 2)
+      if (after.version !== 3)
         throw new Error(
-          'Current camera measurements require version 2 on both sides',
+          'Current EOF/delivery measurements require version 3 on both sides',
         );
       const metrics = (m) => ({
         score: m.creator.score,
@@ -66,7 +66,7 @@ for (const clip of frozen.cases)
         )
           throw new Error('Native baseline project hash mismatch');
         const before = await readJson(join(dir, 'legacy-metrics.json'));
-        if (before.version !== 2)
+        if (before.version !== 3)
           throw new Error('Native measurement version mismatch');
         row.before = metrics(before);
         row.nativeSha256 = native.finalHash;

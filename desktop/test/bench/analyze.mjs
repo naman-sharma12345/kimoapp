@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { mkdir, copyFile } from 'node:fs/promises';
-import { ROOT, command, hashFile, readJson } from './io.mjs';
+import { ROOT, command, hashFile, readJson, probeFile } from './io.mjs';
 import * as metric from './metrics.mjs';
 import { sourceResidualJitter } from './registration.mjs';
 import { workerThreads } from '../../resources.cjs';
@@ -237,12 +237,15 @@ export async function frameSourceMetrics(
   width,
   height,
   duration,
+  ffprobe = process.env.KIMO_FFPROBE ||
+    ffmpeg.replace(/ffmpeg(?=\.exe$|$)/i, 'ffprobe'),
 ) {
   let repeats = 0,
     skips = 0,
     compared = 0,
     total = Math.max(0, Math.round(duration * fps) - 1);
   const details = [];
+  const metadata = new Map();
   let cameraSquared = 0,
     cameraMeasured = 0,
     cameraEligible = total;
@@ -336,11 +339,18 @@ export async function frameSourceMetrics(
     ]);
     const outputFrames = split(out.stdout, size),
       sourceFrames = split(src.stdout, size);
+    if (!metadata.has(e.path))
+      metadata.set(e.path, await probeFile(ffprobe, e.path));
+    const recordedFrames = Number(metadata.get(e.path).video?.nb_frames);
+    const sourceLast = recordedFrames > 0 ? recordedFrames - 1 : Infinity;
     const expected = outputFrames.map(
       (_, i) =>
-        Math.round(
-          (((firstOutput + i) / fps - e.start) * e.speed + e.in_point) *
-            e.sourceFps,
+        Math.min(
+          sourceLast,
+          Math.round(
+            (((firstOutput + i) / fps - e.start) * e.speed + e.in_point) *
+              e.sourceFps,
+          ),
         ) - firstSource,
     );
     // New captions are not present in the source. Exclude conservative envelopes
@@ -375,6 +385,7 @@ export async function frameSourceMetrics(
       : undefined;
     const matched = metric.matchFrames(outputFrames, sourceFrames, expected, {
       masks,
+      photometric: true,
     });
     const camera = sourceResidualJitter(
       outputFrames,
@@ -545,6 +556,7 @@ export async function measureRun({
     a.info.video.width,
     a.info.video.height,
     a.info.duration,
+    ffprobe,
   );
   const delivery = await metric.inspectDelivery(
     ffmpeg,
@@ -597,7 +609,7 @@ export async function measureRun({
     if (duck) duck.estimated = true;
   }
   return {
-    version: 2,
+    version: 3,
     values,
     checks,
     creator: metric.creatorScore(values, weights, {
@@ -615,11 +627,11 @@ export async function measureRun({
         ? 'RMS music-stem level under speech versus gaps.'
         : 'Estimated from saved music/background-audio volume and duck-gain envelopes; source dynamics are unknown. Unavailable if no bed or speech/gap windows exist.',
       frame:
-        '108x192 grey MAD +/-3 source frames with float perspective alignment; no integer crop approximation. EDL cuts are excluded. Text envelopes are masked on both source and output; unknown animated geometry is unmeasured. Expected indices use the global grid, source rate and speed. Intended rate-conversion/slow-motion holds are not judder. Animated mappings and ambiguous static frames reduce coverage.',
+        '108x192 grey affine-photometric MAD +/-3 source frames (best/second cost ratio <=0.9 and absolute separation >=0.02) with float perspective alignment; no integer crop approximation. EDL cuts are excluded. Text envelopes are masked on both source and output; unknown animated geometry is unmeasured. Expected indices use the global grid, source rate and speed, clamped to exact ffprobe nb_frames when available. Intended EOF/rate-conversion/slow-motion holds are not judder. Animated mappings and ambiguous static frames reduce coverage.',
       camera:
-        'Source-referenced small-translation least squares with affine brightness fit on 108x192 decoded grey frames; masked overlay envelopes and gradient neighbours. SG7 high-frequency residual normalized to 1080 short side. Flat/aperture/poor fits are unavailable; requires 95% eligible coverage. Physical source motion cancels against the same expected source frame. This estimate does not certify source-frame identity. The old whole-picture measure remains content_motion_jitter_px. Compare version-2 before and after only.',
+        'Source-referenced small-translation least squares with affine brightness fit on 108x192 decoded grey frames; masked overlay envelopes and gradient neighbours. SG7 high-frequency residual normalized to 1080 short side. Flat/aperture/poor fits are unavailable; requires 95% eligible coverage. Physical source motion cancels against the same expected source frame. This estimate does not certify source-frame identity. The old whole-picture measure remains content_motion_jitter_px. Compare measurement version-3 before and after only.',
       delivery:
-        'qualityChecks plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR.',
+        'Format qualityChecks (excluding whole-content motion) plus ffprobe codec, BT.709 and audio bitrate; trace_headers verifies IDR keyframes and ffprobe timestamps verify CFR. Motion retains its separate source-referenced gates.',
     },
     events: events.map(({ raw, ...e }) => e),
     analysis: { frozen: a.frozen, silences: a.silences },

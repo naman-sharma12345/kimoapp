@@ -449,6 +449,90 @@ const edlFor = (path, fps) => ({
   master: { lufs: -14, true_peak: -1 },
 });
 test(
+  'source matcher treats a metadata-rounding EOF hold as planned, using the actual source frame count',
+  { timeout: 90000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-eof-match-'));
+    try {
+      const fixturePath = await fixture(dir, 25),
+        source = join(dir, 'source.mp4');
+      await command(ffmpeg, [
+        '-v',
+        'error',
+        '-y',
+        '-i',
+        fixturePath,
+        '-c:v',
+        'libx264',
+        '-crf',
+        '10',
+        '-pix_fmt',
+        'yuv420p',
+        source,
+      ]);
+      const e = edlFor(source, 25);
+      e.sources[0].duration = 1.600001;
+      e.video = [
+        {
+          track: 'V1',
+          clips: [
+            { id: 'hold', src: 's', in: 0, out: 1.600001, at: 0, speed: 1 },
+          ],
+        },
+      ];
+      const result = await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output: join(dir, 'final.mkv'),
+        dir: join(dir, 'work'),
+      });
+      const project = {
+        width: W,
+        height: H,
+        fps: 25,
+        assets: {
+          s: { path: source, width: W, height: H, fps: 25, duration: 1.600001 },
+        },
+        tracks: [
+          {
+            id: 'V1',
+            clips: [
+              {
+                id: 'hold',
+                source: { type: 'media', asset: 's' },
+                start: 0,
+                duration: 1.600001,
+                in_point: 0,
+                speed: 1,
+                props: {},
+              },
+            ],
+          },
+        ],
+      };
+      const metrics = await frameSourceMetrics(
+        ffmpeg,
+        result.output,
+        projectEdl(project),
+        25,
+        W,
+        H,
+        41 / 25,
+        ffprobe,
+      );
+      assert.equal((await probeFile(ffprobe, source)).video.nb_frames, '40');
+      assert.equal(metrics.repeated_frames, 0);
+      assert.equal(metrics.skipped_frames, 0);
+      assert.equal(metrics.frame_match[0].incorrect_frames, 0);
+      assert.ok(metrics.frame_match_coverage >= 0.95);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
   'fallback layers match the direct graph through transparent gaps and quoted Windows paths',
   { timeout: 90000 },
   async () => {
