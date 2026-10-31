@@ -7,11 +7,11 @@ import {
   readdir,
   copyFile,
 } from 'node:fs/promises';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, statSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, resolve, sep, basename } from 'node:path';
 import { once } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
-import { spawnBackground } from './resources.cjs';
+import { spawnBackground, execFileBackground } from './resources.cjs';
 import {
   validate,
   rate,
@@ -23,6 +23,10 @@ import {
 import { rectFilter, splineExpr } from './sam.mjs';
 import { coverGeometry, zoomCap, cameraRect, clipCameraAt } from './camera.mjs';
 import { subtitles } from './compose-text.mjs';
+import { AssDocument } from './ass.mjs';
+import { drawCaptions, isKimoCaption, isStyledHook } from './caption-render.mjs';
+import { captionStyle, blockBox } from './captions.mjs';
+import { bundledFontsDir, filterPath, fontFiles } from './fonts.mjs';
 import {
   planTransitions,
   transitionEnvelope,
@@ -35,6 +39,7 @@ const stop = (signal) => {
   if (signal?.aborted) throw new Error('cancelled');
 };
 const safe = (n) => (Number.isFinite(n) ? Number(n.toFixed(9)) : 0);
+const BASE_CACHE_VERSION = 1;
 const scriptOptions = new Map();
 async function scriptOption(ffmpeg) {
   if (!scriptOptions.has(ffmpeg))
@@ -436,11 +441,81 @@ const lossless = [
   '-fps_mode',
   'passthrough',
 ];
-function textFilter(path, localFonts, script) {
+/**
+ * The libass pass. One ass filter (complex shaping, so Devanagari conjuncts
+ * form) with the script and fonts dir given as absolute, escaped filter paths
+ * (C\\:/… on Windows; a bare drive letter splits the option).
+ */
+export function textFilter(path, fontsDir, script) {
   if (!script.includes('\nDialogue:')) return 'format=yuv444p';
   // FFmpeg 6's ASS draw context uses a fixed YUV matrix. Composite its RGB
   // colours in RGB instead, then explicitly return to the BT.709 4:4:4 graph.
-  return `scale=in_color_matrix=bt709:in_range=tv,format=rgb24,setparams=range=full:colorspace=gbr,subtitles=filename='${basename(path)}'${localFonts ? ":fontsdir='fonts'" : ''},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709`;
+  return `scale=in_color_matrix=bt709:in_range=tv,format=rgb24,setparams=range=full:colorspace=gbr,ass=filename=${filterPath(resolve(path))}${fontsDir ? `:fontsdir=${filterPath(resolve(fontsDir))}` : ''}:shaping=complex,scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709`;
+}
+/**
+ * The final text pass script: planner/legacy overlays (compose-text) plus
+ * kimo captions and styled hook titles (caption-render) in one ASS document.
+ */
+export function finalScript(edl, overlays, from, to) {
+  const legacy = subtitles({ ...edl, overlays }, from, to);
+  if (!edl.overlays.some((o) => isKimoCaption(o) || o._kimoText)) return legacy;
+  const doc = new AssDocument({ w: edl.canvas.w, h: edl.canvas.h });
+  doc.rawDialogue(legacy.split('\n').filter((l) => l.startsWith('Dialogue:')));
+  drawCaptions(doc, edl, rate(edl.canvas.fps), from, to);
+  return doc.toString();
+}
+const relLum = (c) => {
+  const v = c / 255;
+  return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+};
+const hexLum = (hex) => {
+  const [r, g, b] = String(hex).replace('#', '').match(/../g).map((h) => parseInt(h, 16));
+  return 0.2126 * relLum(r) + 0.7152 * relLum(g) + 0.0722 * relLum(b);
+};
+/** Styles without a box or a real outline get the background contrast check. */
+const needsContrast = (style, canvas) => !style.box && (style.outline ?? 0) * canvas.w < 3;
+/**
+ * Auto-contrast: mean luminance of the base composite behind each caption
+ * block (one small grey frame per chunk); below 4.5:1 against the text
+ * colour, the chunk renders on a soft translucent box. Mutates the overlays.
+ */
+async function contrastPass(edl, { ffmpeg, base, from, to, signal }) {
+  const fps = rate(edl.canvas.fps);
+  const caps = edl.overlays.filter((o) => isKimoCaption(o) && !o.props.hidden && needsContrast(captionStyle(o.props.style), edl.canvas)).map((o) => ({ o, n: Math.round((o.at + o.dur / 2) * fps) - from })).filter((x) => x.n >= 0 && x.n < to - from);
+  if (!caps.length) return 0;
+  const W = 160;
+  const H = Math.max(2, Math.round((W * edl.canvas.h) / edl.canvas.w / 2) * 2);
+  const frames = [...new Set(caps.map((c) => c.n))].sort((a, b) => a - b);
+  const buf = await new Promise((done) =>
+    execFileBackground(ffmpeg, ['-v', 'error', '-i', base, '-vf', `select='${frames.map((n) => `eq(n,${n})`).join('+')}',scale=${W}:${H},format=gray`, '-fps_mode', 'passthrough', '-f', 'rawvideo', '-'], { encoding: 'buffer', maxBuffer: frames.length * W * H + 65536, signal }, (error, stdout) => done(error ? null : stdout)),
+  );
+  if (!buf || !Buffer.isBuffer(buf) || buf.length < W * H) return 0;
+  let boosted = 0;
+  for (const c of caps) {
+    const fi = frames.indexOf(c.n);
+    if ((fi + 1) * W * H > buf.length) continue;
+    const style = captionStyle(c.o.props.style);
+    const b = blockBox(style, { words: c.o.props.words, lines: c.o.props.lines, place: c.o.props.place }, edl.canvas, c.o.props.place.cy, c.o.props.place.cx);
+    const sx = W / edl.canvas.w;
+    const sy = H / edl.canvas.h;
+    let sum = 0;
+    let n = 0;
+    for (let y = Math.max(0, Math.floor(b.y0 * sy)); y < Math.min(H, Math.ceil(b.y1 * sy)); y++)
+      for (let x = Math.max(0, Math.floor(b.x0 * sx)); x < Math.min(W, Math.ceil(b.x1 * sx)); x++) {
+        sum += relLum(Math.max(0, Math.min(255, ((buf[fi * W * H + y * W + x] - 16) * 255) / 219)));
+        n++;
+      }
+    if (!n) continue;
+    const bg = sum / n;
+    const fg = hexLum(style.colors.text);
+    const ratio = (Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05);
+    c.o.props.contrast_ratio = +ratio.toFixed(2);
+    if (ratio < 4.5) {
+      c.o.props.contrast = 'boost';
+      boosted++;
+    }
+  }
+  return boosted;
 }
 async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
   const fps = rate(edl.canvas.fps),
@@ -799,9 +874,12 @@ export async function compose({
   frame = null,
   fontsDir,
   assetRoot,
+  cacheDir,
 }) {
   // Work on a private normalized copy; IPC/saved EDLs stay immutable.
   edl = structuredClone(edl);
+  // styled hook titles are drawn by the caption renderer, not the legacy text pass
+  for (const o of edl.overlays) if (isStyledHook(edl, o)) o._kimoText = true;
   for (const source of edl.sources)
     if (/\.(png|jpe?g|webp)$/i.test(source.path)) source.kind ??= 'image';
   for (const [ti, track] of edl.audio.entries())
@@ -904,7 +982,15 @@ export async function compose({
     at: started,
   });
   try {
-    let localFonts = false;
+    let fontDir = null;
+    const kimoText = edl.overlays.some((o) => isKimoCaption(o) || o._kimoText);
+    const copied = new Set();
+    const copyFont = async (from, file) => {
+      if (copied.has(file.toLowerCase())) return;
+      if (!fontDir) await mkdir((fontDir = join(dir, 'fonts')));
+      await copyFile(join(from, file), join(fontDir, file));
+      copied.add(file.toLowerCase());
+    };
     if (fontsDir && existsSync(fontsDir)) {
       const families = edl.overlays
         .map((o) =>
@@ -924,13 +1010,10 @@ export async function compose({
           ) ||
             /dejavu/i.test(n)),
       );
-      if (files.length) {
-        await mkdir(join(dir, 'fonts'));
-        for (const file of files)
-          await copyFile(join(fontsDir, file), join(dir, 'fonts', file));
-        localFonts = true;
-      }
+      for (const file of files) await copyFont(fontsDir, file);
     }
+    // kimo captions and title effects use the bundled OFL faces (desktop/fonts)
+    if (kimoText) for (const file of fontFiles(bundledFontsDir())) await copyFont(bundledFontsDir(), file);
     const used = new Set(
       [...edl.video, ...edl.audio].flatMap((t) => t.clips.map((c) => c.src)),
     );
@@ -1002,6 +1085,8 @@ export async function compose({
     const begin = frame == null ? 0 : Math.max(0, Math.min(total - 1, frame)),
       finish = frame == null ? total : begin + 1;
     const outputs = [];
+    const baseFiles = new Set();
+    let boosted = 0;
     for (let from = begin; from < finish; from += chunkSize) {
       const to = Math.min(finish, from + chunkSize),
         length = to - from,
@@ -1017,150 +1102,203 @@ export async function compose({
       let input = 1,
         layer = 0,
         base = 'base0';
-      const baked = complex
-        ? await bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit })
-        : null;
-      const activeClips = baked?.clips ?? clips,
-        activeSources = baked?.sources ?? edl.sources;
-      let pass = 0;
+      // Overlay-only re-render: the base composite (every layer below the final
+      // text pass) is cached by content; a caption edit re-runs only libass.
+      const cacheable = Boolean(cacheDir) && frame == null && kimoText && !complex;
+      let baseFile = null;
+      let reused = false;
       let overlayCursor = 0;
-      for (const clip of activeClips) {
-        const source = activeSources.find((s) => s.id === clip.src),
-          plan = framePlan(clip, source, edl.canvas.fps, from, to);
-        if (!plan.indices.length) continue;
-        // The overlay array is ordered, including text underneath later images.
-        if (clip._overlayIndex != null) {
-          const ass = join(dir, `before-${from}-${clip._overlayIndex}.ass`);
-          const text = subtitles(
-            {
-              ...edl,
-              overlays: edl.overlays.slice(overlayCursor, clip._overlayIndex),
-            },
-            from,
-            to,
-          );
-          await writeFile(ass, text);
-          const textBase = `textBefore${clip._overlayIndex}`;
-          graph.push(
-            `[${base}]${textFilter(ass, localFonts, text)}[${textBase}]`,
-          );
-          base = textBase;
-          overlayCursor = clip._overlayIndex + 1;
-        }
-        let vf;
-        if (clip._baked) {
-          args.push('-i', source.path);
-          vf =
-            'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
-        } else if (!plan.arithmetic) {
-          const key = createHash('sha256')
-              .update(
-                JSON.stringify([
-                  clip,
-                  source,
-                  edl.canvas,
-                  plan.start,
-                  plan.end,
-                ]),
-              )
-              .digest('hex')
-              .slice(0, 20),
-            segment = join(dir, `segment-${key}.mkv`);
-          if (!existsSync(segment))
-            await mappedSegment({
-              ffmpeg,
-              source,
-              clip,
-              canvas: edl.canvas,
-              plan,
-              output: segment,
-              signal,
-              onProgress: (n) =>
-                emit({
-                  t: 'progress',
-                  phase: 'compose',
-                  label: 'mapping source frames',
-                  frame: plan.start + n,
-                  total,
-                  f: (plan.start + n) / total,
-                  fps: n / Math.max(0.001, (Date.now() - started) / 1000),
-                }),
-            });
-          args.push('-i', segment);
-          vf =
-            'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
-        } else {
-          const first = plan.indices[0],
-            last = plan.indices.at(-1),
-            seek =
-              source.kind === 'image'
-                ? 0
-                : Math.max(0, (first - 0.5) / rate(source.fps));
-          if (source.kind === 'image')
-            args.push('-loop', '1', '-framerate', String(edl.canvas.fps));
-          args.push(
-            '-noautorotate',
-            '-ss',
-            String(seek),
-            '-accurate_seek',
-            '-i',
-            source.path,
-          );
-          vf = `trim=end_frame=${last - first + 1}${plan.stride > 1 ? `,select='not(mod(n,${plan.stride}))'` : ''},trim=end_frame=${plan.indices.length},setpts=N/(${fps}*TB),${geometry(clip, source, edl.canvas, plan)}`;
-        }
-        const name = `clip${layer}`,
-          next = `base${layer + 1}`;
-        graph.push(
-          `[${input}:v]${vf},settb=1/${clockN},setpts=N*${clockD}+${(plan.start - from) * clockD}[${name}]`,
-        );
-        let top = name;
-        graph.push(
-          `[${base}][${top}]overlay=eof_action=pass:repeatlast=0:format=auto:enable='gte(t,${safe((plan.start - from - 0.25) / fps)})*lt(t,${safe((plan.end - from - 0.25) / fps)})',setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[${next}]`,
-        );
-        base = next;
-        input++;
-        layer++;
-        if (layer === 20) {
-          const stage = join(dir, `layers-${from}-${pass}.mkv`),
-            stageScript = join(dir, `layers-${from}-${pass}.ffgraph`);
-          pass++;
-          graph.push(`[${base}]format=yuv444p[staged]`);
-          await writeFile(stageScript, graph.join(';\n'));
-          await ffmpegRun(
-            ffmpeg,
-            [
-              ...args,
-              await scriptOption(ffmpeg),
-              stageScript,
-              '-map',
-              '[staged]',
-              '-an',
-              '-frames:v',
-              String(length),
-              ...lossless,
-              stage,
-            ],
-            { signal, cwd: dir },
-          );
-          args.length = 0;
-          args.push('-i', stage);
-          graph.length = 0;
-          graph.push(
-            `[0:v]settb=1/${clockN},setpts=N*${clockD},format=yuv444p[base0]`,
-          );
-          base = 'base0';
-          input = 1;
-          layer = 0;
+      const pictureCursor = () => {
+        let cursor = 0;
+        for (const clip of clips)
+          if (clip._overlayIndex != null && framePlan(clip, edl.sources.find((s) => s.id === clip.src), edl.canvas.fps, from, to).indices.length) cursor = Math.max(cursor, clip._overlayIndex + 1);
+        return cursor;
+      };
+      if (cacheable) {
+        const cursor = pictureCursor();
+        const key = createHash('sha256')
+          .update(
+            JSON.stringify([
+              BASE_CACHE_VERSION,
+              edl.canvas,
+              edl.video,
+              edl.sources.map((s) => [s.id, s.path, s.signature, s.fps, s.w, s.h, s.rotation]),
+              edl.overlays.slice(0, cursor),
+              from,
+              to,
+              [...copied].sort(),
+            ]),
+          )
+          .digest('hex')
+          .slice(0, 24);
+        await mkdir(cacheDir, { recursive: true });
+        baseFile = join(cacheDir, `base-${key}.mkv`);
+        baseFiles.add(baseFile);
+        reused = existsSync(baseFile) && statSync(baseFile).size > 0;
+        if (reused) {
+          overlayCursor = cursor;
+          emit({ t: 'op', id: `${id}-base`, opId: `${id}-base`, tool: 'caption_pass', phase: 'start', title: 'captions only · base picture reused from cache', why: 'a caption change re-renders the text layer, not the picture', at: Date.now() });
+          emit({ t: 'op', id: `${id}-base`, opId: `${id}-base`, tool: 'caption_pass', phase: 'end', ok: true, ms: 0, result: `${length} cached base frames`, at: Date.now() });
         }
       }
+      if (!reused) {
+        const baked = complex
+          ? await bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit })
+          : null;
+        const activeClips = baked?.clips ?? clips,
+          activeSources = baked?.sources ?? edl.sources;
+        let pass = 0;
+        for (const clip of activeClips) {
+          const source = activeSources.find((s) => s.id === clip.src),
+            plan = framePlan(clip, source, edl.canvas.fps, from, to);
+          if (!plan.indices.length) continue;
+          // The overlay array is ordered, including text underneath later images.
+          if (clip._overlayIndex != null) {
+            const ass = join(dir, `before-${from}-${clip._overlayIndex}.ass`);
+            const text = subtitles(
+              {
+                ...edl,
+                overlays: edl.overlays.slice(overlayCursor, clip._overlayIndex),
+              },
+              from,
+              to,
+            );
+            await writeFile(ass, text);
+            const textBase = `textBefore${clip._overlayIndex}`;
+            graph.push(
+              `[${base}]${textFilter(ass, fontDir, text)}[${textBase}]`,
+            );
+            base = textBase;
+            overlayCursor = clip._overlayIndex + 1;
+          }
+          let vf;
+          if (clip._baked) {
+            args.push('-i', source.path);
+            vf =
+              'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
+          } else if (!plan.arithmetic) {
+            const key = createHash('sha256')
+                .update(
+                  JSON.stringify([
+                    clip,
+                    source,
+                    edl.canvas,
+                    plan.start,
+                    plan.end,
+                  ]),
+                )
+                .digest('hex')
+                .slice(0, 20),
+              segment = join(dir, `segment-${key}.mkv`);
+            if (!existsSync(segment))
+              await mappedSegment({
+                ffmpeg,
+                source,
+                clip,
+                canvas: edl.canvas,
+                plan,
+                output: segment,
+                signal,
+                onProgress: (n) =>
+                  emit({
+                    t: 'progress',
+                    phase: 'compose',
+                    label: 'mapping source frames',
+                    frame: plan.start + n,
+                    total,
+                    f: (plan.start + n) / total,
+                    fps: n / Math.max(0.001, (Date.now() - started) / 1000),
+                  }),
+              });
+            args.push('-i', segment);
+            vf =
+              'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
+          } else {
+            const first = plan.indices[0],
+              last = plan.indices.at(-1),
+              seek =
+                source.kind === 'image'
+                  ? 0
+                  : Math.max(0, (first - 0.5) / rate(source.fps));
+            if (source.kind === 'image')
+              args.push('-loop', '1', '-framerate', String(edl.canvas.fps));
+            args.push(
+              '-noautorotate',
+              '-ss',
+              String(seek),
+              '-accurate_seek',
+              '-i',
+              source.path,
+            );
+            vf = `trim=end_frame=${last - first + 1}${plan.stride > 1 ? `,select='not(mod(n,${plan.stride}))'` : ''},trim=end_frame=${plan.indices.length},setpts=N/(${fps}*TB),${geometry(clip, source, edl.canvas, plan)}`;
+          }
+          const name = `clip${layer}`,
+            next = `base${layer + 1}`;
+          graph.push(
+            `[${input}:v]${vf},settb=1/${clockN},setpts=N*${clockD}+${(plan.start - from) * clockD}[${name}]`,
+          );
+          let top = name;
+          graph.push(
+            `[${base}][${top}]overlay=eof_action=pass:repeatlast=0:format=auto:enable='gte(t,${safe((plan.start - from - 0.25) / fps)})*lt(t,${safe((plan.end - from - 0.25) / fps)})',setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[${next}]`,
+          );
+          base = next;
+          input++;
+          layer++;
+          if (layer === 20) {
+            const stage = join(dir, `layers-${from}-${pass}.mkv`),
+              stageScript = join(dir, `layers-${from}-${pass}.ffgraph`);
+            pass++;
+            graph.push(`[${base}]format=yuv444p[staged]`);
+            await writeFile(stageScript, graph.join(';\n'));
+            await ffmpegRun(
+              ffmpeg,
+              [
+                ...args,
+                await scriptOption(ffmpeg),
+                stageScript,
+                '-map',
+                '[staged]',
+                '-an',
+                '-frames:v',
+                String(length),
+                ...lossless,
+                stage,
+              ],
+              { signal, cwd: dir },
+            );
+            args.length = 0;
+            args.push('-i', stage);
+            graph.length = 0;
+            graph.push(
+              `[0:v]settb=1/${clockN},setpts=N*${clockD},format=yuv444p[base0]`,
+            );
+            base = 'base0';
+            input = 1;
+            layer = 0;
+          }
+        }
+        if (cacheable) {
+          // keep the base composite for fast caption re-renders, then draw text on top of it
+          graph.push(`[${base}]format=yuv444p[staged]`);
+          const stageScript = join(dir, `base-${from}.ffgraph`);
+          await writeFile(stageScript, graph.join(';\n'));
+          const partial = baseFile + '.partial.mkv';
+          await ffmpegRun(ffmpeg, [...args, await scriptOption(ffmpeg), stageScript, '-map', '[staged]', '-an', '-frames:v', String(length), ...lossless, partial], { signal, cwd: dir });
+          await rename(partial, baseFile);
+        }
+      }
+      if (cacheable) {
+        args.length = 0;
+        args.push('-i', baseFile);
+        graph.length = 0;
+        graph.push(`[0:v]settb=1/${clockN},setpts=N*${clockD},format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[base0]`);
+        base = 'base0';
+        boosted += await contrastPass(edl, { ffmpeg, base: baseFile, from, to, signal });
+      }
       const ass = join(dir, `overlays-${from}.ass`);
-      const text = subtitles(
-        { ...edl, overlays: edl.overlays.slice(overlayCursor) },
-        from,
-        to,
-      );
+      const text = finalScript(edl, edl.overlays.slice(overlayCursor), from, to);
       await writeFile(ass, text);
-      graph.push(`[${base}]${textFilter(ass, localFonts, text)}[composed]`);
+      graph.push(`[${base}]${textFilter(ass, fontDir, text)}[composed]`);
       const script = join(dir, `picture-${from}.ffgraph`),
         chunk = join(dir, `picture-${from}.mkv`);
       await writeFile(script, graph.join(';\n'));
@@ -1201,6 +1339,16 @@ export async function compose({
         },
       );
       outputs.push(chunk);
+    }
+    if (cacheDir && baseFiles.size) {
+      // one cached base per edit: drop stale composites of earlier versions
+      for (const name of readdirSync(cacheDir))
+        if (/^base-[0-9a-f]+\.mkv(\.partial\.mkv)?$/.test(name) && !baseFiles.has(join(cacheDir, name)))
+          try {
+            unlinkSync(join(cacheDir, name));
+          } catch {
+            /* in use; next render */
+          }
     }
     if (frame != null) {
       await ffmpegRun(ffmpeg, ['-i', outputs[0], '-frames:v', '1', output], {
@@ -1264,7 +1412,7 @@ export async function compose({
       phase: 'end',
       ok: true,
       ms: Date.now() - started,
-      result: `${frame == null ? total : 1} exact frames`,
+      result: `${frame == null ? total : 1} exact frames${boosted ? ` · ${boosted} caption${boosted === 1 ? '' : 's'} given a contrast box` : ''}`,
       at: Date.now(),
     });
     return {

@@ -111,7 +111,8 @@ export function subtitles(edl, from = 0, to = Infinity) {
   const header = `[Script Info]\nScriptType: v4.00+\nYCbCr Matrix: TV.709\nPlayResX: ${edl.canvas.w}\nPlayResY: ${edl.canvas.h}\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,DejaVu Sans,48,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   const lines = [];
   for (const [layer, o] of edl.overlays.entries()) {
-    if (o.kind === 'image' || (o.kind === 'text_behind' && o.src)) continue;
+    // kimo captions and styled hook titles are drawn by caption-render.mjs
+    if (o.kind === 'image' || (o.kind === 'text_behind' && o.src) || o.props?.engine === 'kimo-captions' || o._kimoText) continue;
     const start = Math.max(from, Math.ceil(o.at * fps - 1e-7)),
       end = Math.min(to, Math.ceil((o.at + o.dur) * fps - 1e-7));
     let last,
