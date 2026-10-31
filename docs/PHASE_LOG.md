@@ -198,6 +198,23 @@ Core validation: final lint, strict typecheck, **141 unit/integration tests** (i
 
 This phase is submitted for PR review with the explicit manual/performance gates above, rather than claiming an unverified production launch.
 
+## Desktop creator Phase 03 - edit decisions from the transcript (31 October 2026)
+
+Naman's instruction for this phase: "Dont go too much into testing and benchmarks just make it better", and complete the phase fully. Implementation is complete and pushed to main without force; real-footage bench numbers are deferred. No engine repository/binary or web runtime change, no installer/release, no paid AI/SAM call (the judgment layer is mocked in tests). Design notes: [desktop/CUTPLAN.md](../desktop/CUTPLAN.md).
+
+### Acceptance checklist
+
+- [x] Transcript with refined word edges, cached; fillers list for en + hi. `transcript.mjs`: 16 kHz mono extract, bundled whisper flags detected from `--help` (`-ojf`, `-ml 1 -sow`, `-dtw small` with a no-DTW retry), energy-snapped starts/ends that keep sibilant and plosive tails, en/hi/Hinglish detection, `data/fillers.json`, words/sentences/pauses, cache by audio SHA-256 + model.
+- [x] Deterministic cut plan: silence (template max_pause/pad), clean-join fillers (coarticulated ones flagged and kept), stutters/restarts, retakes with take scoring; needs_cover marked; micro-jumps merged or forced to a framing change. Live op summary ("removed N pauses (x s), N fillers, N retakes · before → after").
+- [x] LLM hook/order/drop/best-take/emphasis/chapters JSON in one cached call through the existing proxy, hook rules verbatim in the prompt, strict validation, deterministic fallback; cold-open hooks applied. Tutorial template (Naman's style reference): optional result-preview montage before the hook, teaser lines kept early and protected from length cuts, setup chatter dropped; screen-recording segments listed as `screen_punch` candidates for Phase 4.
+- [x] Multi-clip speech/broll/mixed classification; two-speaker diarisation by stereo channel energy or mouth-motion vs voice energy (no new paid calls).
+- [x] Wired into runEdit: the plan becomes a frame-exact A-roll track in the planner project, so the EDL compose() renders follows it; `cut_plan` rides on the EDL and `cutplan.json`. ai/batch (AI judgment), captions (offline, deterministic, every jump framed) and follow-up (saved plan in the prompt). The vague pacing advice in the planner prompt is replaced by the cut plan brief; auto_rough_cut/cut_to_beat/re-imports are skipped when the plan applied. New modules and `data/**` are in the installer file list.
+- [x] Synthetic tone+silence unit tests (known gaps, known duplicate take, filler, stutter, cold open, micro-jumps, tutorial preview) plus a runEdit pipeline test for captions and AI modes. 106/106 desktop tests pass locally and on hosted Windows + Linux (`41213165101`). Windows Electron smoke `41213203235` (Phase 02 compositor validation, golden matrix off, no installer/release) passes on main `0b3ede2`; with real bundled whisper on the TTS clip it cut 4.88 s → 4.34 s (2 pauses, first speech 0.05 s) and the manual re-render still works.
+- [x] Joins review tool: `desktop/test/bench/joins-wav.mjs` (beep before each cut). Not yet run on TH-1.
+- [ ] Bench targets on real footage (dead_air_ratio < 3 %, filler_count 0, repeat_takes 0, first_speech_s < 0.4 on TH-1/TH-2/VLOG-1/POD-1), listening to the TH-1 joins, Creator Score: **deferred by Naman's instruction**; not measured, no numbers claimed. Plan-level metrics on the synthetic fixtures and the one TTS smoke clip are not golden-clip results.
+
+The root `kimo checks` run for this push fails only its existing web bundle-budget steps (`pnpm budgets`), outside this desktop change.
+
 ## Desktop creator Phase 02 - app-owned frame-exact picture (30 October 2026)
 
 The user explicitly requested this desktop phase after the incomplete Phase 1 benchmark, overriding the earlier sequencing instruction. Work is pushed to main without force. No engine repository/binary or web runtime behavior is changed. No installer/release is built. Full footage runs on standard hosted Windows runners; this PC only runs bounded synthetic and browser checks.
