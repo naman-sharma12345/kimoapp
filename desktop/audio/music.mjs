@@ -62,16 +62,16 @@ export function speechIntervals(edl) {
   }
   return merged;
 }
-export function duckEnvelope(spans, duration, { hook = false } = {}) {
-  const points = [{ t: 0, db: hook ? 0 : spans.length ? -9 : 0 }];
+export function duckEnvelope(spans, duration, { hook = false,under_db=-16,gap_db=-9,ramp_s=.25 } = {}) {
+  const points = [{ t: 0, db: hook ? 0 : spans.length ? gap_db : 0 }];
   for (const [a, b] of spans) {
     if (b <= 0 || a >= duration) continue;
     const start = Math.max(hook ? 0.75 : 0, a - 0.05);
     points.push(
-      { t: Math.max(0, start - 0.25), db: hook && start <= 0.75 ? 0 : -9 },
-      { t: start, db: -16 },
-      { t: Math.min(duration, b + 0.05), db: -16 },
-      { t: Math.min(duration, b + 0.3), db: -9 },
+      { t: Math.max(0, start - ramp_s), db: hook && start <= 0.75 ? 0 : gap_db },
+      { t: start, db: under_db },
+      { t: Math.min(duration, b + 0.05), db: under_db },
+      { t: Math.min(duration, b + .05+ramp_s), db: gap_db },
     );
   }
   // Stable ordering gives speech priority where adjacent ramps overlap.

@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "id": "explainer",
+  "label": "explainer",
+  "legacy_style": "explainer",
+  "platform": "landscape",
+  "duration": {
+    "max_s": null,
+    "min_s": 1
+  },
+  "cut": {
+    "max_pause": 0.2,
+    "pad": 0.05,
+    "retake_window_s": 30
+  },
+  "camera": {
+    "energy": 3,
+    "max_static_s": 6,
+    "pattern": "medium,tight,medium,wide",
+    "punch": 1.15,
+    "tight": 1.3,
+    "ease_frames": 8,
+    "micro_drift": false,
+    "speaker_framing": false,
+    "screen_zooms": false,
+    "jl_cuts": false,
+    "ramps": false
+  },
+  "captions": {
+    "enabled": true,
+    "optional": false,
+    "style": "ali-abdaal",
+    "max_words": 7,
+    "min_word_s": 0.18,
+    "font_scale": 1,
+    "position": "auto",
+    "hints": []
+  },
+  "graphics": {
+    "enabled": true,
+    "hook_title": false,
+    "lower_thirds": true,
+    "chapters": true,
+    "density_per_min": 4,
+    "gap_s": 0.4,
+    "hook_max_words": 6
+  },
+  "broll": {
+    "density": 0.5,
+    "max_share": 0.4,
+    "min_s": 1.2,
+    "max_s": 3.5
+  },
+  "explainers": {
+    "enabled": true,
+    "density": "rich",
+    "max_items": 12,
+    "layouts": ["side", "pip"]
+  },
+  "audio": {
+    "voice": true,
+    "voice_lufs": -16,
+    "target_lufs": -14,
+    "true_peak": -1,
+    "lra": 7,
+    "music_mood": "tech",
+    "music_under_db": -20,
+    "music_gap_db": -9,
+    "duck_attack_ms": 40,
+    "duck_release_ms": 400,
+    "envelope_ramp_s": 0.25,
+    "sfx_per_min": 6,
+    "sfx_voice_margin_db": 7
+  },
+  "color": {
+    "look": "clean",
+    "strength": 1,
+    "grain": false,
+    "vignette": false,
+    "sharpen": true
+  },
+  "acceptance": {
+    "creator_score": 80,
+    "max_critic_iterations": 2
+  },
+  "editor_notes": "Show the structure of an idea on the exact words. Prefer side and pip layouts, factual lists and a single visual emphasis."
+}

@@ -1,5 +1,44 @@
 # Creator benchmark results
 
+## Phase 10 planner — 1 November 2026
+
+Structured plans, nine templates, deterministic compilation, bounded cached
+critic calls, minimal render passes and persistent plan undo are implemented.
+The user's standing no-benchmark/no-heavy-local-render preference is preserved.
+No new golden recording, paid AI/SAM request, installer or release was run.
+
+| Lightweight verification               | Evidence                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------- |
+| Templates / schema / repair / fallback | All nine templates compile; one repair then deterministic fallback                 |
+| Call caps / timeout / reservations     | Three total requests, two image requests; reservations persist failures            |
+| Cache-only replay                      | Six golden IDs with explicitly synthetic transcript-shaped responses; misses fail  |
+| Actual 1.2-second FFmpeg edit          | Plan → rendered critic frames → AAC stereo 48 kHz delivery                         |
+| Smaller captions                       | Only overlay pass rerendered; base and audio reused                                |
+| No music                               | Only audio rebuilt; picture reused                                                 |
+| Undo                                   | Previous plan restored offline; no additional model request                        |
+| Studio mock bridge                     | Nine templates, format mapping, chat patch, keyboard undo and previous-edit toggle |
+| Creator benchmark acceptance           | Unverified; unavailable pixel/Delta E metrics remain null and score zero           |
+
+Development responses are mocked; estimated reservations in the fixture are not
+actual AI charges. The old USD 5.49 ledger and prepared-media/cache artifacts are
+unchanged. Existing Phase 1 tool-call caches cannot be reinterpreted as new plan
+responses. No real-footage before/after score improvement is asserted.
+
+Actual existing Phase 9 stills were inspected again; four editorial notes per
+case and their limits are in [REVIEW-P9.md](REVIEW-P9.md). The new synthetic
+contact sheet was also inspected. Full footage, runtime proxy adherence and
+creator-score gates remain outside this lightweight verification.
+
+Synthetic evidence: [smoke.json](baselines/phase10-planner/smoke.json) and
+[actual contact sheet](baselines/phase10-planner/contact.jpg). The fixture scores
+57.7/100, with acceptance **false**; this is not a golden result. All eight new
+planner checks pass. Root lint/typecheck, 311 web tests, web/renderer builds and
+the browser bridge check pass. An existing denoiser probe failure found in the
+184/185 desktop regression run was fixed; all seven audio tests and the affected
+caption/planner checks then passed. No skipped tests.
+
+Implementation details and reproduction: [planner/README.md](../../planner/README.md).
+
 ## Phase 9 colour finish — 1 November 2026
 
 Implemented app-owned colour analysis, soft correction/WB, shot matching, seven

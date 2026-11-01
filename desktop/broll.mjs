@@ -221,7 +221,7 @@ export function planBroll(edl, { ctx = {}, clips = [], matches = new Map(), dens
     if (dur < BROLL_MIN - 1e-6) return skipped.push({ at: r3(at), reason, why: 'shorter than 1.2 s' }), false;
     if (at + dur > total - 0.2) return skipped.push({ at: r3(at), reason, why: 'past the end' }), false;
     if (!free(at, at + dur)) return skipped.push({ at: r3(at), reason, why: 'guarded or too close to another insert' }), false;
-    if (reason !== 'planner' && share() + dur > budget + 1e-6) return skipped.push({ at: r3(at), reason, why: 'b-roll budget reached' }), false;
+    if (share() + dur > budget + 1e-6) return skipped.push({ at: r3(at), reason, why: 'b-roll budget reached' }), false;
     const clip = nextClip(preferred);
     if (!clip) return false;
     const len = Math.min(dur, clip.duration || dur);

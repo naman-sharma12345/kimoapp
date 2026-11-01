@@ -9,6 +9,7 @@ import { runEdit, PRESETS, probe } from '../engine.mjs';
 import { command } from './bench/io.mjs';
 import { toolPaths } from './bench/run.mjs';
 import { applyEdits } from '../edl.mjs';
+import { defaultPlan } from '../planner.mjs';
 // Phase 7 lockdown: AI calls need an owner token or the user's own key; the
 // upstream is mocked here, so a run-time test token stands in for the sign-in.
 process.env.KIMO_DESKTOP_TOKEN = 'kd1.test.test';
@@ -113,10 +114,8 @@ test(
           events.some((e) => e.tool === 'compose' && e.phase === 'end' && e.ok),
           mode,
         );
-        const calls = (await readFile(log, 'utf8'))
-          .trim()
-          .split('\n')
-          .map(JSON.parse);
+        const calls = existsSync(log)?(await readFile(log, 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse):[];
+        if(result.creator)assert.equal(existsSync(log),false,'creator route does not start the native tool process');
         assert.ok(
           !calls.some((c) =>
             ['export', 'render_frame', 'contact_sheet', 'lint_edit'].includes(
@@ -152,6 +151,11 @@ test(
     globalThis.fetch = async (_url, init) => {
       const body = JSON.parse(init.body);
       asked.push(body.text.slice(0, 40));
+      if(body.text.startsWith('CREATOR PLAN')){
+        const input=JSON.parse(body.text.split('INPUT_JSON\n')[1].split('\nSCHEMA_JSON')[0]);
+        const plan=defaultPlan(input);plan.story.hook={sentence:1,trim_words:[0,0],why:'synthetic observed result',hook_text:'again'};plan.story.order=[1,0];return Response.json({record:plan});
+      }
+      if(body.text.startsWith('CREATOR CRITIC'))return Response.json({record:{problems:[]}});
       if (body.text.startsWith('JUDGMENT TASK'))
         return Response.json({ record: { done: true, calls: [], judgment: { hook: { sentence: 1, trim_words: [0, 0], hook_text: 'again' }, order: [1, 0] } } });
       return Response.json({
@@ -191,7 +195,7 @@ test(
           emit: (e) => events.push(e),
         });
         const edl = JSON.parse(await readFile(result.edlFile, 'utf8'));
-        const aroll = edl.video.find((t) => t.clips.some((c) => c.id.startsWith('cut')));
+        const aroll = edl.video.find((t) => t.track==='aroll'||t.clips.some((c) => c.id.startsWith('cut')));
         assert.ok(aroll, `${mode}: A-roll track in the EDL`);
         assert.equal(aroll.clips.length, 2, mode);
         assert.ok(edl.cut_plan?.keep?.length === 2, `${mode}: cut plan rides on the EDL`);
@@ -208,7 +212,7 @@ test(
         for (const tool of ['transcribe', 'cut_plan', 'apply_cut', 'camera_probe', 'camera_director', 'explain', 'compose']) assert.ok(ended(tool)?.ok, `${mode}: ${tool} op`);
         assert.ok(existsSync(join(dir, mode, 'ATTRIBUTIONS.txt')) || !edl.explain, `${mode}: credits beside the export`);
         assert.match(ended('cut_plan').result, /^removed \d+ pauses? \([\d.]+ s\)/);
-        const calls = (await readFile(log, 'utf8')).trim().split('\n').map(JSON.parse);
+        const calls = existsSync(log)?(await readFile(log, 'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse):[];
         assert.ok(!calls.some((c) => c.name === 'auto_rough_cut'), `${mode}: the planner may not re-cut`);
         // Phase 5: kimo's own captions from the cut plan's words (no second whisper, no engine captions)
         const caps = edl.overlays.filter((o) => o.props?.engine === 'kimo-captions');
@@ -248,7 +252,8 @@ test(
           assert.equal(aroll.clips[0].in, 0.2);
           assert.ok(aroll.clips[1].camera[0].zoom >= 1.1 && aroll.clips[1].camera[0].y < 0.5, JSON.stringify(aroll.clips[1].camera[0]));
         } else {
-          assert.ok(asked[0].startsWith('JUDGMENT TASK'));
+          assert.ok(asked[0].startsWith('CREATOR PLAN'));
+          assert.equal(asked.filter(s=>s.startsWith('CREATOR PLAN')).length,1);
           assert.equal(result.cutPlan.hook.text, 'again');
           assert.ok(aroll.clips[0].in > 2, 'cold open: the hook line plays first');
         }

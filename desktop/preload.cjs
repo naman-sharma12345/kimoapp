@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('kimo', {
   remove: (id) => ipcRenderer.invoke('remove', id),
   save: (opts) => ipcRenderer.invoke('save', opts),
   followup: (opts) => ipcRenderer.invoke('followup', opts),
+  undoPlan: (opts) => ipcRenderer.invoke('creator:undo',opts),
   apply: (opts) => ipcRenderer.invoke('apply', opts),
   addMusic: (opts) => ipcRenderer.invoke('audio:add-music', opts),
   setColor: (opts) => ipcRenderer.invoke('color:set', opts),

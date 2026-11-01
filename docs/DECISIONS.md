@@ -217,3 +217,43 @@ misrepresented as CC0. Original look parameters/generated LUT data are CC0.
 Other small review stills retain the dataset's full credits, including Cinestudy's
 previously approved terms. No footage was downloaded. Full VLOG-1 ΔE/clipping and
 real camera log/HDR quality remain unmeasured; no thresholds were loosened.
+
+## Desktop creator Phase 10 — planning and bounded review
+
+The user's Phase 10 request follows their no-benchmark preference. Implement the
+desktop planner/compiler, cached critic and plan history, with tiny synthetic
+render checks and the existing browser fixture. Do not run full golden renders,
+new paid calls, a release or Phase 11. The earlier USD 5.49 ledger remains frozen.
+
+Template labels and numeric defaults are data in `desktop/data/templates`.
+Existing native tool-planning remains only for the explicit legacy benchmark
+path; new AI projects use structured plans. Existing projects need an explicit
+re-run before plan-based follow-ups; silently rebuilding an old edited timeline
+would lose user intent. Captions-only, manual EDL and SAM-only paths remain.
+
+Use the existing proxy visual endpoints without backend changes or new SDKs.
+Their older task prompts may return an incompatible shape, so strict validation,
+one repair and deterministic fallback are required. Paid provider adherence is
+unverified. Count image requests against both the three-request total and the
+two-vision cap. The UI's $0.01 text / $0.03 visual estimates are heuristic
+reservations, not provider pricing or a guaranteed bill; estimated cap is $0.09.
+Save reservations before requests, preserve failures, and make replay misses fatal.
+
+The existing Phase 1 scoring function/weights remain unchanged. Sparse review
+cannot certify source-frame identity, source-referenced jitter or clip Delta E;
+leave those null and acceptance unverified. Music duck sampling stops at ten
+seconds. No full-program improvement or sustained CPU percentage is claimed.
+Content dependencies, retained picture passes/stems and background worker limits
+reduce unnecessary work without trading away the existing delivery encoder.
+
+Studio reuses `desk-pad`, existing type/tokens, Button, select and status roles.
+Copy is "creator score", "review target unverified", "estimated AI",
+"undo plan edit" and "before · previous edit" because the brief names the
+behaviours without exact copy. No new visual tokens, motion or libraries.
+The agent-browser CLI is unavailable in this environment, so the existing
+Playwright/headless Chrome harness verifies the mock preload bridge. It does
+not prove OS media playback, a real account or installer behaviour.
+
+Regression testing exposed a denoiser probe that could pass on 0.15 seconds but
+crash in the combined voice chain. Probe the representative half-second chain
+before selecting it; the existing gentle FFT fallback remains available.

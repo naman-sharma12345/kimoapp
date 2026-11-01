@@ -25,6 +25,8 @@ import { EXPLAIN_TOOLS, EXPLAIN_TOOL_TEXT, explainToolCall, notePatches, placeUs
 import { AssetCache, defaultAssetCache, attributionsText } from './explain/assets.mjs';
 import { score as libraryScore } from './explain/sources/library.mjs';
 import { createHash } from 'node:crypto';
+import { runCreatorEdit } from './creator-engine.mjs';
+import { templateStyles,selectTemplate } from './planner/templates.mjs';
 
 export const AI_URL =
   process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai';
@@ -239,6 +241,17 @@ export async function ai(kind, text, images = [], signal) {
   return {};
 }
 
+/** A single proxy attempt: no hidden retries outside the edit's durable ledger. */
+export async function creatorAsk(kind,text,images,signal){
+  if(text.length>60000)throw new Error('Creator prompt exceeds the proxy limit');
+  const auth=await aiHeaders();
+  // The existing visual endpoint accepts arbitrary JSON. Its generic visual
+  // system role supports our versioned task contract without changing the API.
+  const response=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json',...auth},body:JSON.stringify({kind:kind==='critic'?'review':'pick',text,images:images.map(image=>({label:image.label.slice(0,80),url:image.url??`data:${image.mime??'image/jpeg'};base64,${image.data}`}))}),signal});
+  if(!response.ok)throw await proxyError(response,'kimo AI');
+  return (await response.json()).record??{};
+}
+
 /** Detects a working hardware H.264 encoder (NVENC, QSV, AMF), else null. */
 export async function detectGpu(ffmpeg) {
   for (const enc of ['h264_nvenc', 'h264_qsv', 'h264_amf']) {
@@ -327,23 +340,14 @@ export const STYLES = {
     max_pause: 0.3,
   },
 };
+// New projects expose the complete templates; historic names remain valid aliases.
+export const CREATOR_STYLES = templateStyles();
+for(const [id,value] of Object.entries(CREATOR_STYLES)){const t=selectTemplate(id);STYLES[id]={...STYLES[t.legacy_style],...value,captions:{style:t.captions.style,max_words_per_line:t.captions.max_words},punch:t.camera.punch,max_pause:t.cut.max_pause};}
 
 /** What a top YouTube editor does, as rules the model follows with kimo's tools. */
 function expertGuide(P, S, files, cut) {
-  const vertical = P.height > P.width;
-  const talking = files.some((f) => f.kind === 'video');
-  return `edit like a top youtube editor (the result must look professionally edited, not auto-generated):
-- hook: the first 2-3 s decide retention. ${cut ? `the cut already opens on ${cut.hook ? 'the strongest line (cold open)' : 'the first spoken word'}; keep it first.` : 'start on speech or the most striking moment, never on dead air.'} the app's graphics kit puts a 3-6 word hook title on screen at 0.15 s for ~2.4 s (word pop, marker swipe on the key word${cut?.judgment?.hook_text ? `, text "${cut.judgment.hook_text}"` : ''}); change it only with hook_title(text) (short, specific, curiosity, no clickbait lies). never add_title/add_text for the hook.
-- pacing: ${cut ? 'dead air, fillers, stutters and retakes are already removed by the transcript cut planner (word-accurate). do not re-cut the talking track; spend your calls on framing, captions, titles, grade and sound.' : talking ? `auto_rough_cut every talking clip in story order with max_pause ${S.max_pause ?? 0.3} and pad 0.05; read the returned segments and re-run with drop [{asset_id,index}] for false starts, repeats and filler-only segments (um, uh, like).` : 'cut to the beat or keep shots 1.5-4 s.'}
-- cadence: a visual change (cut, punch, b-roll, graphic) every 1.5-4 s on talking footage, never more than 6 s static.
-- camera: the app's camera director already frames the talking track: a framing change (wide / medium / tight) at every jump cut, pushes landing on emphasis words, snap punches on numbers and punchlines at high energy, wide section openers, speaker framing for podcasts and punch-ins on the clicked region of screen recordings, all eased and smooth. never punch or zoom the talking track yourself (set_property scale/x/y on it is overridden). use camera_style only to change the energy, camera_emphasis for an extra beat, camera_hold to keep a moment still, transition for section changes (mostly hard cuts), speed_ramp only on b-roll. b-roll: the app already places the user's non-speech clips over jump cuts and abstract lines (1.2-3.5 s, J-cut in, L-cut out, own slow push, sound at -24 dB, ≤ 40 % of runtime); broll_auto(density) changes how much, broll(at, dur, clip) puts a specific clip somewhere.
-- graphics: purposeful only. the app's kit already adds the hook title (shorts), lower thirds when someone introduces themselves, number pops on numeric emphasis, chapter cards (16:9), callouts and Screen Studio zooms on screen recordings${P.height > P.width ? '' : ', a subscribe end card on longer 16:9 videos'}; it enforces max 1 graphic on screen and the density limit. use graphic(...) to add one the viewer needs (a stat, a callout, a sticker on a joke) or remove one, callout(...) to point at a button in a screen recording, screen_zoom(...) to zoom onto a region.
-- captions: auto_captions style "${S.captions.style}", max_words_per_line ${S.captions.max_words_per_line}${S.captions.lines ? `, lines ${S.captions.lines}` : ''}, keywords true, highlight true, position auto, hint = names/terms from the note. captions must stay inside the title-safe area${vertical ? ' (vertical: keep text out of the bottom 20% and right 15% where shorts/reels ui sits; position middle is safest)' : ''}.
-- look: the app corrects exposure/white balance, matches shots and applies one skin-protected LUT per footage clip. auto_grade configures this local stage (clean, warm-creator, mkbhd-crisp, cinematic-teal-orange, vlog-bright, moody-doc, kimo; strength 0-1). Never stack grades or call a native picture grader.
-- sound: finish_audio last with target_lufs -14 (music under speech ${S.label.startsWith('Doc') ? -20 : -16} db when there is music). the app enforces true-peak -1 dBTP on delivery.
-- before "done": run lint_edit (platform ${vertical ? 'shorts' : 'none'}) and fix what it reports, then timeline_summary to confirm.
-- style for this video: ${S.label} — ${S.guide}
-- quality over busyness: every element must serve the viewer. no overlapping texts, no text over faces.`;
+  const template=selectTemplate(Object.keys(STYLES).find(k=>STYLES[k]===S),P);
+  return `Creator template: ${JSON.stringify(template)}. The app owns picture, sound and colour. Preserve the existing cut plan and use only the named legacy tools when continuing an older project.`;
 }
 
 /** YouTube's recommended upload bitrate (Mbps, SDR) for a canvas and frame rate. */
@@ -661,12 +665,19 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle, explain: explainOpts }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle, explain: explainOpts, creatorUndo }) {
   if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
   const P = PRESETS[preset] ?? PRESETS.shorts;
   const S = STYLES[style] ?? STYLES.auto;
+  const creatorEdl=suppliedEdl??(existsSync(edlFile??join(projectFile?dirname(projectFile):dir,'edit.edl.json'))?JSON.parse(readFileSync(edlFile??join(projectFile?dirname(projectFile):dir,'edit.edl.json'),'utf8')):null);
+  if(!legacy_kimo_render&&mode==='followup'&&!creatorEdl?.creator_plan)throw new Error('re-run this older edit once to enable plan-based follow-ups');
+  if(!legacy_kimo_render&&(mode==='ai'||(['followup','manual'].includes(mode)&&creatorEdl?.creator_plan))){
+    const releaseCreator=acquireExclusive('render');
+    try{return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps});}
+    finally{releaseCreator();}
+  }
   const release = acquireExclusive('render');
   let mcp;
   try { mcp = new Mcp(bin, dir, env); } catch (e) { release(); throw e; }
@@ -1450,11 +1461,11 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
 /** ffprobe: duration + kind for a local file. */
 export function probe(ffprobe, path) {
   return new Promise((done) =>
-    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_space,color_transfer,color_primaries,color_range:stream_tags=rotate:stream_side_data=rotation', '-of', 'json', path],
+    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,codec_name,profile,bit_rate,sample_rate,channels,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_space,color_transfer,color_primaries,color_range:stream_tags=rotate:stream_side_data=rotation', '-of', 'json', path],
       { windowsHide: true, timeout: 30_000 }, (err, stdout) => {
         try {
           const j = JSON.parse(stdout);
-          const v = j.streams?.find((s) => s.codec_type === 'video');
+          const v = j.streams?.find((s) => s.codec_type === 'video'),a=j.streams?.find(s=>s.codec_type==='audio');
           const isImage = /\.(png|jpe?g|webp)$/i.test(path);
           const rate = (x) => {
             const [a, b] = String(x ?? '').split('/').map(Number);
@@ -1464,7 +1475,7 @@ export function probe(ffprobe, path) {
           const avg = rate(v?.avg_frame_rate);
           const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
           const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
-          done({ path, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          done({ path,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }

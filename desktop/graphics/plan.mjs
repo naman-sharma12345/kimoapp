@@ -343,7 +343,7 @@ export function applyGraphics(edl, config = {}, ctx = {}) {
   const frame = 1 / fps;
   const template = config.template ?? 'auto';
   const theme = themeFor(template, { accent: config.accent });
-  const defs = templateDefaults(template, canvas, config.note);
+  const defs = {...templateDefaults(template, canvas, config.note),...(config.defaults?{hook:config.defaults.hook_title,lowerThird:config.defaults.lower_thirds,chapters:config.defaults.chapters}: {})};
   const state = config.state ?? {};
   const calls = state.calls ?? [];
   const total = edl.video.flatMap((t) => t.clips).reduce((m, c) => Math.max(m, c.at + clipLen(c)), 0);
@@ -491,7 +491,7 @@ export function applyGraphics(edl, config = {}, ctx = {}) {
   // native planner overlays that are still graphics (text titles, shapes, images) occupy the screen too
   const occupied = edl.overlays.filter((o) => !o.props?.engine && ['hook_title', 'lower_third', 'callout', 'image', 'text_behind'].includes(o.kind)).map((o) => ({ kind: o.kind, at: o.at, end: o.at + o.dur }));
   for (const layer of config.samLayers ?? []) occupied.push({ kind: 'text_behind', at: layer.at, end: layer.at + layer.dur });
-  const limit = densityLimit(template, canvas);
+  const limit = config.densityLimit ?? densityLimit(template, canvas);
   const { accepted, dropped: restrained } = enforceRestraint(laidOut, { limit, total, occupied, fps });
   dropped.push(...restrained);
 

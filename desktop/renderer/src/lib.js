@@ -10,6 +10,7 @@ export const fmtEta = (eta, estimated) => (eta == null || eta <= 0 ? '' : `${est
 // kimo.mediaUrl exists only in the browser test harness (src/dev/mock-kimo.js)
 export const media = (p) => (window.kimo?.mediaUrl ? window.kimo.mediaUrl(p) : `kimo-media://f/?p=${encodeURIComponent(p)}`);
 export const base = (p) => String(p || '').split(/[\\/]/).pop();
+export const creatorTemplateId=(style,preset)=>({energetic:'shorts-punchy',punchy:'shorts-punchy',clean:'shorts-clean',vlog:'youtube-vlog',podcast:'podcast-clips',cinematic:'documentary',default:'youtube-talking'}[style]??(style&&style!=='auto'?style:['shorts','portrait'].includes(preset)?'shorts-punchy':'youtube-talking'));
 export const STATUS = { queued: 'queued', running: 'editing live', done: 'ready', failed: 'failed', stopped: 'stopped' };
 export const cleanErr = (e) => String(e?.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
 export const isTyping = () => ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.isContentEditable;

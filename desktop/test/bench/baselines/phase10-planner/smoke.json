@@ -1,0 +1,121 @@
+{
+  "fixture": "1.2-second 192x128 FFmpeg testsrc2 + synthetic tone/transcript; not golden footage",
+  "network_calls": 0,
+  "actual_ai_billing_usd": 0,
+  "responses": "local mocks; budget reservations are estimates only",
+  "first": {
+    "version": 1,
+    "template": "shorts-clean",
+    "source": "model",
+    "requestedPass": "full",
+    "passes": ["base", "overlay", "audio"],
+    "score": 57.7,
+    "accepted": false,
+    "stop": "critic proposed no valid improvement",
+    "transitions": [
+      {
+        "iteration": 1,
+        "score": 57.7,
+        "high": 0,
+        "problems": [],
+        "sheet": "contact.jpg"
+      }
+    ],
+    "budget": {
+      "text": 2,
+      "vision": 2,
+      "estimated_cap_usd": 0.09,
+      "reserved_usd": 0.06,
+      "requests": [
+        {
+          "kind": "plan",
+          "key": "dfbc911cb88af2b3c8d37b061c163114534a6a05bad7a5c8582b5620c975fe4e",
+          "estimate_usd": 0.03,
+          "exact_billing": false,
+          "status": "returned"
+        },
+        {
+          "kind": "critic",
+          "key": "be0bb0f2c8735064681f60ee36e3a99f783ae9bb212e3dc27cd5c0ba359c176e",
+          "estimate_usd": 0.03,
+          "exact_billing": false,
+          "status": "returned"
+        }
+      ]
+    },
+    "undoDepth": 0,
+    "limitations": "Lightweight EDL/audio checks. Pixel jitter, source-frame matching and colour Delta E unavailable in this review; missing applicable metrics score zero. No full benchmark."
+  },
+  "smaller": {
+    "version": 1,
+    "template": "shorts-clean",
+    "source": "followup",
+    "requestedPass": "overlay",
+    "passes": ["overlay"],
+    "score": 57.7,
+    "accepted": false,
+    "stop": "user patch applied; no extra critic calls",
+    "transitions": [],
+    "budget": {
+      "text": 0,
+      "vision": 0,
+      "estimated_cap_usd": 0.09,
+      "reserved_usd": 0,
+      "requests": []
+    },
+    "undoDepth": 1,
+    "limitations": "Lightweight EDL/audio checks. Pixel jitter, source-frame matching and colour Delta E unavailable in this review; missing applicable metrics score zero. No full benchmark."
+  },
+  "quiet": {
+    "version": 1,
+    "template": "shorts-clean",
+    "source": "followup",
+    "requestedPass": "audio",
+    "passes": ["audio"],
+    "score": 59.1,
+    "accepted": false,
+    "stop": "user patch applied; no extra critic calls",
+    "transitions": [],
+    "budget": {
+      "text": 0,
+      "vision": 0,
+      "estimated_cap_usd": 0.09,
+      "reserved_usd": 0,
+      "requests": []
+    },
+    "undoDepth": 2,
+    "limitations": "Lightweight EDL/audio checks. Pixel jitter, source-frame matching and colour Delta E unavailable in this review; missing applicable metrics score zero. No full benchmark."
+  },
+  "restored": {
+    "version": 1,
+    "template": "shorts-clean",
+    "source": "saved",
+    "requestedPass": "manual",
+    "passes": ["audio"],
+    "score": 57.7,
+    "accepted": false,
+    "stop": "manual edit",
+    "transitions": [],
+    "budget": {
+      "text": 0,
+      "vision": 0,
+      "estimated_cap_usd": 0.09,
+      "reserved_usd": 0,
+      "requests": []
+    },
+    "undoDepth": 1,
+    "limitations": "Lightweight EDL/audio checks. Pixel jitter, source-frame matching and colour Delta E unavailable in this review; missing applicable metrics score zero. No full benchmark."
+  },
+  "quality": {
+    "width": 192,
+    "height": 128,
+    "fps": 25,
+    "duration": 0.92,
+    "vcodec": "h264",
+    "acodec": "aac",
+    "arate": 48000,
+    "achannels": 2,
+    "lufs": -13.98,
+    "truePeak": -8.31
+  }
+}

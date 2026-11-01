@@ -186,14 +186,14 @@ async function pump() {
   const dir = projectDir(next.id);
   try {
     // AI steps need an owner sign-in or the user's own key; say so plainly instead of failing mid-edit
-    if (['ai', 'followup', 'sam'].includes(job.mode)) {
+    if (['ai', 'sam'].includes(job.mode)||job.mode==='followup'&&!next.creator) {
       const auth = await loadAuth();
       if (!auth.hasAiAccess()) throw new auth.AiLockedError();
     }
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,
+      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,creatorUndo:job.creatorUndo,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
@@ -209,6 +209,8 @@ async function pump() {
     next.master = result.master;
     next.duration = result.duration;
     next.quality = result.quality;
+    if(result.creator)next.creator=result.creator;
+    if(result.beforeOutput)next.beforeOutput=result.beforeOutput;
     if (result.youtube) next.youtube = result.youtube;
     if (result.timeline) next.timeline = result.timeline;
     if (result.projectFile) next.projectFile = result.projectFile;
@@ -303,7 +305,7 @@ async function status() {
     model: fs.existsSync(p.model),
     gpu,
     presets: e.PRESETS,
-    styles: Object.fromEntries(Object.entries(e.STYLES).map(([k, v]) => [k, v.label])),
+    styles: Object.fromEntries(Object.entries(e.CREATOR_STYLES).map(([k, v]) => [k, v.label])),
     captionStyles: { auto: 'Auto (from the style)', ...e.CAPTION_STYLES() },
   };
 }
@@ -553,6 +555,17 @@ app.whenReady().then(async () => {
     update(p);
     pump();
     return publicProject(p);
+  });
+  ipcMain.handle('creator:undo',async(_e,{id})=>{
+    const p=library.find(p=>p.id===id);
+    if(!p||['running','queued'].includes(p.status)||!p.creator)return null;
+    const {undoPlanState}=await import('./creator-engine.mjs');
+    const {edl}=undoPlanState(projectDir(id));
+    const engine=await loadEngine();
+    p.preset=Object.entries(engine.PRESETS).find(([,v])=>v.width===edl.canvas.w&&v.height===edl.canvas.h)?.[0]??p.preset;
+    p.style=edl.creator_plan.template;
+    Object.assign(p,{status:'queued',error:undefined,job:{mode:'manual',ops:[],edl,note:'undo plan edit',creatorUndo:true}});
+    update(p);pump();return publicProject(p);
   });
   // Studio: "Regenerate visuals for this part" re-runs the visual director on a range (a follow-up job)
   ipcMain.handle('explain:regenerate', (_e, { id, from, to }) => {

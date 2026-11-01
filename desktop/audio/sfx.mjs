@@ -7,13 +7,13 @@ export function hash(value) {
 export function planSfx(
   events,
   library,
-  { fps = 30, duration, template = 'clean' } = {},
+  { fps = 30, duration, template = 'clean', cap: requestedCap } = {},
 ) {
-  const cap = /podcast|documentary/.test(template)
+  const cap = requestedCap ?? (/podcast|documentary/.test(template)
     ? 4
     : /hype|gaming|energetic/.test(template)
       ? 14
-      : 8;
+      : 8);
   const gap = 60 / cap,
     result = [],
     last = new Map();
@@ -24,7 +24,7 @@ export function planSfx(
     if (e.kind === 'section' && hash(e.id) % 100 >= 40) continue;
     const mandatory = /whip|zoom/.test(e.kind);
     if (!mandatory && result.some((r) => Math.abs(r.at - e.at) < gap)) continue;
-    const kind = /whip|zoom|section/.test(e.kind)
+    const kind = library.some(s=>s.kind===e.kind)?e.kind:/whip|zoom|section/.test(e.kind)
       ? 'whoosh'
       : /reveal/.test(e.kind)
         ? 'impact'

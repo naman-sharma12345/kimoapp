@@ -412,3 +412,59 @@ The runtime saves `color/report.json` and the full EDL; preview/source selection
 cached, workers remain bounded and cancellable, and long operations emit progress.
 Technical details and reproduction: `desktop/color/README.md`. Benchmark history
 and this lightweight result are recorded in `desktop/test/bench/RESULTS.md`.
+
+## Desktop creator Phase 10 — planner, templates and critic (1 November 2026)
+
+Implementation uses lightweight verification under the user's standing
+no-benchmark preference. Full real-footage creator acceptance remains unclaimed.
+No paid request, engine/backend edit, installer, release or Phase 11 work.
+
+- [x] Nine complete data templates, legacy aliases and UI selection. Numeric craft
+      defaults drive the existing deterministic compilers; no extra libraries.
+      Template/aspect browser evidence: `docs/screens/phase-10-templates.png`.
+- [x] Versioned planner prompt, strict JSON schema and small fail-closed validator.
+      Indexed transcript/takes/fluency, source words, clip metadata and six low-res
+      keyframes enter one plan task. One invalid response gets one repair; errors,
+      timeout, oversize context or another invalid answer use deterministic fallback.
+- [x] Plan compiles to cut/camera/captions/graphics/b-roll/local diagrams/audio/look
+      and title pack. Models cannot supply commands, renderer graphs or file paths.
+      Imported music and user-locked colour survive plan changes.
+- [x] Cached critic reads an actual 12–16-frame rendered sheet and metrics, returns
+      at most five problems and validated patches, and stops on progress/call/cost/
+      iteration limits. Image requests count against both caps; a fresh visual plan
+      normally leaves one vision review, a cached plan can leave two.
+- [x] Per-edit reservations persist before requests, including failures. At most
+      three total requests/two image requests, 60-second proxy timeout, no hidden
+      retries. Estimated $0.09 reservation cap is explicitly not an exact billing
+      ceiling. The old fully reserved USD 5.49 benchmark ledger remains untouched.
+- [x] Common follow-ups patch locally; other requests get one capped patch call.
+      Separate retained base/picture/audio passes select minimal work using content
+      dependencies. Persistent plan undo and previous-edit comparison work through
+      the mock browser bridge: `docs/screens/phase-10-planner-history.png`.
+- [x] Eight new planner tests cover validation/repair/fallback, caps/timeouts,
+      durable failures, atomic patches, offline undo, synthetic golden-ID replay,
+      and a 1.2-second actual FFmpeg edit with critic frames and AAC delivery.
+      Caption-only changes rebuild overlays; no-music changes rebuild only audio.
+      The six-ID replay is synthetic contract coverage, not new golden recordings.
+- [x] Actual Phase 9 stills and the new synthetic contact sheet were inspected;
+      `desktop/test/bench/REVIEW-P9.md` contains four honest editorial notes per
+      existing case. No copyrighted reference-creator footage was added.
+- [x] Regression suite initially passed 184/185 checks and exposed the existing
+      denoiser capability-probe crash. The representative-chain probe fix then
+      passed all seven audio checks plus eight planner checks. No skipped tests.
+- [x] Root lint/typecheck, all 311 web tests, web production build and desktop
+      renderer build pass. Final caption/planner checks pass (21/21), followed by
+      the final eight planner checks after input compaction. Browser checks pass
+      with no page errors. Built assets and screenshots are included.
+- [ ] Full golden creator scores, real provider adherence, pixel motion/frame
+      identity, clip Delta E and sustained CPU/lag acceptance: deferred under the
+      user's no-benchmark instruction. Missing applicable metrics score zero;
+      exports may finish with an explicitly unverified creator target.
+
+Synthetic evidence: `desktop/test/bench/baselines/phase10-planner/smoke.json`
+and `contact.jpg`. The measured fixture score is 57.7/100 with acceptance false;
+no target is claimed. The new runtime and trade-offs are documented in
+`desktop/planner/README.md`.
+Older projects require an explicit re-run before plan-based chat, preserving
+their saved manual edits rather than silently migrating them. Captions-only,
+manual EDL and SAM-only paths remain available. Built desktop assets are included.

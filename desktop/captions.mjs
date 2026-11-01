@@ -348,7 +348,7 @@ export function timeChunks(chunks, { fps, layout, maxCps = Infinity, total = Inf
     const c = out[i];
     const last = c.words.at(-1).end;
     const chars = c.words.map((w) => [...w.w].length).reduce((a, b) => a + b, 0) + c.words.length - 1;
-    const floor = Math.max(layout.min_dur, Number.isFinite(maxCps) ? chars / maxCps : 0);
+    const floor = Math.max(layout.min_dur, c.words.at(-1).start-c.start+(layout.min_word_dur??0), Number.isFinite(maxCps) ? chars / maxCps : 0);
     const next = out[i + 1]?.start ?? Math.min(total, Math.max(last + 2, c.start + floor));
     let end = next - last <= 0.6 ? next : Math.max(last + 0.12, c.start + floor);
     end = Math.min(end, next);
@@ -545,7 +545,7 @@ export function graphicBoxes(edl) {
  * still works. A chunk no candidate fits under a graphic is hidden for the
  * graphic's duration (the longest visible remainder survives).
  */
-export function placeChunks(chunks, style, { edl, canvas = edl?.canvas, ctx = {}, faceAt } = {}) {
+export function placeChunks(chunks, style, { edl, canvas = edl?.canvas, ctx = {}, faceAt,fontScale=1 } = {}) {
   const safe = safeArea(canvas);
   const graphics = edl ? graphicBoxes(edl) : [];
   const face = faceAt ?? ((t) => (edl ? subjectBoxAt(edl, ctx, t) : null));
@@ -555,7 +555,8 @@ export function placeChunks(chunks, style, { edl, canvas = edl?.canvas, ctx = {}
     const c = { ...c0, place: { ...(c0.place ?? {}) } };
     const size = fontSize(style, canvas);
     const mm = measureChunk(style, c, size);
-    c.place.scale = Math.max(0.55, Math.min(1, safe.maxW / Math.max(1, mm.width + 2 * (style.outline ?? 0) * canvas.w + (style.box ? 2 * style.box.pad_x * size : 0))));
+    const widthScale=safe.maxW / Math.max(1, mm.width + 2 * (style.outline ?? 0) * canvas.w + (style.box ? 2 * style.box.pad_x * size : 0));
+    c.place.scale = Math.min(widthScale,Math.max(0.55,Math.min(1,widthScale))*fontScale);
     const probe = blockBox(style, c, canvas, 0);
     const halfH = probe.h / 2;
     const ts = [c.start, (c.start + c.end) / 2, Math.max(c.start, c.end - 0.04)];
@@ -627,19 +628,19 @@ const r3 = (n) => +Number(n).toFixed(3);
  * Full caption build for an EDL: words → chunks with timing, accent and
  * placement → caption_word_group overlays. Returns {overlays, words, stats}.
  */
-export function buildCaptions(edl, { style: styleId = 'kimo', ctx = {}, hints = [], emphasis } = {}) {
+export function buildCaptions(edl, { style: styleId = 'kimo', ctx = {}, hints = [], emphasis,layout,fontScale,position } = {}) {
   const total = edl.video.flatMap((t) => t.clips).reduce((m, c) => Math.max(m, c.at + clipLen(c)), 0);
-  return captionOverlays(outputWords(edl, ctx), { style: styleId, canvas: edl.canvas, fps: rate(edl.canvas.fps), total, hints, emphasis, edl, ctx });
+  return captionOverlays(outputWords(edl, ctx), { style: styleId, canvas: edl.canvas, fps: rate(edl.canvas.fps), total, hints, emphasis, edl, ctx,layout,fontScale,position });
 }
 /** Output-timeline words → caption overlays for a canvas (also used by the bench previews with a synthetic face). */
-export function captionOverlays(raw, { style: styleId = 'kimo', canvas, fps, total = Infinity, hints = [], emphasis = [], edl = null, ctx = {}, faceAt } = {}) {
-  const style = captionStyle(styleId);
-  const layout = layoutFor(style, canvas);
+export function captionOverlays(raw, { style: styleId = 'kimo', canvas, fps, total = Infinity, hints = [], emphasis = [], edl = null, ctx = {}, faceAt,layout:overrideLayout,fontScale=1,position } = {}) {
+  const style = {...captionStyle(styleId),...(position&&position!=='auto'?{position}:{})};
+  const layout = {...layoutFor(style, canvas),...overrideLayout};
   const words = normalizeWords(raw, style, { hints });
   let chunks = chunkWords(words, layout);
   chunks = timeChunks(chunks, { fps, layout, maxCps: style.max_cps ?? (canvas.w > canvas.h ? 17 : Infinity), total });
   chunks = accentChunks(chunks, style, { emphasis });
-  chunks = placeChunks(chunks, style, { edl, canvas, ctx, faceAt });
+  chunks = placeChunks(chunks, style, { edl, canvas, ctx, faceAt,fontScale });
   const overlays = chunks.map((c, i) => ({
     id: `cap${String(i + 1).padStart(3, '0')}`,
     kind: 'caption_word_group',
@@ -707,7 +708,7 @@ export function applyCaptions(edl, config, ctx = {}) {
     delete edl.captions;
     return edl;
   }
-  const built = buildCaptions(edl, { style: config.style, ctx, hints: config.hints ?? [], emphasis: config.emphasis });
+  const built = buildCaptions(edl, { style: config.style, ctx, hints: config.hints ?? [], emphasis: config.emphasis,layout:config.layout,fontScale:config.fontScale,position:config.position });
   // a number pop already shows this word big: the caption keeps it without the accent (no double)
   const plain = edl.graphics?.no_accent ?? [];
   if (plain.length)

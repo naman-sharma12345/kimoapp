@@ -50,7 +50,7 @@ export async function prepareColor(
   edl,
   { ffmpeg, cacheDir, projectDir, signal, emit = () => {} },
 ) {
-  if (!edl.color_finish?.enabled) return null;
+  if (!edl.color_finish?.enabled||!edl.video.some(t=>t.clips.some(c=>!c._baked))) return null;
   const id = randomUUID().slice(0, 8),
     started = Date.now(),
     config = edl.color_finish,
@@ -70,7 +70,7 @@ export async function prepareColor(
       for (const clip of track.clips) {
         const source = edl.sources.find((s) => s.id === clip.src);
         if (
-          !source ||
+          !source || clip._baked ||
           source.alpha ||
           source.kind === 'image' ||
           (clip._overlayIndex != null && !clip._pip)

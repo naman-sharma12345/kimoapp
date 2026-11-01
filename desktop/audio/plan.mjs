@@ -42,7 +42,7 @@ export function retainUserMusic(edl, previous) {
 }
 export function chooseMusic(
   tracks,
-  { template = '', tone = '', seed = '' } = {},
+  { template = '', tone = '', seed = '', mood: requestedMood, track } = {},
 ) {
   const text =
     `${template} ${typeof tone === 'string' ? tone : JSON.stringify(tone)}`.toLowerCase();
@@ -61,7 +61,8 @@ export function chooseMusic(
               : /upbeat|shorts/.test(text)
                 ? 'upbeat'
                 : 'warm';
-  const matching = tracks.filter((t) => t.mood === mood);
+  if(track&&track!=='auto'&&tracks.some(t=>t.id===track))return tracks.find(t=>t.id===track);
+  const matching = tracks.filter((t) => t.mood === ({'chill-lofi':'calm',tech:'curious'}[requestedMood]??requestedMood??mood));
   return (matching.length ? matching : tracks)[
     hash(seed) % Math.max(1, matching.length || tracks.length)
   ];
@@ -138,7 +139,7 @@ export function snapCuts(edl, grid, { musicLed = false, sections = [] } = {}) {
 }
 export function planSound(
   edl,
-  { template = 'clean', tone = '', note = '', ctx = {}, enabled = true } = {},
+  { template = 'clean', tone = '', note = '', ctx = {}, enabled = true, music: musicChoice={}, settings={}, events: requestedEvents=[] } = {},
 ) {
   if (!enabled) return edl;
   const duration = frameCount(edl) / rate(edl.canvas.fps),
@@ -159,6 +160,7 @@ export function planSound(
           template,
           tone,
           seed: edl.video[0]?.clips[0]?.src ?? '',
+          mood:musicChoice.mood,track:musicChoice.track,
         });
   const grid = music
     ? beatGrid(music, duration)
@@ -177,6 +179,7 @@ export function planSound(
     music_id: noMusic ? null : (music?.id ?? existingMusicId ?? null),
     beat_grid: grid,
     speech,
+    music_envelope:{under_db:settings.music_under_db??-16,gap_db:settings.music_gap_db??-9,ramp_s:settings.envelope_ramp_s??.25},
     cut_snaps: previous.cut_snaps ?? [],
   };
   if (music)
@@ -207,7 +210,7 @@ export function planSound(
       sound_auto: true,
       clips: [],
     });
-  const events = [];
+  const events = [...requestedEvents];
   for (const t of edl.video)
     for (const c of t.clips) {
       if (c.transition_in && /whip|zoom/.test(c.transition_in.kind))
@@ -248,6 +251,7 @@ export function planSound(
     fps: rate(edl.canvas.fps),
     duration,
     template,
+    cap:settings.sfx_per_min,
   }).filter(
     (e) => e.mandatory || !existing.some((c) => Math.abs(c.at - e.at) < 0.5),
   );

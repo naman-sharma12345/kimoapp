@@ -4,7 +4,7 @@ import { Button } from '@web/components/ui/button';
 import { SegmentedControl } from '@web/components/ui/segmented-control';
 import { Toggle } from '@web/components/ui/toggle';
 import { Pill } from '@web/components/ui/pill';
-import { kimo, fmtTime, fmtBytes, fmtMs, base, STATUS, SAM_EFFECTS, busy } from './lib.js';
+import { kimo, fmtTime, fmtBytes, fmtMs, base, STATUS, SAM_EFFECTS, busy,creatorTemplateId } from './lib.js';
 
 const MODES = [
   { value: 'ai', label: 'ai edit' },
@@ -12,7 +12,7 @@ const MODES = [
   { value: 'sam', label: 'subject effect only' },
 ];
 const MODE_HINT = {
-  ai: 'script → build live → check 18 frames → fix',
+  ai: 'plan → compose → review → refine',
   captions: 'fully offline, whisper on this pc',
   sam: 'runs only the subject effect below',
 };
@@ -216,7 +216,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
   const [staged, setStaged] = useState([]);
   const [note, setNote] = useState('');
   const [preset, setPreset] = useState(localStorage.preset || 'youtube');
-  const [style, setStyle] = useState(localStorage.style || 'auto');
+  const [style, setStyle] = useState(creatorTemplateId(localStorage.style,localStorage.preset));
   const [captionStyle, setCaptionStyle] = useState(localStorage.captionStyle || 'auto');
   const [mode, setMode] = useState(localStorage.mode || 'ai');
   const [batch, setBatch] = useState(false);
@@ -379,7 +379,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
               </label>
               <label className="desk-select" data-disabled={mode !== 'ai' || undefined}>
                 <span>style</span>
-                <select value={style} onChange={(e) => setStyle(e.target.value)} disabled={mode !== 'ai'}>
+                <select value={style} onChange={(e) => {const value=e.target.value;setStyle(value);if(value.startsWith('shorts-')||value==='podcast-clips')setPreset('shorts');else if(value!=='music-montage'&&!preset.startsWith('youtube'))setPreset('youtube');}} disabled={mode !== 'ai'}>
                   {Object.entries(styles).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}

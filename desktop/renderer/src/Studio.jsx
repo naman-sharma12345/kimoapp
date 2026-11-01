@@ -4,7 +4,7 @@ import { Button } from '@web/components/ui/button';
 import { Avatar } from '@web/components/ui/avatar';
 import { Progress } from '@web/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@web/components/ui/tabs';
-import { kimo, fmtTime, fmtTc, fmtBytes, fmtMs, fmtEta, media, STATUS, busy, isTyping, base } from './lib.js';
+import { kimo, fmtTime, fmtTc, fmtBytes, fmtMs, fmtEta, media, STATUS, busy, isTyping, base,creatorTemplateId } from './lib.js';
 import { Timeline } from './Timeline.jsx';
 import { ColourFinish } from './ColourFinish.jsx';
 
@@ -325,7 +325,7 @@ function YoutubeView({ y, project, guard, notify }) {
 }
 function ExportView({ project, presets, styles, ready, isBusy, guard, notify, setLibrary }) {
   const [fmt, setFmt] = useState(project.preset);
-  const [sty, setSty] = useState(project.style || 'auto');
+  const [sty, setSty] = useState(project.creator?.template??creatorTemplateId(project.style,project.preset));
   const [renote, setRenote] = useState('');
   const P = presets[project.preset];
   const save = guard(async () => { const f = await kimo.save({ id: project.id }); if (f) notify(`saved ${f}`); });
@@ -441,7 +441,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
   const showLive = isBusy && Boolean(feed.live);
 
   // player source
-  const src = orig ? (isVideo ? media(p.files[0].path) : '') : ready ? `${media(p.output)}&v=${p.updated ?? ''}` : isVideo ? media(p.files[0].path) : '';
+  const src = orig ? (isVideo ? `${media(p.beforeOutput??p.files[0].path)}&v=${p.updated??''}` : '') : ready ? `${media(p.output)}&v=${p.updated ?? ''}` : isVideo ? media(p.files[0].path) : '';
   useEffect(() => {
     const v = video.current;
     if (!v || v.dataset.src === src) return;
@@ -469,10 +469,10 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
   const toggleAB = useCallback(() => {
     if (!p.output || !isVideo) return;
     setOrig((o) => {
-      setAbBadge(!o ? 'before · original' : 'after · kimo edit');
+      setAbBadge(!o ? (p.beforeOutput?'before · previous edit':'before · original') : 'after · kimo edit');
       return !o;
     });
-  }, [p.output, isVideo]);
+  }, [p.output, p.beforeOutput, isVideo]);
   useEffect(() => {
     if (!abBadge || orig) return;
     const tm = setTimeout(() => setAbBadge(null), 1500);
@@ -694,6 +694,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
               <TabsTrigger value="youtube">youtube</TabsTrigger>
             </TabsList>
             <TabsContent value="export">
+      {p.creator ? <div className="desk-pad" role="status">{p.creator.template} · creator score {p.creator.score}/100{p.creator.accepted?' · review target reached':' · review target unverified'} · estimated AI ${p.creator.budget?.reserved_usd?.toFixed(2)??'0.00'}{p.creator.undoDepth>0?<Button size="sm" variant="ghost" icon={Undo2} disabled={isBusy} onClick={async()=>{try{const np=await kimo.undoPlan({id:p.id});if(np)setLibrary(ls=>ls.map(x=>x.id===p.id?np:x));}catch(error){notify(error.message);}}}>undo plan edit</Button>:null}</div>:null}
               <ExportView project={p} presets={presets} styles={styles} ready={ready} isBusy={isBusy} guard={guard} notify={notify} setLibrary={setLibrary} />
             </TabsContent>
             <TabsContent value="quality">
@@ -706,6 +707,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
         </aside>
       </div>
       <span />
+
       <Timeline project={p} live={feed.timeline} video={video} time={t.cur} orig={orig} guard={guard} notify={notify} setLibrary={setLibrary} />
     </div>
   );

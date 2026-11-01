@@ -335,7 +335,7 @@ export async function mixSound(
     options,
   );
   const spans = speechIntervals(edl),
-    envelope = duckEnvelope(spans, duration, { hook: edl.sound.hook });
+    envelope = duckEnvelope(spans, duration, { hook: edl.sound.hook,...edl.sound.music_envelope });
   // Parallel sidechain keeps the requested word envelope audible: full sidechain
   // alone can add >20 dB reduction to its -16 dB speech envelope.
   const graph = [
