@@ -835,7 +835,7 @@ export function toTimeline(edl) {
         end: c.at + (c.dur ?? (c.out - c.in) / (c.speed ?? 1)),
         in: c.in,
       }));
-    if (clips.length) tracks.push({ track_id: t.track, clips });
+    if (clips.length || t.role==='MUSIC') tracks.push({ track_id: t.track, name:t.name, role:t.role, clips });
   }
   return {
     edl_version: 1,
@@ -947,6 +947,7 @@ export function publicEdl(edl) {
     })),
     ...(edl.captions ? { captions: { style: edl.captions.style, hook_style: edl.captions.hook_style ?? null, bounds: captionBounds(edl), stats: edl.captions.stats } } : {}),
     master: { ...edl.master },
+    ...(edl.sound?{sound:{version:edl.sound.version,enabled:edl.sound.enabled,target_lufs:edl.sound.target_lufs,music_id:edl.sound.music_id,sfx_count:edl.sound.sfx_count,master:edl.sound.report?.master}}:{}),
   };
 }
 export function toKimoProject(edl) {

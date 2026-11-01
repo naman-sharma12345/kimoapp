@@ -111,6 +111,18 @@ Generated offline by `explain/tools/build-data.mjs` (dev tool, not run by the ap
 
 Synthesised at run time by kimo with FFmpeg's `lavfi` generators from parameters in the source (no recordings, no third-party audio). kimo dedicates them to the public domain (CC0 1.0).
 
+## Phase 8 original music and sound effects
+
+`audio/music/*.opus` (8 original procedural scores) and `audio/sfx/*.wav` (40
+synthesized effects) are dedicated to CC0 1.0 Universal by kimo. No samples or
+third-party compositions are incorporated. Source and generation parameters:
+https://github.com/naman-sharma12345/kimoapp/blob/main/desktop/audio/tools/build-library.mjs .
+License: https://creativecommons.org/publicdomain/zero/1.0/ (legal text:
+https://creativecommons.org/publicdomain/zero/1.0/legalcode ; local dedication:
+`audio/LICENSE-CC0.txt`). Per-file metadata and source URLs are in `data/music.json`
+and `data/sfx.json`. User-imported music is supplied by the project owner and is
+not relicensed by kimo. FFmpeg/Opus codec licensing remains as listed above.
+
 ## Fetched explainer assets
 
 Images found through Openverse (https://openverse.org, API https://api.openverse.org) and Wikimedia Commons (https://commons.wikimedia.org, API https://commons.wikimedia.org/w/api.php) are keyless searches filtered to CC0, public domain, CC BY and CC BY-SA. Each asset keeps its licence, creator and source URL in the project, and every export writes them to `ATTRIBUTIONS.txt` beside the video (also offered as a YouTube description block). Nothing is bundled from these sources.

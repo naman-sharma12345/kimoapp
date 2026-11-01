@@ -321,3 +321,47 @@ User request: implement the attached benchmark phase and push to GitHub. Subsequ
 Validation: web lint/typecheck, 300 existing unit/integration tests and web production build were exercised; the final lint pass succeeded. The web test alias was repaired for Windows and its existing tests pass on Node 24. Desktop Node 20 tests cover all new resource/encoder paths using small synthetic clips. The engine repository/binaries and web runtime behavior remain unchanged. The version stays 0.3.2; no release tag was created. Source changes take effect in the next desktop build.
 
 Desktop Phase02 follow-up (30October): user explicitly approved Cinestudy credit/hashtag terms. Raw-v2 source selections, credits, exact hosted preparation and comparison workflow are pushed;41099499282 is running. Dedicated b-roll hit HTTP429 twice and was stopped. Six vlog inputs are documented as raw shot excerpts from two camera rolls, pending actual selected-preview review. New source-referenced camera measurement preserves whole-picture motion separately;75 local desktop tests pass including injected subpixel shake, moving source/brightness/caption rejection and unavailable flat/aperture cases. This does not tick final raw-data, score or full-footage frame acceptance.
+
+## Desktop creator Phase 08 — sound design (1 November 2026)
+
+User scope: implement Phase 8 and push; explicitly skip benchmarks and use quick
+working checks. Earlier benchmark work is not resumed. Implementation is complete
+within that revised scope; real-footage sound-quality acceptance remains unclaimed.
+
+- [x] Adaptive voice analysis and cleanup, pitch-based high-pass, learned noise
+      floor, conditional gentle gate/de-esser/EQ, two compressors and clip leveling.
+      Quiet gap fills require both unvoiced analysis and transcript exclusion.
+- [x] Optional documentary/cinematic studio processing. The installed BtbN build's
+      crashing anlmdn is capability-gated, with a reported FFT fallback.
+- [x] Eight offline original CC0 scores, BPM/key/mood/energy and loop metadata;
+      19,232,787 bytes. Bar fitting, seam crossfades, final fade, beat grids, safe cut
+      snapping, processed-voice sidechain and word envelope are connected.
+- [x] Forty offline original CC0 SFX, tagged variants and measured peaks;
+      3,687,600 bytes. Deterministic selection, spacing/rotation, transition cues,
+      graphic entrances, reveal/freeze/screen cues, early starts and local level caps.
+- [x] Two-pass app-owned mastering, −14 LUFS / −16 podcast targets, limiter,
+      measured peak/LRA/DC/clipping/stereo checks. Native finish_audio is intercepted;
+      delivery encoding preserves podcast loudness.
+- [x] Durable voice/music/SFX stems, source-signature caches, stem-only remix API,
+      background worker/thread limits, cancellation and live FFmpeg progress.
+- [x] Own music picker and MUSIC-lane drop, retained across follow-ups. Existing
+      tokens/components are reused. Keyboard import/drop browser smoke passes with no
+      page errors; inspected screenshot: `docs/screens/phase-08-music-import.png`.
+      The browser bridge is mocked and provides no preview video; no OS-picker or
+      packaged-installer acceptance is claimed.
+- [x] Seven audio tests pass, including six-second real FFmpeg audio smoke,
+      synthetic SNR/treble checks, 20 ms verified room fill, loops/stems/cache and
+      podcast remix. Twenty existing EDL/resource/encoder and three short synthetic
+      pipeline checks pass. No golden media or full-footage render was run.
+- [x] Repository lint/typecheck/build and desktop renderer build pass. All 311 web
+      tests pass on bundled Node 24.22.1 (Node 26 initially failed existing storage
+      tests; no web source fix was needed). No engine or backend source was changed.
+- [ ] Golden benchmarks, 30-second human listening reviews, real-footage LRA and
+      duck-depth acceptance, full-program correlation and sustained CPU/lag checks:
+      explicitly deferred under the user's no-benchmarks instruction. The synthetic
+      fixture's 0.5 LU LRA fails the requested 4–9 range and is reported honestly.
+
+Final smoke: −14.01 LUFS, −6.82 dBTP, synthetic SNR 40.45 → 50.79 dB, 6 kHz/140 Hz
+ratio +1.59 dB, podcast stem remix −16.01 LUFS. These describe only the fixture.
+Details, reproduction and limitations: `desktop/audio/README.md` and
+`desktop/audio/RESULTS.md`. No paid AI calls, benchmarks, installer or release.

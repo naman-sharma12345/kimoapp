@@ -600,6 +600,23 @@ app.whenReady().then(async () => {
     pump();
     return publicProject(p);
   });
+  ipcMain.handle('audio:add-music',async (_e,{id,path:input})=>{
+    const p=library.find(x=>x.id===id);
+    if(!p||['running','queued'].includes(p.status))throw new Error('wait for this edit to finish');
+    if(!p.edlFile||!fs.existsSync(p.edlFile))throw new Error('re-run this edit once first');
+    if(!input){const r=await dialog.showOpenDialog(win,{properties:['openFile'],filters:[{name:'Music',extensions:['mp3','wav','m4a','aac','flac','ogg','opus']}]});if(r.canceled)return null;input=r.filePaths[0];}
+    if(typeof input!=='string'||input.length>4096||!/\.(mp3|wav|m4a|aac|flac|ogg|opus)$/i.test(input)||!fs.statSync(input).isFile())throw new Error('choose an audio file');
+    const e=await loadEngine(),file=await e.probe(paths().ffprobe,input);
+    if(!file?.audio||!(file.duration>0))throw new Error('this file has no readable audio');
+    const {addUserMusic}=await import('./audio/import.mjs');
+    const edl=await import('./edl.mjs'),current=JSON.parse(fs.readFileSync(p.edlFile,'utf8'));
+    const changed=addUserMusic(current,file);
+    if(!p.files.some(f=>f.path===file.path))p.files.push(file);
+    fs.writeFileSync(p.edlFile,JSON.stringify(changed,null,2));
+    p.edl=edl.publicEdl(changed);p.timeline={...edl.toTimeline(changed),edl:p.edl};
+    Object.assign(p,{status:'queued',error:undefined,job:{mode:'manual',ops:[],edl:changed,note:p.note}});
+    update(p);pump();return publicProject(p);
+  });
   ipcMain.handle('saveThumb', async (_e, id) => {
     const p = library.find((x) => x.id === id);
     const src = p?.youtube?.thumbnail;

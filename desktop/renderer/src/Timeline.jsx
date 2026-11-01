@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Undo2, X, Check, Sparkles } from 'lucide-react';
+import { Undo2, X, Check, Sparkles, Music2 } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
 import { kimo, fmtTime, fmtTc, busy } from './lib.js';
 import { toTimeline } from '../../edl.mjs';
 
-const clipKind = (c) => (c.explain ? 'explain' : /^text:/.test(c.src ?? '') ? 'text' : /\.(mp3|wav|m4a|aac|flac|ogg)$/i.test(c.src ?? '') ? 'audio' : /\.(png|jpe?g|webp|gif)$/i.test(c.src ?? '') ? 'image' : /\./.test(c.src ?? '') ? 'video' : 'fx');
+const clipKind = (c) => (c.explain ? 'explain' : /^text:/.test(c.src ?? '') ? 'text' : /\.(mp3|wav|m4a|aac|flac|ogg|opus)$/i.test(c.src ?? '') ? 'audio' : /\.(png|jpe?g|webp|gif)$/i.test(c.src ?? '') ? 'image' : /\./.test(c.src ?? '') ? 'video' : 'fx');
 const tlDuration = (t) => Math.max(1, Number(t?.duration) || 0, ...(t?.tracks_bottom_to_top ?? []).flatMap((k) => k.clips.map((c) => c.end)));
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const trackLabel = (k, i, counts) => {
@@ -298,6 +298,12 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
       discard();
     }
   });
+  const addMusic = guard(async (path) => {
+    if (!canEdit()) return;
+    if (edits.length) return notify('apply or discard your timeline edits before adding music');
+    const p = await kimo.addMusic({ id: project.id, ...(path ? { path } : {}) });
+    if (p) { setLibrary((l) => l.map((x) => x.id === p.id ? { ...x, ...p } : x)); setTl(toTimeline(p.edl)); }
+  });
 
   useEffect(() => {
     const onKey = (e) => {
@@ -325,7 +331,7 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
   const n = tracks.reduce((a, k) => a + k.clips.length, 0);
   const selectedBeat = selected ? tracks.flatMap((k) => k.clips).find((c) => c.id === selected && c.explain) ?? null : null;
   const counts = {};
-  const rows = [...tracks].map((k, i) => ({ k, label: trackLabel(k, i, counts) })).reverse();
+  const rows = [...tracks].map((k, i) => ({ k, label: k.role ?? trackLabel(k, i, counts) })).reverse();
   const at = orig ? 0 : time || 0;
 
   return (
@@ -335,6 +341,9 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
         <span className="desk-fine mono">{tracks.length ? `${fmtTc(dur)} · ${n} clip${n === 1 ? '' : 's'} · ${tracks.length} track${tracks.length === 1 ? '' : 's'}` : ''}</span>
         {edits.length ? <span className="desk-unsaved">{edits.length} unsaved edit{edits.length === 1 ? '' : 's'}</span> : null}
         <span className="studio-spacer" />
+        <Button size="xs" variant="ghost" icon={Music2} disabled={isBusy || !project.edl || edits.length > 0} onClick={() => addMusic()} tooltip="choose your own music, or drop an audio file onto MUSIC">
+          add music
+        </Button>
         <span className="studio-tool-hint">drag to move · drag edges to trim · captions snap to words · delete removes · double-click a caption to edit · select a visual to edit its beat</span>
         <Button size="xs" variant="ghost" icon={Undo2} disabled={!undo.length} onClick={undoEdit} tooltip="undo timeline edit" shortcut="Ctrl Z">
           undo
@@ -365,7 +374,9 @@ export function Timeline({ project, live, video, time, orig, guard, notify, setL
               ))}
             </div>
             {rows.map(({ k }) => (
-              <div key={k.track_id} className="desk-tl-track">
+              <div key={k.track_id} className="desk-tl-track" aria-label={k.role === 'MUSIC' ? 'MUSIC · drop an audio file here or use add music' : undefined}
+                onDragOver={(e) => { if(k.role==='MUSIC'){ e.preventDefault(); e.dataTransfer.dropEffect='copy'; } }}
+                onDrop={(e) => { if(k.role==='MUSIC'){ e.preventDefault(); e.stopPropagation(); const path=kimo.pathsOf(e.dataTransfer.files)[0]; if(path)addMusic(path); } }}>
                 {k.clips.map((c) => {
                   const kind = clipKind(c);
                   const text = kind === 'explain' ? beatLabel(c, beatProps(c.id)) : label(c);

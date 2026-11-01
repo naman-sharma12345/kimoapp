@@ -12,6 +12,7 @@ import { join, resolve, sep, basename } from 'node:path';
 import { once } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawnBackground, execFileBackground } from './resources.cjs';
+import { mixSound } from './audio/mix.mjs';
 import {
   validate,
   rate,
@@ -701,6 +702,7 @@ async function audioMix(edl, { ffmpeg, dir, signal, totalFrames, emit }) {
   const fps = rate(edl.canvas.fps),
     seconds = totalFrames / fps,
     samples = Math.round(seconds * 48000);
+  if(edl.sound?.enabled) return mixSound(edl,{ffmpeg,dir:edl.sound.stem_dir,signal,duration:seconds,emit});
   const args = [],
     filters = [],
     labels = [],
@@ -1432,6 +1434,7 @@ export async function compose({
           { signal },
         );
       }
+      if(edl.sound?.enabled) edl.sound.stem_dir=resolve(output,'..','audio');
       const audio = await audioMix(edl, {
         ffmpeg,
         dir,

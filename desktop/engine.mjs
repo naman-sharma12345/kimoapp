@@ -443,7 +443,7 @@ export function canvasFps(files) {
   return best;
 }
 
-export function qualityChecks(m, P, { final = false, sourceAudio = false } = {}) {
+export function qualityChecks(m, P, { final = false, sourceAudio = false, targetLufs = -14 } = {}) {
   const rec = recommendedMbps(P.width, P.height, m.fps);
   const c = [];
   const add = (id, label, ok, value, want, warn = false) => c.push({ id, label, ok, value, want, warn });
@@ -459,7 +459,7 @@ export function qualityChecks(m, P, { final = false, sourceAudio = false } = {})
   }
   if (sourceAudio) add('sound', 'sound', Boolean(m.acodec), m.acodec ? 'present' : 'missing', 'source sound kept');
   if (m.lufs != null) {
-    add('lufs', 'loudness', Math.abs(m.lufs + 14) <= 1, `${m.lufs} LUFS`, '-14 ± 1 LUFS');
+    add('lufs', 'loudness', Math.abs(m.lufs - targetLufs) <= 1, `${m.lufs} LUFS`, `${targetLufs} ± 1 LUFS`);
     add('tp', 'true peak', m.truePeak <= -1, `${m.truePeak} dBTP`, '≤ -1 dBTP');
   } else if (!m.acodec) add('lufs', 'loudness', true, 'no audio', '-', true);
   if (m.jitter != null) {
@@ -493,6 +493,7 @@ export async function youtubeMaster({
   onProgress,
   encoder,
   onFallback,
+  audioMastered = false,
 }) {
   if (signal?.aborted) throw new Error('cancelled');
   if (encoder === undefined) {
@@ -507,7 +508,7 @@ export async function youtubeMaster({
   const rec = recommendedMbps(P.width, P.height, fps);
   const gop = Math.max(1, Math.round(fps / 2));
   const L = m.loudnorm;
-  const fix = L && [L.input_i,L.input_tp,L.input_lra,L.input_thresh,L.target_offset].every(v=>Number.isFinite(Number(v))) && (Math.abs(m.lufs + 14) > 0.5 || m.truePeak > -1.5);
+  const fix = !audioMastered && L && [L.input_i,L.input_tp,L.input_lra,L.input_thresh,L.target_offset].every(v=>Number.isFinite(Number(v))) && (Math.abs(m.lufs + 14) > 0.5 || m.truePeak > -1.5);
   const af = fix
     ? [
         '-af',
@@ -676,6 +677,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   const savedEdl = join(dir, 'edit.edl.json');
   const appEdl = suppliedEdl ?? (edlFile && existsSync(edlFile) ? JSON.parse(readFileSync(edlFile,'utf8')) : null);
   const pictures = pictureTools({mcp,dir,files,mode,suppliedEdl,ffmpeg,ffprobe,out,savedEdl,signal,emit,fontsDir:env?.KIMO_FONTS,runTool});
+  pictures.sound={enabled:true,template:style,note,previous:appEdl};
   let duration;
   let timeline = null;
   let msPerSec = speed || 2500; // export ms per second of 1080p timeline, learned per PC
@@ -1138,7 +1140,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       await call('export', { path: out, crf: 16 });
       m = await measure(ffmpeg, ffprobe, out);
     }
-    const qc = qualityChecks(m, P, { sourceAudio: files.some((f) => f.audio) });
+    const qc = qualityChecks(m, P, { sourceAudio: files.some((f) => f.audio), targetLufs:pictures.lastEdl?.sound?.target_lufs??-14 });
     checks.push({ pass, m, qc });
     emit({ t: 'quality', pass, stage: 'render', m: { ...m, loudnorm: undefined }, checks: qc });
     reviewImages = [];
@@ -1370,13 +1372,14 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
 
     // ---------- YouTube upload master ----------
     const m0 = checks.at(-1)?.m ?? (await measure(ffmpeg, ffprobe, out));
-    emit({ t: 'status', text: 'encoding the YouTube upload master (H.264 High, closed GOP, AAC 384k, -14 LUFS)' });
+    const soundTarget=pictures.lastEdl?.sound?.target_lufs??-14;
+    emit({ t: 'status', text: `encoding the YouTube upload master (H.264 High, closed GOP, AAC 384k, ${soundTarget} LUFS)` });
     const id = randomUUID().slice(0, 8);
     emit({ t: 'op', id, phase: 'start', tool: 'youtube_master', title: `youtube_master ${recommendedMbps(P.width, P.height, m0.fps)} Mbps · ${P.width}x${P.height}`, at: Date.now() });
     const t0 = Date.now();
     let master;
     try {
-      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
+      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, audioMastered:Boolean(pictures.lastEdl?.sound?.enabled), onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
       emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: `${master.encoder} · ${master.loudnessFixed ? 'loudness corrected to -14 LUFS' : 'loudness already on target'}` });
     } catch (err) {
       if (signal?.aborted) throw err;
@@ -1385,7 +1388,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     const output = master && existsSync(finalOut) ? finalOut : out;
     const mf = await measure(ffmpeg, ffprobe, output);
-    const qf = qualityChecks(mf, P, { final: output === finalOut, sourceAudio: files.some((f) => f.audio) });
+    const qf = qualityChecks(mf, P, { final: output === finalOut, sourceAudio: files.some((f) => f.audio),targetLufs:soundTarget });
     emit({ t: 'quality', pass: 'final', stage: 'master', m: { ...mf, loudnorm: undefined }, checks: qf });
 
     // ---------- thumbnail + YouTube pack ----------
@@ -1427,8 +1430,9 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     }
     // Phase 7: credits for every fetched asset (and the map data) beside the export, and in the description
     let attributions = null;
-    const credits = pictures.lastEdl?.explain?.attributions ?? [];
-    if (pictures.lastEdl?.explain) {
+    const credits = [...(pictures.lastEdl?.explain?.attributions ?? [])];
+    if(pictures.lastEdl?.sound?.enabled)credits.push({source:'kimo-audio',text:'Original kimo procedural music and synthesized sound effects, CC0 1.0. Source: https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/audio — https://creativecommons.org/publicdomain/zero/1.0/ . User-imported music is supplied by the project owner.'});
+    if (pictures.lastEdl?.explain || pictures.lastEdl?.sound?.enabled) {
       attributions = join(dir, 'ATTRIBUTIONS.txt');
       writeFileSync(attributions, attributionsText(credits, { title: files[0]?.path?.split(/[\\/]/).pop() ?? 'kimo video' }));
       if (youtube && credits.length) youtube.description = `${youtube.description}\n\nCredits:\n${attributionsText(credits).split('\n').filter((l) => l.startsWith('- ')).join('\n')}`.slice(0, 4900);

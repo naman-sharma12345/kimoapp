@@ -160,3 +160,30 @@ Benchmark aliases default/shorts-punchy map to the existing auto/energetic style
 The existing Windows test alias was normalized in vitest.config.ts. Existing Markdown formatting was repaired for lint. These changes do not alter the web application.
 
 User follow-up scope: after reporting PC lag, the user explicitly asked to reduce lag and find a high-quality render path with minimum CPU use. Stopped both local full benchmarks and their helper processes, then added cross-process edit/bench locks, lower worker priority, bounded app-owned thread pools and analysis buffers, graceful benchmark cancellation and a queue race fix. The upload master now prefers hardware encoding, with a tested NVDEC/CUDA/NVENC path on the local RTX 4050 and bounded CPU fallback. GPU quality settings and remaining CPU compositor limitations are in desktop/PERFORMANCE.md. Large generated bench data now lives outside OneDrive in LocalAppData. No full baseline was restarted; the incomplete acceptance items remain visible.
+
+## Desktop creator sound design — 1 November 2026
+
+The user explicitly requested desktop Phase 8, a GitHub push, and quick checks
+without benchmarks. This overrides the PDF's golden-clip measurement/listening
+work for this task. No paid AI requests, engine changes, web behavior changes,
+installer or release are included.
+
+The offline audio pack uses eight original procedural scores and forty synthesized
+effects dedicated to CC0. This avoids external downloads and unverified recording
+licenses. The assets are simple original compositions; no human listening-quality
+approval is claimed. BPM/key/loop metadata comes from their composition parameters.
+
+The Studio import control reuses the existing ghost Button, Music2 icon, MUSIC
+track header, focus treatment and timeline styles. Its copy is "add music"; the
+brief specifies the capability but no exact control copy. No new visual tokens or
+libraries are introduced. The OS picker and drop bridge feed one main-process
+validation path. Imported music remains in the EDL across AI follow-ups.
+
+The app intercepts native finish_audio and retains separate stems. A parallel
+sidechain adds at most about 3 dB attenuation to the required word envelope rather
+than compounding two full reductions. Runtime checks report unavailable or
+out-of-range metrics. The installed FFmpeg build crashes in anlmdn, so a tiny
+capability check gates that optional filter and reports an FFT fallback. Voice
+analysis and stereo compatibility sample at most 30 seconds; raw source channels
+with opposed voice are repaired before mixing. CPU work remains bounded and
+cached, with no measured real-footage CPU improvement claim.

@@ -341,7 +341,7 @@ function ExportView({ project, presets, styles, ready, isBusy, guard, notify, se
       <div className="desk-export-card" data-ready={ready || undefined}>
         <div className="desk-export-h">
           <span className="studio-heading">youtube master</span>
-          <span className="desk-fine">h.264 high · closed gop · aac 384k · −14 lufs</span>
+          <span className="desk-fine">h.264 high · closed gop · aac 384k · −{Math.abs(project.edl?.sound?.target_lufs ?? -14)} lufs</span>
         </div>
         <dl className="desk-rows">
           <div>

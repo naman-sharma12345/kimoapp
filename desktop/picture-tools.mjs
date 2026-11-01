@@ -14,6 +14,8 @@ import { editCaptionChunk } from './caption-edits.mjs';
 import { applyGraphics } from './graphics/plan.mjs';
 import { planBroll, applyBroll } from './broll.mjs';
 import { applyExplain } from './explain/plan.mjs';
+import { planSound, snapCuts, chooseMusic, libraries, retainUserMusic } from './audio/plan.mjs';
+import { beatGrid } from './audio/music.mjs';
 
 /** Implements picture operations locally. The planner remains a read-only black-box toolbox. */
 export function pictureTools({
@@ -50,12 +52,24 @@ export function pictureTools({
     graphicsReport: null,
     // Phase 7 explainers ({enabled, beats (anchored), template, theme, state, report, ...}); applied on every snapshot
     explain: null,
-    handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit']),
+    sound: null,
+    handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit', 'finish_audio']),
   };
   api.snapshot = async () => {
     const edl = await snapshotEdl();
+    if(mode==='followup')retainUserMusic(edl,api.sound?.previous);
     if (api.cutPlan) edl.cut_plan = api.cutPlan;
-    return captioned(explained(graphicked(directed(brolled(edl)))));
+    const config={...api.sound,template:api.camera?.ctx?.podcast?'podcast':api.sound?.template,tone:api.explain?.tone??'',ctx:api.camera?.ctx??edl.camera_plan??{}};
+    if(api.sound && !(mode==='manual'&&suppliedEdl)){
+      edl.camera_plan??=config.ctx;
+      const music=chooseMusic(libraries().music,config);
+      const grid=beatGrid(music,frameCount(edl)/rate(edl.canvas.fps));
+      const disabled=/\b(no|without|remove|disable)\s+(background\s+)?music\b/i.test(config.note??'');
+      const cut_snaps=disabled||edl.audio.some(t=>t.role==='MUSIC'&&t.clips.length)?[]:snapCuts(edl,grid,{musicLed:/music|montage|broll/.test(config.template)||/music.led|montage|b.roll montage/i.test(config.note??''),sections:(config.ctx.overrides?.transitions??[]).map(t=>t.at)});
+      edl.sound={...edl.sound,cut_snaps};
+    }
+    const result=captioned(explained(graphicked(directed(brolled(edl)))));
+    return api.sound && !(mode==='manual'&&suppliedEdl?.sound?.enabled) ? planSound(result,config) : result;
   };
   const skipped = (stage, error) => {
     const title = `${stage} skipped: ${error.message}`.slice(0, 200);
@@ -185,6 +199,7 @@ export function pictureTools({
     return { ...toTimeline(current), edl: publicEdl(current) };
   };
   api.call = async (name, args) => {
+    if(name==='finish_audio')return {content:[{type:'text',text:JSON.stringify({ok:true,engine:'kimo sound design',note:'Adaptive voice cleanup, music/SFX buses and two-pass mastering run in the app during export; native finish_audio is not used.'})}]};
     if (['auto_captions', 'caption_from_words', 'edit_caption'].includes(name)) {
       try {
         return await captionTool(name, args ?? {});
@@ -251,6 +266,15 @@ export function pictureTools({
           // the base composite is kept so a caption-only edit re-renders just the text pass
           cacheDir: join(dir, 'compose-cache'),
         });
+        // compose validates a copy. Persist the durable audio report on the edit too.
+        const audioReport=join(dir,'audio','report.json');
+        if(edl.sound?.enabled&&existsSync(audioReport)){
+          edl.sound.report=JSON.parse(readFileSync(audioReport,'utf8'));
+          const fit=edl.sound.report.music_fits?.[0];
+          if(fit?.bpm){edl.sound.beat_grid=beatGrid({bpm:fit.bpm},frameCount(edl)/rate(edl.canvas.fps),fit.at);edl.sound.beat_grid_estimated=fit.estimated;}
+          edl.sound.stem_dir=join(dir,'audio');
+          writeFileSync(savedEdl,JSON.stringify(edl,null,2));
+        }
         return {
           content: [
             {
