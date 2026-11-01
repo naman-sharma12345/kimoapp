@@ -123,6 +123,24 @@ https://creativecommons.org/publicdomain/zero/1.0/legalcode ; local dedication:
 and `data/sfx.json`. User-imported music is supplied by the project owner and is
 not relicensed by kimo. FFmpeg/Opus codec licensing remains as listed above.
 
+## Phase 9 looks and reference previews
+
+`data/looks/*.json` and the original generated `.cube` LUT data are dedicated to
+CC0 1.0 Universal. Source: https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/data/looks .
+License: https://creativecommons.org/publicdomain/zero/1.0/ ; local dedication:
+`data/looks/LICENSE-CC0.txt`. These are kimo's own parameter sets, not third-party LUTs.
+
+`data/looks/previews/*.webp` are cropped, resized and colour-corrected reference
+stills from **ProPublica**, "Unedited: ProPublica Interviews President Biden,
+September 2023". Source: https://commons.wikimedia.org/wiki/File:Unedited-_ProPublica_Interviews_President_Biden,_September_2023.webm .
+License: CC BY 3.0, https://creativecommons.org/licenses/by/3.0/ . The existing
+TH-1 fixture's provenance is retained; Commons declares that licence and still
+marks its external review pending. The previews retain this attribution, are
+not CC0, and imply no endorsement. Source/look comparison strips are explicitly
+requested by Phase 9; no additional footage was downloaded. Developer review
+stills retain their respective credits in `test/bench/baselines/phase09-color/ATTRIBUTIONS.txt`,
+including the previously approved Cinestudy credit/hashtag requirements.
+
 ## Fetched explainer assets
 
 Images found through Openverse (https://openverse.org, API https://api.openverse.org) and Wikimedia Commons (https://commons.wikimedia.org, API https://commons.wikimedia.org/w/api.php) are keyless searches filtered to CC0, public domain, CC BY and CC BY-SA. Each asset keeps its licence, creator and source URL in the project, and every export writes them to `ATTRIBUTIONS.txt` beside the video (also offered as a YouTube description block). Nothing is bundled from these sources.

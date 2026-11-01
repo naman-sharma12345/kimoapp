@@ -1,0 +1,13 @@
+Original kimo look parameters and generated colour LUTs — CC0 1.0 Universal
+
+To the extent possible under law, kimo waives copyright and related rights
+in the original JSON look parameter sets in this directory and the colour
+LUT data generated from them by desktop/color/lut.mjs, under CC0 1.0 Universal.
+
+Source: https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/data/looks
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+This dedication does not cover application source, user footage or the
+ProPublica-derived preview images. The latter retain CC BY 3.0 attribution
+as documented in desktop/THIRD_PARTY_NOTICES.md. No endorsement is implied.

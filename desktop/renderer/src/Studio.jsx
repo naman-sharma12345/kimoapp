@@ -6,6 +6,7 @@ import { Progress } from '@web/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@web/components/ui/tabs';
 import { kimo, fmtTime, fmtTc, fmtBytes, fmtMs, fmtEta, media, STATUS, busy, isTyping, base } from './lib.js';
 import { Timeline } from './Timeline.jsx';
+import { ColourFinish } from './ColourFinish.jsx';
 
 /* ------------------------------------------------------------------ feed model */
 function useFeed(project) {
@@ -396,6 +397,7 @@ function ExportView({ project, presets, styles, ready, isBusy, guard, notify, se
           re-run from scratch
         </Button>
       </div>
+      <ColourFinish project={project} isBusy={isBusy} guard={guard} setLibrary={setLibrary}/>
     </div>
   );
 }

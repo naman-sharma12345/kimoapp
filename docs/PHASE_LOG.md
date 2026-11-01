@@ -365,3 +365,50 @@ Final smoke: −14.01 LUFS, −6.82 dBTP, synthetic SNR 40.45 → 50.79 dB, 6 kH
 ratio +1.59 dB, podcast stem remix −16.01 LUFS. These describe only the fixture.
 Details, reproduction and limitations: `desktop/audio/README.md` and
 `desktop/audio/RESULTS.md`. No paid AI calls, benchmarks, installer or release.
+
+## Desktop creator Phase 09 — colour and finish (1 November 2026)
+
+Implementation is complete with lightweight verification under the user's
+standing no-benchmark/no-heavy-local-render preference. Full real-footage gates
+remain unclaimed. Nothing from the next phase, a release or an installer is built.
+
+- [x] Per-clip twelve-frame RGB analysis, percentiles, clipping, chroma, skin-region
+      sampling, bounded grey-world WB, saturation/contrast and heuristic flat-profile
+      detection. Signature/range/metadata/mask-aware caches avoid repeated sampling.
+- [x] One generated 33³ tetrahedral LUT per footage clip combines correction,
+      bounded reference-shot matching, existing explicit primaries and the look.
+      Longest A-roll is the reference; b-roll matching is weaker. Missing skin regions
+      and sparse/proxy metrics are labeled, including expired cached mask coverage.
+- [x] Seven original CC0 look parameter files, zero-strength identity, skin
+      protection, teal/orange cap, full-strength TH-1 strips and Studio controls.
+      Existing styles/tokens only; selection, keyboard strength, preview and persistence
+      pass the browser bridge test. Inspected screenshot:
+      `docs/screens/phase-09-colour-finish.png`.
+- [x] Adaptive sharpening after scale, optional luma grain and 20% vignette before
+      overlays. Downscaled 4K is not sharpened. Float LUT processing is dithered at the
+      existing 8-bit camera-warp boundary; this is not an end-to-end float renderer.
+- [x] Native auto_grade is intercepted; source colour metadata and input range are
+      read, generic HDR normalization has technical coverage, and delivery BT.709
+      primaries/transfer/matrix/limited range pass. Explicit user primaries still apply.
+- [x] Seven colour tests pass. Actual chart clipping is 0% for all looks, skin patch
+      hues stay in range, A/B compositor mean RGB difference is 0, and tiny delivery
+      patch drift is 1.34 RGB levels. Nineteen existing EDL/transition/mask/audio/pipeline
+      checks pass. These are synthetic fixtures, not full golden videos.
+- [x] All six golden-case still rows across all seven looks were generated from
+      existing small tiles and visually inspected. Initial washout was corrected;
+      remaining highlight/framing/dataset limits are recorded honestly. All 42 processed
+      tiles measure 0% clipped luma, which does not prove recovered source detail.
+      Evidence: `desktop/test/bench/baselines/phase09-color/REVIEW.md`, `stills.webp`,
+      `still-metrics.json` and full `ATTRIBUTIONS.txt` in that directory.
+- [x] Repository lint/typecheck, 311 existing web tests on Node 24, web production
+      build and desktop renderer build pass. Web behavior, engine and backend source
+      are unchanged. Built desktop assets are committed.
+- [ ] Full VLOG-1 clip_delta_e <4, all-frame clipping <0.5%, temporal consistency,
+      calibrated skin, camera-specific log/HDR quality and sustained CPU/lag acceptance:
+      deferred under the user's no-benchmark preference. No unavailable measurement
+      is counted as a pass.
+
+The runtime saves `color/report.json` and the full EDL; preview/source selection is
+cached, workers remain bounded and cancellable, and long operations emit progress.
+Technical details and reproduction: `desktop/color/README.md`. Benchmark history
+and this lightweight result are recorded in `desktop/test/bench/RESULTS.md`.

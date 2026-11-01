@@ -16,6 +16,7 @@ import { planBroll, applyBroll } from './broll.mjs';
 import { applyExplain } from './explain/plan.mjs';
 import { planSound, snapCuts, chooseMusic, libraries, retainUserMusic } from './audio/plan.mjs';
 import { beatGrid } from './audio/music.mjs';
+import { LOOK_IDS } from './color/looks.mjs';
 
 /** Implements picture operations locally. The planner remains a read-only black-box toolbox. */
 export function pictureTools({
@@ -53,10 +54,12 @@ export function pictureTools({
     // Phase 7 explainers ({enabled, beats (anchored), template, theme, state, report, ...}); applied on every snapshot
     explain: null,
     sound: null,
-    handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit', 'finish_audio']),
+    color: null,
+    handles: new Set(['export', 'render_frame', 'contact_sheet', 'lint_edit', 'finish_audio','auto_grade']),
   };
   api.snapshot = async () => {
     const edl = await snapshotEdl();
+    if(api.color)edl.color_finish=mode==='manual'&&suppliedEdl?.color_finish?structuredClone(suppliedEdl.color_finish):structuredClone(api.color);
     if(mode==='followup')retainUserMusic(edl,api.sound?.previous);
     if (api.cutPlan) edl.cut_plan = api.cutPlan;
     const config={...api.sound,template:api.camera?.ctx?.podcast?'podcast':api.sound?.template,tone:api.explain?.tone??'',ctx:api.camera?.ctx??edl.camera_plan??{}};
@@ -199,6 +202,15 @@ export function pictureTools({
     return { ...toTimeline(current), edl: publicEdl(current) };
   };
   api.call = async (name, args) => {
+    if(name==='auto_grade'){
+      if(api.color&&!api.color.locked){
+        const requested=args.look??args.style,settings={};
+        if(LOOK_IDS.includes(requested))settings.look=requested;
+        if(Number.isFinite(args.strength))settings.strength=Math.max(0,Math.min(1,args.strength));
+        if(typeof args.clip_id==='string')api.color.clip_overrides={...api.color.clip_overrides,[args.clip_id]:settings};else Object.assign(api.color,settings);
+      }
+      return {content:[{type:'text',text:JSON.stringify({ok:true,engine:'kimo colour finish',look:api.color?.look??'clean',note:'App-owned sampled correction, shot matching and one float 3D LUT per footage clip run during composition. Native auto_grade is not called.'})}]};
+    }
     if(name==='finish_audio')return {content:[{type:'text',text:JSON.stringify({ok:true,engine:'kimo sound design',note:'Adaptive voice cleanup, music/SFX buses and two-pass mastering run in the app during export; native finish_audio is not used.'})}]};
     if (['auto_captions', 'caption_from_words', 'edit_caption'].includes(name)) {
       try {
@@ -268,6 +280,11 @@ export function pictureTools({
         });
         // compose validates a copy. Persist the durable audio report on the edit too.
         const audioReport=join(dir,'audio','report.json');
+        const colorReport=join(dir,'color','report.json');
+        if(edl.color_finish?.enabled&&existsSync(colorReport)){
+          edl.color_report=JSON.parse(readFileSync(colorReport,'utf8'));
+          writeFileSync(savedEdl,JSON.stringify(edl,null,2));
+        }
         if(edl.sound?.enabled&&existsSync(audioReport)){
           edl.sound.report=JSON.parse(readFileSync(audioReport,'utf8'));
           const fit=edl.sound.report.music_fits?.[0];

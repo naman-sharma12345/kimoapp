@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSyn
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
+import { colorConfig } from './color/plan.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
@@ -338,7 +339,7 @@ function expertGuide(P, S, files, cut) {
 - camera: the app's camera director already frames the talking track: a framing change (wide / medium / tight) at every jump cut, pushes landing on emphasis words, snap punches on numbers and punchlines at high energy, wide section openers, speaker framing for podcasts and punch-ins on the clicked region of screen recordings, all eased and smooth. never punch or zoom the talking track yourself (set_property scale/x/y on it is overridden). use camera_style only to change the energy, camera_emphasis for an extra beat, camera_hold to keep a moment still, transition for section changes (mostly hard cuts), speed_ramp only on b-roll. b-roll: the app already places the user's non-speech clips over jump cuts and abstract lines (1.2-3.5 s, J-cut in, L-cut out, own slow push, sound at -24 dB, ≤ 40 % of runtime); broll_auto(density) changes how much, broll(at, dur, clip) puts a specific clip somewhere.
 - graphics: purposeful only. the app's kit already adds the hook title (shorts), lower thirds when someone introduces themselves, number pops on numeric emphasis, chapter cards (16:9), callouts and Screen Studio zooms on screen recordings${P.height > P.width ? '' : ', a subscribe end card on longer 16:9 videos'}; it enforces max 1 graphic on screen and the density limit. use graphic(...) to add one the viewer needs (a stat, a callout, a sticker on a joke) or remove one, callout(...) to point at a button in a screen recording, screen_zoom(...) to zoom onto a region.
 - captions: auto_captions style "${S.captions.style}", max_words_per_line ${S.captions.max_words_per_line}${S.captions.lines ? `, lines ${S.captions.lines}` : ''}, keywords true, highlight true, position auto, hint = names/terms from the note. captions must stay inside the title-safe area${vertical ? ' (vertical: keep text out of the bottom 20% and right 15% where shorts/reels ui sits; position middle is safest)' : ''}.
-- look: auto_grade every media clip (style strength as given). never stack two grades.
+- look: the app corrects exposure/white balance, matches shots and applies one skin-protected LUT per footage clip. auto_grade configures this local stage (clean, warm-creator, mkbhd-crisp, cinematic-teal-orange, vlog-bright, moody-doc, kimo; strength 0-1). Never stack grades or call a native picture grader.
 - sound: finish_audio last with target_lufs -14 (music under speech ${S.label.startsWith('Doc') ? -20 : -16} db when there is music). the app enforces true-peak -1 dBTP on delivery.
 - before "done": run lint_edit (platform ${vertical ? 'shorts' : 'none'}) and fix what it reports, then timeline_summary to confirm.
 - style for this video: ${S.label} — ${S.guide}
@@ -678,6 +679,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   const appEdl = suppliedEdl ?? (edlFile && existsSync(edlFile) ? JSON.parse(readFileSync(edlFile,'utf8')) : null);
   const pictures = pictureTools({mcp,dir,files,mode,suppliedEdl,ffmpeg,ffprobe,out,savedEdl,signal,emit,fontsDir:env?.KIMO_FONTS,runTool});
   pictures.sound={enabled:true,template:style,note,previous:appEdl};
+  pictures.color=colorConfig({template:style,note,previous:appEdl?.color_finish});
   let duration;
   let timeline = null;
   let msPerSec = speed || 2500; // export ms per second of 1080p timeline, learned per PC
@@ -1448,7 +1450,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
 /** ffprobe: duration + kind for a local file. */
 export function probe(ffprobe, path) {
   return new Promise((done) =>
-    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_space,color_transfer,color_primaries:stream_tags=rotate:stream_side_data=rotation', '-of', 'json', path],
+    execFile(ffprobe, ['-v', 'error', '-show_entries', 'format=duration:stream=codec_type,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_space,color_transfer,color_primaries,color_range:stream_tags=rotate:stream_side_data=rotation', '-of', 'json', path],
       { windowsHide: true, timeout: 30_000 }, (err, stdout) => {
         try {
           const j = JSON.parse(stdout);
@@ -1462,7 +1464,7 @@ export function probe(ffprobe, path) {
           const avg = rate(v?.avg_frame_rate);
           const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
           const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
-          done({ path, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          done({ path, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }

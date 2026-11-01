@@ -13,6 +13,8 @@ import { once } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
 import { spawnBackground, execFileBackground } from './resources.cjs';
 import { mixSound } from './audio/mix.mjs';
+import { prepareColor } from './color/plan.mjs';
+import { inputFilters, colorFilters, finishSettings, finishFilters } from './color/filters.mjs';
 import {
   validate,
   rate,
@@ -137,10 +139,10 @@ export function cameraRectsForClip(clip, source, canvas, plan, onCap) {
   if (capped) onCap?.(cap, geom);
   return rects;
 }
-function geometry(clip, source, canvas, plan) {
+function geometry(clip, source, canvas, plan, colorNormalized=false) {
   // Normalize before resampling in both strategies. Otherwise RGB sources can
   // be transformed before conversion in A but after conversion in B.
-  const filters = [
+  const filters = clip._color ? [colorFilters(source,clip._color,{normalized:colorNormalized}),'format=yuva444p'] : [
     'scale=out_color_matrix=bt709:out_range=tv',
     'format=yuva444p',
     'setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709',
@@ -208,6 +210,11 @@ function geometry(clip, source, canvas, plan) {
       `pad=${canvas.w}:${canvas.h}:${k.x}:${k.y}:color=black@0`,
     );
   }
+  if(clip._color){
+    const target=clip._pip??clip._card??canvas;
+    const settings=finishSettings(source,target,cameraRectsForClip(clip,source,canvas,plan),clip._color);
+    filters.push(...finishFilters(settings));
+  }
   // screen card backdrop: a blurred, dimmed copy of the recording
   if (clip.blur > 0) filters.push(`gblur=sigma=${safe(clip.blur)}:steps=2`);
   if (clip.dim > 0)
@@ -225,7 +232,7 @@ function geometry(clip, source, canvas, plan) {
     filters.push(
       `rotate='${splineExpr(angles, 'n', 0.000001)}':fillcolor=black@0`,
     );
-  for (const effect of clip.grade?.effects ?? []) {
+  for (const effect of clip._color ? [] : clip.grade?.effects ?? []) {
     if (effect.kind !== 'primaries') continue;
     const p = effect.params ?? {},
       v = (key, fallback) => curveValue(p[key], 0, fallback);
@@ -338,8 +345,9 @@ async function mappedSegment({
   const first = plan.indices[0],
     last = plan.indices.at(-1),
     fps = rate(source.fps || canvas.fps);
-  const rawFormat = source.alpha ? 'bgra' : 'yuv444p',
-    rawSize = source.w * source.h * (source.alpha ? 4 : 3);
+  const colorFloat=Boolean(clip._color);
+  const rawFormat = colorFloat ? 'gbrpf32le' : source.alpha ? 'bgra' : 'yuv444p',
+    rawSize = source.w * source.h * (colorFloat ? 12 : source.alpha ? 4 : 3);
   const seek = source.kind === 'image' ? 0 : Math.max(0, (first - 0.5) / fps);
   const decoder = spawnBackground(
     ffmpeg,
@@ -357,7 +365,7 @@ async function mappedSegment({
       '0:v:0',
       '-an',
       '-vf',
-      `trim=end_frame=${last - first + 1}${source.alpha ? '' : ',scale=out_color_matrix=bt709:out_range=tv'},format=${rawFormat}`,
+      `trim=end_frame=${last - first + 1}${colorFloat ? ','+inputFilters(source) : source.alpha ? '' : ',scale=out_color_matrix=bt709:out_range=tv'},format=${rawFormat}`,
       '-fps_mode',
       'passthrough',
       '-f',
@@ -392,12 +400,12 @@ async function mappedSegment({
       `${source.w}x${source.h}`,
       '-framerate',
       String(canvas.fps),
-      ...(source.alpha ? [] : ['-colorspace', 'bt709', '-color_range', 'tv']),
+      ...(colorFloat ? ['-colorspace','rgb','-color_primaries','bt709','-color_trc','bt709','-color_range','pc'] : source.alpha ? [] : ['-colorspace', 'bt709', '-color_range', 'tv']),
       '-i',
       'pipe:0',
       '-an',
       '-vf',
-      geometry(clip, source, canvas, plan),
+      geometry(clip, source, canvas, plan, colorFloat),
       '-frames:v',
       String(plan.indices.length),
       '-c:v',
@@ -1017,9 +1025,9 @@ export async function compose({
       );
     if (clip.blend && clip.blend !== 'normal')
       warn(`${clip.id}: blend ${clip.blend} not implemented; rendered normal`);
-    if (clip.grade?.native)
+    if (clip.grade?.native && !edl.color_finish?.enabled)
       warn(`${clip.id}: native grade graph retained in EDL; not rendered yet`);
-    if (clip.grade?.look)
+    if (clip.grade?.look && !edl.color_finish?.enabled)
       warn(`${clip.id}: grade look ${clip.grade.look} not rendered yet`);
     for (const effect of clip.grade?.effects ?? [])
       if (effect.kind !== 'primaries')
@@ -1098,6 +1106,8 @@ export async function compose({
           : edl.canvas.fps;
       source.audio = info.streams.some((s) => s.codec_type === 'audio');
       if (video) {
+        source.pixel_format=video.pix_fmt;
+        source.color={...source.color,primaries:video.color_primaries??source.color?.primaries,trc:video.color_transfer??source.color?.trc,space:video.color_space??source.color?.space,range:video.color_range??source.color?.range};
         source.w = video.width;
         source.h = video.height;
         source.frames = Number(video.nb_frames) || source.frames;
@@ -1125,6 +1135,7 @@ export async function compose({
           `tight punch limited: source is ${Math.round(Math.min(geom.W, geom.H))}p (crop kept at or above 75% of the output)`,
         );
     }
+    await prepareColor(edl,{ffmpeg,cacheDir:join(cacheDir??workspace,'color'),projectDir:resolve(output,'..'),signal,emit});
     await interpolateRamps(edl, { ffmpeg, ffprobe, dir, signal, emit, warn });
     const clips = edl.video.flatMap((t) => t.clips);
     // Caption/shape cues share ASS passes; they are not separate graph nodes.

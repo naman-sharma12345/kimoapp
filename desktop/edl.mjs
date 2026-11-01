@@ -947,6 +947,7 @@ export function publicEdl(edl) {
     })),
     ...(edl.captions ? { captions: { style: edl.captions.style, hook_style: edl.captions.hook_style ?? null, bounds: captionBounds(edl), stats: edl.captions.stats } } : {}),
     master: { ...edl.master },
+    ...(edl.color_finish?{color_finish:pick(edl.color_finish,['version','enabled','look','strength','grain','vignette','sharpen','locked'])}:{}),
     ...(edl.sound?{sound:{version:edl.sound.version,enabled:edl.sound.enabled,target_lufs:edl.sound.target_lufs,music_id:edl.sound.music_id,sfx_count:edl.sound.sfx_count,master:edl.sound.report?.master}}:{}),
   };
 }

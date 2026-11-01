@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('kimo', {
   followup: (opts) => ipcRenderer.invoke('followup', opts),
   apply: (opts) => ipcRenderer.invoke('apply', opts),
   addMusic: (opts) => ipcRenderer.invoke('audio:add-music', opts),
+  setColor: (opts) => ipcRenderer.invoke('color:set', opts),
   regenerateVisuals: (opts) => ipcRenderer.invoke('explain:regenerate', opts),
   edl: (id) => ipcRenderer.invoke('edl:get', id),
   saveThumb: (id) => ipcRenderer.invoke('saveThumb', id),

@@ -112,6 +112,7 @@
     ],
   };
   window.kimo = {
+    setColor: async ({id,...settings}) => {const p=library.find(p=>p.id===id);if(!p?.edl)return null;p.edl.color_finish={version:1,enabled:true,locked:true,...settings};window.__mockColorCalls??=[];window.__mockColorCalls.push({id,...settings});emit('project',structuredClone(p));return structuredClone(p);},
     mediaUrl: (p) => M + String(p).split(/[\\/]/).pop().replace(/\.mp4$/, '.webm') + '?',
     status: async () => ({ version: '0.3.1', kimo: true, ffmpeg: '7.1-full_build-www.gyan.dev', whisper: true, model: window.__noModel ? false : true, gpu: 'h264_nvenc', presets, styles, captionStyles: { auto: 'Auto (from the style)', kimo: 'kimo', hormozi: 'Hormozi', mrbeast: 'MrBeast', 'ali-abdaal': 'Ali Abdaal', mkbhd: 'MKBHD', karaoke: 'Karaoke', 'boxed-highlight': 'Boxed highlight', 'doc-subtitle': 'Documentary subtitle' } }),
     library: async () => library.map((p) => ({ ...p })),

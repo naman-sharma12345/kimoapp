@@ -1,5 +1,42 @@
 # Creator benchmark results
 
+## Phase 9 colour finish — 1 November 2026
+
+Implemented app-owned colour analysis, soft correction/WB, shot matching, seven
+CC0 looks, per-clip 33³ LUTs, adaptive finish and Studio controls. Native auto_grade
+is intercepted. The existing user preference against full benchmarks and heavy
+local renders is preserved: only tiny fixtures and existing still tiles were used.
+No paid AI/SAM call, full golden render, installer or release was run.
+
+| Lightweight check                             | Actual result                      |
+| --------------------------------------------- | ---------------------------------- |
+| Colour tests                                  | 7 pass                             |
+| Actual chart output clipped luma, all 7 looks | 0%                                 |
+| Representative actual skin patch hues         | 123° ±8° gate passes               |
+| Compositor A/B mean RGB difference            | 0                                  |
+| Tiny delivery patch mean RGB drift            | 1.34 levels                        |
+| Delivery primaries/transfer/matrix/range      | BT.709 / BT.709 / BT.709 / limited |
+| Existing still tiles, six cases × seven looks | 0% clipped luma in all 42          |
+| Full VLOG-1 clip_delta_e <4                   | Unmeasured; not a pass             |
+| Full-frame/all-footage clipping <0.5%         | Unmeasured; not a pass             |
+
+Independent CIEDE2000 pairs, identity at zero, actual FFmpeg LUT paths containing
+spaces/apostrophes, skin guards, conservative mid-tones, screen preservation,
+explicit primaries, cache, optional finish and the generic HDR graph are covered.
+Nineteen existing EDL/transition/mask/audio/pipeline checks pass. Repository
+lint/typecheck, 311 web tests on Node 24, web build and desktop renderer build pass.
+The browser colour picker/keyboard slider/persistence check passes via its mock
+bridge; no packaged Electron acceptance is implied.
+
+Actual still review found and corrected over-brightening before final acceptance
+of the small checks. Remaining visual caveats and source credits are retained in
+[the review](baselines/phase09-color/REVIEW.md), with
+[the still matrix](baselines/phase09-color/stills.webp) and
+[metrics](baselines/phase09-color/still-metrics.json). These results do not establish
+temporal match, recovered sensor highlights, HDR camera quality or sustained CPU
+performance. Float colour correction is dithered at the existing 8-bit camera-warp
+boundary, and overlays are finished afterwards. Prior benchmark history follows.
+
 1 November 2026 (Phase 7): **explainers implemented (cue detection, visual director, families, assets, sound kit, controls, key lockdown); real-footage numbers and the EXPLAIN-1 bench are deferred**, as for Phases 3-6. No EXPLAIN-1 or golden-clip run, no beat-to-word sync, face-overlap or visual-share numbers on real footage, no Creator Score, no paid AI/SAM call. Evidence is limited to 163/163 desktop unit tests on hosted Windows + Linux (`41246970470`) and locally, the Windows Electron smoke `41246983535` (explain self-test on the offscreen Chromium window: 8 families drew, deterministic frame, entry-frame sync on a synthetic list, sound kit synthesised, beat edit round-trip) and the regenerated soft-canvas previews inspected by eye. None of these is a golden-clip result. Caveats: [EXPLAINERS.md](../../EXPLAINERS.md) and NOTES.md (Phase 7).
 
 1 November 2026 (Phase 6): **motion-graphics kit and b-roll placement implemented; real-footage bench numbers are deferred** at Naman's instruction (don't go deep on tests or benchmarks). No VLOG-1/TUT-1 run, no b-roll share or max_static_s on real footage, no Creator Score, no paid AI/SAM call. Evidence is limited to 148/148 desktop unit tests on hosted Windows + Linux (`41234653698`), the Windows Electron smoke `41235183276` (graphics rendered by the offscreen Chromium window, deterministic, composite rendered) and a soft-canvas gallery of every element at 9:16 and 16:9 inspected by eye. None of these is a golden-clip result. Caveats are listed in [GRAPHICS.md](../../GRAPHICS.md).

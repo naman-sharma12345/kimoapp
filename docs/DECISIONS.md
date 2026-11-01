@@ -187,3 +187,33 @@ capability check gates that optional filter and reports an FFT fallback. Voice
 analysis and stereo compatibility sample at most 30 seconds; raw source channels
 with opposed voice are repaired before mixing. CPU work remains bounded and
 cached, with no measured real-footage CPU improvement claim.
+
+## Desktop creator colour finish — 1 November 2026
+
+Phase 9 targets the desktop compositor. Continue the user's existing preference
+for lightweight checks, no golden benchmark campaign and no full local footage
+renders. Use sub-second synthetic clips and already-created small source stills;
+do not spend additional AI/SAM budget. The web runtime and engine binaries stay
+unchanged; no installer or release is requested.
+
+Colour math and matching run in an original 33³ LUT per clip. The existing camera
+warp accepts only 8-bit formats, so preserve float decode/correction through the
+LUT and dither to limited-range 4:4:4 at that boundary. This is an explicit scope
+limit, not a claim of an end-to-end float compositor. Existing delivery encoding
+performs 4:2:0 subsampling with verified BT.709 tags. Untracked mid-tones stay
+conservative, and known screen recordings preserve exposure/WB after actual still
+review exposed over-brightening. Skin highlights have an additional bounded guard.
+
+The new inspector reuses `desk-rerender`, `desk-select`, `ui-field`, `ui-input` and
+the existing Button. Slider/checkbox accent uses `--cream-100`; no new colours,
+fonts, spacing, radii, motion or libraries are introduced. Copy is "colour finish",
+"look", "strength", "subtle grain", "subtle vignette" and
+"apply colour & re-render" because the brief specifies controls but no exact copy.
+Reference strips are labeled full-strength examples rather than live previews.
+
+The brief explicitly asks for TH-1 preview strips. They reuse the existing
+ProPublica CC BY 3.0 fixture, retain its attribution and changes, and are not
+misrepresented as CC0. Original look parameters/generated LUT data are CC0.
+Other small review stills retain the dataset's full credits, including Cinestudy's
+previously approved terms. No footage was downloaded. Full VLOG-1 ΔE/clipping and
+real camera log/HDR quality remain unmeasured; no thresholds were loosened.

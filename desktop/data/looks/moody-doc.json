@@ -1,0 +1,16 @@
+{
+  "id": "moody-doc",
+  "label": "moody doc",
+  "cap": 1,
+  "contrast": 1.1,
+  "saturation": 0.92,
+  "lift": [-0.004, -0.004, -0.004],
+  "gamma": [0.99, 0.99, 0.99],
+  "gain": [1.018, 1, 0.985],
+  "red_boost": 0,
+  "green_sat": 0.8,
+  "grain": true,
+  "vignette": false,
+  "license": "CC0-1.0",
+  "source": "https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/data/looks"
+}

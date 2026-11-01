@@ -617,6 +617,17 @@ app.whenReady().then(async () => {
     Object.assign(p,{status:'queued',error:undefined,job:{mode:'manual',ops:[],edl:changed,note:p.note}});
     update(p);pump();return publicProject(p);
   });
+  ipcMain.handle('color:set',async (_e,{id,...settings})=>{
+    const p=library.find(x=>x.id===id);
+    if(!p||['running','queued'].includes(p.status))throw new Error('wait for this edit to finish');
+    if(!p.edlFile||!fs.existsSync(p.edlFile))throw new Error('re-run this edit once first');
+    const {changeColor}=await import('./color/plan.mjs');
+    const edl=await import('./edl.mjs'),changed=changeColor(JSON.parse(fs.readFileSync(p.edlFile,'utf8')),settings);
+    edl.validate(changed);fs.writeFileSync(p.edlFile,JSON.stringify(changed,null,2));
+    p.edl=edl.publicEdl(changed);p.timeline={...edl.toTimeline(changed),edl:p.edl};
+    Object.assign(p,{status:'queued',error:undefined,job:{mode:'manual',ops:[],edl:changed,note:p.note}});
+    update(p);pump();return publicProject(p);
+  });
   ipcMain.handle('saveThumb', async (_e, id) => {
     const p = library.find((x) => x.id === id);
     const src = p?.youtube?.thumbnail;

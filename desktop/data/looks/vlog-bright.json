@@ -1,0 +1,16 @@
+{
+  "id": "vlog-bright",
+  "label": "vlog bright",
+  "cap": 1,
+  "contrast": 1.015,
+  "saturation": 0.9,
+  "lift": [0.012, 0.012, 0.012],
+  "gamma": [1.04, 1.04, 1.04],
+  "gain": [1.015, 1.02, 1.025],
+  "red_boost": 0,
+  "green_sat": 1,
+  "grain": false,
+  "vignette": false,
+  "license": "CC0-1.0",
+  "source": "https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/data/looks"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "kimo",
+  "label": "kimo",
+  "cap": 1,
+  "contrast": 1.06,
+  "saturation": 0.98,
+  "lift": [0.002, 0.002, 0.002],
+  "gamma": [1, 1, 1],
+  "gain": [1.018, 1.012, 0.99],
+  "red_boost": 0,
+  "green_sat": 1,
+  "grain": false,
+  "vignette": false,
+  "license": "CC0-1.0",
+  "source": "https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/data/looks"
+}

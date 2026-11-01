@@ -1,0 +1,562 @@
+[
+  {
+    "clip": "TH-1",
+    "look": "clean",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 6253,
+        "rgb": [
+          0.5778772855695936,
+          0.4106621762730306,
+          0.3565780190214571
+        ],
+        "region": "face box",
+        "p50": 0.4549019607843137,
+        "chroma": [
+          -0.04620026586250224,
+          0.08608715596499707
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-1",
+    "look": "warm-creator",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.14901960784313725,
+      "skin": {
+        "count": 6481,
+        "rgb": [
+          0.5876568309780325,
+          0.42404071025107715,
+          0.3702829689197075
+        ],
+        "region": "face box",
+        "p50": 0.4666666666666667,
+        "chroma": [
+          -0.04562471420230403,
+          0.0842726964595692
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-1",
+    "look": "mkbhd-crisp",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.0784313725490196,
+      "skin": {
+        "count": 6092,
+        "rgb": [
+          0.5788851982027224,
+          0.40789399147708405,
+          0.353931868216754
+        ],
+        "region": "face box",
+        "p50": 0.4549019607843137,
+        "chroma": [
+          -0.046571884302007364,
+          0.08796960977594843
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-1",
+    "look": "cinematic-teal-orange",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.12156862745098039,
+      "skin": {
+        "count": 6386,
+        "rgb": [
+          0.5791492419078491,
+          0.4137924258334663,
+          0.360151802656546
+        ],
+        "region": "face box",
+        "p50": 0.4588235294117647,
+        "chroma": [
+          -0.0457655902570384,
+          0.0851376746065168
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-1",
+    "look": "vlog-bright",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.14901960784313725,
+      "skin": {
+        "count": 6166,
+        "rgb": [
+          0.5875783073527825,
+          0.43037784688964326,
+          0.3796543982497285
+        ],
+        "region": "face box",
+        "p50": 0.4745098039215686,
+        "chroma": [
+          -0.04337251214840279,
+          0.08092575283240905
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-1",
+    "look": "moody-doc",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.08627450980392157,
+      "skin": {
+        "count": 6346,
+        "rgb": [
+          0.5772992714261892,
+          0.40879726614881123,
+          0.3543878187896654
+        ],
+        "region": "face box",
+        "p50": 0.4549019607843137,
+        "chroma": [
+          -0.04651035329908708,
+          0.08674551756079363
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-1",
+    "look": "kimo",
+    "input": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 5867,
+        "rgb": [
+          0.38715514158620856,
+          0.2682721904169892,
+          0.23931728477994366
+        ],
+        "region": "face box",
+        "p50": 0.2784313725490196,
+        "chroma": [
+          -0.028098122908292125,
+          0.06076897379834775
+        ]
+      }
+    },
+    "output": {
+      "p50": 0.11372549019607843,
+      "skin": {
+        "count": 6398,
+        "rgb": [
+          0.5822947121956014,
+          0.41460015078240825,
+          0.3588535633071607
+        ],
+        "region": "face box",
+        "p50": 0.4588235294117647,
+        "chroma": [
+          -0.04708641281309525,
+          0.08640309961421205
+        ]
+      },
+      "clipped_pct": 0
+    },
+    "limitation": "one existing first-second still; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "clean",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "warm-creator",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "mkbhd-crisp",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "cinematic-teal-orange",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "vlog-bright",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "moody-doc",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TH-2",
+    "look": "kimo",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "clean",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "warm-creator",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "mkbhd-crisp",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "cinematic-teal-orange",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "vlog-bright",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "moody-doc",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "TUT-1",
+    "look": "kimo",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "clean",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "warm-creator",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "mkbhd-crisp",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "cinematic-teal-orange",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "vlog-bright",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "moody-doc",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "POD-1",
+    "look": "kimo",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "clean",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "warm-creator",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "mkbhd-crisp",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "cinematic-teal-orange",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "vlog-bright",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "moody-doc",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "MUSIC-1",
+    "look": "kimo",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "clean",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "warm-creator",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "mkbhd-crisp",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "cinematic-teal-orange",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "vlog-bright",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "moody-doc",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  },
+  {
+    "clip": "VLOG-1",
+    "look": "kimo",
+    "output": {
+      "clipped_pct": 0
+    },
+    "limitation": "one existing contact-sheet tile; skin localisation unavailable; not a full-clip benchmark"
+  }
+]

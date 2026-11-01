@@ -1,0 +1,16 @@
+{
+  "id": "cinematic-teal-orange",
+  "label": "cinematic teal orange",
+  "cap": 0.6,
+  "contrast": 1.06,
+  "saturation": 0.97,
+  "lift": [0, 0.008, 0.012],
+  "gamma": [1.015, 1, 0.99],
+  "gain": [1.02, 1, 0.98],
+  "red_boost": 0,
+  "green_sat": 1,
+  "grain": true,
+  "vignette": false,
+  "license": "CC0-1.0",
+  "source": "https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/data/looks"
+}
