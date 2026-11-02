@@ -43,7 +43,7 @@ const stop = (signal) => {
   if (signal?.aborted) throw new Error('cancelled');
 };
 const safe = (n) => (Number.isFinite(n) ? Number(n.toFixed(9)) : 0);
-const BASE_CACHE_VERSION = 1;
+const BASE_CACHE_VERSION = 2;
 const scriptOptions = new Map();
 async function scriptOption(ffmpeg) {
   if (!scriptOptions.has(ffmpeg))
@@ -363,7 +363,7 @@ async function mappedSegment({
       tags=colorFloat?'setparams=colorspace=gbr:color_primaries=bt709:color_trc=bt709:range=full':source.alpha?'null':'setparams=colorspace=bt709:range=limited';
     await writeFile(filterFile,`trim=end_frame=${plan.indices.length},${input},format=${rawFormat},${tags},settb=expr=1/(${canvas.fps}),setpts=N,${geometry(clip,source,canvas,plan,colorFloat)}`);
     const args=['-noautorotate','-ss',String(seek),'-accurate_seek','-i',source.path,'-map','0:v:0','-an',vfOption,filterFile,'-frames:v',String(plan.indices.length),'-r',String(canvas.fps),'-c:v','ffv1','-level','3','-pix_fmt','yuva444p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-fps_mode','cfr',output];
-    try{await ffmpegRun(ffmpeg,['-hwaccel','auto',...args],{signal,onProgress});}
+    try{await ffmpegRun(ffmpeg,[...(process.env.KIMO_HW_DECODE==='off'?[]:['-hwaccel','auto']),...args],{signal,onProgress});}
     catch(error){stop(signal);await ffmpegRun(ffmpeg,args,{signal,onProgress});}
     return;
   }
@@ -494,11 +494,16 @@ async function mappedSegment({
     signal?.removeEventListener('abort', abort);
   }
 }
+// Opaque cache passes need exact pixels, not FFV1's compression cost. CRF 0
+// retains the full 4:4:4 samples; alpha-bearing segments above still use FFV1.
+// This is an intermediate format. Final delivery continues to use x264 medium.
 const lossless = [
   '-c:v',
-  'ffv1',
-  '-level',
-  '3',
+  'libx264',
+  '-preset',
+  'ultrafast',
+  '-crf',
+  '0',
   '-pix_fmt',
   'yuv444p',
   '-colorspace',
