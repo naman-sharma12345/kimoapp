@@ -11,6 +11,10 @@ on:
         type: boolean
         default: false
         description: Collect the initial measured baseline without comparing scores
+      analyze_run:
+        type: string
+        default: ''
+        description: Remeasure preserved creator-review artifacts from this run without rerendering
 permissions:
   contents: read
   actions: read
@@ -63,7 +67,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ${{ github.workspace }}/.qualification-data/prepared
       - run: node desktop/test/bench/creator-release.mjs prepare
-      - run: node desktop/test/bench/creator-release.mjs run
+      - if: inputs.analyze_run == ''
+        run: node desktop/test/bench/creator-release.mjs run
+      - if: inputs.analyze_run != ''
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.analyze_run }}
+          name: creator-review-${{ matrix.clip }}-${{ matrix.template }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ github.workspace }}/.qualification-data/creator-bench
       - run: node desktop/test/bench/creator-release.mjs measure
       - uses: actions/upload-artifact@v4
         if: always()

@@ -317,7 +317,12 @@ export async function frameSourceMetrics(
     }
     const cropW = (sw / sh > aspect ? sh * aspect : sw) / transform.scale,
       cropH = (sw / sh > aspect ? sh : sw / aspect) / transform.scale;
-    const vf = `scale=out_color_matrix=bt709:out_range=tv,format=yuva444p,${rectFilter([[(sw - cropW) / 2, (sh - cropH) / 2, cropW, cropH]])},scale=${width}:${height}:flags=lanczos+accurate_rnd+full_chroma_int,scale=108:192:flags=area,format=gray`;
+    // Modern colour finishing is nonlinear. Apply the saved, hash-attested LUT
+    // to the source reference before registration; affine brightness fitting
+    // alone cannot undo it. Confidence/coverage limits remain unchanged.
+    const referenceColor =
+      e.reference_color_filter ?? 'scale=out_color_matrix=bt709:out_range=tv';
+    const vf = `${referenceColor},format=yuva444p,${rectFilter([[(sw - cropW) / 2, (sh - cropH) / 2, cropW, cropH]])},scale=${width}:${height}:flags=lanczos+accurate_rnd+full_chroma_int${e.reference_finish_filter ? ',' + e.reference_finish_filter : ''},scale=108:192:flags=area,format=gray`;
     const src = await command(ffmpeg, [
       '-nostdin',
       '-v',

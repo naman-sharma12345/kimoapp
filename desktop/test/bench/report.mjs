@@ -138,7 +138,17 @@ export function reviewHtml({ title, metrics, ops }) {
   </style><main><h1>${e(title)}</h1><p>Creator Score ${metrics.creator.score}/100. Unavailable applicable metrics score zero. Estimates require visual review.</p><video controls preload="metadata" src="final.mp4"></video><p><a href="sheet.jpg">Contact sheet</a> · <a href="strip.mp4">First ten seconds</a> · <a href="project.kimo.json">Saved project</a> · <a href="metrics.json">Full measurement evidence</a></p><h2>Edit decisions</h2><p>Select a block to seek. Times come from the saved project.</p>${timeline}<h2>Metrics</h2><table><thead><tr><th>Metric</th><th>Value</th><th>Target</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table><h2>Measurement limits</h2><pre>${e(JSON.stringify(metrics.evidence, null, 2))}</pre><h2>Operations</h2>${ops.map((o) => `<details><summary>${e(`${o.phase ?? o.t} ${o.tool ?? ''} ${o.title ?? o.text ?? ''}`)}</summary><pre>${e(JSON.stringify(o, null, 2))}</pre></details>`).join('')}</main><script>document.querySelectorAll('[data-time]').forEach(b=>b.addEventListener('click',()=>{document.querySelector('video').currentTime=Number(b.dataset.time)}));</script></html>`;
 }
 export async function writeReview(directory, data) {
-  await writeFile(join(directory, 'review.html'), reviewHtml(data));
+  let html = reviewHtml(data);
+  if (data.metrics.edlFile === 'edit.edl.json')
+    html = html.replace(
+      'href="project.kimo.json">Saved project',
+      'href="edit.edl.json">Saved EDL',
+    );
+  html = html.replace(
+    'Full measurement evidence</a>',
+    'Full measurement evidence</a> · <a href="CREDITS.txt">Footage credits</a>',
+  );
+  await writeFile(join(directory, 'review.html'), html);
 }
 export function summaryTable(rows) {
   return (

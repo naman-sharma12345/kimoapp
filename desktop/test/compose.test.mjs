@@ -324,6 +324,74 @@ test(
       const faulty = await frameSourceMetrics(ffmpeg, bad, events, 25, W, H, 1);
       assert.ok(faulty.repeated_frames >= 4, JSON.stringify(faulty));
       assert.ok(faulty.skipped_frames >= 4, JSON.stringify(faulty));
+      // A nonlinear source grade belongs in the reference, not in a relaxed
+      // registration threshold. Known frame faults must still be detected.
+      const gradedSource = join(dir, 'graded-source.mkv');
+      await command(ffmpeg, [
+        '-i',
+        source,
+        '-vf',
+        'eq=gamma=1.5',
+        '-c:v',
+        'ffv1',
+        gradedSource,
+      ]);
+      const gradedProject = structuredClone(project);
+      gradedProject.assets.s.path = gradedSource;
+      const graded = join(dir, 'graded.mkv');
+      await compose({
+        edl: fromKimoProject(gradedProject),
+        ffmpeg,
+        ffprobe,
+        output: graded,
+        dir: join(dir, 'graded-work'),
+        fontsDir: tools.env.KIMO_FONTS,
+      });
+      const references = events.map((event) =>
+        event.kind === 'cut'
+          ? {
+              ...event,
+              reference_color_filter:
+                'eq=gamma=1.5,scale=out_color_matrix=bt709:out_range=tv',
+            }
+          : event,
+      );
+      const matchedGrade = await frameSourceMetrics(
+        ffmpeg,
+        graded,
+        references,
+        25,
+        W,
+        H,
+        1,
+      );
+      assert.equal(matchedGrade.repeated_frames, 0);
+      assert.ok(
+        matchedGrade.frame_match_coverage >= 0.95,
+        JSON.stringify(matchedGrade),
+      );
+      const gradedBad = join(dir, 'graded-judder.mkv');
+      await command(ffmpeg, [
+        '-i',
+        graded,
+        '-vf',
+        'shuffleframes=0 0 2 3 4',
+        '-an',
+        '-c:v',
+        'ffv1',
+        gradedBad,
+      ]);
+      const badGrade = await frameSourceMetrics(
+        ffmpeg,
+        gradedBad,
+        references,
+        25,
+        W,
+        H,
+        1,
+      );
+      assert.ok(badGrade.repeated_frames >= 4, JSON.stringify(badGrade));
+      assert.ok(badGrade.skipped_frames >= 4, JSON.stringify(badGrade));
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

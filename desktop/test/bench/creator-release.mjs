@@ -19,6 +19,14 @@ import { captionStyle, blockBox, outputWords } from '../../captions.mjs';
 import { criticalGates } from '../../quality-gates.mjs';
 import { rate, duration } from '../../edl.mjs';
 import { reviewMedia, writeReview } from './report.mjs';
+import {
+  colorFilters,
+  finishSettings,
+  finishFilters,
+} from '../../color/filters.mjs';
+import { cameraRectsForClip } from '../../compose.mjs';
+import { framePlan } from '../../edl.mjs';
+import { writeLut } from '../../color/lut.mjs';
 if (process.env.CI !== 'true')
   throw new Error(
     'Run release qualification on hosted CI, not the foreground PC',
@@ -134,7 +142,8 @@ if (cmd === 'prepare') {
   const edl = await readJson(join(directory, 'edit.edl.json')),
     light = await readJson(join(directory, 'metrics.json')),
     output = join(directory, 'final.mp4'),
-    events = [];
+    events = [],
+    referenceLuts = [];
   for (const t of edl.video)
     for (const c of t.clips) {
       const s = edl.sources.find((s) => s.id === c.src),
@@ -148,7 +157,53 @@ if (cmd === 'prepare') {
         y: { base: keys[0].y - 0.5 },
         opacity: { base: 1 },
       };
+      const grade = edl.color_report?.clips?.find(
+        (entry) => entry.clip === c.id,
+      );
+      let reference = {};
+      if (grade?.lut) {
+        const override = edl.color_finish?.clip_overrides?.[c.id];
+        const rebuilt = await writeLut(
+          join(directory, 'cache', 'color', 'luts'),
+          {
+            correction: grade.correction,
+            look: override?.look ?? edl.color_report.look,
+            strength: override?.strength ?? edl.color_report.strength,
+            primaries: (c.grade?.effects ?? []).filter(
+              (effect) => effect.kind === 'primaries',
+            ),
+          },
+        );
+        if (rebuilt.key !== grade.lut)
+          throw Error('Saved source-reference LUT does not reproduce');
+        const lut = rebuilt.path;
+        referenceLuts.push({
+          clip: c.id,
+          lut: grade.lut,
+          sha256: await hashFile(lut),
+        });
+        reference = {
+          reference_color_filter: colorFilters(
+            { ...s, pixel_format: s.native?.pix_fmt },
+            { lut },
+          ),
+          reference_finish_filter: finishFilters(
+            finishSettings(
+              s,
+              edl.canvas,
+              cameraRectsForClip(
+                c,
+                s,
+                edl.canvas,
+                framePlan(c, s, edl.canvas.fps),
+              ),
+              edl.color_finish,
+            ),
+          ).join(','),
+        };
+      }
       events.push({
+        ...reference,
         id: c.id,
         kind: 'cut',
         start: c.at,
@@ -159,7 +214,11 @@ if (cmd === 'prepare') {
         sourceHeight: s.h,
         in_point: c.in,
         speed: c.speed ?? 1,
-        raw: { start: c.at, props },
+        raw: {
+          start: c.at,
+          props,
+          motion_path: c.follow || c.drift || undefined,
+        },
       });
     }
   for (const o of edl.overlays) {
@@ -216,6 +275,7 @@ if (cmd === 'prepare') {
     ),
     values = {
       ...light.metrics,
+      duration_s: full.info.duration,
       ...frame,
       clip_delta_e: colour.clip_delta_e,
       clipped_pct: colour.clipped_pct,
@@ -234,7 +294,8 @@ if (cmd === 'prepare') {
       audio: true,
     }),
     report = {
-      version: 5,
+      version: 6,
+      edlFile: 'edit.edl.json',
       values,
       creator: score,
       gates,
@@ -242,8 +303,9 @@ if (cmd === 'prepare') {
       replay: light.replay,
       events,
       evidence: {
+        reference_luts: referenceLuts,
         scope:
-          'Modern EDL caption/cut statistics plus independent source matching, source-residual registration, sampled colour and final-audio measurement.',
+          'Modern EDL caption/cut statistics plus source matching, source-residual registration against the hash-attested saved grade, sampled colour and final-audio measurement. Frame/rate expectations and registration remain independent of the compositor frame oracle.',
         limits:
           'Animated/non-centre source mappings or ambiguous natural footage remain unverified; no zero is substituted. CI short fixtures explicitly hold a centred wide camera to isolate frame selection; separate barcode/camera unit tests cover moving cameras. Saved deterministic plan replay is not provider adherence.',
       },
