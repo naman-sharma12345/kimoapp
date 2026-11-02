@@ -1,4 +1,17 @@
 import { test } from 'node:test';
+import { overlayMaskTimes } from './analyze.mjs';
+
+test('caption masks enclose the rendered ASS clock at a fractional-frame chunk boundary', () => {
+  const atFrame79 = 79 / 24;
+  const previous = overlayMaskTimes(2.958, 3.291);
+  const next = overlayMaskTimes(3.292, 3.959);
+  assert.ok(
+    atFrame79 < 3.292,
+    'unrounded EDL activation would miss the visible next caption',
+  );
+  assert.ok(next.mask_start <= atFrame79 && next.mask_end > atFrame79);
+  assert.ok(previous.mask_start <= atFrame79 && previous.mask_end > atFrame79);
+});
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

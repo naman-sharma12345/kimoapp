@@ -232,6 +232,14 @@ export function visibleSourceSegments(events, duration) {
   }
   return segments;
 }
+/** ASS stores centiseconds. Enclose its floor-quantized timing without an
+ * unmasked sub-frame gap between adjacent EDL caption chunks. */
+export function overlayMaskTimes(start, end) {
+  return {
+    mask_start: Math.floor(start * 100 + 1e-6) / 100,
+    mask_end: Math.ceil(end * 100 - 1e-6) / 100,
+  };
+}
 export async function frameSourceMetrics(
   ffmpeg,
   output,
@@ -369,7 +377,8 @@ export async function frameSourceMetrics(
           const time = (firstOutput + i) / fps;
           const mask = new Uint8Array(size).fill(1);
           for (const event of text.filter(
-            (v) => v.start <= time && v.end > time,
+            (v) =>
+              (v.mask_start ?? v.start) <= time && (v.mask_end ?? v.end) > time,
           )) {
             if (!event.box) {
               mask.fill(0);

@@ -13,7 +13,11 @@ import { probe } from '../../engine.mjs';
 import { run } from '../../audio/process.mjs';
 import { hashFile, ROOT, readJson, writeJson } from './io.mjs';
 import { runCreatorSmoke } from '../../creator-smoke.mjs';
-import { frameSourceMetrics, sampledColour } from './analyze.mjs';
+import {
+  frameSourceMetrics,
+  sampledColour,
+  overlayMaskTimes,
+} from './analyze.mjs';
 import { creatorScore, inspectDelivery, analyzeMedia } from './metrics.mjs';
 import { captionStyle, blockBox, outputWords } from '../../captions.mjs';
 import { criticalGates } from '../../quality-gates.mjs';
@@ -121,7 +125,7 @@ if (cmd === 'prepare') {
   if (id === 'SAM-PERSON')
     await writeFile(
       join(directory, 'CREDITS.txt'),
-      'Repository sam-person.mp4 regression fixture. No new source acquisition.\n',
+      'Tears of Steel (c) Blender Foundation\nhttps://mango.blender.org/\nCC BY 3.0\nhttps://creativecommons.org/licenses/by/3.0/\nRepository sam-person.mp4 regression excerpt; no new source acquisition.\nChanges: fixed portrait framing, creator captions, colour and sound finishing for an offline CI fixture.\n',
     );
   else
     await copyFile(
@@ -256,6 +260,7 @@ if (cmd === 'prepare') {
     }
     events.push({
       id: o.id,
+      ...overlayMaskTimes(o.at, o.at + o.dur),
       kind: o.kind === 'caption_word_group' ? 'caption' : 'graphic',
       start: o.at,
       end: o.at + o.dur,
@@ -302,7 +307,7 @@ if (cmd === 'prepare') {
       audio: true,
     }),
     report = {
-      version: 6,
+      version: 7,
       edlFile: 'edit.edl.json',
       speech,
       values,
@@ -313,6 +318,8 @@ if (cmd === 'prepare') {
       events,
       evidence: {
         reference_luts: referenceLuts,
+        overlay_clock:
+          'Conservative centisecond bounds enclose libass floor-quantized starts/ends; no unmasked fractional-frame caption gaps.',
         scope:
           'Modern EDL caption/cut statistics plus source matching, source-residual registration against the hash-attested saved grade, sampled colour and final-audio measurement. Frame/rate expectations and registration remain independent of the compositor frame oracle.',
         limits:

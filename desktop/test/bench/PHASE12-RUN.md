@@ -156,3 +156,13 @@ Ready candidate docs/evidence: six actual first-second/contact sheets inspected,
 and credited raw/creator first-second sheets. CPU/codec and zero paid-call limits
 remain explicit. User accepted the failed performance budget only, not false
 correctness results. Ledger Git blob unchanged f33b9339c1459b02a4d3633b6dad989ffdf6d8db.
+Saved-output diagnostic41469131574 (artifact13154607638) identified EXACTLY one
+rejected fit: frame79 (79/24=3.2916667s), RMSE10.1238, dx0.000264,dy-0.001637.
+All other frames fit (mean RMSE0.7122), repeats0 at100%identity coverage. This is
+not natural aperture ambiguity. cap006 ends3.291s andcap007 starts3.292s in EDL,
+while assTime floors starts to centiseconds (next caption visibly starts3.29s).
+The old mask sees neither at frame79, leaving caption pixels in the fit. New
+explicit conservative centisecond mask bounds enclose libass timing;95%/RMSE
+thresholds unchanged. Added the concrete79/24 boundary regression. No re-render
+or calibration overlay is needed. Retain the diagnostic and don't guess by
+retuning thresholds. This is measurement v7; full v6 baseline scores remain.
