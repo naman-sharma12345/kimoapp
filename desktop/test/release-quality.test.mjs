@@ -87,14 +87,19 @@ test(
         base,
       ]);
       await run(tools.ffmpeg, [
+        '-display_rotation',
+        '90',
         '-i',
         base,
         '-c',
         'copy',
-        '-metadata:s:v:0',
-        'rotate=90',
         rotated,
       ]);
+      assert.equal(
+        Math.abs((await probe(tools.ffprobe, rotated)).rotation),
+        90,
+        'fixture must contain a real display matrix',
+      );
       const [rotation] = await prepareInputs(
         [await probe(tools.ffprobe, rotated)],
         { dir: root, ffmpeg: tools.ffmpeg, ffprobe: tools.ffprobe, probe },

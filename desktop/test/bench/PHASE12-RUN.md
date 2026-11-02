@@ -8,16 +8,57 @@ not this user's PC. Local tests use tiny synthetic media. Do not edit the engine
 repository or change web behaviour. Fetch/rebase before every normal push.
 
 Starting main: dd38f427e7a903ab58bfceddb3443b6500d322e1 (Phase 11).
-Current implementation is uncommitted: bounded critical gates/retry, true preview
+Runtime implementation is committed in 71800db: bounded critical gates/retry, true preview
 render until export, software master, input normalization, process-tree stop,
 checkpoint resume (preserves edit call allowance), partial cache recovery, cache
 size/clean UI, bounded analysis pool. New release-quality tests and expanded tiny
-Studio test cover these. Targeted tests are in progress; no release/CI dispatch yet.
+Studio test cover these, including encoded AAC peak measurement/correction, resumed
+budget preservation and a genuine reduced preview. Latest targeted run: 15 pass,
+one hosted-only robustness test skipped locally. Earlier full desktop run: 198
+pass, one hosted-only skip. Root lint/typecheck/311 tests/build pass; renderer
+build and four Phase 12 screenshots pass and were visually reviewed.
 
-Remaining: hosted robustness matrix, strict replay smoke and report artifacts,
-manual full benchmark with >3 point regression gate, four-core performance run,
-docs/GIF/credited before-after/FINAL, version+lock bump, all checks, build/install
-smoke and release with verified installer/blockmap/latest.yml hashes. Use honest
+Qualification/version/workflows are committed in ed554c3e5ecd6d9ba95d66ab5b28350eb1a7c65d.
+Main pushed normally and SHA verified. v0.4.0 is a candidate, NOT published yet.
+Hosted runs dispatched once (no paid calls):
+
+- Windows installer/unit/schema/renderer/installed replay smoke, release=false: 41427773769.
+- All nine template cases on six frozen raw-v2 IDs, initial baseline_mode=true: 41427780123.
+- Four-core, no-GPU, cold Whisper 60-second talking-head performance: 41427786326.
+- Automatic desktop unit matrix: 41427727850; web checks: 41427727688.
+
+First-run results: Windows 41427773769 failed because some tests needed FFmpeg
+on PATH and the rotation fixture used an obsolete metadata-tag command. Both
+fixed. Full 41427780123 had shorts-clean / shorts-punchy failures from Windows
+ENAMETOOLONG in mapped camera geometry. Two completed passing summaries (TH-1
+talking/documentary) preserved outside OneDrive under LOCALAPPDATA/kimo/phase12/
+initial-baseline, artifact IDs 13133832254 / 13133892804. The run was cancelled
+after preserving those, to replace the known-bad renderer build.
+
+Performance 41427786326 completed but FAILED budgets: transcript44.024s,
+compose806.454s,total1009.450s on four EPYC virtual cores. JSON-only extraction
+from artifact13133472651 is preserved in baselines/phase12-performance-before.
+New exact contiguous-frame FFmpeg path avoids the JS pixel pipe, CI filters can
+use the explicit thread budget, and geometry is in files. Auto/B/strict decoded
+frame-ID checks all pass across seven rates (21 combinations), including trims,
+2x/.5x and camera keys. Colour/resource checks13/13 pass, with zero A/B mean RGB
+difference. New qualifying runs still need dispatch after pushing these fixes.
+
+Do not duplicate active replacement runs. Poll actual jobs/logs and fix real failures within
+scope. CI saved-plan replay uses deterministic structured fixtures, NOT recorded
+provider responses; this is explicit in metrics and must remain explicit in docs.
+No model requests occur and any fetch in that replay is rejected. Static centred
+camera in the two short CI fixtures isolates natural source-frame selection;
+separate barcode/camera tests cover animated cameras. Full golden template cases
+retain their actual camera; ambiguous/unsupported measurements stay unavailable.
+Never lower coverage or claim missing pixel metrics passed.
+
+Remaining: collect hosted robustness matrix, strict replay smoke/report artifacts,
+commit genuinely measured initial release-baseline.json, then run normal full
+replay with the >3 point regression gate; collect four-core performance run,
+docs/GIF/credited before-after/FINAL, final checks, publish only after qualification
+and verify remote installer/blockmap/latest.yml hashes. Version+lock already 0.4.0.
+Use honest
 unknowns; do not relabel the old Phase 2 identical-EDL comparison as v0.4.0 AI
 editorial improvement. Existing prepared raw bytes are in run 41099499282 (six
 raw-v2-prepared-* artifacts), still available as checked. Latest published release
