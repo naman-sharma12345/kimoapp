@@ -620,9 +620,10 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
           <header className="studio-panel-header desk-viewer-head">
             <span className="desk-viewer-title">{p.name}</span>{p.creator?<CreatorScore project={p}/>:null}
             <span className="desk-chip" data-status={p.status} title={p.error || ''}>
-              {p.status === 'failed' ? (p.errorCode === 'ai_locked' ? 'needs an ai key: settings → ai access' : `failed: ${String(p.error || '').slice(0, 60)}`) : STATUS[p.status]}
+              {p.status === 'failed' ? (p.errorCode === 'ai_locked' ? 'needs an ai key: settings → ai access' : `failed: ${String(p.error || '').slice(0, 60)}`) : p.preview&&p.status==='done'?'preview · full quality on export':STATUS[p.status]}
             </span>
             <span className="studio-spacer" />
+            {['failed','stopped'].includes(p.status)?<Button size="sm" variant="secondary" onClick={guard(async()=>{const next=await kimo.resumeProject(p.id);if(next)setLibrary(list=>list.map(item=>item.id===p.id?next:item));})}>resume edit</Button>:null}
             {isBusy ? (
               <Button size="sm" variant="secondary" icon={Square} onClick={guard(() => kimo.stop(p.id))}>
                 stop
@@ -630,6 +631,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
             ) : null}
             <Button size="sm" variant="ghost" iconOnly icon={Trash2} aria-label="delete edit" tooltip="delete edit" onClick={remove} />
           </header>
+          {p.creator?.gates?.red?<p className="creator-gate-alert" role="alert">critical quality check failed after one retry. review the Quality tab before exporting.</p>:null}
           {prog ? (
             <div className="desk-progress">
               <Progress thin value={prog.f} running label={prog.label} />

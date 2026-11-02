@@ -117,6 +117,6 @@ export function registerStudioIpc({
     p.error = undefined;
     update(p);
     pump();
-    return { ...p, job: undefined, log: undefined };
+    return { ...p, job: undefined, resumeJob:undefined, log: undefined };
   });
 }

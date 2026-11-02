@@ -128,6 +128,9 @@
     edl: async (id) => structuredClone(library.find(p=>p.id===id)?.edl??null),
     log: async (id) => log[id] ?? [],
     pathsOf: () => [],
+    cacheInfo:async()=>({bytes:12582912}),
+    cleanCache:async()=>({bytes:0}),
+    resumeProject:async id=>{const p=library.find(p=>p.id===id);p.status='queued';emit('project',p);return {...p};},
     expand: async () => [],
     pick: async () => [
       { path: 'C:/Users/naman/Videos/manali_drive.mp4', kind: 'video', duration: 318, width: 3840, height: 2160, bytes: 2.4e9 },

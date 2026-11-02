@@ -110,6 +110,8 @@ function Row({ ok, title, detail, children }) {
 
 export function Settings({ status: s, refresh, model, downloadModel, update, guard }) {
   const [checking, setChecking] = useState(false);
+  const [cache,setCache]=useState(null),[cleaning,setCleaning]=useState(false);
+  useEffect(()=>{kimo.cacheInfo?.().then(setCache).catch(()=>{});},[]);
   const recheck = guard(async () => {
     setChecking(true);
     try {
@@ -174,6 +176,9 @@ export function Settings({ status: s, refresh, model, downloadModel, update, gua
             <Button size="sm" icon={FileText} onClick={() => kimo.openLog()}>
               open log
             </Button>
+          </Row>
+          <Row title="cache" detail={cache?`${(cache.bytes/1024/1024).toFixed(1)} MB · saved projects and input copies are kept`:'calculating cache size'}>
+            <Button size="sm" variant="ghost" loading={cleaning} onClick={guard(async()=>{setCleaning(true);try{setCache(await kimo.cleanCache());}finally{setCleaning(false);}})}>clean cache</Button>
           </Row>
           <Row title="engine check" detail="look for ffmpeg, whisper and the gpu again">
             <Button size="sm" variant="ghost" icon={RefreshCw} loading={checking} onClick={recheck}>

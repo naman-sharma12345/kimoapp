@@ -113,7 +113,7 @@ const loadLibrary = () => {
   } catch {
     library = [];
   }
-  for (const p of library) if (p.status === 'running' || p.status === 'queued') p.status = 'stopped';
+  for (const p of library) if (p.status === 'running' || p.status === 'queued') {p.status = 'stopped';p.interrupted=true;}
 };
 const saveLibrary = () => {
   fs.mkdirSync(data(), { recursive: true });
@@ -121,7 +121,7 @@ const saveLibrary = () => {
   fs.renameSync(`${libPath()}.tmp`, libPath());
 };
 const projectDir = (id) => join(data(), 'projects', id);
-const publicProject = (p) => ({ ...p, log: undefined, job: undefined, logCount: p.log?.length ?? 0 });
+const publicProject = (p) => ({ ...p, log: undefined, job: undefined, resumeJob:undefined, logCount: p.log?.length ?? 0 });
 // learned render speed (ms per second of 1080p timeline) for honest ETAs
 const settingsPath = () => join(data(), 'settings.json');
 const settings = () => {
@@ -193,7 +193,7 @@ async function pump() {
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,creatorUndo:job.creatorUndo,creatorOptions:next.creatorOptions,studioHistory:job.studioHistory,studioAppend:job.studioAppend,
+      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,creatorUndo:job.creatorUndo,creatorOptions:next.creatorOptions,studioHistory:job.studioHistory,studioAppend:job.studioAppend,preview:job.export!==true,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
@@ -209,6 +209,7 @@ async function pump() {
     next.master = result.master;
     next.duration = result.duration;
     next.quality = result.quality;
+    next.preview=!!result.preview;next.interrupted=false;
     if(result.creator){next.creator=result.creator;next.style=result.creator.template??next.style;}
     if(result.studioHistory)next.studioHistory=result.studioHistory;
     if(result.stems)next.stems=result.stems;
@@ -230,6 +231,7 @@ async function pump() {
     log('edit failed', next.id, err.stack || err);
   } finally {
     next.log = next.log.slice(-500);
+    next.resumeJob=next.status==='done'?undefined:job;
     next.job = undefined;
     running = null;
     update(next);
@@ -493,12 +495,18 @@ function createWindow() {
 }
 
 const smokeAt = process.argv.indexOf('--smoke');
-if (smokeAt < 0 && !app.requestSingleInstanceLock()) app.quit();
+const creatorSmokeAt=process.argv.indexOf('--creator-smoke');
+if (smokeAt < 0 && creatorSmokeAt<0 && !app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => win && (win.isMinimized() && win.restore(), win.focus()));
 
 app.whenReady().then(async () => {
   await registerGraphicsHost().catch((error) => console.error('graphics host unavailable; the built-in canvas renders graphics', error));
   await registerScreenshotHost().catch((error) => console.error('screenshots unavailable; explainers use cards instead', error));
+  if(creatorSmokeAt>=0){
+    const config=JSON.parse(fs.readFileSync(process.argv[creatorSmokeAt+1],'utf8'));
+    try{const {runCreatorSmoke}=await import('./creator-smoke.mjs');const tools=paths();const result=await runCreatorSmoke(config,{...tools,bin:tools.kimo,env:engineEnv(),emit:ev=>fs.appendFileSync(join(config.directory,'ops.jsonl'),JSON.stringify(ev)+'\n')});fs.writeFileSync(join(config.directory,'smoke.json'),JSON.stringify({ok:true,...result},null,2));app.exit(0);}
+    catch(error){fs.mkdirSync(config.directory,{recursive:true});fs.writeFileSync(join(config.directory,'smoke.json'),JSON.stringify({ok:false,error:error.stack},null,2));app.exit(1);}return;
+  }
   if (smokeAt >= 0) {
     const outAt = process.argv.indexOf('--smoke-out');
     return smoke(process.argv[smokeAt + 1], outAt > 0 ? process.argv[outAt + 1] : join(data(), 'smoke.json'));
@@ -519,6 +527,9 @@ app.whenReady().then(async () => {
     return net.fetch(pathToFileURL(file).href, { headers: req.headers });
   });
   ipcMain.handle('status', status);
+  ipcMain.handle('cache:info',async()=>({bytes:await (await import('./project-state.mjs')).folderBytes(join(data(),'cache'))}));
+  ipcMain.handle('cache:clear',async()=>{if(running||library.some(p=>p.status==='queued'))throw new Error('Wait for edits to finish before cleaning the cache.');await (await import('./project-state.mjs')).clearCache(join(data(),'cache'),data());return {bytes:0};});
+  ipcMain.handle('project:resume',(_e,id)=>{const p=library.find(p=>p.id===id);if(!p||!['stopped','failed'].includes(p.status))return null;p.status='queued';p.error=undefined;p.job=p.resumeJob??p.job??{mode:p.mode,note:p.note};update(p);pump();return publicProject(p);});
   studioIpc.registerStudioIpc({ipcMain,library,projectDir,update,pump,dialog,getWindow:()=>win,probe:(await loadEngine()).probe,ffprobe:paths().ffprobe});
   ipcMain.handle('library', () => library.map(publicProject));
   ipcMain.handle('project:log', (_e, id) => library.find((p) => p.id === id)?.log ?? []);
@@ -673,8 +684,12 @@ app.whenReady().then(async () => {
     const p = library.find((x) => x.id === id);
     if (p?.status === 'queued') (p.status = 'stopped'), update(p);
   });
-  ipcMain.handle('remove', (_e, id) => {
+  ipcMain.handle('remove', async (_e, id) => {
+    const p=library.find(p=>p.id===id);if(!p)return;
     if (running?.id === id) running.controller.abort();
+    p.status='stopped';
+    const until=Date.now()+2000;while(running?.id===id&&Date.now()<until)await new Promise(resolve=>setTimeout(resolve,50));
+    if(running?.id===id)throw new Error('This edit is still stopping. Try deleting it again in a moment.');
     library = library.filter((p) => p.id !== id);
     fs.rmSync(projectDir(id), { recursive: true, force: true });
     saveLibrary();
@@ -684,6 +699,12 @@ app.whenReady().then(async () => {
     if (!p?.output) return null;
     const r = await dialog.showSaveDialog(win, { defaultPath: `${p.name}-kimo.mp4`, filters: [{ name: 'MP4', extensions: ['mp4'] }] });
     if (r.canceled || !r.filePath) return null;
+    if(p.creator&&p.preview){
+      if(['running','queued'].includes(p.status))throw new Error('Wait for this edit to finish before exporting.');
+      p.job={mode:'manual',ops:[],note:p.note,export:true};p.status='queued';p.error=undefined;update(p);pump();
+      while(['running','queued'].includes(p.status))await new Promise(resolve=>setTimeout(resolve,100));
+      if(p.status!=='done'||p.preview)throw new Error(p.error??'Full-quality export stopped.');
+    }
     if (!compress) {
       await fs.promises.copyFile(p.output, r.filePath);
     } else {
@@ -714,4 +735,4 @@ app.whenReady().then(async () => {
 });
 app.on('window-all-closed', () => app.quit());
 // the hidden graphics window must not keep the app alive
-app.on('before-quit', () => graphicsHost?.close());
+app.on('before-quit', () => {running?.controller.abort();graphicsHost?.close();});

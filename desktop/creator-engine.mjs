@@ -6,13 +6,29 @@ import { PlanCalls, EditBudget, planEdit, followupPlan } from './planner.mjs';
 import { selectTemplate, getTemplate } from './planner/templates.mjs';
 import { plannerContext, compilePlan } from './planner/compile.mjs';
 import { atomicJson, renderPlan, digest } from './planner/render.mjs';
-import { critique, lightweightMetrics } from './critic.mjs';
+import {
+  critique,
+  lightweightMetrics,
+  refreshMeasurements,
+} from './critic.mjs';
 import { planCut, storablePlan } from './cutstage.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
 import { cachedPersonTracks } from './sam.mjs';
 import { publicEdl, toTimeline, toKimoProject, rate } from './edl.mjs';
-import { run } from './audio/process.mjs';
+import { run, measureLoudness } from './audio/process.mjs';
 import { applyStoredStudio, cleanCreatorOptions } from './studio.mjs';
+import { applyStudioPatch } from './studio.mjs';
+import {
+  enforceGates,
+  performanceReport,
+  criticalGates,
+} from './quality-gates.mjs';
+import {
+  saveCheckpoint,
+  readCheckpoint,
+  inputFingerprint,
+  cleanPartials,
+} from './project-state.mjs';
 
 export function readPlanHistory(dir) {
   const p = join(dir, 'plan-history.json');
@@ -71,21 +87,43 @@ export async function runCreatorEdit(
     ffmpeg,
     ffprobe,
     signal,
-    emit = () => {},
+    emit: upstream = () => {},
     transcribe,
     captionStyle,
     explain,
   } = options;
+  const started = Date.now(),
+    operations = [],
+    emit = (event) => {
+      if (event.t === 'op') operations.push(event);
+      upstream(event);
+    };
   await mkdir(dir, { recursive: true });
+  const fingerprint = inputFingerprint(
+      files,
+      note,
+      options.style,
+      options.preset,
+    ),
+    checkpoint = await readCheckpoint(dir);
+  const resuming =
+    mode === 'ai' &&
+    checkpoint?.stage !== 'done' &&
+    checkpoint?.fingerprint === fingerprint &&
+    checkpoint.edl?.creator_plan;
   const savedPath = join(dir, 'edit.edl.json');
   const previous =
-    options.edl ??
+    (resuming ? checkpoint.edl : options.edl) ??
     (existsSync(options.edlFile ?? savedPath)
       ? JSON.parse(await readFile(options.edlFile ?? savedPath, 'utf8'))
       : null);
-  const id = randomUUID(),
+  const id = resuming && checkpoint.edit ? checkpoint.edit : randomUUID(),
     budgetPath = join(dir, `creator-budget-${id}.json`),
-    budget = new EditBudget();
+    budget = new EditBudget(
+      resuming && existsSync(budgetPath)
+        ? JSON.parse(await readFile(budgetPath, 'utf8'))
+        : {},
+    );
   const calls = new PlanCalls({
     ask,
     cacheDir: join(
@@ -137,12 +175,21 @@ export async function runCreatorEdit(
     compiled,
     edl,
     chapters = [];
-  if (previous?.creator_plan && mode !== 'ai') {
+  if (previous?.creator_plan && (mode !== 'ai' || resuming)) {
     context = previous.creator_context;
     plan = previous.creator_plan;
     clips = previous.creator_clips ?? [];
     heads = previous.camera_plan?.heads ?? {};
     screens = previous.camera_plan?.screenRegions ?? {};
+    if (resuming) {
+      edl = structuredClone(previous);
+      source = 'resumed';
+      emit({
+        t: 'say',
+        kind: 'creator',
+        text: `resuming after ${checkpoint.stage}`,
+      });
+    }
     if (mode === 'followup') {
       try {
         const result = await followupPlan(note, plan, context, calls);
@@ -312,19 +359,62 @@ export async function runCreatorEdit(
     t: 'timeline',
     timeline: { ...toTimeline(edl), edl: publicEdl(edl) },
   });
-  const finalOut = join(dir, 'final.mp4'),
+  await saveCheckpoint(dir, 'compiled', { fingerprint, edl, edit: id });
+  const isPreview = options.preview === true,
+    factor = isPreview ? Math.min(1, 540 / Math.min(P.width, P.height)) : 1,
+    renderCanvas = {
+      ...P,
+      width: Math.round((P.width * factor) / 2) * 2,
+      height: Math.round((P.height * factor) / 2) * 2,
+    },
+    renderDir = isPreview ? join(dir, 'preview') : dir;
+  let viewedEdl = edl;
+  const renderCurrent = async () => {
+    viewedEdl = isPreview
+      ? applyStoredStudio(
+          compilePlan({
+            plan: edl.creator_plan,
+            context: edl.creator_context,
+            files: edl.sources
+              .filter(
+                (s) => s.kind === 'video' || s.id === 'creator-user-music',
+              )
+              .map((s) => ({
+                path: s.path,
+                kind: s.kind,
+                width: s.w,
+                height: s.h,
+                duration: s.duration,
+                fps: s.fps,
+                audio: s.audio,
+              })),
+            clips: edl.creator_clips,
+            P: renderCanvas,
+            fps: rate(edl.canvas.fps),
+            heads: edl.camera_plan?.heads ?? {},
+            screenRegions: edl.camera_plan?.screenRegions ?? {},
+            previous: edl,
+          }).edl,
+          edl,
+        )
+      : edl;
+    const result = await renderPlan({
+      edl: viewedEdl,
+      ffmpeg,
+      ffprobe,
+      dir: renderDir,
+      signal,
+      emit,
+      fontsDir: env.KIMO_FONTS,
+      cacheDir: env.KIMO_CACHE_DIR ?? join(dir, 'cache'),
+    });
+    edl.sound = viewedEdl.sound;
+    return result;
+  };
+  const finalOut = join(dir, isPreview ? 'preview.mp4' : 'final.mp4'),
     before = join(dir, 'before.mp4');
   if (existsSync(finalOut)) await copyFile(finalOut, before);
-  let rendered = await renderPlan({
-    edl,
-    ffmpeg,
-    ffprobe,
-    dir,
-    signal,
-    emit,
-    fontsDir: env.KIMO_FONTS,
-    cacheDir: env.KIMO_CACHE_DIR ?? join(dir, 'cache'),
-  });
+  let rendered = await renderCurrent();
   const transitions = [];
   let review = null,
     stop = 'manual edit';
@@ -342,7 +432,7 @@ export async function runCreatorEdit(
             critique({
               plan,
               context,
-              edl,
+              edl: viewedEdl,
               path: rendered.master,
               ffmpeg,
               dir,
@@ -388,16 +478,7 @@ export async function runCreatorEdit(
         });
         edl = applyStoredStudio(compiled.edl, previous);
         chapters = compiled.chapters;
-        rendered = await renderPlan({
-          edl,
-          ffmpeg,
-          ffprobe,
-          dir,
-          signal,
-          emit,
-          fontsDir: env.KIMO_FONTS,
-          cacheDir: env.KIMO_CACHE_DIR ?? join(dir, 'cache'),
-        });
+        rendered = await renderCurrent();
         stop = 'iteration cap';
       } catch (error) {
         if (signal?.aborted || calls.replay) throw error;
@@ -413,7 +494,46 @@ export async function runCreatorEdit(
         : mode === 'followup'
           ? 'user patch applied; no extra critic calls'
           : 'manual edit';
-  const measurements = await lightweightMetrics(edl, { ffmpeg, dir, signal });
+  const checked = await enforceGates({
+    measure: () =>
+      lightweightMetrics(viewedEdl, { ffmpeg, dir: renderDir, signal }),
+    context: {
+      speech: template.audio.voice,
+      captions: plan.captions.enabled,
+      audio: true,
+    },
+    emit,
+    signal,
+    repair: async (stage) => {
+      if (stage === 'cut')
+        edl = applyStudioPatch(edl, {
+          type: 'edit',
+          pause: Math.min(0.12, edl.creator_context.template.cut.max_pause),
+        });
+      else if (stage === 'captions')
+        edl = applyStudioPatch(edl, {
+          type: 'captions',
+          size: Math.max(0.55, plan.captions.font_scale * 0.9),
+          position: 'bottom',
+        });
+      else if (stage === 'sound') {
+        edl.sound.target_lufs = -14;
+        edl.sound.quality_retry = 1;
+        delete edl.sound.report;
+      } else {
+        edl.studio ??= {};
+        edl.studio.safe_compose = true;
+      }
+      plan = edl.creator_plan;
+      rendered = await renderCurrent();
+      await saveCheckpoint(dir, `repaired-${stage}`, {
+        fingerprint,
+        edl,
+        edit: id,
+      });
+    },
+  });
+  let { measurements, gates } = checked;
   if (transitions.length && transitions.at(-1).score !== measurements.score)
     transitions.push({
       iteration: 'after repair',
@@ -421,7 +541,10 @@ export async function runCreatorEdit(
       target: template.acceptance.creator_score,
       high: null,
     });
-  const accepted = stop === 'score target reached with no high issue';
+  let accepted =
+    stop === 'score target reached with no high issue' && gates.passed;
+  if (gates.red) stop = 'critical quality check failed after one retry';
+  else if (gates.unverified) stop += ' · critical pixel checks unverified';
   const history =
     mode === 'manual' && options.creatorUndo
       ? readPlanHistory(dir).slice(0, -1)
@@ -437,7 +560,9 @@ export async function runCreatorEdit(
     });
   await operation(
     'creator_delivery',
-    'delivery · high-quality H.264 with hardware fallback',
+    isPreview
+      ? 'delivery · quick preview'
+      : 'delivery · high-quality H.264 software master',
     async () => {
       if (rendered.passes.length || !existsSync(finalOut)) {
         const measured = await probe(ffprobe, rendered.master);
@@ -446,8 +571,8 @@ export async function runCreatorEdit(
           : null;
         if (
           rendered.passes.every((p) => p === 'audio' || p === 'remix') &&
-          previousDelivery?.width === P.width &&
-          previousDelivery?.height === P.height
+          previousDelivery?.width === renderCanvas.width &&
+          previousDelivery?.height === renderCanvas.height
         ) {
           await run(
             ffmpeg,
@@ -483,7 +608,9 @@ export async function runCreatorEdit(
             ffmpeg,
             input: rendered.master,
             output: finalOut + '.partial.mp4',
-            P,
+            P: renderCanvas,
+            encoder: null,
+            preview: isPreview,
             m: measured,
             signal,
             audioMastered: true,
@@ -503,6 +630,104 @@ export async function runCreatorEdit(
       }
     },
   );
+  let encoded = await measureLoudness(ffmpeg, finalOut, {
+    signal,
+    emit,
+    title: 'quality · measured final AAC loudness and peak',
+  });
+  if (
+    Number(encoded.input_tp) > -1 &&
+    !gates.retries.some((r) => r.stage === 'sound')
+  ) {
+    const retry = {
+      stage: 'sound',
+      attempt: 1,
+      scope: 'final AAC peak',
+      ok: false,
+    };
+    try {
+      await operation(
+        'quality_repair',
+        'quality gate · retry sound once after AAC encoding',
+        async () => {
+          await run(
+            ffmpeg,
+            [
+              '-i',
+              finalOut,
+              '-map',
+              '0:v:0',
+              '-map',
+              '0:a:0',
+              '-c:v',
+              'copy',
+              '-af',
+              'aresample=192000,alimiter=limit=0.749894:level=false:latency=true,aresample=48000',
+              '-c:a',
+              'aac',
+              '-b:a',
+              '384k',
+              '-ar',
+              '48000',
+              '-ac',
+              '2',
+              '-movflags',
+              '+faststart',
+              finalOut + '.partial.mp4',
+            ],
+            {
+              signal,
+              emit,
+              title: 'quality · AAC-safe peak correction, picture copied',
+            },
+          );
+          await (
+            await import('node:fs/promises')
+          ).rename(finalOut + '.partial.mp4', finalOut);
+        },
+      );
+      retry.ok = true;
+    } catch (error) {
+      signal?.throwIfAborted();
+      retry.error = error.message;
+    }
+    gates.retries.push(retry);
+    encoded = await measureLoudness(ffmpeg, finalOut, {
+      signal,
+      emit,
+      title: 'quality · recheck corrected final AAC',
+    });
+  }
+  const numeric = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  measurements = refreshMeasurements(
+    measurements,
+    {
+      lufs: numeric(encoded.input_i),
+      true_peak: numeric(encoded.input_tp),
+      lra: numeric(encoded.input_lra),
+    },
+    { music: !!edl.sound?.music_id },
+  );
+  gates = {
+    ...gates,
+    ...criticalGates(measurements.metrics, {
+      speech: template.audio.voice,
+      captions: plan.captions.enabled,
+      audio: true,
+    }),
+  };
+  accepted =
+    accepted &&
+    gates.passed &&
+    measurements.score >= template.acceptance.creator_score;
+  if (gates.red) {
+    stop = 'critical quality check failed after one retry';
+    emit({
+      t: 'say',
+      kind: 'creator',
+      text: 'critical quality check failed after one retry. review the Quality tab before exporting.',
+    });
+  }
   const creator = {
     version: 1,
     template: plan.template,
@@ -517,6 +742,7 @@ export async function runCreatorEdit(
     budget: budget.snapshot(),
     undoDepth: Math.max(0, history.length - 1),
     limitations: measurements.scope,
+    gates,
   };
   edl.creator = creator;
   if (options.studioHistory) {
@@ -592,11 +818,14 @@ export async function runCreatorEdit(
     creator: measurements,
     accepted,
     checks: [
+      ...gates.checks,
       {
         label: 'resolution',
-        ok: delivered.width === P.width && delivered.height === P.height,
+        ok:
+          delivered.width === renderCanvas.width &&
+          delivered.height === renderCanvas.height,
         value: `${delivered.width}×${delivered.height}`,
-        want: `${P.width}×${P.height}`,
+        want: `${renderCanvas.width}×${renderCanvas.height}${isPreview ? ' preview · full resolution on export' : ''}`,
       },
       {
         label: 'delivery codecs',
@@ -626,6 +855,18 @@ export async function runCreatorEdit(
     ],
   };
   emit({ t: 'quality', m: quality.final, checks: quality.checks });
+  const performance = performanceReport(operations, Date.now() - started, {
+    preview: !!options.preview,
+    sourceSeconds: Math.max(...files.map((f) => f.duration ?? 0)),
+  });
+  await atomicJson(join(dir, 'metrics.json'), {
+    ...measurements,
+    gates,
+    performance,
+    delivery: quality.final,
+  });
+  await saveCheckpoint(dir, 'done', { fingerprint, edl, edit: id });
+  await cleanPartials(dir);
   emit({ t: 'youtube', youtube });
   emit({
     t: 'timeline',
@@ -633,6 +874,7 @@ export async function runCreatorEdit(
   });
   return {
     output: finalOut,
+    preview: isPreview,
     master: rendered.master,
     duration: rendered.seconds,
     history: transitions,
@@ -655,7 +897,7 @@ export async function runCreatorEdit(
     stems: Object.fromEntries(
       ['voice', 'music', 'sfx'].map((k) => [
         k,
-        join(dir, 'creator-audio', k + '.wav'),
+        join(renderDir, 'creator-audio', k + '.wav'),
       ]),
     ),
     beforeOutput: existsSync(before) ? before : undefined,

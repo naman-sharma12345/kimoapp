@@ -22,6 +22,7 @@ import { toolPaths } from './bench/run.mjs';
 import { readFile } from 'node:fs/promises';
 import { stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { measureLoudness } from '../audio/process.mjs';
 test('manual captions follow source content when regenerated IDs change, and warn when it disappears', () => {
   const original = studioFixture(),
     cap = original.overlays.find((o) => o.kind === 'caption_word_group'),
@@ -402,6 +403,51 @@ test(
       );
       assert.equal(result.quality.final.acodec, 'aac');
       assert.ok(result.stems.voice.endsWith('voice.wav'));
+      const actualAac = await measureLoudness(tools.ffmpeg, result.output);
+      assert.equal(
+        result.quality.final.truePeak,
+        Number(actualAac.input_tp),
+        'quality reports encoded AAC, not the preceding WAV',
+      );
+      const checkpointPath = join(options.dir, 'checkpoint.json'),
+        checkpoint = JSON.parse(await readFile(checkpointPath, 'utf8'));
+      checkpoint.stage = 'compiled';
+      await writeFile(checkpointPath, JSON.stringify(checkpoint));
+      await writeFile(
+        join(options.dir, `creator-budget-${checkpoint.edit}.json`),
+        JSON.stringify({
+          text: 3,
+          vision: 2,
+          reserved_usd: 0.09,
+          requests: [],
+        }),
+      );
+      const resumed = await runCreatorEdit(options, {
+        ...deps,
+        ask: async () => {
+          throw Error('resume must not reset its spent request allowance');
+        },
+      });
+      assert.equal(resumed.creator.source, 'resumed');
+      assert.equal(resumed.creator.budget.reserved_usd, 0.09);
+      assert.equal(resumed.creator.budget.text, 3);
+      assert.deepEqual(resumed.creator.passes, []);
+      const full = JSON.parse(await readFile(resumed.edlFile, 'utf8'));
+      full.canvas.w = 960;
+      full.canvas.h = 640;
+      const draft = await runCreatorEdit(
+        { ...options, mode: 'manual', edl: full, preview: true },
+        { ...deps, P: { width: 960, height: 640 } },
+      );
+      assert.equal(draft.preview, true);
+      assert.equal(draft.quality.final.width, 810);
+      assert.equal(draft.quality.final.height, 540);
+      assert.equal(
+        JSON.parse(await readFile(draft.edlFile, 'utf8')).canvas.w,
+        960,
+        'preview keeps full-resolution edit decisions',
+      );
+      assert.ok(draft.stems.voice.includes('preview'));
     } finally {
       await rm(dir, {
         recursive: true,

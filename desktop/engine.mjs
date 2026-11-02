@@ -8,6 +8,8 @@ import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { colorConfig } from './color/plan.mjs';
+import { prepareInputs } from './input-media.mjs';
+import { criticalGates } from './quality-gates.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
 import { videoEncoderArgs, encodeWithFallback } from './encoding.mjs';
@@ -448,7 +450,7 @@ export function canvasFps(files) {
   return best;
 }
 
-export function qualityChecks(m, P, { final = false, sourceAudio = false, targetLufs = -14 } = {}) {
+export function qualityChecks(m, P, { final = false, sourceAudio = false, targetLufs = -14, creator, gateContext } = {}) {
   const rec = recommendedMbps(P.width, P.height, m.fps);
   const c = [];
   const add = (id, label, ok, value, want, warn = false) => c.push({ id, label, ok, value, want, warn });
@@ -479,6 +481,7 @@ export function qualityChecks(m, P, { final = false, sourceAudio = false, target
   add('hook', 'hook (first 2.5 s)', !hookGap, hookGap ? `dead air ${hookGap[0].toFixed(1)}-${hookGap[1].toFixed(1)} s` : 'starts on sound', 'no dead air');
   const gaps = m.silences.filter(([s, e]) => s >= 2.5 && e - s >= 1.5 && e < m.duration - 0.3);
   add('pacing', 'pacing', !gaps.length, gaps.length ? `${gaps.length} pause${gaps.length > 1 ? 's' : ''} ≥ 1.5 s` : 'tight', 'no long pauses', true);
+  if(creator)c.push(...criticalGates(creator.metrics??creator,gateContext).checks);
   return c;
 }
 
@@ -487,7 +490,6 @@ export function qualityChecks(m, P, { final = false, sourceAudio = false, target
  * 2 B-frames, BT.709, YouTube's recommended bitrate, AAC-LC 384 kbps 48 kHz,
  * faststart, and loudness pulled to -14 LUFS / -1.5 dBTP when it is off.
  */
-const masterGpu = new Map();
 export async function youtubeMaster({
   ffmpeg,
   input,
@@ -496,19 +498,12 @@ export async function youtubeMaster({
   m,
   signal,
   onProgress,
-  encoder,
+  encoder = null,
+  preview = false,
   onFallback,
   audioMastered = false,
 }) {
   if (signal?.aborted) throw new Error('cancelled');
-  if (encoder === undefined) {
-    if (!masterGpu.has(ffmpeg))
-      masterGpu.set(
-        ffmpeg,
-        detectGpu(ffmpeg).catch(() => null),
-      );
-    encoder = await masterGpu.get(ffmpeg);
-  }
   const fps = m.fps || 30;
   const rec = recommendedMbps(P.width, P.height, fps);
   const gop = Math.max(1, Math.round(fps / 2));
@@ -530,7 +525,7 @@ export async function youtubeMaster({
       '-i',
       input,
       ...af,
-      ...videoEncoderArgs(selected, m.duration),
+      ...videoEncoderArgs(selected, m.duration).map((v,i,a)=>a[i-1]==='-preset'&&selected==='libx264'?(preview?'ultrafast':'medium'):v),
       '-b:v',
       `${rec}M`,
       '-maxrate',
@@ -665,20 +660,22 @@ const stamp = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
  * thumbnail and YouTube title/description/chapters.
  * emit(event): {t:'op'|'say'|'think'|'status'|'progress'|'frame'|'preview'|'timeline'|'quality'|'youtube', ...}
  */
-export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle, explain: explainOpts, creatorUndo,creatorOptions,studioHistory,studioAppend }) {
+export async function runEdit({ bin, env, dir, files, note, preset, style, mode, signal, emit, ffmpeg, ffprobe, projectFile, edlFile, edl: suppliedEdl, legacy_kimo_render = false, ops, speed, sam, transcribe, captionStyle, explain: explainOpts, creatorUndo,creatorOptions,studioHistory,studioAppend,preview=false }) {
   if (legacy_kimo_render && process.env.KIMO_BENCH_LEGACY !== '1') throw new Error('Legacy picture rendering is restricted to explicit benchmark A/B runs');
   mkdirSync(dir, { recursive: true });
   if (signal?.aborted) throw new Error('cancelled');
+  const normalize=async()=>{if(!legacy_kimo_render&&['ai','captions','sam'].includes(mode))files=await prepareInputs(files,{dir,ffmpeg,ffprobe,probe,signal,emit});};
   const P = PRESETS[preset] ?? PRESETS.shorts;
   const S = STYLES[style] ?? STYLES.auto;
   const creatorEdl=suppliedEdl??(existsSync(edlFile??join(projectFile?dirname(projectFile):dir,'edit.edl.json'))?JSON.parse(readFileSync(edlFile??join(projectFile?dirname(projectFile):dir,'edit.edl.json'),'utf8')):null);
   if(!legacy_kimo_render&&mode==='followup'&&!creatorEdl?.creator_plan)throw new Error('re-run this older edit once to enable plan-based follow-ups');
   if(!legacy_kimo_render&&(mode==='ai'||(['followup','manual'].includes(mode)&&creatorEdl?.creator_plan))){
     const releaseCreator=acquireExclusive('render');
-    try{return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo,creatorOptions,studioHistory,studioAppend},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps});}
+    try{await normalize();return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo,creatorOptions,studioHistory,studioAppend,preview},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps});}
     finally{releaseCreator();}
   }
   const release = acquireExclusive('render');
+  try{await normalize();}catch(error){release();throw error;}
   let mcp;
   try { mcp = new Mcp(bin, dir, env); } catch (e) { release(); throw e; }
   signal?.addEventListener('abort', () => mcp.kill());
@@ -1475,7 +1472,7 @@ export function probe(ffprobe, path) {
           const avg = rate(v?.avg_frame_rate);
           const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
           const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
-          done({ path,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&fr>0&&avg>0&&Math.abs(fr-avg)>.01,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }

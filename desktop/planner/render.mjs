@@ -30,6 +30,7 @@ export function renderKeys(edl) {
       sources: sources.filter((s) => s.kind !== 'audio'),
       video: edl.video,
       color: edl.color_finish,
+      safe_compose: !!edl.studio?.safe_compose,
     };
   return {
     base: digest(base),
@@ -150,6 +151,7 @@ export async function renderPlan({
       },
       fontsDir,
       cacheDir,
+      strategy: edl.studio?.safe_compose ? 'B' : 'auto',
     });
     if (liveTask) await liveTask;
     await rename(path + '.partial.mkv', path);
@@ -165,6 +167,8 @@ export async function renderPlan({
       (existsSync(join(dir, 'color', 'report.json'))
         ? JSON.parse(await readFile(join(dir, 'color', 'report.json'), 'utf8'))
         : edl.color_report);
+    previous.base = keys.base;
+    await atomicJson(manifestPath, previous);
   }
   if (
     previous.picture !== keys.picture ||
@@ -201,6 +205,8 @@ export async function renderPlan({
     model.audio = [];
     model.sound = { enabled: false };
     await render(model, picture, 'overlay');
+    previous.picture = keys.picture;
+    await atomicJson(manifestPath, previous);
   }
   if (previous.audio !== keys.audio || !existsSync(join(stems, 'master.wav'))) {
     const remixOnly =
@@ -232,6 +238,9 @@ export async function renderPlan({
         emit,
       });
     edl.sound.report = effective.sound.report;
+    previous.audio = keys.audio;
+    previous.stems = keys.stems;
+    await atomicJson(manifestPath, previous);
   } else if (existsSync(join(stems, 'report.json')) && edl.sound)
     edl.sound.report = JSON.parse(
       await readFile(join(stems, 'report.json'), 'utf8'),

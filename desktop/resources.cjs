@@ -11,7 +11,10 @@ function workerThreads(
   parallelism = os.availableParallelism(),
 ) {
   const requested = Number(env.KIMO_WORKER_THREADS);
-  const ceiling = Math.max(1, Math.min(2, parallelism - 2));
+  const ceiling =
+    env.KIMO_PERFORMANCE_PROFILE === 'ci'
+      ? Math.max(1, parallelism)
+      : Math.max(1, Math.min(2, parallelism - 2));
   return Number.isInteger(requested) && requested > 0
     ? Math.min(requested, ceiling)
     : 1;
@@ -77,7 +80,9 @@ function spawnBackground(bin, args, options = {}) {
     ...options,
     env,
     windowsHide: true,
+    detached: process.platform !== 'win32',
   });
+  treeCancellation(child);
   lowerPriority(child.pid);
   return child;
 }
@@ -90,11 +95,38 @@ function execFileBackground(bin, args, options, callback) {
   const child = childProcess.execFile(
     bin,
     ffmpegArgs(bin, args, env),
-    { ...options, env, windowsHide: true },
+    {
+      ...options,
+      env,
+      windowsHide: true,
+      detached: process.platform !== 'win32',
+    },
     callback,
   );
+  treeCancellation(child);
   lowerPriority(child.pid);
   return child;
+}
+function treeCancellation(child) {
+  const direct = child.kill.bind(child);
+  child.kill = (signal = 'SIGKILL') => {
+    if (!child.pid || child.exitCode !== null) return false;
+    if (process.platform === 'win32') {
+      const killer = childProcess.spawn(
+        'taskkill',
+        ['/pid', String(child.pid), '/T', '/F'],
+        { windowsHide: true, stdio: 'ignore' },
+      );
+      killer.once('error', () => direct('SIGKILL'));
+      return true;
+    }
+    try {
+      process.kill(-child.pid, signal);
+      return true;
+    } catch {
+      return direct(signal);
+    }
+  };
 }
 function alive(pid) {
   try {

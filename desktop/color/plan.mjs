@@ -5,6 +5,7 @@ import { analyzeClip } from './analyze.mjs';
 import { loadLook, defaultLook, LOOK_IDS } from './looks.mjs';
 import { makeCorrection, writeLut, transform } from './lut.mjs';
 import { clamp, luma } from './math.mjs';
+import { mapPool } from '../worker-pool.mjs';
 
 export function colorConfig({ template = '', previous, note = '' } = {}) {
   const id =
@@ -50,7 +51,11 @@ export async function prepareColor(
   edl,
   { ffmpeg, cacheDir, projectDir, signal, emit = () => {} },
 ) {
-  if (!edl.color_finish?.enabled||!edl.video.some(t=>t.clips.some(c=>!c._baked))) return null;
+  if (
+    !edl.color_finish?.enabled ||
+    !edl.video.some((t) => t.clips.some((c) => !c._baked))
+  )
+    return null;
   const id = randomUUID().slice(0, 8),
     started = Date.now(),
     config = edl.color_finish,
@@ -66,16 +71,20 @@ export async function prepareColor(
     at: started,
   });
   try {
-    for (const track of edl.video)
-      for (const clip of track.clips) {
+    const analyzed = await mapPool(
+      edl.video.flatMap((track) =>
+        track.clips.map((clip) => ({ track, clip })),
+      ),
+      async ({ track, clip }) => {
         const source = edl.sources.find((s) => s.id === clip.src);
         if (
-          !source || clip._baked ||
+          !source ||
+          clip._baked ||
           source.alpha ||
           source.kind === 'image' ||
           (clip._overlayIndex != null && !clip._pip)
         )
-          continue;
+          return null;
         signal?.throwIfAborted();
         const head =
           edl.camera_plan?.heads?.[source.path.replaceAll('\\', '/')];
@@ -97,14 +106,16 @@ export async function prepareColor(
           (edl.cut_plan?.screen_punch ?? []).some((p) => p.clip_id === clip.id)
         )
           stats.screen = true;
-        records.push({
+        return {
           clip,
           source,
           stats,
           broll,
           length: (clip.out - clip.in) / (clip.speed ?? 1),
-        });
-      }
+        };
+      },
+    );
+    records.push(...analyzed.filter(Boolean));
     const reference =
       [...records]
         .filter((r) => !r.broll && r.stats.available)

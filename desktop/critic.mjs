@@ -24,6 +24,14 @@ const weights = {
   sound: 10,
   colour: 5,
 };
+export function refreshMeasurements(previous, patch, { music = true } = {}) {
+  const metrics = { ...previous.metrics, ...patch };
+  return {
+    ...previous,
+    ...creatorScore(metrics, weights, { speech: previous.speech, music }),
+    metrics,
+  };
+}
 export function reviewTimes(edl) {
   const total = duration(edl),
     fps = rate(edl.canvas.fps),
