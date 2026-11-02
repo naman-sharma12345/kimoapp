@@ -1,0 +1,160 @@
+name: creator full benchmark and performance
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [full, performance]
+        default: full
+        description: Replay all nine template cases, or measure the four-core budget
+      baseline_mode:
+        type: boolean
+        default: false
+        description: Collect the initial measured baseline without comparing scores
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    if: inputs.mode == 'full'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - { clip: TH-1, template: youtube-talking }
+          - { clip: TH-1, template: shorts-clean }
+          - { clip: TH-1, template: documentary }
+          - { clip: TH-2, template: shorts-punchy }
+          - { clip: TUT-1, template: tutorial }
+          - { clip: TUT-1, template: explainer }
+          - { clip: VLOG-1, template: youtube-vlog }
+          - { clip: POD-1, template: podcast-clips }
+          - { clip: MUSIC-1, template: music-montage }
+    env:
+      CI: 'true'
+      BENCH_CASE: ${{ matrix.clip }}
+      BENCH_TEMPLATE: ${{ matrix.template }}
+      BENCH_INPUT: ${{ github.workspace }}/.qualification-data/prepared
+      BENCH_OUTPUT: ${{ github.workspace }}/.qualification-data/creator-bench
+      BENCH_BASELINE_MODE: ${{ inputs.baseline_mode && '1' || '0' }}
+      KIMO_PERFORMANCE_PROFILE: ci
+      KIMO_WORKER_THREADS: '4'
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - shell: pwsh
+        run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --prefix desktop
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41099499282
+          name: raw-v2-prepared-41099499282-${{ matrix.clip }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ github.workspace }}/.qualification-data/prepared
+      - run: node desktop/test/bench/creator-release.mjs prepare
+      - run: node desktop/test/bench/creator-release.mjs run
+      - run: node desktop/test/bench/creator-release.mjs measure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creator-review-${{ matrix.clip }}-${{ matrix.template }}
+          retention-days: 7
+          path: |
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/final.mp4
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/review.html
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/metrics.json
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/sheet.jpg
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/hook.jpg
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/strip.mp4
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/CREDITS.txt
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/edit.edl.json
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/fixture-plan.json
+            ${{ github.workspace }}/.qualification-data/creator-bench/**/sources.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creator-summary-${{ matrix.clip }}-${{ matrix.template }}
+          path: ${{ github.workspace }}/.qualification-data/creator-bench/**/summary.json
+          retention-days: 14
+  report:
+    if: always() && inputs.mode == 'full'
+    needs: replay
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: creator-summary-*
+          path: summaries
+      - run: node desktop/test/bench/release-summary.mjs summaries report
+        env:
+          BENCH_BASELINE_MODE: ${{ inputs.baseline_mode && '1' || '0' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creator-full-results
+          path: report/
+      - if: needs.replay.result != 'success'
+        run: exit 1
+  performance:
+    if: inputs.mode == 'performance'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      BENCH_CASE: TH-1
+      BENCH_TEMPLATE: youtube-talking
+      BENCH_INPUT: ${{ github.workspace }}/.qualification-data/prepared
+      BENCH_OUTPUT: ${{ github.workspace }}/.qualification-data/creator-performance
+      BENCH_PERFORMANCE: '1'
+      BENCH_BASELINE_MODE: '1'
+      KIMO_PERFORMANCE_PROFILE: ci
+      KIMO_WORKER_THREADS: '4'
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/cache@v4
+        with:
+          path: desktop/vendor
+          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+      - shell: pwsh
+        run: ./desktop/test/bench/bootstrap.ps1
+      - run: npm ci --prefix desktop
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41099499282
+          name: raw-v2-prepared-41099499282-TH-1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ github.workspace }}/.qualification-data/prepared
+      - run: node desktop/test/bench/creator-release.mjs prepare
+      - run: node desktop/test/bench/creator-release.mjs run
+      - run: node desktop/test/bench/creator-release.mjs measure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creator-performance
+          path: |
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/metrics.json
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/summary.json
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/final.mp4
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/review.html
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/sheet.jpg
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/hook.jpg
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/strip.mp4
+            ${{ github.workspace }}/.qualification-data/creator-performance/**/CREDITS.txt

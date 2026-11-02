@@ -1,24 +1,17 @@
 name: desktop (Windows)
-
 on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'publish the GitHub Release when the smoke test passes'
-        type: boolean
-        default: true
-      ai:
-        description: 'also run one AI edit end to end (uses the kimo AI budget)'
+        description: Publish v0.4.0 only after all qualification steps pass
         type: boolean
         default: false
-      sam:
-        description: 'also run one SAM 3.1 effect end to end (5 s clip, ~$0.03 of the kimo AI budget)'
-        type: boolean
-        default: false
-
 permissions:
   contents: write
-
+  actions: read
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
 jobs:
   windows:
     runs-on: windows-latest
@@ -26,106 +19,122 @@ jobs:
     defaults:
       run:
         shell: pwsh
-        working-directory: desktop
+    env:
+      CI: 'true'
+      KIMO_BENCH_REQUIRE_FFMPEG: '1'
+      KIMO_ROBUSTNESS_CI: '1'
+      KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
+      KIMO_PERFORMANCE_PROFILE: ci
+      KIMO_WORKER_THREADS: '4'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: desktop/package-lock.json
-      - name: cache bundled tools
-        id: vendor
-        uses: actions/cache@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/cache@v4
         with:
           path: desktop/vendor
           key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
-      - name: download kimo, FFmpeg, whisper and the model
-        if: steps.vendor.outputs.cache-hit != 'true'
+      - run: ./desktop/test/bench/bootstrap.ps1
+      - run: pnpm install --frozen-lockfile
+      - run: npm ci --prefix desktop
+      - name: Unit, schema and Windows robustness tests
+        run: npm test --prefix desktop
+      - name: Build renderer
+        run: npm run build:renderer --prefix desktop
+      - name: Playwright renderer and critical-gate UI
         run: |
-          $ProgressPreference = 'SilentlyContinue'
-          New-Item -ItemType Directory -Force vendor, vendor/models, vendor/whisper, vendor/ffmpeg, t | Out-Null
-          Invoke-WebRequest https://github.com/naman-sharma12345/kimo/releases/download/v6.0.0/kimo-6.0.0-windows-x86_64.zip -OutFile t/kimo.zip
-          Expand-Archive t/kimo.zip t/kimo
-          $root = Get-ChildItem t/kimo -Directory | Select-Object -First 1
-          if (Test-Path (Join-Path $root.FullName 'bin')) { Move-Item $root.FullName vendor/kimo } else { Move-Item t/kimo vendor/kimo }
-          Get-ChildItem vendor/kimo -Recurse -Filter kimo-mcp.exe | Select-Object -First 1 | ForEach-Object { if ($_.DirectoryName -ne (Resolve-Path vendor/kimo/bin -ErrorAction SilentlyContinue)) { New-Item -ItemType Directory -Force vendor/kimo/bin | Out-Null; Copy-Item $_.FullName vendor/kimo/bin/ } }
-          Invoke-WebRequest https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip -OutFile t/ffmpeg.zip
-          Expand-Archive t/ffmpeg.zip t/ffmpeg
-          $ff = Get-ChildItem t/ffmpeg -Directory | Select-Object -First 1
-          Copy-Item (Join-Path $ff.FullName 'bin/*') vendor/ffmpeg/
-          Copy-Item (Join-Path $ff.FullName 'LICENSE.txt') vendor/ffmpeg/LICENSE.txt
-          Invoke-WebRequest https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-x64.zip -OutFile t/whisper.zip
-          Expand-Archive t/whisper.zip t/whisper
-          $cli = Get-ChildItem t/whisper -Recurse -Filter whisper-cli.exe | Select-Object -First 1
-          Copy-Item (Join-Path $cli.DirectoryName '*') vendor/whisper/ -Recurse
-          Invoke-WebRequest https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin -OutFile vendor/models/ggml-small-q5_1.bin
-          Remove-Item t -Recurse -Force
-          Get-ChildItem vendor -Recurse -File | Measure-Object Length -Sum | ForEach-Object { "vendor: $([math]::Round($_.Sum/1MB)) MB" }
-          if (-not (Test-Path vendor/kimo/bin/kimo-mcp.exe)) { Get-ChildItem vendor/kimo -Recurse | Select-Object -First 40 FullName; throw 'kimo-mcp.exe not found' }
-      - run: npm ci
-      - name: build installer
-        run: npx electron-builder --win nsis --publish never
+          $server = Start-Process (Get-Command node).Source -ArgumentList 'desktop/test/studio-ui.mjs' -PassThru -WindowStyle Hidden -RedirectStandardOutput "$env:RUNNER_TEMP/studio-ui.log" -RedirectStandardError "$env:RUNNER_TEMP/studio-ui-error.log"
+          try {
+            $ready = $false
+            for ($attempt=0; $attempt -lt 50; $attempt++) {
+              try { Invoke-WebRequest http://127.0.0.1:8770 -TimeoutSec 2 | Out-Null; $ready=$true; break } catch { Start-Sleep -Milliseconds 200 }
+            }
+            if (-not $ready) { throw 'Renderer fixture server did not start' }
+            node desktop/test/studio-ui-check.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Studio renderer checks failed' }
+            node desktop/test/release-ui-check.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Release UI checks failed' }
+          } finally { if (-not $server.HasExited) { Stop-Process -Id $server.Id -Force } }
+      - name: Build installer
+        run: npm exec --prefix desktop -- electron-builder --projectDir desktop --win nsis --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: install and smoke test
+      - name: Verify installer, blockmap and updater feed bytes
+        run: node desktop/test/verify-release.mjs desktop/dist
+      - name: Install and run offline engine/captions smoke
         run: |
-          $setup = Get-ChildItem dist -Filter 'kimo-Setup-*.exe' | Select-Object -First 1
-          "installer: $($setup.Name) $([math]::Round($setup.Length/1MB,1)) MB" | Tee-Object -FilePath smoke-summary.txt
-          Start-Process $setup.FullName -ArgumentList '/S' -Wait
-          $exe = Join-Path $env:LOCALAPPDATA 'Programs\kimo\kimo.exe'
-          if (-not (Test-Path $exe)) { throw "not installed at $exe" }
-          # 5 s test clip with real speech (Windows TTS) so whisper has words to caption
+          $setup = Get-ChildItem desktop/dist -Filter 'kimo-Setup-*.exe' | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait -WindowStyle Hidden
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs/kimo/kimo.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'Installer did not create kimo.exe' }
           Add-Type -AssemblyName System.Speech
-          $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
-          $s.SetOutputToWaveFile("$PWD\speech.wav"); $s.Speak('Welcome to kimo. This is a five second test of the real engine.'); $s.Dispose()
-          & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=1280x720:r=30:d=5' -i speech.wav -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest clip.mp4
-          $smokeArgs = @('--smoke', "$PWD\clip.mp4", '--smoke-out', "$PWD\smoke.json")
-          if ('${{ inputs.sam }}' -eq 'true') { $smokeArgs += @('--smoke-sam', "$PWD\test\sam-person.mp4") }
-          if ('${{ inputs.ai }}' -eq 'true') {
-            # ~25 s talking sample (Windows TTS) with pauses and fillers for the rough cut, over moving grainy gradients
-            $s2 = New-Object System.Speech.Synthesis.SpeechSynthesizer
-            $s2.Rate = 0
-            $s2.SetOutputToWaveFile("$PWD\talk.wav")
-            $ssml = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">So, um, here is the thing nobody tells you about editing videos.<break time="1500ms"/>Most creators spend hours cutting silence by hand.<break time="2000ms"/>Uh, that is, that is a lot of time.<break time="1200ms"/>With kimo, the cuts, the captions and the colour happen in minutes, right on your own computer.<break time="1800ms"/>Stick around, because the last tip changes everything.<break time="1000ms"/>Okay. Let us go.</speak>'
-            $s2.SpeakSsml($ssml); $s2.Dispose()
-            & vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'gradients=s=1920x1080:r=30:speed=0.015:n=5,noise=alls=3:allf=t,eq=saturation=0.8' -i talk.wav -map 0:v -map 1:a -shortest -t 40 -c:v libx264 -preset veryfast -b:v 10M -maxrate 12M -bufsize 20M -pix_fmt yuv420p -c:a aac -b:a 192k -ar 48000 talk.mp4
-            "ai sample: $([math]::Round((Get-Item talk.mp4).Length/1MB,1)) MB" | Tee-Object -FilePath smoke-summary.txt -Append
-            $smokeArgs += @('--smoke-ai', '--smoke-ai-clip', "$PWD\talk.mp4", '--smoke-style', 'podcast')
+          $speech = New-Object System.Speech.Synthesis.SpeechSynthesizer
+          $speech.SetOutputToWaveFile("$env:RUNNER_TEMP/speech.wav")
+          $speech.Speak('Welcome to kimo. This is a five second test of the real engine.'); $speech.Dispose()
+          & desktop/vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=1280x720:r=30:d=5' -i "$env:RUNNER_TEMP/speech.wav" -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$env:RUNNER_TEMP/clip.mp4"
+          if ($LASTEXITCODE -ne 0) { throw 'Speech fixture encode failed' }
+          $process = Start-Process $exe -ArgumentList @('--smoke',('"'+"$env:RUNNER_TEMP/clip.mp4"+'"'),'--smoke-out',('"'+"$PWD/desktop/smoke.json"+'"')) -PassThru -WindowStyle Hidden
+          $null=$process.Handle
+          if (-not $process.WaitForExit(30*60*1000)) { & taskkill /pid $process.Id /T /F; throw 'Installed smoke timed out' }
+          Get-Content desktop/smoke.json
+          if ($process.ExitCode -ne 0) { throw 'Installed engine smoke failed' }
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41099499282
+          name: raw-v2-prepared-41099499282-TH-2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/creator-golden
+      - name: Installed creator pipeline, saved-plan replay only
+        env:
+          BENCH_INPUT: ${{ runner.temp }}/creator-golden
+          BENCH_OUTPUT: ${{ runner.temp }}/release-evidence
+          BENCH_SHORT: '1'
+        run: |
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs/kimo/kimo.exe'
+          foreach ($case in @(@{id='SAM-PERSON';template='shorts-punchy'},@{id='TH-2';template='youtube-talking'})) {
+            $env:BENCH_CASE=$case.id; $env:BENCH_TEMPLATE=$case.template
+            node desktop/test/bench/creator-release.mjs prepare
+            if ($LASTEXITCODE -ne 0) { throw 'Fixture preparation failed' }
+            $configuration=Join-Path "$env:BENCH_OUTPUT/$($case.id)-$($case.template)" config.json
+            $process=Start-Process $exe -ArgumentList @('--creator-smoke',('"'+$configuration+'"')) -PassThru -WindowStyle Hidden
+            $null=$process.Handle
+            if (-not $process.WaitForExit(20*60*1000)) { & taskkill /pid $process.Id /T /F; throw 'Creator replay smoke timed out' }
+            if ($process.ExitCode -ne 0) { Get-Content (Join-Path (Split-Path $configuration) smoke.json); throw 'Installed creator replay failed' }
+            node desktop/test/bench/creator-release.mjs measure
+            if ($LASTEXITCODE -ne 0) { throw 'Critical gates / score <75 / delivery failed' }
           }
-          # wait for kimo.exe itself (not every helper it spawned), with a hard limit
-          $p = Start-Process $exe -ArgumentList $smokeArgs -PassThru
-          $null = $p.Handle  # keeps ExitCode readable after WaitForExit
-          if (-not $p.WaitForExit(50 * 60 * 1000)) { & taskkill /pid $p.Id /T /F | Out-Null; Get-Content smoke.json -ErrorAction SilentlyContinue; throw 'smoke test timed out' }
-          Start-Sleep -Seconds 2
-          Get-Process kimo-mcp, ffmpeg, whisper-cli -ErrorAction SilentlyContinue | ForEach-Object { "left running after exit: $($_.Name) $($_.Id)"; Stop-Process -Id $_.Id -Force }
-          Get-Content smoke.json
-          if ($p.ExitCode -ne 0) { throw "smoke test failed ($($p.ExitCode))" }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: kimo-windows
+          name: kimo-windows-qualification
+          retention-days: 7
           path: |
             desktop/dist/*.exe
+            desktop/dist/*.blockmap
             desktop/dist/latest.yml
+            desktop/dist/release-verification.json
             desktop/smoke.json
-            desktop/smoke-summary.txt
-            desktop/ai-*.jpg
-            desktop/ai-final.mp4
-            desktop/sam-final.mp4
-            desktop/sam-text_behind.mp4
-          retention-days: 7
-      - name: read version
-        id: ver
-        run: echo "v=$((Get-Content package.json | ConvertFrom-Json).version)" >> $env:GITHUB_OUTPUT
-      - name: publish release
+            desktop/test/ui-shots/*.png
+            ${{ runner.temp }}/release-evidence/**
+            ${{ runner.temp }}/studio-ui*.log
+      - name: Read version
+        id: version
+        run: '"v=$((Get-Content desktop/package.json | ConvertFrom-Json).version)" >> $env:GITHUB_OUTPUT'
+      - name: Publish qualified release
         if: inputs.release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.ver.outputs.v }}
-          name: kimo for Windows ${{ steps.ver.outputs.v }}
+          tag_name: v${{ steps.version.outputs.v }}
+          name: kimo for Windows ${{ steps.version.outputs.v }} — Creator edits
           body_path: desktop/RELEASE_NOTES.md
           files: |
             desktop/dist/kimo-Setup-*.exe
             desktop/dist/kimo-Setup-*.exe.blockmap
             desktop/dist/latest.yml
+          fail_on_unmatched_files: true
