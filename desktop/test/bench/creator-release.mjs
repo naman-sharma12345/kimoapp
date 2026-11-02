@@ -141,6 +141,13 @@ if (cmd === 'prepare') {
 } else if (cmd === 'measure') {
   const edl = await readJson(join(directory, 'edit.edl.json')),
     light = await readJson(join(directory, 'metrics.json')),
+    speech =
+      typeof light.speech === 'boolean'
+        ? light.speech
+        : outputWords(edl, edl.camera_plan).length > 0 ||
+          edl.audio.some(
+            (track) => track.role === 'VOICE' && track.clips.length,
+          ),
     output = join(directory, 'final.mp4'),
     events = [],
     referenceLuts = [];
@@ -274,7 +281,7 @@ if (cmd === 'prepare') {
       full.info.fps,
     ),
     values = {
-      ...light.metrics,
+      ...(light.metrics ?? light.values),
       duration_s: full.info.duration,
       ...frame,
       clip_delta_e: colour.clip_delta_e,
@@ -285,17 +292,18 @@ if (cmd === 'prepare') {
       ...delivery,
     },
     score = creatorScore(values, await readJson(join(ROOT, 'score.json')), {
-      speech: light.speech,
+      speech,
       music: !!edl.sound?.music_id,
     }),
     gates = criticalGates(values, {
-      speech: light.speech,
-      captions: light.speech && edl.creator_plan.captions.enabled,
+      speech,
+      captions: speech && edl.creator_plan.captions.enabled,
       audio: true,
     }),
     report = {
       version: 6,
       edlFile: 'edit.edl.json',
+      speech,
       values,
       creator: score,
       gates,
@@ -334,6 +342,14 @@ if (cmd === 'prepare') {
   await writeJson(join(directory, 'summary.json'), row);
   const baseline = await readJson(join(ROOT, 'release-baseline.json')),
     prior = baseline.rows.find((r) => r.clip === id && r.template === template);
+  if (
+    process.env.BENCH_ANALYZE_RUN &&
+    prior &&
+    prior.output_sha256 !== row.output_sha256
+  )
+    throw new Error(
+      'Remeasurement output does not match the committed rendered baseline bytes',
+    );
   if (staticCamera) {
     if (
       !gates.passed ||

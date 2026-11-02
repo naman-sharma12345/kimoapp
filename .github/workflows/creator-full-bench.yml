@@ -44,6 +44,7 @@ jobs:
       BENCH_INPUT: ${{ github.workspace }}/.qualification-data/prepared
       BENCH_OUTPUT: ${{ github.workspace }}/.qualification-data/creator-bench
       BENCH_BASELINE_MODE: ${{ inputs.baseline_mode && '1' || '0' }}
+      BENCH_ANALYZE_RUN: ${{ inputs.analyze_run }}
       KIMO_PERFORMANCE_PROFILE: ci
       KIMO_WORKER_THREADS: '4'
       KIMO_HW_DECODE: 'off'
