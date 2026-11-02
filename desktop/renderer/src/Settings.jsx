@@ -133,7 +133,7 @@ export function Settings({ status: s, refresh, model, downloadModel, update, gua
         <div className="desk-set-group">
           <Row ok={s?.kimo} title="kimo v6 engine" detail={s?.kimo ? 'ready' : 'missing: reinstall kimo'} />
           <Row ok={Boolean(s?.ffmpeg)} title="ffmpeg" detail={s?.ffmpeg ? String(s.ffmpeg).slice(0, 60) : 'missing'} />
-          <Row ok={Boolean(s?.gpu)} title="gpu encode" detail={s?.gpu ? String(s.gpu).replace('h264_', '').toUpperCase() : 'none found, cpu encode'} />
+          <Row ok={Boolean(s?.gpu)} title="gpu encode" detail={s?.gpu ? String(s.gpu).replace('h264_', '').toUpperCase() : s?.gpu === null ? 'none found, cpu encode' : 'checked only when you request a small copy'} />
           <Row ok={Boolean(s?.whisper && s?.model)} title="offline captions" detail={s?.model ? 'whisper model downloaded' : 'needs the whisper model (≈190 MB, one time)'}>
             {model ? (
               <div className="desk-set-progress">
@@ -180,7 +180,7 @@ export function Settings({ status: s, refresh, model, downloadModel, update, gua
           <Row title="cache" detail={cache?`${(cache.bytes/1024/1024).toFixed(1)} MB · saved projects and input copies are kept`:'calculating cache size'}>
             <Button size="sm" variant="ghost" loading={cleaning} onClick={guard(async()=>{setCleaning(true);try{setCache(await kimo.cleanCache());}finally{setCleaning(false);}})}>clean cache</Button>
           </Row>
-          <Row title="engine check" detail="look for ffmpeg, whisper and the gpu again">
+          <Row title="engine check" detail="look for ffmpeg and whisper again">
             <Button size="sm" variant="ghost" icon={RefreshCw} loading={checking} onClick={recheck}>
               check again
             </Button>

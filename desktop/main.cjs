@@ -300,7 +300,8 @@ async function status() {
   const p = paths();
   const e = await loadEngine();
   const ff = await run(p.ffmpeg, ['-version']);
-  gpu ??= await e.detectGpu(p.ffmpeg).catch(() => null);
+  // Driver probing can itself reset an unstable GPU. Detect only when the user
+  // explicitly asks for the optional small copy, never at startup/status refresh.
   return {
     version: app.getVersion(),
     kimo: fs.existsSync(p.kimo),
@@ -338,7 +339,7 @@ async function smoke(clip, outPath) {
     report.paths = p;
     report.ffmpeg = (await run(p.ffmpeg, ['-version'])).out.split('\n')[0];
     report.whisperHelp = (await run(p.whisper, ['--help'])).out.includes('usage');
-    report.gpu = await e.detectGpu(p.ffmpeg);
+    report.gpu = process.env.KIMO_HW_DECODE === 'off' ? null : await e.detectGpu(p.ffmpeg);
     const m = new e.Mcp(p.kimo, data(), engineEnv());
     const s = await m.start();
     m.kill();
