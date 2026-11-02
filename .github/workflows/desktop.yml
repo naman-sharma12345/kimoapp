@@ -28,6 +28,7 @@ jobs:
       KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
       KIMO_PERFORMANCE_PROFILE: ci
       KIMO_WORKER_THREADS: '4'
+      KIMO_HW_DECODE: off
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

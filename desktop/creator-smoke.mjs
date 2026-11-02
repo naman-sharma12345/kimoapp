@@ -125,12 +125,16 @@ export async function runCreatorSmoke(
     for (const track of edl.video)
       for (const c of track.clips) {
         c.camera = [{ t: 0, x: 0.5, y: 0.5, zoom: 1, ease: 'hold' }];
+        // The director's follow/drift are independent of its camera keys.
+        // Remove both for this explicitly fixed-camera frame-matching fixture.
+        delete c.follow;
+        delete c.drift;
         c.camera_by = 'CI fixed-centre fixture';
       }
   if (config.staticCamera)
     applyCaptions(
       edl,
-      { enabled: plan.captions.enabled, style: plan.captions.style },
+      { enabled: plan.captions.enabled, style: plan.captions.style, position: 'bottom' },
       edl.camera_plan,
     );
   await writeFile(

@@ -44,6 +44,13 @@ frame-ID checks all pass across seven rates (21 combinations), including trims,
 2x/.5x and camera keys. Colour/resource checks13/13 pass, with zero A/B mean RGB
 difference. New qualifying runs still need dispatch after pushing these fixes.
 
+Replacement qualification on 43c8ae04fcf73ecc9505a4e7ca2e61f04d9b41e8:
+- Windows release=false: 41440293194 (job125260171137).
+- Initial nine-case baseline: 41440298549.
+- Four-core performance: 41440304538 (job125260209325).
+Dispatched once, after confirming the original full run was completed/cancelled.
+Do not dispatch duplicates; collect these results next.
+
 Do not duplicate active replacement runs. Poll actual jobs/logs and fix real failures within
 scope. CI saved-plan replay uses deterministic structured fixtures, NOT recorded
 provider responses; this is explicit in metrics and must remain explicit in docs.
@@ -65,3 +72,22 @@ raw-v2-prepared-* artifacts), still available as checked. Latest published relea
 is v0.3.2. CLI helper outside the repo at LOCALAPPDATA/kimo/bench/control-gh.mjs
 uses saved Git credentials without printing them and supports workflow dispatch.
 GitHub connector has no dispatch/publish capability, so CLI is needed for those.
+
+User reported AMD driver errors from testing. ALL further media/browser/GPU
+tests, including tiny fixtures, must run on hosted runners. No FFmpeg/Whisper
+processes remained locally when checked. Do not repeat local media tests.
+Set KIMO_HW_DECODE=off for hosted no-GPU qualification; runtime also supports
+that explicit CPU-only switch. No driver settings/restarts/registry changes.
+
+Windows replacement41440293194 passed unit/robustness/UI/build/install/legacy
+smoke but creator SAM gate failed:66.2, frame/jitter unavailable. Its supposedly
+fixed camera still retained independent follow/drift. Fix removes those and
+relayouts captions at bottom; this is fixture-only and must remain disclosed.
+Preserved JSON/JPEG/proof from qualification artifact13139072594 in
+LOCALAPPDATA/kimo/phase12/windows2 (only0.52MB downloaded, no installer).
+
+Opaque intermediates are now x264 ultrafast CRF0 4:4:4 (lossless samples), alpha
+segments remain FFV1. Tiny regression batch completed before the AMD report:
+37/37pass, zero skips; frame IDs at seven rates, alpha gaps, exact A/B pixels,
+colour mean A/B difference0, measured camera residual0.2504px, actual preview
+and encoded-picture-preserving remix. Further qualification is hosted-only.
