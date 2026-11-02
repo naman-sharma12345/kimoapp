@@ -110,7 +110,7 @@ export async function runCreatorEdit(
     mode === 'ai' &&
     checkpoint?.stage !== 'done' &&
     checkpoint?.fingerprint === fingerprint &&
-    checkpoint.edl?.creator_plan;
+    (checkpoint.edl?.creator_plan || checkpoint.stage_data);
   const savedPath = join(dir, 'edit.edl.json');
   const previous =
     (resuming ? checkpoint.edl : options.edl) ??
@@ -175,7 +175,16 @@ export async function runCreatorEdit(
     compiled,
     edl,
     chapters = [];
-  if (previous?.creator_plan && (mode !== 'ai' || resuming)) {
+  if (!resuming)
+    await saveCheckpoint(dir, 'started', {
+      fingerprint,
+      edit: id,
+      stage_data: {},
+    });
+  if (
+    previous?.creator_plan &&
+    (mode !== 'ai' || (resuming && checkpoint.edl?.creator_plan))
+  ) {
     context = previous.creator_context;
     plan = previous.creator_plan;
     clips = previous.creator_clips ?? [];
@@ -215,54 +224,80 @@ export async function runCreatorEdit(
         chapters = JSON.parse(await readFile(pack, 'utf8')).chapters ?? [];
     }
   } else {
-    const template = selectTemplate(options.style, P, note),
+    const staged = resuming ? (checkpoint.stage_data ?? {}) : {},
+      template = selectTemplate(options.style, P, note),
       overrides = cleanCreatorOptions(options.creatorOptions);
     if (overrides.length === 'full') template.duration.max_s = null;
     else if (typeof overrides.length === 'number')
       template.duration.max_s = overrides.length;
     if (overrides.look && overrides.look !== 'auto')
       template.color.look = overrides.look;
-    const cut = template.audio.voice
-      ? await planCut({
-          files,
-          P,
-          style: template.legacy_style,
-          styleInfo: { punch: template.camera.punch },
-          note,
-          mode,
-          env,
-          dir,
-          ffmpeg,
-          signal,
-          emit,
-          transcribe,
-        })
-      : null;
-    clips = cut?.clips ?? [];
-    context = plannerContext({
-      template,
-      note: note + (overrides.music === 'off' ? ' no music' : ''),
-      files,
-      clips,
-      P,
-    });
-    context.images = await operation(
-      'planner_frames',
-      'planner · six low-resolution source keyframes',
-      () => sampleInput(ffmpeg, files, dir, signal),
-    );
-    const result = await planEdit(context, calls);
-    plan = result.plan;
-    source = result.source;
-    delete context.images;
-    if (result.errors.length)
+    const cut =
+      template.audio.voice && !staged.clips
+        ? await planCut({
+            files,
+            P,
+            style: template.legacy_style,
+            styleInfo: { punch: template.camera.punch },
+            note,
+            mode,
+            env,
+            dir,
+            ffmpeg,
+            signal,
+            emit,
+            transcribe,
+          })
+        : null;
+    clips = staged.clips ?? cut?.clips ?? [];
+    context =
+      staged.context ??
+      plannerContext({
+        template,
+        note: note + (overrides.music === 'off' ? ' no music' : ''),
+        files,
+        clips,
+        P,
+      });
+    if (staged.plan) {
+      plan = staged.plan;
+      source = 'resumed';
+      heads = staged.heads ?? {};
+      screens = staged.screens ?? {};
       emit({
         t: 'say',
         kind: 'creator',
-        text: `deterministic plan: ${result.errors.slice(0, 2).join('; ')}`,
+        text: `resuming after ${checkpoint.stage}`,
       });
-    if (captionStyle && captionStyle !== 'auto')
-      plan.captions.style = captionStyle;
+    } else {
+      await saveCheckpoint(dir, 'transcript', {
+        fingerprint,
+        edit: id,
+        stage_data: { clips, context },
+      });
+      context.images = await operation(
+        'planner_frames',
+        'planner · six low-resolution source keyframes',
+        () => sampleInput(ffmpeg, files, dir, signal),
+      );
+      const result = await planEdit(context, calls);
+      plan = result.plan;
+      source = result.source;
+      delete context.images;
+      if (result.errors.length)
+        emit({
+          t: 'say',
+          kind: 'creator',
+          text: `deterministic plan: ${result.errors.slice(0, 2).join('; ')}`,
+        });
+      if (captionStyle && captionStyle !== 'auto')
+        plan.captions.style = captionStyle;
+      await saveCheckpoint(dir, 'plan', {
+        fingerprint,
+        edit: id,
+        stage_data: { clips, context, plan },
+      });
+    }
   }
   const template = getTemplate(plan.template),
     fps = canvasFps(files);
@@ -287,6 +322,11 @@ export async function runCreatorEdit(
         }
       },
     );
+    await saveCheckpoint(dir, 'camera', {
+      fingerprint,
+      edit: id,
+      stage_data: { clips, context, plan, heads, screens },
+    });
     compiled = await operation(
       'apply_cut',
       'creator · compile validated plan into edit decisions',

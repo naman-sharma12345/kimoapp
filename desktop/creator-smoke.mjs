@@ -134,7 +134,11 @@ export async function runCreatorSmoke(
   if (config.staticCamera)
     applyCaptions(
       edl,
-      { enabled: plan.captions.enabled, style: plan.captions.style, position: 'bottom' },
+      {
+        enabled: plan.captions.enabled,
+        style: plan.captions.style,
+        position: 'bottom',
+      },
       edl.camera_plan,
     );
   await writeFile(

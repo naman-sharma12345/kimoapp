@@ -432,6 +432,37 @@ test(
       assert.equal(resumed.creator.budget.reserved_usd, 0.09);
       assert.equal(resumed.creator.budget.text, 3);
       assert.deepEqual(resumed.creator.passes, []);
+      // A crash after planning but before compilation must keep the SAME edit
+      // allowance and reuse the finished transcript/plan, not an older EDL.
+      const staged = {
+        ...checkpoint,
+        stage: 'plan',
+        edl: undefined,
+        stage_data: {
+          clips: checkpoint.edl.creator_clips,
+          context: checkpoint.edl.creator_context,
+          plan: checkpoint.edl.creator_plan,
+          heads: checkpoint.edl.camera_plan?.heads,
+          screens: checkpoint.edl.camera_plan?.screenRegions,
+        },
+      };
+      await writeFile(checkpointPath, JSON.stringify(staged));
+      const earlyResume = await runCreatorEdit(options, {
+        ...deps,
+        transcribe: async () => {
+          throw Error('finished transcript must be reused');
+        },
+        ask: async () => {
+          throw Error('finished plan must be reused');
+        },
+      });
+      assert.equal(earlyResume.creator.source, 'resumed');
+      assert.equal(earlyResume.creator.budget.reserved_usd, 0.09);
+      assert.equal(earlyResume.creator.budget.text, 3);
+      assert.equal(
+        JSON.parse(await readFile(checkpointPath, 'utf8')).edit,
+        checkpoint.edit,
+      );
       const full = JSON.parse(await readFile(resumed.edlFile, 'utf8'));
       full.canvas.w = 960;
       full.canvas.h = 640;
