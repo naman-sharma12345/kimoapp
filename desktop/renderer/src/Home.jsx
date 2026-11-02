@@ -1,3 +1,4 @@
+import {CreatorHome} from './CreatorHome.jsx';
 import { useEffect, useRef, useState } from 'react';
 import { FilePlus2, FolderPlus, X, Film, AudioLines, Image as ImageIcon, ScanSearch, ArrowUp, Layers, Shapes } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
@@ -215,6 +216,7 @@ export function SubjectEffects({ sam, setSam, video, guard, compact = false }) {
 export function Home({ status, library, setLibrary, openProject, guard, notify, now }) {
   const [staged, setStaged] = useState([]);
   const [note, setNote] = useState('');
+  const [creatorOptions,setCreatorOptions]=useState({}),[musicFile,setMusicFile]=useState(null);
   const [preset, setPreset] = useState(localStorage.preset || 'youtube');
   const [style, setStyle] = useState(creatorTemplateId(localStorage.style,localStorage.preset));
   const [captionStyle, setCaptionStyle] = useState(localStorage.captionStyle || 'auto');
@@ -273,7 +275,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
     localStorage.explain = JSON.stringify(explain);
     setStarting(true);
     try {
-      const made = await kimo.create({ files: staged, note: note.trim(), preset, style, captionStyle, mode, batch: batch && staged.length > 1, sam: samChoice, explain: mode === 'ai' ? explain : undefined });
+      const made = await kimo.create({ creatorOptions,files: musicFile?[...staged.filter(f=>f.kind!=='audio'),musicFile]:staged, note: note.trim(), preset, style, captionStyle, mode, batch: batch && staged.length > 1, sam: samChoice, explain: mode === 'ai' ? explain : undefined });
       setLibrary((l) => [...made, ...l.filter((x) => !made.some((m) => m.id === x.id))]);
       setStaged([]);
       setNote('');
@@ -356,6 +358,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
             </div>
           </div>
 
+            {mode==='ai'?<CreatorHome style={style} onStyle={value=>{setStyle(value);if(value.startsWith('shorts-')||value==='podcast-clips')setPreset('shorts');else if(value!=='music-montage'&&!preset.startsWith('youtube'))setPreset('youtube');}} options={creatorOptions} onOptions={setCreatorOptions} musicFile={musicFile} onMusicFile={setMusicFile} guard={guard}/>:null}
           <div className="agent-composer desk-composer">
             <textarea
               ref={noteRef}
@@ -366,6 +369,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
               placeholder="what should kimo make? e.g. a punchy youtube video with a strong hook, no dead air, word captions and a clean grade"
               aria-label="what should kimo make"
             />
+
             <div className="desk-composer-row">
               <label className="desk-select">
                 <span>format</span>
@@ -373,16 +377,6 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
                   {Object.entries(presets).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="desk-select" data-disabled={mode !== 'ai' || undefined}>
-                <span>style</span>
-                <select value={style} onChange={(e) => {const value=e.target.value;setStyle(value);if(value.startsWith('shorts-')||value==='podcast-clips')setPreset('shorts');else if(value!=='music-montage'&&!preset.startsWith('youtube'))setPreset('youtube');}} disabled={mode !== 'ai'}>
-                  {Object.entries(styles).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v}
                     </option>
                   ))}
                 </select>
@@ -397,6 +391,7 @@ export function Home({ status, library, setLibrary, openProject, guard, notify, 
                   ))}
                 </select>
               </label>
+              <div className="creator-pills">{captionStyle!=='auto'?<button type="button" onClick={()=>setCaptionStyle('auto')} aria-label="reset caption override">captions: {captionStyle} ×</button>:null}{preset!==(style.startsWith('shorts-')||style==='podcast-clips'?'shorts':'youtube')?<button type="button" onClick={()=>setPreset(style.startsWith('shorts-')||style==='podcast-clips'?'shorts':'youtube')} aria-label="reset aspect override">aspect override ×</button>:null}</div>
               <span className="studio-spacer" />
               <Button variant="primary" size="md" icon={ArrowUp} disabled={!staged.length} loading={starting} onClick={start} tooltip="start" shortcut="Ctrl ↵">
                 edit with kimo

@@ -257,3 +257,45 @@ not prove OS media playback, a real account or installer behaviour.
 Regression testing exposed a denoiser probe that could pass on 0.15 seconds but
 crash in the combined voice chain. Probe the representative half-second chain
 before selecting it; the existing gentle FFT fallback remains available.
+
+## Phase 11 — creator Studio, 1 November 2026
+
+The desktop Studio brief supersedes the earlier Phase 0 screen restriction for
+this desktop phase. Shared web components remain unchanged. Reuse Geist/mono,
+ink/cream, semantic status colours, `--shadow-pop`, existing radii and spacing.
+New control transitions use `--dur-3` (220 ms)/`--ease-out`; reduced motion removes
+them. Existing `--dur-5`/`--ease-in-out` powers neutral waiting/updating indicators
+and the active AI pulse. The selected template gets the orange ring specified by
+Phase 11; the creation action lives in a separate composer panel. No new library.
+
+Incidental copy follows the brief's behaviours: "length target", "creator score",
+"more zooms", "less zooms", "new b-roll picks", "re-style captions" and "restore
+this pause". Template names match the PDF; four-to-six-word vibe lines describe
+existing settings. Tabs wrap with existing tokens. Timeline height uses three
+96-unit spaces, rows use 24 units, and inspector content scrolls internally to fit
+1080×720. Functional hatched pause slivers are Phase 11's named exception to the
+gradient prohibition and use existing ink/cream tokens. Coincident removals open
+a chooser, and tail markers stay inside the lane. Manual controls have keyboard
+alternatives. Audio hide hides blocks without muting; silent caption/graphic mute
+is disabled. Track flags persist and apply to their relevant media.
+
+Persist 20 full EDL history states and up to 200 source-anchored overrides. Display
+a warning and skip an override whose source content changed. Inspector template
+changes retain canvas/story; Home template selection resets overrides. Local
+changes work offline. New hook/new b-roll picks use the existing authenticated,
+bounded follow-up planner and history path.
+
+The PDF explicitly allows CC benchmark clips for tiny previews, a scoped exception
+to the earlier CC0 asset rule. Verify the existing ProPublica CC-BY-3.0 raw-source
+hash before using seconds 70–73. Home/third-party notices retain credits, licence,
+source and changes. Labels are not dialogue or endorsement. Only the selected
+Home loop and hovered/focused caption loops play; hidden/reduced-motion playback
+pauses to reduce load. Previews demonstrate framing/captions, not complete sound,
+b-roll or grading. All eleven WebMs are under 21 KB, 3 seconds and 12 fps.
+
+Actual base-render previews schedule at most one 360 px JPEG task per 500 ms;
+slower machines may deliver less often. Gain changes reuse stems and encoded
+picture. The user's lightweight verification excludes full footage benchmarks,
+paid provider requests, releases and installers. Browser checks use a mock preload
+and synthetic metrics, not native OS/account/provider evidence. Missing quality
+measurements remain unverified.

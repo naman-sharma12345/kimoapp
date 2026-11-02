@@ -1,5 +1,31 @@
 # Creator benchmark results
 
+## Phase 11 Studio — 1 November 2026
+
+Nine-template Home, ten-stage live feed, creator score details, seven timeline
+tracks, seven inspector tabs and persistent manual/variation history are wired
+through the desktop IPC. Verification follows the user's lightweight-check
+instruction: no paid AI calls, full-footage benchmark, installer or release.
+
+| Functional check        | Evidence                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| Desktop regressions     | 193/193 pass, zero skips, one test worker                                       |
+| Actual tiny FFmpeg edit | Progressive base JPEG emitted; gain change selects remix only                   |
+| Gain-only delivery      | Encoded H264 elementary stream hash unchanged; new AAC retained                 |
+| IPC commands            | Local patches, both regeneration jobs, persisted undo/redo and atomic rejection |
+| Source-safe edits       | Caption follows matching source despite changed IDs; missing target warns       |
+| Restore pause           | Adjacent source bounds, shifted caption words and extended music bed            |
+| Preview assets          | Eleven 3-second/12-fps loops, 10,764–20,024 bytes each; source hash checked     |
+| Browser views           | Home, three live moments, timeline, seven tabs and score details at both sizes  |
+
+Screenshots in `../ui-shots/phase-11-*.png` use a mock preload with the real pure
+patch reducer and synthetic transcript/quality values. Their scores are not
+benchmark results. Preview labels are not dialogue or endorsement; full attribution
+is in `../../THIRD_PARTY_NOTICES.md` and `../../data/creator-previews.json`.
+Provider/account/installer/native OS playback and sustained CPU/lag acceptance
+remain unmeasured. The USD 5.49 historical reservation ledger is unchanged.
+See `../../studio-README.md` for behaviour, test commands and limits.
+
 ## Phase 10 planner — 1 November 2026
 
 Structured plans, nine templates, deterministic compilation, bounded cached

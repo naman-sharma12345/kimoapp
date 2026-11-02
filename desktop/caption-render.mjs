@@ -146,7 +146,7 @@ export function drawChunk(doc, overlay, canvas, fps, win = { from: 0, to: Infini
   const scale = p.place?.scale ?? 1;
   const cx = p.place?.cx ?? canvas.w / 2;
   const cy = p.place?.cy ?? canvas.h * 0.7;
-  const c = style.colors;
+  const c = {...style.colors,...(p.accent_color?{accent:p.accent_color}:{})};
   const size = fontSize(style, canvas) * scale;
   const mm = measureChunk(style, chunk, size);
   const boost = p.contrast === 'boost';

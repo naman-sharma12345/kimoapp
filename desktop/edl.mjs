@@ -903,8 +903,7 @@ export function publicEdl(edl) {
     Object.fromEntries(
       keys.filter((k) => value[k] !== undefined).map((k) => [k, value[k]]),
     );
-  const clip = (c) =>
-    pick(c, [
+  const clip = (c) => ({...pick(c, [
       'id',
       'src',
       'in',
@@ -915,7 +914,7 @@ export function publicEdl(edl) {
       'dur',
       'linked',
       'gain_db',
-    ]);
+    ]),...(edl.creator_plan&&c.camera?{camera:c.camera.map(k=>pick(k,['t','x','y','zoom','ease'])),camera_by:c.camera_by,camera_framing:[...(c.camera_framing??[])]}:{}),...(edl.creator_plan&&c.sound_sfx?{sound_sfx:{...c.sound_sfx}}:{})});
   const tracks = (family) =>
     edl[family].map((t) => ({
       ...pick(t, ['track', 'name', 'role']),
@@ -943,10 +942,11 @@ export function publicEdl(edl) {
       ...pick(o, ['id', 'kind', 'at', 'dur', 'track', 'src']),
       props: pick(o.props ?? {}, ['text', 'primitive', 'width', 'height', 'engine', 'style', 'edited', 'hidden', 'element',
         // Phase 7 explainer beats: what the Studio beat editor shows and edits (no panel geometry, assets or paths)
-        'explain', 'explain_plan', 'mode', 'title', 'items', 'label', 'question', 'term', 'keyword', 'caption', 'quote']),
+        'explain', 'explain_plan', 'mode', 'title', 'items', 'label', 'question', 'term', 'keyword', 'caption', 'quote','words','lines','place','accent_color']),
     })),
     ...(edl.captions ? { captions: { style: edl.captions.style, hook_style: edl.captions.hook_style ?? null, bounds: captionBounds(edl), stats: edl.captions.stats } } : {}),
     master: { ...edl.master },
+    ...(edl.creator_plan?{creator_settings:edl.creator_settings??{template:edl.creator_plan.template,energy:edl.creator_plan.camera.energy,pause:edl.creator_context.template.cut.max_pause,captions:edl.creator_plan.captions,music:edl.creator_plan.music,levels:edl.studio?.levels??{voice:0,music:0,sfx:0},accent:edl.studio?.accent??'template'},studio:{tracks:edl.studio?.tracks??{},warnings:edl.studio?.warnings??[]},removed:(edl.cut_plan?.removed??[]).map((r,index)=>({index,reason:r.reason,dur:r.out-r.in,text:r.text,at:edl.cut_plan.keep.find(k=>k.src===r.src&&k.in>=r.out-.04)?.at??duration(edl)}))}:{}),
     ...(edl.color_finish?{color_finish:pick(edl.color_finish,['version','enabled','look','strength','grain','vignette','sharpen','locked'])}:{}),
     ...(edl.sound?{sound:{version:edl.sound.version,enabled:edl.sound.enabled,target_lufs:edl.sound.target_lufs,music_id:edl.sound.music_id,sfx_count:edl.sound.sfx_count,master:edl.sound.report?.master}}:{}),
   };

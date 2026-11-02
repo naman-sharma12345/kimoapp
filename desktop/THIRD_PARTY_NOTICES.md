@@ -144,3 +144,22 @@ including the previously approved Cinestudy credit/hashtag requirements.
 ## Fetched explainer assets
 
 Images found through Openverse (https://openverse.org, API https://api.openverse.org) and Wikimedia Commons (https://commons.wikimedia.org, API https://commons.wikimedia.org/w/api.php) are keyless searches filtered to CC0, public domain, CC BY and CC BY-SA. Each asset keeps its licence, creator and source URL in the project, and every export writes them to `ATTRIBUTIONS.txt` beside the video (also offered as a YouTube description block). Nothing is bundled from these sources.
+
+
+## Phase 11 creator preview loops
+
+`renderer/src/creator-previews/*.webm` (and the derived poster) use the already
+prepared **ProPublica**, “Unedited: ProPublica Interviews President Biden,
+September 2023” raw source. Source:
+https://commons.wikimedia.org/wiki/File:Unedited-_ProPublica_Interviews_President_Biden,_September_2023.webm .
+Licence: CC BY 3.0, https://creativecommons.org/licenses/by/3.0/ . The exact
+source SHA256 is `cf880aa9a077c7e96ec521439834895ba656969ad3cb05ba0830b1bf5b0b74ed`.
+
+Changes: 70–73 second excerpts, cropped/reframed, silent 12 fps VP9 loops, with
+**template-name or caption-preview labels**, not dialogue transcription. No
+endorsement is implied. Phase 11 explicitly requests a CC benchmark clip for
+these small previews; they are not relicensed CC0. No new footage was downloaded.
+Attribution and source/licence links also appear in Home’s preview credits.
+Per-file duration, dimensions and sizes are in `data/creator-previews.json`.
+The build bundles these loops into `renderer/assets/`. The creator/UI screenshots
+use the same attributed previews and a clearly mocked backend.

@@ -1,3 +1,7 @@
+import {rate} from '../../edl.mjs';
+import {CreatorFeed,CreatorScore} from './CreatorFeed.jsx';
+import {CreatorInspector,CreatorSplit} from './CreatorInspector.jsx';
+import {CreatorTimeline} from './CreatorTimeline.jsx';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Play, Pause, SplitSquareHorizontal, Square, Trash2, Download, Minimize2, FolderOpen, Check, X, LoaderCircle, WandSparkles, ArrowUp, RotateCcw, Undo2, Copy, ImageDown, ChevronDown } from 'lucide-react';
 import { Button } from '@web/components/ui/button';
@@ -21,10 +25,10 @@ function useFeed(project) {
       case 'op': {
         // live events carry the tool-call id as opId; the saved log keeps it as id
         const opId = ev.opId ?? ev.id;
-        if (ev.phase === 'start') push({ type: 'op', id: opId, title: ev.title, why: ev.why, tool: ev.tool, status: 'running', t0: replay ? 0 : Date.now() });
+        if (ev.phase === 'start') {const item={type:'op',id:opId,title:ev.title,why:ev.why,tool:ev.tool,status:'running',t0:replay?(ev.at??Date.now()):Date.now()};if(entries.some(e=>e.type==='op'&&e.id===opId))next.entries=entries.map(e=>e.type==='op'&&e.id===opId?item:e);else push(item);}
         else
           next.entries = entries.map((e) =>
-            e.type === 'op' && e.id === opId ? { ...e, status: ev.ok ? 'done' : 'failed', ms: ev.ms, error: ev.error, result: !replay && ev.result ? String(ev.result).slice(0, 140) : e.result, t0: 0 } : e,
+            e.type === 'op' && e.id === opId ? { ...e, status: ev.ok ? 'done' : 'failed', ms: ev.ms, error: ev.error, result: ev.result ? String(ev.result).slice(0, 140) : e.result, t0: 0 } : e,
           );
         if (ev.phase === 'start' && !replay) next.liveTool = ev.tool;
         break;
@@ -409,7 +413,8 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
   const styles = status?.styles ?? { auto: 'Auto' };
   const video = useRef(null);
   const askRef = useRef(null);
-  const [tab, setTab] = useState('export');
+  const [tab, setTab] = useState(p.creator?'edit':'export'),[split,setSplit]=useState(false);
+  const studioPatch=guard(async patch=>{const np=await kimo.studioPatch({id:p.id,patch});if(np)setLibrary(list=>list.map(x=>x.id===p.id?{...x,...np}:x));return np;});
   const [ask, setAsk] = useState('');
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState({ cur: 0, dur: 0 });
@@ -513,9 +518,12 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
         if (ready && !isBusy) saveMp4();
         return;
       }
+      if(ctrl&&e.key.toLowerCase()==='e'){e.preventDefault();if(ready&&!isBusy)saveMp4();return;}
+      if(ctrl&&e.key.toLowerCase()==='z'&&p.creator&&!isTyping()){e.preventDefault();if(!isBusy)studioPatch({type:e.shiftKey?'redo':'undo'});return;}
       if (isTyping() || ctrl) return;
+      if(e.key.toLowerCase()==='m'&&p.creator&&!isBusy){e.preventDefault();studioPatch({type:'music',enabled:!p.edl?.creator_settings?.music?.enabled});return;}
       const v = video.current;
-      const step = e.shiftKey ? 1 : 1 / 30;
+      const step = e.shiftKey ? 1 : 1 / rate(p.edl?.canvas.fps??30);
       switch (e.key) {
         case ' ':
           e.preventDefault();
@@ -590,7 +598,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
               <pre>{feed.script}</pre>
             </details>
           ) : null}
-          <Feed feed={feed} project={p} now={now} />
+          {p.creator||p.mode==='ai'?<CreatorFeed feed={feed} project={p} now={now}/>:<Feed feed={feed} project={p} now={now}/>}
           <div className="agent-composer desk-ask">
             <textarea
               ref={askRef}
@@ -610,7 +618,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
         {/* viewer */}
         <section className="studio-panel studio-viewer desk-viewer" aria-label="preview">
           <header className="studio-panel-header desk-viewer-head">
-            <span className="desk-viewer-title">{p.name}</span>
+            <span className="desk-viewer-title">{p.name}</span>{p.creator?<CreatorScore project={p}/>:null}
             <span className="desk-chip" data-status={p.status} title={p.error || ''}>
               {p.status === 'failed' ? (p.errorCode === 'ai_locked' ? 'needs an ai key: settings → ai access' : `failed: ${String(p.error || '').slice(0, 60)}`) : STATUS[p.status]}
             </span>
@@ -644,6 +652,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
                 onSeeked={(e) => setT({ cur: e.currentTarget.currentTime, dur: e.currentTarget.duration || 0 })}
                 onLoadedMetadata={(e) => setT({ cur: e.currentTarget.currentTime, dur: e.currentTarget.duration || 0 })}
               />
+              {split&&ready?<CreatorSplit project={p} video={video}/>:null}
               {imgs.map((s, i) => (s ? <img key={i} className="desk-live" data-show={(showLive && front === i) || undefined} src={s} alt="" /> : null))}
               {!src && !showLive ? <div className="desk-noout">the live preview appears here as kimo edits.</div> : null}
               {showLive ? (
@@ -687,7 +696,7 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
               sam 3.1 · {p.sam.effect.replace('_', ' ')} on “{p.sam.prompt || 'person'}”
             </div>
           ) : null}
-          <Tabs value={tab} onValueChange={setTab}>
+          {p.creator?<CreatorInspector project={p} status={status} tab={tab} setTab={setTab} patch={studioPatch} guard={guard} notify={notify} setLibrary={setLibrary} isBusy={isBusy} video={video} split={split} setSplit={setSplit} renderExport={()=> <ExportView project={p} presets={presets} styles={styles} ready={ready} isBusy={isBusy} guard={guard} notify={notify} setLibrary={setLibrary}/>} renderQuality={()=> <QualityView q={quality} passes={isBusy?[]:p.quality?.passes}/>} renderYoutube={()=> <YoutubeView y={isBusy?feed.youtube:youtube} project={p} guard={guard} notify={notify}/>}/>:          <Tabs value={tab} onValueChange={setTab}>
             <TabsList aria-label="inspector views">
               <TabsTrigger value="export">export</TabsTrigger>
               <TabsTrigger value="quality">quality</TabsTrigger>
@@ -703,12 +712,12 @@ export function Studio({ project: p, status, guard, notify, goHome, setLibrary, 
             <TabsContent value="youtube">
               <YoutubeView y={isBusy ? feed.youtube : youtube} project={p} guard={guard} notify={notify} />
             </TabsContent>
-          </Tabs>
+          </Tabs>}
         </aside>
       </div>
       <span />
 
-      <Timeline project={p} live={feed.timeline} video={video} time={t.cur} orig={orig} guard={guard} notify={notify} setLibrary={setLibrary} />
+      <>{p.creator?<CreatorTimeline project={p} video={video} time={t.cur} patch={studioPatch} isBusy={isBusy} notify={notify}/>:<Timeline project={p} live={feed.timeline} video={video} time={t.cur} orig={orig} guard={guard} notify={notify} setLibrary={setLibrary}/>}</>
     </div>
   );
 }

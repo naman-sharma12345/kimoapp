@@ -12,6 +12,7 @@ import { headTrack, screenRegions } from './camera-probe.mjs';
 import { cachedPersonTracks } from './sam.mjs';
 import { publicEdl, toTimeline, toKimoProject, rate } from './edl.mjs';
 import { run } from './audio/process.mjs';
+import { applyStoredStudio, cleanCreatorOptions } from './studio.mjs';
 
 export function readPlanHistory(dir) {
   const p = join(dir, 'plan-history.json');
@@ -167,7 +168,13 @@ export async function runCreatorEdit(
         chapters = JSON.parse(await readFile(pack, 'utf8')).chapters ?? [];
     }
   } else {
-    const template = selectTemplate(options.style, P, note);
+    const template = selectTemplate(options.style, P, note),
+      overrides = cleanCreatorOptions(options.creatorOptions);
+    if (overrides.length === 'full') template.duration.max_s = null;
+    else if (typeof overrides.length === 'number')
+      template.duration.max_s = overrides.length;
+    if (overrides.look && overrides.look !== 'auto')
+      template.color.look = overrides.look;
     const cut = template.audio.voice
       ? await planCut({
           files,
@@ -185,7 +192,13 @@ export async function runCreatorEdit(
         })
       : null;
     clips = cut?.clips ?? [];
-    context = plannerContext({ template, note, files, clips, P });
+    context = plannerContext({
+      template,
+      note: note + (overrides.music === 'off' ? ' no music' : ''),
+      files,
+      clips,
+      P,
+    });
     context.images = await operation(
       'planner_frames',
       'planner · six low-resolution source keyframes',
@@ -243,7 +256,7 @@ export async function runCreatorEdit(
           previous,
         }),
     );
-    edl = compiled.edl;
+    edl = applyStoredStudio(compiled.edl, previous);
     chapters = compiled.chapters;
     if (template.camera.screen_zooms) {
       const ranges = (edl.video[0]?.clips ?? [])
@@ -279,7 +292,7 @@ export async function runCreatorEdit(
           screenRegions: screens,
           previous,
         });
-        edl = compiled.edl;
+        edl = applyStoredStudio(compiled.edl, previous);
       }
     }
     if (explain?.enabled === false) {
@@ -373,7 +386,7 @@ export async function runCreatorEdit(
           screenRegions: screens,
           previous: edl,
         });
-        edl = compiled.edl;
+        edl = applyStoredStudio(compiled.edl, previous);
         chapters = compiled.chapters;
         rendered = await renderPlan({
           edl,
@@ -405,6 +418,7 @@ export async function runCreatorEdit(
     transitions.push({
       iteration: 'after repair',
       score: measurements.score,
+      target: template.acceptance.creator_score,
       high: null,
     });
   const accepted = stop === 'score target reached with no high issue';
@@ -427,23 +441,62 @@ export async function runCreatorEdit(
     async () => {
       if (rendered.passes.length || !existsSync(finalOut)) {
         const measured = await probe(ffprobe, rendered.master);
-        await youtubeMaster({
-          ffmpeg,
-          input: rendered.master,
-          output: finalOut + '.partial.mp4',
-          P,
-          m: measured,
-          signal,
-          audioMastered: true,
-          onProgress: (f, eta) =>
-            emit({
-              t: 'progress',
-              phase: 'delivery',
-              label: 'encoding delivery',
-              f,
-              eta,
-            }),
-        });
+        const previousDelivery = existsSync(before)
+          ? await probe(ffprobe, before)
+          : null;
+        if (
+          rendered.passes.every((p) => p === 'audio' || p === 'remix') &&
+          previousDelivery?.width === P.width &&
+          previousDelivery?.height === P.height
+        ) {
+          await run(
+            ffmpeg,
+            [
+              '-i',
+              before,
+              '-i',
+              rendered.master,
+              '-map',
+              '0:v:0',
+              '-map',
+              '1:a:0',
+              '-c:v',
+              'copy',
+              '-c:a',
+              'aac',
+              '-b:a',
+              '384k',
+              '-ar',
+              '48000',
+              '-ac',
+              '2',
+              '-t',
+              String(rendered.seconds),
+              '-movflags',
+              '+faststart',
+              finalOut + '.partial.mp4',
+            ],
+            { signal, title: 'delivery: picture copied; updating audio only' },
+          );
+        } else {
+          await youtubeMaster({
+            ffmpeg,
+            input: rendered.master,
+            output: finalOut + '.partial.mp4',
+            P,
+            m: measured,
+            signal,
+            audioMastered: true,
+            onProgress: (f, eta) =>
+              emit({
+                t: 'progress',
+                phase: 'delivery',
+                label: 'encoding delivery',
+                f,
+                eta,
+              }),
+          });
+        }
         await (
           await import('node:fs/promises')
         ).rename(finalOut + '.partial.mp4', finalOut);
@@ -457,6 +510,7 @@ export async function runCreatorEdit(
     requestedPass: pass,
     passes: rendered.passes,
     score: measurements.score,
+    target: template.acceptance.creator_score,
     accepted,
     stop,
     transitions,
@@ -465,6 +519,16 @@ export async function runCreatorEdit(
     limitations: measurements.scope,
   };
   edl.creator = creator;
+  if (options.studioHistory) {
+    if (options.studioAppend) {
+      const h = options.studioHistory;
+      h.entries = h.entries.slice(0, h.cursor + 1);
+      h.entries.push(structuredClone(edl));
+      if (h.entries.length > 20) h.entries.shift();
+      h.cursor = h.entries.length - 1;
+    }
+    await atomicJson(join(dir, 'studio-history.json'), options.studioHistory);
+  }
   await atomicJson(join(dir, 'plan.json'), plan);
   await atomicJson(join(dir, 'creator-review.json'), {
     ...creator,
@@ -579,6 +643,21 @@ export async function runCreatorEdit(
     quality,
     youtube,
     creator,
+    studioHistory: options.studioHistory
+      ? {
+          undo: options.studioHistory.cursor,
+          redo:
+            options.studioHistory.entries.length -
+            options.studioHistory.cursor -
+            1,
+        }
+      : undefined,
+    stems: Object.fromEntries(
+      ['voice', 'music', 'sfx'].map((k) => [
+        k,
+        join(dir, 'creator-audio', k + '.wav'),
+      ]),
+    ),
     beforeOutput: existsSync(before) ? before : undefined,
     cutPlan: compiled?.cut,
   };

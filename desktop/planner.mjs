@@ -253,7 +253,7 @@ export async function followupPlan(text, plan, context, calls) {
   if (!patches.length) {
     const response = await calls.call(
       'followup',
-      `Return only {"patches":[RFC6902 add/remove/replace]}. Edit this creator plan to satisfy the user's request. No new facts or executable fields.\n${JSON.stringify({ request: text, plan, sentences: context.sentences })}`,
+      `Return only {"patches":[RFC6902 add/remove/replace]}. Edit this creator plan to satisfy the user's request. No new facts or executable fields.\n${JSON.stringify({ request: text, plan, sentences: context.sentences, clips: context.clips, template: context.template })}`,
     );
     patches = response.patches;
   }

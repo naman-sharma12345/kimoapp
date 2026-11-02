@@ -384,6 +384,7 @@ export async function mixSound(
       dir,
       output,
       target: edl.sound.target_lufs ?? -14,
+      gains:edl.sound.mix_gains??{voice:0,music:0,sfx:0},
       ...options,
     });
   const report = {

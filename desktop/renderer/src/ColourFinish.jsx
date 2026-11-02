@@ -15,7 +15,7 @@ const previews = import.meta.glob('../../data/looks/previews/*.webp', {
   import: 'default',
 });
 
-export function ColourFinish({ project, isBusy, guard, setLibrary }) {
+export function ColourFinish({ project, isBusy, guard, setLibrary,onApply }) {
   const current = project.edl?.color_finish;
   const [look, setLook] = useState(current?.look ?? 'clean'),
     [strength, setStrength] = useState(current?.strength ?? 1),
@@ -41,7 +41,7 @@ export function ColourFinish({ project, isBusy, guard, setLibrary }) {
     vignette !== (current?.vignette ?? false) ||
     !current;
   const apply = guard(async () => {
-    const p = await kimo.setColor({
+    const p = await (onApply??kimo.setColor)({
       id: project.id,
       look,
       strength,

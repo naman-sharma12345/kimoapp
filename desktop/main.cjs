@@ -186,14 +186,14 @@ async function pump() {
   const dir = projectDir(next.id);
   try {
     // AI steps need an owner sign-in or the user's own key; say so plainly instead of failing mid-edit
-    if (['ai', 'sam'].includes(job.mode)||job.mode==='followup'&&!next.creator) {
+    if (['ai', 'sam'].includes(job.mode)||job.mode==='followup'&&!next.creator||job.needsAi) {
       const auth = await loadAuth();
       if (!auth.hasAiAccess()) throw new auth.AiLockedError();
     }
     const e = await loadEngine();
     const result = await e.runEdit({
       bin: paths().kimo, env: engineEnv(), dir, files: next.files, note: job.note,
-      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,creatorUndo:job.creatorUndo,
+      preset: next.preset, style: next.style, captionStyle: next.captionStyle, explain: next.explain, mode: job.mode, ops: job.ops, projectFile: next.projectFile, edlFile: next.edlFile, edl: job.edl, sam: next.sam,creatorUndo:job.creatorUndo,creatorOptions:next.creatorOptions,studioHistory:job.studioHistory,studioAppend:job.studioAppend,
       signal: controller.signal, ffmpeg: paths().ffmpeg, ffprobe: paths().ffprobe, speed: settings().speed,
       emit: (ev) => {
         if (!LIVE_ONLY.has(ev.t)) next.log.push({ ...ev, at: Date.now() });
@@ -209,7 +209,9 @@ async function pump() {
     next.master = result.master;
     next.duration = result.duration;
     next.quality = result.quality;
-    if(result.creator)next.creator=result.creator;
+    if(result.creator){next.creator=result.creator;next.style=result.creator.template??next.style;}
+    if(result.studioHistory)next.studioHistory=result.studioHistory;
+    if(result.stems)next.stems=result.stems;
     if(result.beforeOutput)next.beforeOutput=result.beforeOutput;
     if (result.youtube) next.youtube = result.youtube;
     if (result.timeline) next.timeline = result.timeline;
@@ -235,12 +237,12 @@ async function pump() {
   }
 }
 
-function newProject({ files, note, preset, mode, name, style, sam, captionStyle, explain }) {
+function newProject({ files, note, preset, mode, name, style, sam, captionStyle, explain,creatorOptions }) {
   const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const p = {
     id, name: name || basename(files[0].path, extname(files[0].path)), created: Date.now(), updated: Date.now(),
     files, note: note || '', preset: preset || 'shorts', style: style || 'auto', captionStyle: cleanCaptionStyle(captionStyle), mode: mode || 'ai', status: 'queued', log: [], turns: [],
-    sam: cleanSam(sam),
+    sam: cleanSam(sam),creatorOptions,
     explain: cleanExplain(explain),
   };
   library.unshift(p);
@@ -477,7 +479,7 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'kimo-media', privileges: { stre
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1440, height: 900, minWidth: 1080, minHeight: 680, backgroundColor: '#0b0b0f', show: false,
+    width: 1440, height: 900, minWidth: 1080, minHeight: 720, backgroundColor: '#0b0b0f', show: false,
     title: 'kimo', autoHideMenuBar: true,
     webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   });
@@ -508,13 +510,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('auth:signout', async () => (await loadAuth()).signOut());
   ipcMain.handle('byok:set', async (_e, input) => (await loadAuth()).setByok(input));
   ipcMain.handle('byok:clear', async () => (await loadAuth()).clearByok());
+  const studioIpc=await import('./studio-ipc.mjs');
+  const studioMusic=studioIpc.catalog().music;
   protocol.handle('kimo-media', (req) => {
     const file = decodeURIComponent(new URL(req.url).searchParams.get('p') || '');
-    const known = library.some((p) => p.output === file || p.files.some((f) => f.path === file) || file.startsWith(projectDir(p.id)));
+    const known = studioIpc.mediaAllowed(file,library,projectDir,studioMusic);
     if (!known) return new Response('not found', { status: 404 });
     return net.fetch(pathToFileURL(file).href, { headers: req.headers });
   });
   ipcMain.handle('status', status);
+  studioIpc.registerStudioIpc({ipcMain,library,projectDir,update,pump,dialog,getWindow:()=>win,probe:(await loadEngine()).probe,ffprobe:paths().ffprobe});
   ipcMain.handle('library', () => library.map(publicProject));
   ipcMain.handle('project:log', (_e, id) => library.find((p) => p.id === id)?.log ?? []);
   ipcMain.handle('edl:get', async (_e,id) => {
@@ -528,9 +533,10 @@ app.whenReady().then(async () => {
     const r = await dialog.showOpenDialog(win, { properties: folders ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'], filters: folders ? [] : [{ name: 'Media', extensions: ['mp4', 'mov', 'm4v', 'mkv', 'webm', 'avi', 'mp3', 'wav', 'm4a', 'png', 'jpg', 'jpeg'] }] });
     return r.canceled ? [] : expand(r.filePaths);
   });
-  ipcMain.handle('create', (_e, { files, note, preset, mode, batch, style, sam, captionStyle, explain }) => {
+  ipcMain.handle('create', async (_e, { files, note, preset, mode, batch, style, sam, captionStyle, explain,creatorOptions }) => {
     if (!files?.length) throw new Error('add a video first');
-    const made = batch ? files.map((f) => newProject({ files: [f], note, preset, mode, style, sam, captionStyle, explain })) : [newProject({ files, note, preset, mode, style, sam, captionStyle, explain })];
+    const {cleanCreatorOptions}=await import('./studio.mjs');creatorOptions=cleanCreatorOptions(creatorOptions);
+    const made = batch ? (creatorOptions.music==='file'?files.filter(f=>f.kind==='video'):files).map((f) => newProject({ files: creatorOptions.music==='file'?[f,...files.filter(a=>a.kind==='audio')]:[f], note, preset, mode, style, sam, captionStyle, explain,creatorOptions })) : [newProject({ files, note, preset, mode, style, sam, captionStyle, explain,creatorOptions })];
     saveLibrary();
     pump();
     return made.map(publicProject);
@@ -552,6 +558,7 @@ app.whenReady().then(async () => {
     if (!p.projectFile || !fs.existsSync(p.projectFile)) throw new Error('re-run this edit once first (it was made before follow-ups existed)');
     p.turns = [...(p.turns ?? []), { at: Date.now(), text: note }].slice(-50);
     Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'followup', note } });
+    if(p.creator&&p.edlFile&&fs.existsSync(p.edlFile)){const historyPath=join(projectDir(id),'studio-history.json');p.job.studioHistory=fs.existsSync(historyPath)?JSON.parse(fs.readFileSync(historyPath,'utf8')):{entries:[JSON.parse(fs.readFileSync(p.edlFile,'utf8'))],cursor:0};p.job.studioAppend=true;}
     update(p);
     pump();
     return publicProject(p);
@@ -577,6 +584,7 @@ app.whenReady().then(async () => {
     const note = `regenerate visuals for this part (${a.toFixed(1)}–${b.toFixed(1)} s)`;
     p.turns = [...(p.turns ?? []), { at: Date.now(), text: note }].slice(-50);
     Object.assign(p, { status: 'queued', error: undefined, job: { mode: 'followup', note } });
+    if(p.creator&&p.edlFile&&fs.existsSync(p.edlFile)){const historyPath=join(projectDir(id),'studio-history.json');p.job.studioHistory=fs.existsSync(historyPath)?JSON.parse(fs.readFileSync(historyPath,'utf8')):{entries:[JSON.parse(fs.readFileSync(p.edlFile,'utf8'))],cursor:0};p.job.studioAppend=true;}
     update(p);
     pump();
     return publicProject(p);

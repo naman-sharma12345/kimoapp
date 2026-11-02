@@ -1,5 +1,39 @@
 # Investigation notes
 
+## 1 November 2026 — Phase 11 Studio
+
+- No paid AI calls, full golden renders, new benchmark recordings or release.
+  The fully reserved USD 5.49 ledger is unchanged. Tiny synthetic render checks
+  and the explicitly requested 3-second preview assets are functional evidence.
+- Real IPC contract tests exercise the main-process registration, including both
+  regeneration jobs, all local command families and persistent undo/redo.
+- Visual review caught a score popup clipped by its feed parent; move it to a
+  focused portal with Escape/outside close. Inspector content now scrolls inside
+  its pane at the minimum supported size.
+- A preview candidate under a legacy TH-1 path was stale/mislabelled. Discard those
+  generated assets. Rebuild all previews from the exact raw-v2 ProPublica source
+  only after its complete SHA-256 matched the frozen provenance. Inspect actual
+  poster/frames. Use template-name labels rather than unverified dialogue.
+- The older compact public-EDL test exposed excessive camera payload on legacy
+  projects. Send only scalar camera keys for creator projects; keep the legacy
+  payload small. The regression then passes.
+- Caption-source anchors avoid applying an old cap001 change to a regenerated
+  hook. Missing/rechunked targets show a warning. Restoring a gap now uses adjacent
+  quantized source bounds and shifts caption word times plus the full music bed.
+- Overlapping leading/tail removal markers intercepted clicks. Put the tail at
+  the actual edit end and group coincident markers into a chooser. Browser checks
+  now restore the pause through the visible control.
+- Stem slider preview state was resetting the commit sentinel. Commit from the
+  persisted setting, while audition gain stays local. A keyboard arrow now reaches
+  the actual levels reducer; the tiny FFmpeg check proves picture bytes unchanged.
+- Windows socket enumeration twice failed to locate an owned fixture server while
+  rebinding still reported EADDRINUSE. Switch to exact command-line/CIM process
+  identification and stop only that server, then rebuild/restart. No blind repeats.
+- The UI fixture generates silent WAV data in memory, requires no private user
+  asset path, and uses synthetic quality numbers. Native playback/accounts and
+  real-provider adherence remain outside this browser check. No CPU percentage or
+  natural-footage quality improvement is claimed.
+
 ## 29 October 2026
 
 - Baseline source: commit `b0c90974257e8795c292622c4c30defef1457db1`, desktop 0.3.2, read-only kimo-mcp 6.0.0 (`3621dcfa35ac`). The installed Windows app supplied BtbN FFmpeg, Whisper and the small quantized model. No engine/planner behavior changed.

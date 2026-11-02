@@ -1,0 +1,120 @@
+{
+  "source": "ProPublica, Unedited: ProPublica Interviews President Biden, September 2023",
+  "url": "https://commons.wikimedia.org/wiki/File:Unedited-_ProPublica_Interviews_President_Biden,_September_2023.webm",
+  "license": "CC BY 3.0",
+  "license_url": "https://creativecommons.org/licenses/by/3.0/",
+  "source_sha256": "cf880aa9a077c7e96ec521439834895ba656969ad3cb05ba0830b1bf5b0b74ed",
+  "changes": "Three-second excerpts at 70–73 s, cropped, manually framed, template-name labels, silent VP9 loops. Labels are not dialogue. No endorsement. Preview demonstrates framing/caption defaults, not full template editing quality.",
+  "clips": [
+    {
+      "id": "shorts-punchy",
+      "bytes": 20024,
+      "duration": 3,
+      "fps": 12,
+      "width": 180,
+      "height": 320,
+      "caption_style": "hormozi",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "shorts-clean",
+      "bytes": 16813,
+      "duration": 3,
+      "fps": 12,
+      "width": 180,
+      "height": 320,
+      "caption_style": "ali-abdaal",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "youtube-talking",
+      "bytes": 11597,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "mkbhd",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "youtube-vlog",
+      "bytes": 11579,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "ali-abdaal",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "tutorial",
+      "bytes": 11264,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "doc-subtitle",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "podcast-clips",
+      "bytes": 17279,
+      "duration": 3,
+      "fps": 12,
+      "width": 180,
+      "height": 320,
+      "caption_style": "karaoke",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "documentary",
+      "bytes": 11396,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "doc-subtitle",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "explainer",
+      "bytes": 11685,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "ali-abdaal",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "music-montage",
+      "bytes": 10764,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "kimo",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "caption-mrbeast",
+      "bytes": 13874,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "mrbeast",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    },
+    {
+      "id": "caption-boxed-highlight",
+      "bytes": 14035,
+      "duration": 3,
+      "fps": 12,
+      "width": 320,
+      "height": 180,
+      "caption_style": "boxed-highlight",
+      "source": "Verified raw-v2 ProPublica source at 70–73 s; template-name overlay, not dialogue transcription"
+    }
+  ]
+}

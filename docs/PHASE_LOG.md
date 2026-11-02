@@ -468,3 +468,79 @@ no target is claimed. The new runtime and trade-offs are documented in
 Older projects require an explicit re-run before plan-based chat, preserving
 their saved manual edits rather than silently migrating them. Captions-only,
 manual EDL and SAM-only paths remain available. Built desktop assets are included.
+
+## Phase 11 — Studio UI for creator edits (1 November 2026)
+
+Scope: implement the supplied desktop Studio brief and push the completed change.
+The user's standing instruction is lightweight verification, without full golden
+benchmarks or heavy local footage renders. No paid AI/SAM request, new dataset,
+engine/backend change, release or installer. The fully reserved USD 5.49 historical
+benchmark ledger is byte-identical to the starting commit.
+
+### Acceptance checklist
+
+- [x] Home has nine named templates, four-to-six-word vibe lines, bundled muted
+      three-second loops, selected orange ring, target length, look/music controls
+      and reset pills. Aspect/caption overrides, library/drop/batch/captions-only/
+      SAM paths remain available. Screenshot: `docs/screens/phase-11-home.png`.
+- [x] Listening, Cutting, Directing camera, Captions, Graphics & b-roll, Sound,
+      Colour, Rendering, Reviewing and Done are collapsible live groups. Summaries,
+      progress/ETA, critic findings and score use actual events in production.
+      Screens: `docs/screens/phase-11-live-listening.png`,
+      `docs/screens/phase-11-live-graphics.png`,
+      `docs/screens/phase-11-live-reviewing.png`.
+- [x] Creator Score uses semantic status tokens, a reduced-motion-aware numeric
+      tween and a focused scrollable breakdown with targets/reasons. Missing
+      measurements remain unavailable. Screenshot:
+      `docs/screens/phase-11-score-breakdown.png`.
+- [x] Base-composite progress emits actual small JPEGs at most every 500 ms, with
+      one preview task in flight. The tiny real FFmpeg test receives a frame.
+      Slow sources may deliver less often; no fixed preview rate is claimed.
+      Live viewer evidence: `docs/screens/phase-11-live-graphics.png` (mock events).
+- [x] Seven fixed timeline lanes expose mute/solo/hide, hatched restore controls,
+      camera diamonds/framing, inline caption text/style/word accents and graphics/
+      SFX move/delete/duplicate. Keyboard numeric controls supplement dragging.
+      Silent GFX/CAP mute is disabled. Screenshot:
+      `docs/screens/phase-11-timeline.png`.
+- [x] Edit/Captions/Sound/Look/Export/Quality/YouTube pack inspector tabs are wired
+      to IPC and existing actions. Caption galleries use real bundled mini loops;
+      sound has three live stem gains and eight play/select music entries; look
+      has strength/reference strips and synchronized split. Screens:
+      `docs/screens/phase-11-inspector-captions.png`,
+      `docs/screens/phase-11-inspector-sound.png`,
+      `docs/screens/phase-11-inspector-look.png`,
+      `docs/screens/phase-11-inspector-export.png`,
+      `docs/screens/phase-11-inspector-quality.png`,
+      `docs/screens/phase-11-inspector-youtube-pack.png`.
+- [x] New hook/new b-roll use the existing gated, bounded follow-up planner; other
+      named variations use local plan patches. Each local edit has persistent
+      undo/redo; AI regeneration saves a baseline and appends its result. Previous
+      delivery supports before/after. Source anchors prevent old caption text
+      leaking onto a new hook. Removed/rechunked targets warn visibly. Edit view:
+      `docs/screens/phase-11-inspector-edit.png`.
+- [x] Content dependencies choose minimal passes. Actual 1.2-second FFmpeg evidence
+      proves gain-only changes select remix, retain AAC and preserve the encoded
+      H264 elementary stream hash. No sustained CPU figure is asserted.
+- [x] 220 ms token-based control transitions, active AI pulse, waiting skeleton,
+      reduced motion, keyboard names/focus and shortcuts are implemented. Browser
+      checks exercise caption focus/edit, gain keyboard commit, music, undo/redo
+      and restore controls. Minimum-size evidence:
+      `docs/screens/phase-11-minimum-window.png`.
+- [x] Browser fixture uses mock preload, real pure patch reducer and synthetic
+      metrics. It captures 26 screenshots: Home, three live moments, timeline,
+      seven inspector tabs and score details at 1440×900 and 1080×720; all were
+      visually inspected. Both sizes have no page errors/document overflow; 4K
+      document bounds also pass. Originals: `desktop/test/ui-shots/phase-11-*.png`.
+- [x] 193 desktop regression tests pass with no skips, including actual main IPC
+      registration, strict atomic validation, all patch families/regeneration jobs,
+      source-safe override replay, pause timing and the tiny real render.
+- [x] Root lint/typecheck, 311 web tests, web production build and desktop renderer
+      build pass. Final eight Studio checks also pass after preview asset updates.
+- [ ] Native OS playback/account/provider/installer acceptance and full-footage
+      quality, sustained CPU/lag and golden Creator Score gates are unverified
+      under the lightweight-check scope. Mock metrics are not benchmark results.
+
+Runtime behaviour, history/render selection, reproduction commands, preview
+credits and limitations are in `desktop/studio-README.md`. All eleven preview
+assets derive from the hash-verified existing ProPublica CC-BY-3.0 raw source;
+template labels are not dialogue or endorsement. No full source footage is bundled.

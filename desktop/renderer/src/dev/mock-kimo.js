@@ -111,6 +111,15 @@
       { t: 'say', text: 'captions are bigger now. re-rendered the master.' },
     ],
   };
+  window.__studioEvents=(id,stage)=>{
+    const p=library.find(p=>p.id===id);if(!p)return;
+    if(window.__creatorFixture)Object.assign(p,window.__creatorFixture);
+    const tools=['transcribe','cut_plan','camera_director','captions','graphics','sound_design','colour_finish','compose','creator_critic'];
+    p.status=stage>=9?'done':'running';p.started=Date.now()-2500;emit('project',structuredClone(p));
+    tools.forEach((tool,i)=>{if(i>stage)return;emit('event',{id,opId:'stage-'+i,t:'op',phase:'start',tool,title:tool==='cut_plan'?'removed 37 pauses · 9 fillers · 2 retakes · hook from 0:41':tool,at:Date.now()-1200});if(i<stage)emit('event',{id,opId:'stage-'+i,t:'op',phase:'end',tool,ok:true,ms:1200,result:'mock stage completed'});});
+    emit('event',{id,t:'progress',phase:'compose',label:'compositing frame 48/200 · 25 fps',frame:48,total:200,f:.24,fps:25,eta:6});
+    if(window.__studioFrame)emit('event',{id,t:'preview',image:window.__studioFrame,time:1.5,after:'base composite'});
+  };
   window.kimo = {
     setColor: async ({id,...settings}) => {const p=library.find(p=>p.id===id);if(!p?.edl)return null;p.edl.color_finish={version:1,enabled:true,locked:true,...settings};window.__mockColorCalls??=[];window.__mockColorCalls.push({id,...settings});emit('project',structuredClone(p));return structuredClone(p);},
     mediaUrl: (p) => M + String(p).split(/[\\/]/).pop().replace(/\.mp4$/, '.webm') + '?',
@@ -127,6 +136,13 @@
     ],
     create: async (o) => [{ ...library[0], id: 'new' + Date.now(), status: 'queued', files: o.files }],
     rerun: async () => null, stop: async () => {}, remove: async () => {}, save: async () => 'C:/Users/naman/Videos/kimo/manali.mp4',
+    creatorCatalog:async()=>window.__studioCatalog??{music:[],templates:[],accents:['template','cream','orange']},
+    pickMusic:async()=>({path:'C:/music/selected.opus',kind:'audio',duration:120,audio:true}),
+    studioPatch:async({id,patch})=>{
+      window.__studioPatches??=[];window.__studioPatches.push(patch);
+      if(!window.__studioBridge)throw new Error('Start the Phase 11 mock server for Studio patch replay');
+      const next=await window.__studioBridge(id,patch),p=library.find(p=>p.id===id);Object.assign(p,next);emit('project',structuredClone(p));return structuredClone(p);
+    },
     followup: async () => null, apply: async ({id,ops}) => {
       const p=library.find(p=>p.id===id);if(!p?.edl)return null;
       for(const op of ops){const e=p.edl,c=e.video.flatMap(t=>t.clips).find(c=>c.id===op.args.clip_id)??e.overlays.find(c=>c.id===op.args.clip_id);if(!c)continue;
