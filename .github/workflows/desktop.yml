@@ -85,9 +85,19 @@ jobs:
       - name: Install and run offline engine/captions smoke
         run: |
           $setup = Get-ChildItem desktop/dist -Filter 'kimo-Setup-*.exe' | Select-Object -First 1
-          Start-Process $setup.FullName -ArgumentList '/S' -Wait -WindowStyle Hidden
-          $exe = Join-Path $env:LOCALAPPDATA 'Programs/kimo/kimo.exe'
-          if (-not (Test-Path -LiteralPath $exe)) { throw 'Installer did not create kimo.exe' }
+          $installRoot=Join-Path $env:RUNNER_TEMP 'kimo-installed'
+          $exe=Join-Path $installRoot 'kimo.exe'
+          $installed=$false
+          for ($attempt=1; $attempt -le 2; $attempt++) {
+            $installer=Start-Process $setup.FullName -ArgumentList @('/S',('/D='+$installRoot)) -PassThru -Wait -WindowStyle Hidden
+            "Installer attempt $attempt exit code: $($installer.ExitCode); target: $installRoot"
+            for ($check=0; $check -lt 30; $check++) {
+              if (Test-Path -LiteralPath $exe) { $installed=$true; break }
+              Start-Sleep -Seconds 1
+            }
+            if ($installed) { break }
+          }
+          if (-not $installed) { throw "Installer did not create $exe; last exit code $($installer.ExitCode)" }
           Add-Type -AssemblyName System.Speech
           $speech = New-Object System.Speech.Synthesis.SpeechSynthesizer
           $speech.SetOutputToWaveFile("$env:RUNNER_TEMP/speech.wav")
@@ -111,7 +121,7 @@ jobs:
           BENCH_OUTPUT: ${{ runner.temp }}/release-evidence
           BENCH_SHORT: '1'
         run: |
-          $exe = Join-Path $env:LOCALAPPDATA 'Programs/kimo/kimo.exe'
+          $exe = Join-Path $env:RUNNER_TEMP 'kimo-installed/kimo.exe'
           foreach ($case in @(@{id='SAM-PERSON';template='shorts-punchy'},@{id='TH-2';template='youtube-talking'})) {
             $env:BENCH_CASE=$case.id; $env:BENCH_TEMPLATE=$case.template
             node desktop/test/bench/creator-release.mjs prepare

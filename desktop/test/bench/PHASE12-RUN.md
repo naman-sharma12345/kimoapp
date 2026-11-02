@@ -166,3 +166,14 @@ explicit conservative centisecond mask bounds enclose libass timing;95%/RMSE
 thresholds unchanged. Added the concrete79/24 boundary regression. No re-render
 or calibration overlay is needed. Retain the diagnostic and don't guess by
 retuning thresholds. This is measurement v7; full v6 baseline scores remain.
+Clock remeasurement41470264406 SUCCESS: SAMscore81.2, all critical green,
+identity100%, repeats0, jitter0.004632289px, all106/106eligiblefitsaccepted.
+Saved video SHA256 identical before/after6c6248bcd77443b35aa3e25454e3ef698ea5edaa37403a4e4814391379e24962.
+Proof/smallmetrics copied into baselines/phase12-release (still uncommitted).
+No new render or new data needed. Qualification94e51a6 run41470547336 passed
+unit/robustness/schema/renderer/build/feed proof but stopped because silent
+installer did not create the assumed LOCALAPPDATA/Programs/kimo exe (before
+creator tests). Current workflow now explicitly uses RUNNER_TEMP/kimo-installed,
+records installer exit, polls child extraction and has a bounded two-attempt
+install. Both installed-smoke steps use that same target. No release published.
+Need push workflow fix then dispatch release=true full_bench_run41463788275.
