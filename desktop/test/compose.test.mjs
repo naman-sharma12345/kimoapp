@@ -6,7 +6,8 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { command, filterPath, probeFile } from './bench/io.mjs';
 import { compose, cameraRectsForClip } from '../compose.mjs';
-import { rate, frameCount, fromKimoProject } from '../edl.mjs';
+import { rate, frameCount, fromKimoProject, framePlan } from '../edl.mjs';
+import { rectFilter } from '../sam.mjs';
 import { frameSourceMetrics, projectEdl } from './bench/analyze.mjs';
 import { rawBarcodeFilter, readRawBarcodes } from './bench/instrument-raw.mjs';
 import { toolPaths } from './bench/run.mjs';
@@ -14,6 +15,93 @@ import { youtubeMaster, measure } from '../engine.mjs';
 const tools = toolPaths(),
   ffmpeg = process.env.KIMO_FFMPEG || tools.ffmpeg,
   ffprobe = process.env.KIMO_FFPROBE || tools.ffprobe;
+test('dense camera expressions larger than the Windows command line render from a filter file', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'kimo-long-camera-'));
+  try {
+    const input = join(dir, 'source.mkv'),
+      output = join(dir, 'mapped.mkv');
+    await command(ffmpeg, [
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc2=s=384x256:r=120:d=1',
+      '-c:v',
+      'ffv1',
+      input,
+    ]);
+    const file = {
+        path: input,
+        kind: 'video',
+        width: 384,
+        height: 256,
+        fps: 120,
+        duration: 1,
+        audio: false,
+      },
+      edl = fromKimoProject(
+        {
+          width: 192,
+          height: 128,
+          fps: 120,
+          assets: {
+            s1: { path: input, width: 384, height: 256, fps: 120, duration: 1 },
+          },
+          tracks: [
+            {
+              id: 'v1',
+              clips: [
+                {
+                  id: 'dense',
+                  source: { type: 'media', asset: 's1' },
+                  start: 0,
+                  duration: 1,
+                  in_point: 0,
+                  props: {},
+                },
+              ],
+            },
+          ],
+        },
+        [file],
+      ),
+      c = edl.video[0].clips[0];
+    c.camera = Array.from({ length: 120 }, (_, i) => ({
+      t: i / 120,
+      x: i % 2 ? 0.48 : 0.52,
+      y: 0.5,
+      zoom: i % 2 ? 1.15 : 1.3,
+      ease: 'hold',
+    }));
+    const plan = framePlan(c, edl.sources[0], 120, 0, 120),
+      expression = rectFilter(
+        cameraRectsForClip(c, edl.sources[0], edl.canvas, plan),
+      );
+    assert.ok(
+      expression.length > 32767,
+      `fixture must exercise the Windows limit (${expression.length})`,
+    );
+    await compose({
+      edl,
+      ffmpeg,
+      ffprobe,
+      output,
+      dir: join(dir, 'work'),
+      strategy: 'B',
+    });
+    const metadata = await probeFile(ffprobe, output);
+    assert.equal(
+      Number(metadata.video.nb_frames) || Math.round(metadata.duration * 120),
+      120,
+    );
+  } finally {
+    await rm(dir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
+  }
+});
 const W = 192,
   H = 128,
   block = 8,
@@ -803,73 +891,86 @@ for (const fps of ['24000/1001', 24, 25, '30000/1001', 30, 50, 60])
       const dir = await mkdtemp(join(tmpdir(), 'kimo-frame-'));
       try {
         const path = await fixture(dir, fps),
-          edl = edlFor(path, fps),
-          output = join(dir, 'output.mkv'),
-          ops = [];
-        await compose({
-          edl,
-          ffmpeg,
-          ffprobe,
-          output,
-          dir: join(dir, 'work'),
-          emit: (o) => ops.push(o),
-        });
-        const decoded = (
-            await command(ffmpeg, [
-              '-v',
-              'error',
-              '-i',
-              output,
-              '-an',
-              '-pix_fmt',
-              'rgb24',
-              '-f',
-              'rawvideo',
-              'pipe:1',
-            ])
-          ).stdout,
-          size = W * H * 3;
-        const expectedFrames = Math.ceil(oracleRate(fps) - 1e-7);
-        assert.equal(decoded.length / size, expectedFrames);
-        const info = await probeFile(ffprobe, output);
-        assert.ok(
-          Math.abs(oracleRate(info.video.r_frame_rate) - oracleRate(fps)) <
-            1e-6,
-          'CFR must preserve the exact source rate',
-        );
-        for (let n = 0; n < expectedFrames; n++) {
-          const c = edl.video[0].clips.find(
-            (c) =>
-              n >= Math.ceil(c.at * rate(fps) - 1e-7) &&
-              n <
-                Math.ceil((c.at + (c.out - c.in) / c.speed) * rate(fps) - 1e-7),
+          edl = edlFor(path, fps);
+        for (const strategy of ['auto', 'B', 'strict']) {
+          const output = join(dir, `output-${strategy}.mkv`),
+            ops = [];
+          await compose({
+            edl,
+            ffmpeg,
+            ffprobe,
+            output,
+            dir: join(dir, `work-${strategy}`),
+            strategy: strategy === 'strict' ? 'B' : strategy,
+            strictSampling: strategy === 'strict',
+            emit: (o) => ops.push(o),
+          });
+          const decoded = (
+              await command(ffmpeg, [
+                '-v',
+                'error',
+                '-i',
+                output,
+                '-an',
+                '-pix_fmt',
+                'rgb24',
+                '-f',
+                'rawvideo',
+                'pipe:1',
+              ])
+            ).stdout,
+            size = W * H * 3;
+          const expectedFrames = Math.ceil(oracleRate(fps) - 1e-7);
+          assert.equal(decoded.length / size, expectedFrames);
+          const info = await probeFile(ffprobe, output);
+          assert.ok(
+            Math.abs(oracleRate(info.video.r_frame_rate) - oracleRate(fps)) <
+              1e-6,
+            'CFR must preserve the exact source rate',
           );
-          const plan = { start: n, end: n + 1, indices: [oracleId(n, c, fps)] },
-            r = cameraRectsForClip(c, edl.sources[0], edl.canvas, plan)[0];
-          let number = 0;
-          for (let b = 0; b < 16; b++) {
-            const x = Math.round(
-                ((left + (b + 0.5) * block - r[0]) / r[2]) * W,
-              ),
-              y = Math.round(((top + 4 - r[1]) / r[3]) * H);
-            const pixel = decoded[n * size + (y * W + x) * 3];
-            if (pixel > 128) number |= 1 << b;
+          for (let n = 0; n < expectedFrames; n++) {
+            const c = edl.video[0].clips.find(
+              (c) =>
+                n >= Math.ceil(c.at * rate(fps) - 1e-7) &&
+                n <
+                  Math.ceil(
+                    (c.at + (c.out - c.in) / c.speed) * rate(fps) - 1e-7,
+                  ),
+            );
+            const plan = {
+                start: n,
+                end: n + 1,
+                indices: [oracleId(n, c, fps)],
+              },
+              r = cameraRectsForClip(c, edl.sources[0], edl.canvas, plan)[0];
+            let number = 0;
+            for (let b = 0; b < 16; b++) {
+              const x = Math.round(
+                  ((left + (b + 0.5) * block - r[0]) / r[2]) * W,
+                ),
+                y = Math.round(((top + 4 - r[1]) / r[3]) * H);
+              const pixel = decoded[n * size + (y * W + x) * 3];
+              if (pixel > 128) number |= 1 << b;
+            }
+            assert.equal(
+              number,
+              oracleId(n, c, fps),
+              `output frame ${n}, clip ${c.id}`,
+            );
           }
-          assert.equal(
-            number,
-            oracleId(n, c, fps),
-            `output frame ${n}, clip ${c.id}`,
+          assert.ok(
+            ops.some((o) => o.tool === 'compose' && o.phase === 'end' && o.ok),
+          );
+          assert.ok(
+            ops.some(
+              (o) => o.phase === 'compose' && o.total === frameCount(edl),
+            ),
+          );
+          assert.ok(
+            Math.abs((await probeFile(ffprobe, output)).fps - rate(fps)) <
+              0.001,
           );
         }
-        assert.ok(
-          ops.some((o) => o.tool === 'compose' && o.phase === 'end' && o.ok),
-        );
-        assert.ok(
-          ops.some((o) => o.phase === 'compose' && o.total === frameCount(edl)),
-        );
-        assert.ok(
-          Math.abs((await probeFile(ffprobe, output)).fps - rate(fps)) < 0.001,
-        );
       } finally {
         await rm(dir, { recursive: true, force: true });
       }
@@ -1286,7 +1387,8 @@ test(
         let left = cx - crop / 2;
         if (!(hi > 0)) left = hi / 2;
         else if (left < band) left = band * Math.exp((left - band) / band);
-        else if (left > hi - band) left = hi - band * Math.exp((hi - band - left) / band);
+        else if (left > hi - band)
+          left = hi - band * Math.exp((hi - band - left) / band);
         const expected = ((127.5 - left) / crop) * w;
         residual.push(edge - expected);
       }

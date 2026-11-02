@@ -341,14 +341,32 @@ async function mappedSegment({
   output,
   signal,
   onProgress,
+  strictSampling=false,
 }) {
   const first = plan.indices[0],
     last = plan.indices.at(-1),
     fps = rate(source.fps || canvas.fps);
   const colorFloat=Boolean(clip._color);
+  // Camera expressions can exceed Windows' process command-line limit even
+  // when the outer compositor graph is bounded. Keep the exact same filter in
+  // a project-local file rather than truncating keys or reducing precision.
+  const filterFile=output+'.geometry.txt';
+  await writeFile(filterFile,geometry(clip,source,canvas,plan,colorFloat));
+  const vfOption=(await scriptOption(ffmpeg))==='-filter_complex_script'?'-filter_script:v':'-/vf';
   const rawFormat = colorFloat ? 'gbrpf32le' : source.alpha ? 'bgra' : 'yuv444p',
     rawSize = source.w * source.h * (colorFloat ? 12 : source.alpha ? 4 : 3);
   const seek = source.kind === 'image' ? 0 : Math.max(0, (first - 0.5) / fps);
+  if(!strictSampling&&source.kind!=='image'&&plan.indices.every((value,i)=>value===first+i)){
+    // A contiguous frame oracle needs no JS pixel round-trip. Keep exactly the
+    // same decoded frames, explicit pixel format and geometry; only retime PTS.
+    const input= colorFloat?inputFilters(source):source.alpha?'null':'scale=out_color_matrix=bt709:out_range=tv',
+      tags=colorFloat?'setparams=colorspace=gbr:color_primaries=bt709:color_trc=bt709:range=full':source.alpha?'null':'setparams=colorspace=bt709:range=limited';
+    await writeFile(filterFile,`trim=end_frame=${plan.indices.length},${input},format=${rawFormat},${tags},settb=expr=1/(${canvas.fps}),setpts=N,${geometry(clip,source,canvas,plan,colorFloat)}`);
+    const args=['-noautorotate','-ss',String(seek),'-accurate_seek','-i',source.path,'-map','0:v:0','-an',vfOption,filterFile,'-frames:v',String(plan.indices.length),'-r',String(canvas.fps),'-c:v','ffv1','-level','3','-pix_fmt','yuva444p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-fps_mode','cfr',output];
+    try{await ffmpegRun(ffmpeg,['-hwaccel','auto',...args],{signal,onProgress});}
+    catch(error){stop(signal);await ffmpegRun(ffmpeg,args,{signal,onProgress});}
+    return;
+  }
   const decoder = spawnBackground(
     ffmpeg,
     [
@@ -385,7 +403,8 @@ async function mappedSegment({
     decodeError = error.message;
     decoder.stdout.destroy(error);
   });
-  const encoder = spawnBackground(
+  let encoder;
+  try{encoder = spawnBackground(
     ffmpeg,
     [
       '-nostdin',
@@ -404,8 +423,8 @@ async function mappedSegment({
       '-i',
       'pipe:0',
       '-an',
-      '-vf',
-      geometry(clip, source, canvas, plan, colorFloat),
+      vfOption,
+      filterFile,
       '-frames:v',
       String(plan.indices.length),
       '-c:v',
@@ -428,6 +447,7 @@ async function mappedSegment({
     ],
     { stdio: ['pipe', 'pipe', 'pipe'] },
   );
+  }catch(error){decoder.kill();throw error;}
   encoder.stdin.on('error', () => {});
   const completed = processDone(encoder, signal);
   // Attach a rejection handler immediately, before pumping the decoder.
@@ -568,7 +588,7 @@ async function contrastPass(edl, { ffmpeg, base, from, to, signal }) {
   }
   return boosted;
 }
-async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
+async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampling=false }) {
   const fps = rate(edl.canvas.fps),
     layers = [],
     sources = [];
@@ -622,6 +642,7 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit }) {
         ffmpeg,
         source,
         clip,
+        strictSampling,
         canvas: edl.canvas,
         plan,
         output: path,
@@ -923,6 +944,7 @@ export async function compose({
   signal,
   emit = () => {},
   strategy = 'auto',
+  strictSampling = false,
   frame = null,
   fontsDir,
   assetRoot,
@@ -1219,7 +1241,7 @@ export async function compose({
       }
       if (!reused) {
         const baked = complex
-          ? await bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit })
+          ? await bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampling })
           : null;
         const activeClips = baked?.clips ?? clips,
           activeSources = baked?.sources ?? edl.sources;

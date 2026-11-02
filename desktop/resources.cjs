@@ -39,6 +39,7 @@ function ffmpegArgs(bin, args, env = process.env) {
   if (!/(^|[\\/])ffmpeg(?:\.exe)?$/i.test(bin) || !args.includes('-i'))
     return [...args];
   const threads = String(workerThreads(env));
+  const filterThreads = env.KIMO_PERFORMANCE_PROFILE === 'ci' ? threads : '1';
   const cleaned = [];
   for (let i = 0; i < args.length; i++) {
     if (
@@ -55,9 +56,9 @@ function ffmpegArgs(bin, args, env = process.env) {
   // These app commands have one output, always their final argument.
   return [
     '-filter_threads',
-    '1',
+    filterThreads,
     '-filter_complex_threads',
-    '1',
+    filterThreads,
     ...cleaned.slice(0, -1),
     '-threads',
     threads,

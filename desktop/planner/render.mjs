@@ -152,6 +152,7 @@ export async function renderPlan({
       fontsDir,
       cacheDir,
       strategy: edl.studio?.safe_compose ? 'B' : 'auto',
+      strictSampling: !!edl.studio?.safe_compose,
     });
     if (liveTask) await liveTask;
     await rename(path + '.partial.mkv', path);

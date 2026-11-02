@@ -1,0 +1,26 @@
+{
+  "artifact": {
+    "id": 13133472651,
+    "name": "creator-performance",
+    "digest": "sha256:7a954b04e5b6eae7b58b0256d53053cea19c743c8b8f33cdf0dec23caee997e1",
+    "size_in_bytes": 74876031
+  },
+  "fetchedBytes": 72119,
+  "files": [
+    {
+      "name": "TH-1-youtube-talking/CREDITS.txt",
+      "bytes": 239,
+      "sha256": "d597e889d15aedeb4b050f53294e8b7a4474647d94c884d443e7bd6a42cdbc34"
+    },
+    {
+      "name": "TH-1-youtube-talking/summary.json",
+      "bytes": 4400,
+      "sha256": "209d9984d295c526872291d00ef22f78c0ecff0ff7442f86743e8afd01d0ea1f"
+    },
+    {
+      "name": "TH-1-youtube-talking/metrics.json",
+      "bytes": 25448,
+      "sha256": "fddbcd487fe597e614eed1bf8bf46b43c6e3219574e79ddc6796a09242c71d5f"
+    }
+  ]
+}

@@ -1,5 +1,31 @@
 # Investigation notes
 
+## 2 November 2026 — Phase 12 qualification fixes
+
+- The first Windows qualification found FFmpeg missing from PATH for tests that
+  intentionally use the command name. Keep explicit vendor binary variables and
+  add that verified directory to the Actions PATH; do not skip those tests.
+- Modern FFmpeg did not write the old rotate output tag into the test MP4. Create
+  a real input display matrix with `-display_rotation 90`, assert that the probe
+  sees it, then test baking the rotation. A local 0.2-second fixture proves 96×64
+  becomes 64×96 with rotation zero.
+- A genuine full-footage replay failed with Windows ENAMETOOLONG inside the mapped
+  camera encoder. The outer graph was already bounded, but the per-clip geometry
+  was still on argv. Put that exact expression in a filter file. A new synthetic
+  expression larger than 32,767 characters now renders successfully.
+- First four-core hosted measurement (41427786326, artifact 13133472651): transcript
+  44.024 s, cached plan 0 s, compose 806.454 s, critic 0 s, total 1009.450 s.
+  This FAILS the 90 s compose / 240 s total budgets. Preserve these numbers.
+  Small JSON-only artifact extraction downloaded 0.07 MB; no footage render or
+  whole-footage analysis was run on the user's PC.
+- Optimize contiguous source-frame plans through one FFmpeg process, retaining
+  exact pixel format, crop, timebase and frame count. Noncontiguous plans still
+  use strict JS sampling; critical compose repair forces that path. The explicit
+  CI profile can use filter threads; the foreground low-CPU defaults are unchanged.
+  Independent decoded barcode oracles pass all seven rates, 2×/0.5× trims and camera
+  keys in auto, bounded and strict modes (21 combinations). New timings must be
+  measured before claiming the performance budget is met.
+
 ## 1 November 2026 — Phase 11 Studio
 
 - No paid AI calls, full golden renders, new benchmark recordings or release.
