@@ -140,7 +140,7 @@ export function performanceReport(
         ? 'critic'
         : /creator_ai|planner/.test(name)
           ? 'plan'
-          : /compose|render/.test(name)
+          : /compose|render|creator_delivery|youtube_master/.test(name)
             ? 'compose'
             : null;
     if (key) sums[key] += op.ms / 1000;

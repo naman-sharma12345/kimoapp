@@ -248,6 +248,19 @@ test('input policy, durations and stage performance budgets have explicit bounds
   assert.equal(p.representative, true);
   assert.equal(p.checks.find((c) => c.stage === 'transcript').ok, false);
   assert.equal(p.checks.at(-1).ok, false);
+  const encoded = performanceReport(
+    [
+      { id: 'encode', tool: 'creator_delivery', phase: 'start' },
+      { id: 'encode', phase: 'end', ms: 91000 },
+    ],
+    92000,
+  );
+  assert.equal(
+    encoded.seconds.compose,
+    91,
+    'final x264 encode belongs in compose budget',
+  );
+  assert.equal(encoded.checks.find((c) => c.stage === 'compose').ok, false);
 });
 test('atomic checkpoints survive interrupted writes and cache cleaning preserves projects and ledgers', async () => {
   const root = await mkdtemp(join(tmpdir(), 'kimo-quality-state-'));
