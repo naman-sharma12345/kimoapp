@@ -1,0 +1,142 @@
+{
+  "run": "41466604893",
+  "commit": "9b5ece0d832a135abd0ba59c510d4d23d01535db",
+  "scope": "Hosted Vite output downloaded with gh; local file hashes, no local renderer build or browser execution.",
+  "files": [
+    {
+      "name": "index.html",
+      "sha256": "41acc467db342859f37d7e73f3385a122929c53ca8e95b88b0d2f493495d831a",
+      "bytes": 538
+    },
+    {
+      "name": "assets/caption-boxed-highlight-BX-KmcYi.webm",
+      "sha256": "3240e65312c27374500c05ba600555bf825be2a386a63088cfd1e630b9d32288",
+      "bytes": 14035
+    },
+    {
+      "name": "assets/caption-mrbeast-D_ifq7Iq.webm",
+      "sha256": "44b097fcfd882d4f96f02f193a5e3520390f0b56b4f9fee71623809dd5a135ea",
+      "bytes": 13874
+    },
+    {
+      "name": "assets/cinematic-teal-orange-BHpPsJWd.webp",
+      "sha256": "e175b48f5658c05be7addfbfd1b5fa7b39279c8af5c662cb6eb3d0c9a30b14e4",
+      "bytes": 9720
+    },
+    {
+      "name": "assets/clean-Dr5Y8zNU.webp",
+      "sha256": "0afdae11f1cd138d81c5cf6dd7cfa5f8a1256cb514555cb8d291842e06b3b427",
+      "bytes": 9750
+    },
+    {
+      "name": "assets/documentary-Be63u3nQ.webm",
+      "sha256": "1953586b4e1e558383296ec6f1b41e4cc88c43319f685943b294e2ea14e1c09c",
+      "bytes": 11396
+    },
+    {
+      "name": "assets/explainer-D1nOoTT6.webm",
+      "sha256": "993efa02077b40ed8c68669a896434804ddca1ff12221049b06fb04193961258",
+      "bytes": 11685
+    },
+    {
+      "name": "assets/Geist-UI-DVqfvPl-.woff2",
+      "sha256": "ce9ad239dfdb15f1af29031c2fd5212392483450f56b18c0096bba543d3e1e44",
+      "bytes": 24616
+    },
+    {
+      "name": "assets/Geist-UI-full-DHmDcw7S.woff2",
+      "sha256": "206f01ed08e05c98a51daa7472331c3c71bbb8c1f9d55ea8c70074f3c528a706",
+      "bytes": 69560
+    },
+    {
+      "name": "assets/GeistMono-UI-CIVd5Z4L.woff2",
+      "sha256": "f5c2e5eb62fe0d94020c8153595f1c94edb3501f830e83b613f8831506796dc2",
+      "bytes": 27168
+    },
+    {
+      "name": "assets/GeistMono-UI-full-C2M1wx0c.woff2",
+      "sha256": "55419aa06f58adcd7f145c6c920e56936416f17e528f60efc6032ffa4269972b",
+      "bytes": 71104
+    },
+    {
+      "name": "assets/index-B8fdTIp2.js",
+      "sha256": "c3e0e2a8862906ea912e5a75396b9d3a7389c48c80b517ba79a606a21c62d1ff",
+      "bytes": 524810
+    },
+    {
+      "name": "assets/InstrumentSerif-Italic-DLFhbRub.woff2",
+      "sha256": "9eece28d6c10f9cad5d189450e0e4b55d8e3f307d185680dcf0f64438c47a7ee",
+      "bytes": 16560
+    },
+    {
+      "name": "assets/InstrumentSerif-Italic-full-Cg4-EJUh.woff2",
+      "sha256": "4f7aacc18d491dea8778bbc591db87b9455625899ed5f913957e7fd82604c294",
+      "bytes": 28096
+    },
+    {
+      "name": "assets/kimo-B4Y5hcCb.webp",
+      "sha256": "9b6c9a7637dffb64455e2e0ea1f4b3b8b6ff988360d611873b674223176e0901",
+      "bytes": 9798
+    },
+    {
+      "name": "assets/mkbhd-crisp-DrXUWNr_.webp",
+      "sha256": "221259d5b7314240e4f9a2ce7bdaad70770b9b52d299fa8204fa0f70fef7a964",
+      "bytes": 9704
+    },
+    {
+      "name": "assets/moody-doc-BTk-2axw.webp",
+      "sha256": "ad5a00fce686e7405399e9b0bce3725c167fc85ab4e92fc044317127306b6f12",
+      "bytes": 9646
+    },
+    {
+      "name": "assets/music-montage-Cxtlx6gI.webm",
+      "sha256": "280515f906155e11f4b8c3e4a8b97e0a05ea45289c1109d3282fab4cd66050c3",
+      "bytes": 10764
+    },
+    {
+      "name": "assets/podcast-clips-i1l8WOrS.webm",
+      "sha256": "771dc3adbdd465825724399f90aceb437b793f5eb0b851ddebf50a6b9d0af620",
+      "bytes": 17279
+    },
+    {
+      "name": "assets/shorts-clean-Cw2ZTnVG.webm",
+      "sha256": "92f6022e74a2c50063214add032772133c383a686e6465d406abefc3c41f5a38",
+      "bytes": 16813
+    },
+    {
+      "name": "assets/shorts-punchy-BvIGZ16q.webm",
+      "sha256": "b86048dbbb34e1d86bbdb509c525b02e8d485547147e40d31217183f9fc91d31",
+      "bytes": 20024
+    },
+    {
+      "name": "assets/style-lUxt80og.css",
+      "sha256": "6ecf022c0f96d5e74c9c18659597ba862b2f669fb32b596f309e0554355561cb",
+      "bytes": 108603
+    },
+    {
+      "name": "assets/tutorial-Cqdo-vOi.webm",
+      "sha256": "15cd41a8d9be81e037b22ac08d4173c67fdd85c53fd330ddd1dcfd95cde747f9",
+      "bytes": 11264
+    },
+    {
+      "name": "assets/vlog-bright-p11Dxep1.webp",
+      "sha256": "32c514450bb246bcbd056af8094fae713579596f8dbc91d4b139d8518f4d5490",
+      "bytes": 9700
+    },
+    {
+      "name": "assets/warm-creator-D2gWEdin.webp",
+      "sha256": "64c31ee24fe131c6c8ced4becb6ff04f81d10bf67d569541062887a9294d20b1",
+      "bytes": 9652
+    },
+    {
+      "name": "assets/youtube-talking-DXfLyyfW.webm",
+      "sha256": "9a67d3002cc60cee71c1d8db926823e919f4c3f2a5efdf9e7335137b55b4cf19",
+      "bytes": 11597
+    },
+    {
+      "name": "assets/youtube-vlog-B1WbaYjQ.webm",
+      "sha256": "c374b7822d9e68f5035ac0c2f5f839e753cc565635ee6557a90a2926ff16264f",
+      "bytes": 11579
+    }
+  ]
+}
