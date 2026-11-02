@@ -43,7 +43,7 @@ await writeFile(
       version: 1,
       commit: process.env.GITHUB_SHA,
       scope:
-        'Actual hosted deterministic-plan replay, modern measurement v6 with hash-attested grade references, fixed prepared raw-v2 bytes; not provider adherence.',
+        'Actual hosted deterministic-plan replay, modern measurement v7 with hash-attested grade references and ASS-clock overlay masks, fixed prepared raw-v2 bytes; not provider adherence.',
       rows,
     },
     null,

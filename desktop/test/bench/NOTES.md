@@ -118,3 +118,23 @@ Known gaps, left open on purpose:
 - UI callouts need a target box (from a screenshot or the planner); there is no automatic detection of the UI element being talked about.
 - Explain previews are a synthetic scene without the camera's make-room reframe, so top-mode panels at 9:16 sit over the fake head there; real edits reframe the speaker.
 - The renderer browser check (`test/renderer-edl.mjs`) needs a local Chrome; it could not run in the agent sandbox this session (Playwright browser download refused), so the 14-clip fixture change was checked by the renderer build and unit tests only.
+
+## 2 November 2026 — Phase 12 registration diagnosis
+
+- Two short-smoke qualification attempts retained73.7 despite correct frame IDs.
+  Stop rebuilding the installer to diagnose that unchanged measurement failure.
+  Saved-output-only run41469131574 exposed one rejected frame:79/24s, RMSE10.1238
+  but translation nearly zero. All other fits averaged0.7122 RMSE.
+- EDL caption times3.291/3.292s leave an unrounded mask gap at3.291667s. The ASS
+  writer floors to centiseconds, so the next caption is already visible at3.29s.
+  Enclose the actual ASS clock in the measurement mask and retain95% coverage,
+  RMSE6 and all physical thresholds. Add the concrete fractional-frame boundary
+  regression. Saved video bytes do not need changing; no threshold retuning or
+  calibration overlay is justified by this diagnosis.
+- Opaque-cache optimization reduced hosted total to532.819s, but the composition
+  counter originally omitted the82.918s final master. Correct composition through
+  delivery is479.973s. The user explicitly accepted release with that documented
+  performance gap; the performance workflow still fails rather than turning green.
+- AMD driver errors ended all local media/browser/GPU tests, including tiny ones.
+  Remove runtime startup/status GPU probes; decode defaults to CPU and hardware
+  decode is explicit opt-in. No driver settings or registry were touched.

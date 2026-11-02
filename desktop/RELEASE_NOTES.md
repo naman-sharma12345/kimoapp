@@ -55,3 +55,9 @@ No new paid AI/SAM requests were made; the historical reservation ledger is unch
 Inputs longer than three hours are refused. The installer is unsigned. Automated
 updater feed/size/hash verification is separate from the documented manual
 v0.3.2 profile-and-restart upgrade test; an interactive old-install upgrade is not claimed.
+
+CI-only test excerpt: *Tears of Steel* (c) Blender Foundation,
+[source](https://mango.blender.org/), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+It is framed, captioned, graded and audio-finished for regression testing; the
+full source clip is not installed. Other benchmark source credits accompany their
+outputs and are linked in the final report.

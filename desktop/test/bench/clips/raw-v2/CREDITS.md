@@ -1,6 +1,8 @@
 # Replacement raw dataset credits
 
-Candidate footage is for benchmark preparation. Final dataset adoption, timing and before/after review remain pending. Large originals and prepared files are not installed or committed.
+Benchmark source selection, prepared timing and review provenance are recorded in
+the adjacent manifest and review files. Phase 12 uses those frozen prepared bytes.
+Large originals and prepared files are not installed or committed.
 
 ## Cinestudy source packs
 
