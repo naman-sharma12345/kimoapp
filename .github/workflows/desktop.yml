@@ -6,6 +6,10 @@ on:
         description: Publish v0.4.0 only after all qualification steps pass
         type: boolean
         default: false
+      full_bench_run:
+        description: Successful nine-template regression run required for publication
+        type: string
+        default: ''
 permissions:
   contents: write
   actions: read
@@ -52,6 +56,12 @@ jobs:
         run: npm test --prefix desktop
       - name: Build renderer
         run: npm run build:renderer --prefix desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kimo-renderer-build
+          path: |
+            desktop/renderer/index.html
+            desktop/renderer/assets/**
       - name: Playwright renderer and critical-gate UI
         run: |
           $server = Start-Process (Get-Command node).Source -ArgumentList 'desktop/test/studio-ui.mjs' -PassThru -WindowStyle Hidden -RedirectStandardOutput "$env:RUNNER_TEMP/studio-ui.log" -RedirectStandardError "$env:RUNNER_TEMP/studio-ui-error.log"
@@ -131,6 +141,25 @@ jobs:
       - name: Read version
         id: version
         run: '"v=$((Get-Content desktop/package.json | ConvertFrom-Json).version)" >> $env:GITHUB_OUTPUT'
+      - name: Require the completed full-benchmark regression run
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QUALIFYING_RUN: ${{ inputs.full_bench_run }}
+        run: |
+          if ($env:QUALIFYING_RUN -notmatch '^\d+$') { throw 'Publication requires a full_bench_run ID' }
+          $qualified=$false
+          for ($attempt=0; $attempt -lt 60; $attempt++) {
+            $run=gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:QUALIFYING_RUN" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the full-bench run' }
+            if ($run.path -ne '.github/workflows/creator-full-bench.yml') { throw 'Wrong qualification workflow' }
+            if ($run.status -eq 'completed') {
+              if ($run.conclusion -ne 'success') { throw 'Full benchmark did not pass' }
+              $qualified=$true; break
+            }
+            Start-Sleep -Seconds 15
+          }
+          if (-not $qualified) { throw 'Full-benchmark regression run is still incomplete' }
       - name: Publish qualified release
         if: inputs.release
         uses: softprops/action-gh-release@v2

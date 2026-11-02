@@ -229,6 +229,7 @@ if (cmd === 'prepare') {
       });
     }
   for (const o of edl.overlays) {
+    if (o.props?.hidden) continue; // Non-rendered captions must not mask real reference pixels.
     let box = null;
     if (o.kind === 'caption_word_group') {
       const b = blockBox(
