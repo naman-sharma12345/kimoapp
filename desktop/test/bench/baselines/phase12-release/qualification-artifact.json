@@ -1,0 +1,131 @@
+{
+  "artifact": {
+    "id": 13156776131,
+    "name": "kimo-windows-qualification",
+    "digest": "sha256:861c895fa06665cd6aecbb65c613eda1a6112f90b79730d61f4c7bdbcc8b70d7",
+    "size_in_bytes": 2208862832
+  },
+  "fetchedBytes": 81777,
+  "files": [
+    {
+      "name": "kimoapp/kimoapp/desktop/dist/release-verification.json",
+      "bytes": 546,
+      "sha256": "48fa3f62847141178bf5eeecfeb8dc29520c4d1d18e94b3684b4221a90e68f05"
+    },
+    {
+      "name": "kimoapp/kimoapp/desktop/smoke.json",
+      "bytes": 10740,
+      "sha256": "dc31a01feaf62566be0d3b4a6ffae3d84e2e2fc86e448dd3b02baeed1988b854"
+    },
+    {
+      "name": "kimoapp/kimoapp/desktop/test/ui-shots/phase-12-1080-critical-quality.png",
+      "bytes": 183783,
+      "sha256": "1b30f38734873d60e9dcadec90bd548783c17fe75a929b7a9c7a2ab8f7cbbf0e"
+    },
+    {
+      "name": "kimoapp/kimoapp/desktop/test/ui-shots/phase-12-1080-settings.png",
+      "bytes": 75713,
+      "sha256": "f2e0cffb3682b7a5c168e79b6df9596a979a014a80f906ac0414ed1791a86bad"
+    },
+    {
+      "name": "kimoapp/kimoapp/desktop/test/ui-shots/phase-12-1440-critical-quality.png",
+      "bytes": 329582,
+      "sha256": "31aa5603436555b09b3ca5cadc135f913285d39ba6eaf7cce1d44fb2327ee17c"
+    },
+    {
+      "name": "kimoapp/kimoapp/desktop/test/ui-shots/phase-12-1440-settings.png",
+      "bytes": 101652,
+      "sha256": "d25cfcb0453039c718f2176db674f4d403a87320ab83b04b80e68d40ce19ac1d"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/config.json",
+      "bytes": 322,
+      "sha256": "77348734f8705bf13b34672165f8a50accaaae322afc4748e35b0ac896dc7a97"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/CREDITS.txt",
+      "bytes": 298,
+      "sha256": "c6650fc40ac638dec44825fd4e7d3e278ec21e1204b2a4a73146166361bd9a41"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/fixture-plan.json",
+      "bytes": 6600,
+      "sha256": "7d867af4e623ad88a2253b2330cc4ceeb70de205c61b993c0ab45fbf6a027305"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/hook.jpg",
+      "bytes": 210697,
+      "sha256": "beba4f8b82075d64d504a5666f2e22bd7625458aba47256a4e19b6598d1a3a84"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/metrics.json",
+      "bytes": 9474,
+      "sha256": "4ae4770860ce13622a73345c36a84bcd7387dc6c8b7be90ec3b2418013aca17d"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/sheet.jpg",
+      "bytes": 86479,
+      "sha256": "33842ec6e3589ea117cf5845845ee04c29f9fa8800e81760603b5f643fe1b830"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/smoke.json",
+      "bytes": 39413,
+      "sha256": "d10163d5398f775ce2b1bf39f899e3ce9251c2790d512ce43b8d03867bb760d9"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/sources.json",
+      "bytes": 268,
+      "sha256": "27c23772d8146e6337c8c548f24792c4d3f12fdcf5aa1069482cd5f7d87cbcd4"
+    },
+    {
+      "name": "_temp/release-evidence/SAM-PERSON-shorts-punchy/summary.json",
+      "bytes": 4413,
+      "sha256": "f130a4792b4f628f0f2468c5f9960f6d9e78a39c5d352704badbfdf503bb25de"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/config.json",
+      "bytes": 362,
+      "sha256": "65814a0dab1d11b1452a09d2ae35b94b8e51bf7fd0c8c87690ce012950ebae2e"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/CREDITS.txt",
+      "bytes": 543,
+      "sha256": "cf608501160208fbf29c67289216b4c863ddbada3134c96e95d4bef0d1263b0b"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/fixture-plan.json",
+      "bytes": 8130,
+      "sha256": "1802cb1b324ace8a828b25c0f3654e22e3edc3d667233bfd1e2d132d9501763b"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/metrics.json",
+      "bytes": 10418,
+      "sha256": "b8264a1dafaa2cd5391bda5c00e7c5e70251d1a063a7e784b1bb4aac42ab991f"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/hook.jpg",
+      "bytes": 91829,
+      "sha256": "fbc0acd30a8719aee0f6f5140474346a9042923a6a60be19d88d20f562bcd833"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/sheet.jpg",
+      "bytes": 76051,
+      "sha256": "6819cbbcd25960b99a18f8bd64dfe66d405e4ca75247b82dc4d25909809957da"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/smoke.json",
+      "bytes": 34376,
+      "sha256": "54f55b07fe463245dc07ba99ac08bcab1aab34232fc9f1753f990f3c22c6de83"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/sources.json",
+      "bytes": 303,
+      "sha256": "2c9272f377793c5cd8a773cf5a372ea7d6dc575a40f1851a8cdeacf392f14d7a"
+    },
+    {
+      "name": "_temp/release-evidence/TH-2-youtube-talking/summary.json",
+      "bytes": 4893,
+      "sha256": "9dd8f1484c42c82e76713f82399ac7828dd45bf9f5c83cf689c3191648995e44"
+    }
+  ]
+}

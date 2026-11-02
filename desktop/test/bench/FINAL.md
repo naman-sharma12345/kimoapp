@@ -92,3 +92,22 @@ automated updater parsing/asset hashes are a separate check. The installer is un
 
 Credits for every distributed case remain beside its media and in
 [raw dataset notices](clips/raw-v2/CREDITS.md). No full source media is bundled.
+
+## Published release proof
+
+[v0.4.0 release](https://github.com/naman-sharma12345/kimoapp/releases/tag/v0.4.0) · [passing Windows qualification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41472140170).
+
+203 desktop tests pass, zero skips; renderer/robustness/schema, installer installation, offline captions and both installed creator edits pass. Required root lint/typecheck/311 tests/build pass in run 41472137369. The broader web jobs retain their pre-existing bundle-budget failure; all repository CI is not claimed green.
+
+| Installed case | Score | Frame coverage | Repeats | Jitter px | Critical gates |
+|---|---:|---:|---:|---:|---|
+| SAM-PERSON-shorts-punchy | 81.2 | 100.00% | 0 | 0.004748 | green |
+| TH-2-youtube-talking | 80.4 | 99.45% | 0 | 0.006525 | green |
+
+The published installer is 369147721 bytes. Hosted download verification proves version/name/size/SHA512 in latest.yml and compares all three published assets with built bytes. Proof is in baselines/phase12-release/published-release-verification.json. Interactive upgrade of an old user profile remains the manual check, not an automated success claim.
+
+Build commit: fe936a4673359a39a2601021b9c715a280428cb8; tag commit: 3bd644287c11418b120f4a464ef66a536e42140e. Their desktop trees are identical; the intervening change is only a CI preflight workflow.
+
+The SAM registration correction uses unchanged video bytes: all 106 eligible fits are now valid (jitter 0.004632px), because the mask encloses the actual ASS centisecond clock. It changes measurement, not the video. Short CI cameras are explicitly fixed; these green results do not certify the natural animated golden camera mappings above.
+
+Final 1080/1440 renderer screenshots were visually inspected. Their preload, version label and quality values are mock fixtures, not native measurements. No local media/browser/GPU test or renderer build ran after the AMD driver report.

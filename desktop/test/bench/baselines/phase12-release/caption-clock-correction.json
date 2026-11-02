@@ -1,0 +1,16 @@
+{
+  "before_run": "41469131574",
+  "after_run": "41470264406",
+  "same_video": true,
+  "output_sha256": "6c6248bcd77443b35aa3e25454e3ef698ea5edaa37403a4e4814391379e24962",
+  "coverage_before": 0,
+  "coverage_after": 1,
+  "jitter_after": 0.004632289258683692,
+  "score_before": 73.7,
+  "score_after": 81.2,
+  "limits": "95% coverage; RMSE <=6, unchanged. Only mask activation encloses libass centiseconds.",
+  "clip_fit_coverage_before": 0.9339622641509434,
+  "eligible_fits": 106,
+  "accepted_before": 99,
+  "accepted_after": 106
+}

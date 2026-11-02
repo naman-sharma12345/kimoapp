@@ -1,0 +1,46 @@
+{
+  "run": "41472140170",
+  "run_url": "https://github.com/naman-sharma12345/kimoapp/actions/runs/41472140170",
+  "build_commit": "fe936a4673359a39a2601021b9c715a280428cb8",
+  "tag_commit": "3bd644287c11418b120f4a464ef66a536e42140e",
+  "tag_scope": "Tag includes only a later CI preflight workflow; git diff between build and tag has no desktop file changes.",
+  "published_url": "https://github.com/naman-sharma12345/kimoapp/releases/tag/v0.4.0",
+  "installer_bytes": 369147721,
+  "installer_sha512": "rw/WGIYZeLmLjoOdzn7Dj7f2GFgmvkC9hYdpjNH5Vhe0Ifeg06SWbjlFJSlkuIB5TTUGGcbMqJ6v0iUIUDmvYw==",
+  "desktop_tests": 203,
+  "desktop_skips": 0,
+  "root_checks_run": "41472137369",
+  "root_checks_scope": "Required lint/typecheck/test/build passed; broader web jobs retain pre-existing bundle-budget failure.",
+  "full_replay_run": "41442412531",
+  "regression_run": "41463788275",
+  "regression_scope": "Nine scores held, exact archived-video SHA256s unchanged; no new paid calls.",
+  "installed_cases": [
+    {
+      "case": "SAM-PERSON-shorts-punchy",
+      "score": 81.2,
+      "critical_pass": true,
+      "frame_coverage": 1,
+      "repeats": 0,
+      "jitter": 0.004747606454283925,
+      "true_peak": -2.1,
+      "caption_safe": true,
+      "network_attempts": 0,
+      "paid_calls": 0
+    },
+    {
+      "case": "TH-2-youtube-talking",
+      "score": 80.4,
+      "critical_pass": true,
+      "frame_coverage": 0.9945054945054945,
+      "repeats": 0,
+      "jitter": 0.006525478501363556,
+      "true_peak": -2.1,
+      "caption_safe": true,
+      "network_attempts": 0,
+      "paid_calls": 0
+    }
+  ],
+  "published_verification_artifact": "13155767753",
+  "interactive_old_profile_upgrade": "Not performed; documented manual test in desktop/test/UPDATER.md",
+  "performance_budget": "Failed, publication exception explicitly accepted by user. Total532.819s against240s."
+}

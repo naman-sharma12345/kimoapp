@@ -1,3 +1,12 @@
+CURRENT STATUS: v0.4.0 IS PUBLISHED AND QUALIFIED (run41472140170 SUCCESS).
+Final proof/docs are retained in this commit; do NOT rerun renders or publish again.
+User accepted performance gap only:532.819s against240s; remain honest.
+All media/browser/build work stays hosted because of AMD driver errors locally.
+ReleaseURL https://github.com/naman-sharma12345/kimoapp/releases/tag/v0.4.0
+203 desktop tests zero skips; installed SAM81.2/TH2 80.4, all critical green.
+Nine baseline +normal regression pass. Published asset/feed bytes verified.
+Final snapshots/verification are in baselines/phase12-release; interactive old-
+profile upgrade is the documented unperformed manual test. Historical ledger unchanged.
 # Phase 12 durable run state
 
 User requested Phase 12 and a push on 2 November 2026. Scope includes v0.4.0

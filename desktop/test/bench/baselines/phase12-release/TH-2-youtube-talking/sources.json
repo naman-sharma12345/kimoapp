@@ -1,0 +1,10 @@
+{
+  "id": "TH-2",
+  "proof": [
+    {
+      "source_sha256": "cf10cae9a0d07b0c132189d1d2104328bbe4952f2159cea912eb88e68a1566d2",
+      "render_source_sha256": "80203cbfd69697b8879b058e3560d8e70901c89f5e536264356835f2c6a785f6",
+      "changes": "first 8 seconds, CFR H264/AAC fixture excerpt"
+    }
+  ]
+}

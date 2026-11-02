@@ -1,0 +1,423 @@
+{
+  "started": "2026-11-02T15:35:07.289Z",
+  "stage": "done",
+  "paths": {
+    "kimo": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\kimo\\bin\\kimo-mcp.exe",
+    "fonts": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\kimo\\fonts",
+    "ffmpegDir": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\ffmpeg",
+    "ffmpeg": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\ffmpeg\\ffmpeg.exe",
+    "ffprobe": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\ffmpeg\\ffprobe.exe",
+    "whisper": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\whisper\\whisper-cli.exe",
+    "model": "D:\\a\\_temp\\kimo-installed\\resources\\vendor\\models\\ggml-small-q5_1.bin"
+  },
+  "ffmpeg": "ffmpeg version N-128142-g28fda48e0b-20261028 Copyright (c) 2000-2026 the FFmpeg developers\r",
+  "whisperHelp": true,
+  "gpu": null,
+  "kimo": {
+    "server": {
+      "commit": "3621dcfa35ac",
+      "name": "kimo",
+      "schema_version": 1,
+      "version": "6.0.0"
+    },
+    "tools": 35
+  },
+  "render": {
+    "edl": true,
+    "composed": true,
+    "output": "C:\\Users\\runneradmin\\AppData\\Roaming\\kimo\\smoke\\final.mp4",
+    "bytes": 4820200,
+    "duration": 4.566667,
+    "live": {
+      "timeline": 4,
+      "preview": 0,
+      "progress": 35
+    },
+    "quality": {
+      "final": {
+        "width": 1080,
+        "height": 1080,
+        "fps": 30,
+        "vcodec": "h264",
+        "profile": "High",
+        "pix_fmt": "yuv420p",
+        "duration": 4.566667,
+        "bytes": 4820200,
+        "mbps": 8.06,
+        "acodec": "aac",
+        "arate": 48000,
+        "achannels": 2,
+        "akbps": 371,
+        "black": [],
+        "silences": [],
+        "jitter": 0.91,
+        "jitterP95": 1.63,
+        "dupFrames": 0,
+        "frames": 137,
+        "lufs": -13.8,
+        "truePeak": -1.5,
+        "lra": 0.6
+      },
+      "checks": [
+        {
+          "id": "res",
+          "label": "resolution",
+          "ok": true,
+          "value": "1080×1080",
+          "want": "1080×1080",
+          "warn": false
+        },
+        {
+          "id": "fps",
+          "label": "frame rate",
+          "ok": true,
+          "value": "30 fps",
+          "want": "≥ 24 fps",
+          "warn": false
+        },
+        {
+          "id": "codec",
+          "label": "video codec",
+          "ok": true,
+          "value": "h264 High yuv420p",
+          "want": "H.264 yuv420p",
+          "warn": false
+        },
+        {
+          "id": "bitrate",
+          "label": "video bitrate",
+          "ok": true,
+          "value": "8.06 Mbps",
+          "want": "8 Mbps target (YouTube)",
+          "warn": false
+        },
+        {
+          "id": "audio",
+          "label": "audio",
+          "ok": true,
+          "value": "aac 48 kHz 2ch 371 kbps",
+          "want": "AAC-LC 48 kHz stereo (384 kbps target)",
+          "warn": false
+        },
+        {
+          "id": "sound",
+          "label": "sound",
+          "ok": true,
+          "value": "present",
+          "want": "source sound kept",
+          "warn": false
+        },
+        {
+          "id": "lufs",
+          "label": "loudness",
+          "ok": true,
+          "value": "-13.8 LUFS",
+          "want": "-14 ± 1 LUFS",
+          "warn": false
+        },
+        {
+          "id": "tp",
+          "label": "true peak",
+          "ok": true,
+          "value": "-1.5 dBTP",
+          "want": "≤ -1 dBTP",
+          "warn": false
+        },
+        {
+          "id": "motion",
+          "label": "camera smoothness",
+          "ok": true,
+          "value": "0.91 px/frame shake",
+          "want": "≤ 2 px/frame, no judder",
+          "warn": false
+        },
+        {
+          "id": "black",
+          "label": "black frames",
+          "ok": true,
+          "value": "none",
+          "want": "none",
+          "warn": false
+        },
+        {
+          "id": "hook",
+          "label": "hook (first 2.5 s)",
+          "ok": true,
+          "value": "starts on sound",
+          "want": "no dead air",
+          "warn": false
+        },
+        {
+          "id": "pacing",
+          "label": "pacing",
+          "ok": true,
+          "value": "tight",
+          "want": "no long pauses",
+          "warn": true
+        }
+      ],
+      "passes": [
+        {
+          "pass": 1,
+          "lufs": -13.8,
+          "truePeak": -1.5,
+          "checks": [
+            {
+              "id": "res",
+              "label": "resolution",
+              "ok": true,
+              "value": "1080×1080",
+              "want": "1080×1080",
+              "warn": false
+            },
+            {
+              "id": "fps",
+              "label": "frame rate",
+              "ok": true,
+              "value": "30 fps",
+              "want": "≥ 24 fps",
+              "warn": false
+            },
+            {
+              "id": "codec",
+              "label": "video codec",
+              "ok": false,
+              "value": "h264 High 4:4:4 Predictive yuv444p",
+              "want": "H.264 yuv420p",
+              "warn": false
+            },
+            {
+              "id": "sound",
+              "label": "sound",
+              "ok": true,
+              "value": "present",
+              "want": "source sound kept",
+              "warn": false
+            },
+            {
+              "id": "lufs",
+              "label": "loudness",
+              "ok": true,
+              "value": "-13.8 LUFS",
+              "want": "-14 ± 1 LUFS",
+              "warn": false
+            },
+            {
+              "id": "tp",
+              "label": "true peak",
+              "ok": true,
+              "value": "-1.5 dBTP",
+              "want": "≤ -1 dBTP",
+              "warn": false
+            },
+            {
+              "id": "motion",
+              "label": "camera smoothness",
+              "ok": true,
+              "value": "0.7 px/frame shake",
+              "want": "≤ 2 px/frame, no judder",
+              "warn": false
+            },
+            {
+              "id": "black",
+              "label": "black frames",
+              "ok": true,
+              "value": "none",
+              "want": "none",
+              "warn": false
+            },
+            {
+              "id": "hook",
+              "label": "hook (first 2.5 s)",
+              "ok": true,
+              "value": "starts on sound",
+              "want": "no dead air",
+              "warn": false
+            },
+            {
+              "id": "pacing",
+              "label": "pacing",
+              "ok": true,
+              "value": "tight",
+              "want": "no long pauses",
+              "warn": true
+            }
+          ]
+        }
+      ]
+    },
+    "projectFile": true,
+    "ops": [
+      "ok 0ms ",
+      "ok undefinedms ",
+      "ok 65ms ",
+      "ok 11735ms ",
+      "ok 0ms ",
+      "ok 1ms ",
+      "ok 171ms ",
+      "ok 35ms ",
+      "ok 13ms ",
+      "ok 1ms ",
+      "ok 0ms ",
+      "ok 0ms ",
+      "ok 1483ms ",
+      "ok 1662ms ",
+      "ok 48ms ",
+      "ok 227ms ",
+      "ok 158ms ",
+      "ok 214ms ",
+      "ok 65ms ",
+      "ok 62ms ",
+      "ok 56ms ",
+      "ok 53ms ",
+      "ok 57ms ",
+      "ok 153ms ",
+      "ok 188ms ",
+      "ok 153ms ",
+      "ok 48ms ",
+      "ok 45ms ",
+      "ok undefinedms ",
+      "ok 11349ms ",
+      "ok 11406ms ",
+      "ok 660ms ",
+      "ok 708ms ",
+      "ok 2394ms ",
+      "ok 657ms ",
+      "ok 3436ms "
+    ]
+  },
+  "manual": {
+    "duration": 3.566667,
+    "expected": 3.533333
+  },
+  "cutPlan": {
+    "summary": "removed 2 pauses (0.5 s), 0 fillers, 0 retakes · 5 s → 4.49 s",
+    "metrics": {
+      "dead_air_ratio": 0,
+      "filler_count": 0,
+      "repeat_takes": 0,
+      "first_speech_s": 0.05
+    }
+  },
+  "captions": [
+    "captions => kimo, 7 chunks"
+  ],
+  "captionEngine": {
+    "style": "kimo",
+    "chunks": 7,
+    "text": "WELCOME | TO CHEMO | THIS IS | A 5 SECOND | TEST | OF THE REAL | ENGINE",
+    "stats": {
+      "chunks": 7,
+      "hidden": 0,
+      "caption_min_word_s": 0.1,
+      "caption_safe": true,
+      "unsafe_chunks": 0,
+      "caption_face_overlap": 0,
+      "max_cps": 19.4,
+      "accent_share": 0.286,
+      "mouth_hits": 0
+    },
+    "engineCaptions": false,
+    "fonts": {
+      "fontsDir": "D:\\a\\_temp\\kimo-installed\\resources\\app.asar.unpacked\\fonts",
+      "files": [
+        "Bangers-Regular.ttf",
+        "Geist-Black.ttf",
+        "Geist-Bold.ttf",
+        "Geist-SemiBold.ttf",
+        "GeistMono-SemiBold.ttf",
+        "InstrumentSerif-Italic.ttf",
+        "InstrumentSerif-Regular.ttf",
+        "Montserrat-Black.ttf",
+        "Montserrat-ExtraBold.ttf",
+        "NotoSansDevanagari-Black.ttf",
+        "NotoSansDevanagari-Bold.ttf"
+      ],
+      "ok": true,
+      "edit": {
+        "ok": true,
+        "selected": [
+          "Geist-Black"
+        ],
+        "foreign": [],
+        "missing": []
+      },
+      "styles": {
+        "ok": true,
+        "selected": [
+          "Geist-SemiBold",
+          "NotoSansDevanagari-Bold",
+          "Montserrat-ExtraBold",
+          "NotoSansDevanagari-Black",
+          "Geist-Bold",
+          "Geist-Black",
+          "Montserrat-Black",
+          "Bangers-Regular"
+        ],
+        "foreign": [],
+        "missing": []
+      }
+    }
+  },
+  "graphics": {
+    "backend": "chromium-offscreen",
+    "elements": {
+      "hook_title": "ok 412x148",
+      "lower_third": "ok 308x100",
+      "stat": "ok 274x166",
+      "callout": "ok 304x258",
+      "screen_zoom": "ok 540x954",
+      "progress": "ok 540x4",
+      "chapter": "ok 540x234",
+      "sticker": "ok 182x182",
+      "text_behind": "sam",
+      "cta": "ok 288x122"
+    },
+    "ok": true,
+    "deterministic": true,
+    "parity": {
+      "mean_abs": 6.12,
+      "over_64": 0.03249
+    },
+    "compose": {
+      "ok": true,
+      "graphics": "3 graphics · 0 from cache · chromium-offscreen",
+      "warnings": []
+    }
+  },
+  "explain": {
+    "backend": "chromium-offscreen",
+    "families": {
+      "ex_list": "ok 458x290",
+      "ex_stat": "ok 384x222",
+      "ex_chart": "ok 540x960",
+      "ex_flow": "ok 458x314",
+      "ex_timeline": "ok 458x314",
+      "ex_definition": "ok 458x192",
+      "ex_question": "ok 458x216",
+      "ex_name_card": "ok 332x136"
+    },
+    "ok": true,
+    "deterministic": true,
+    "sync": {
+      "entry": 30,
+      "still_before": true,
+      "drawn_on_entry": true,
+      "ok": true
+    },
+    "sfx": {
+      "tick": "ok",
+      "whoosh": "ok",
+      "ding": "ok"
+    },
+    "edl": {
+      "kept": true,
+      "edited": true
+    }
+  },
+  "lockdown": {
+    "ok": true,
+    "message": "kimo's built-in AI is reserved for the kimo team. Add your own AI key in Settings (kept in memory only, never saved) to use AI edits; captions, manual edits and exports work without one."
+  },
+  "ok": true
+}

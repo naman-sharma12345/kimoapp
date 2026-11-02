@@ -246,3 +246,30 @@ Run41089587650 recomposed the genuine saved Phase1 TH-1 project without AI calls
 | Delivery gate               |            Fail |           Pass |
 
 These are insufficient-coverage diagnostics, not zero-repeat or camera-jitter acceptance. The original failed recording does not prove that the saved project state produced its last successful native export, so the score change is not certified as a compositor-only causal effect. The raw-v2 comparison explicitly exports both renderers from the identical saved project. Measurement version2 separately retains whole-picture motion and adds source-referenced camera registration; never mix version1 and version2 scores. The full USD5.49 reservation remains unchanged.
+
+### Final published verification
+
+Windows run41472140170 SUCCESS:203 tests, zero skips; actual rotation/VFR/HDR/
+4K60/ten-bit/non-ASCII/cancel/resume fixtures, renderer/schema checks, silent
+installation exit0, offline engine/captions and both installed creator cases.
+SAMshorts-punchy81.2 (zero repeats,100%identity, jitter0.004748px); TH2talking80.4
+(zero repeats,99.45%identity, jitter0.006525px). Both critical reports are green.
+Full replay41442412531 and normal regression41463788275 pass; nine scores hold
+and all archived final-video SHA256s match the committed baseline.
+
+v0.4.0 is published, with installer369147721bytes, nonempty blockmap and latest.yml.
+Hosted publication downloads all3assets, parses the feed with electron-updater,
+checks version/name/size/SHA512 and compares SHA256 with the built files.
+Published-proof artifact13155767753; fullqualification13156776131. Small proof,
+actual metrics, credits, final four screenshots and release metadata are retained
+under baselines/phase12-release and docs/screens. No full installer/media download
+or local browser/render was used to collect them.
+
+The auxiliary Windows unit job briefly downloaded a different current FFmpeg
+nightly (Lavf63/Lavc63), which crashed its noise-filter probe with access violation
+3221225477. The shipped/cached BtbN toolchain passed all203 qualification tests.
+Align that auxiliary job with the same release vendor cache/bootstrap rather than
+running an independently changing nightly. Tests/assertions remain unchanged.
+The broader web CI still fails the pre-existing landing bundle budget; mandatory
+lint/typecheck/311tests/build pass (41472137369). This is not an all-repository-
+CI-green claim. The4min export budget remains failed and explicitly accepted.

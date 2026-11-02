@@ -61,3 +61,13 @@ CI-only test excerpt: *Tears of Steel* (c) Blender Foundation,
 It is framed, captioned, graded and audio-finished for regression testing; the
 full source clip is not installed. Other benchmark source credits accompany their
 outputs and are linked in the final report.
+
+## Release verification
+
+[Windows qualification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41472140170)
+passes 203 desktop tests with zero skips, renderer/robustness/schema checks,
+installation and offline captions. Installed creator fixtures score 81.2 and 80.4
+with all critical gates green. The nine-template regression run also passes.
+The published installer, blockmap and latest.yml were downloaded on the hosted
+runner and verified against the built files, including feed size and SHA512.
+No media/GPU testing ran locally after the reported AMD driver errors.

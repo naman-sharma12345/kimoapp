@@ -1,0 +1,10 @@
+{
+  "id": "SAM-PERSON",
+  "proof": [
+    {
+      "source_sha256": "067e76e0346d50e1221d1636d3f2a4ecac7c20f891ef03c3fc9b83815f9ea8c8",
+      "render_source_sha256": "067e76e0346d50e1221d1636d3f2a4ecac7c20f891ef03c3fc9b83815f9ea8c8",
+      "changes": "none"
+    }
+  ]
+}

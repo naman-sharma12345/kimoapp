@@ -584,8 +584,14 @@ correctness checks pass. The performance acceptance item remains failed, not gre
       version/name/size/SHA512 and installer/blockmap presence. Publication adds
       a hosted download/byte comparison. Interactive old-profile upgrade is the
       explicitly unperformed manual test in `desktop/test/UPDATER.md`.
-- [ ] Final publication/remote-asset verification and final hosted run IDs: pending
-      the remaining strict installed measurement; do not mark released early.
+- [x] v0.4.0 published. Windows qualification `41472140170` passes all 203
+      desktop tests with zero skips, renderer/schema/robustness checks, silent
+      installation (exit 0), offline captions and both installed creator edits.
+      Scores: SAM 81.2 and short TH-2 80.4, all critical gates green. Normal
+      nine-template regression `41463788275` passes with unchanged video hashes.
+      The hosted runner downloaded the published installer, blockmap and feed;
+      version/name/size/SHA512 and exact built/published bytes match. Proof:
+      `desktop/test/bench/baselines/phase12-release/`.
 
 Local checks before the AMD report passed root lint/typecheck/311 tests/build,
 renderer build and the latest37-test tiny media regression. Later required root
@@ -594,3 +600,11 @@ pre-existing120KB landing-cap failure and are not claimed green. No new paid
 AI/SAM calls; the historical USD5.49 reservation ledger is unchanged. Fixtures
 use deterministic saved plans, not provider responses. Full natural camera/frame
 metrics can remain unverified; independent barcode tests have a narrower scope.
+
+Final 1080/1440 screenshots were downloaded from the passing hosted job and
+visually inspected. They use mock preload/status/quality values, including a
+fixture version label; actual installed version 0.4.0 is verified separately.
+Caption registration measurement v7 fixes a centisecond mask gap at frame 79/24,
+without changing the saved video, score weights, 95% coverage or fit thresholds.
+The full natural-footage table retains its honest unverified values. The accepted
+performance exception is the only deliberately failed Phase 12 acceptance item.

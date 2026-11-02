@@ -1,0 +1,6 @@
+Tears of Steel (c) Blender Foundation
+https://mango.blender.org/
+CC BY 3.0
+https://creativecommons.org/licenses/by/3.0/
+Repository sam-person.mp4 regression excerpt; no new source acquisition.
+Changes: fixed portrait framing, creator captions, colour and sound finishing for an offline CI fixture.

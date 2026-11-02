@@ -1,0 +1,214 @@
+{
+  "clip": "TH-2",
+  "template": "youtube-talking",
+  "score": 80.4,
+  "metrics": {
+    "first_speech_s": 0,
+    "hook_text": false,
+    "dead_air_ratio": 0,
+    "filler_count": 0,
+    "repeat_takes": 0,
+    "median_shot_s": 5.422080999999999,
+    "max_static_s": 5.42,
+    "framing_variety": 2,
+    "jitter_px": 0.006525478501363556,
+    "repeated_frames": 0,
+    "skipped_frames": 0,
+    "frame_match_coverage": 0.9945054945054945,
+    "caption_min_word_s": 0.459,
+    "caption_safe": true,
+    "caption_face_overlap": null,
+    "lufs": -14.2,
+    "true_peak": -2.1,
+    "lra": 2.6,
+    "duck_depth_db": -14.161571285446563,
+    "sfx_count_per_min": 0,
+    "aspect": "16:9",
+    "clip_delta_e": 0.6039908935820181,
+    "clipped_pct": 0.03930519511411118,
+    "duration_s": 7.632625,
+    "frame_match": [
+      {
+        "id": "clip1",
+        "repeated_frames": 0,
+        "skipped_frames": 0,
+        "compared": 52,
+        "total": 53,
+        "coverage": 1,
+        "mean_mad": 0.5317726297976553,
+        "incorrect_frames": 0,
+        "camera": {
+          "jitter_px": 0.008901884595387061,
+          "measured": 47,
+          "eligible": 47,
+          "coverage": 1,
+          "rejections": [],
+          "mean_fit_rmse": 0.7655322584684188
+        }
+      },
+      {
+        "id": "clip2",
+        "repeated_frames": 0,
+        "skipped_frames": 0,
+        "compared": 129,
+        "total": 130,
+        "coverage": 1,
+        "mean_mad": 0.7105539002772325,
+        "incorrect_frames": 0,
+        "camera": {
+          "jitter_px": 0.005355922930647108,
+          "measured": 124,
+          "eligible": 124,
+          "coverage": 1,
+          "rejections": [],
+          "mean_fit_rmse": 0.9519994603333807
+        }
+      }
+    ],
+    "camera_registration_coverage": 1,
+    "closed_gop": true,
+    "cfr_ok": true
+  },
+  "gates": {
+    "checks": [
+      {
+        "id": "repeated_frames",
+        "label": "repeated frames",
+        "stage": "compose",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 0,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 0"
+      },
+      {
+        "id": "jitter_px",
+        "label": "camera jitter",
+        "stage": "compose",
+        "state": "pass",
+        "measured": 0.006525478501363556,
+        "value": "0.006525478501363556",
+        "limit": 1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 1"
+      },
+      {
+        "id": "true_peak",
+        "label": "true peak",
+        "stage": "sound",
+        "state": "pass",
+        "measured": -2.1,
+        "value": "-2.1",
+        "limit": -1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ -1"
+      },
+      {
+        "id": "caption_safe",
+        "label": "caption safe area",
+        "stage": "captions",
+        "state": "pass",
+        "measured": true,
+        "value": "inside",
+        "limit": true,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "inside safe area"
+      },
+      {
+        "id": "dead_air_ratio",
+        "label": "dead air",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 0.06,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 0.06"
+      },
+      {
+        "id": "first_speech_s",
+        "label": "first speech",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 1"
+      }
+    ],
+    "passed": true,
+    "red": false,
+    "unverified": false
+  },
+  "performance": {
+    "seconds": {
+      "transcript": 0.091,
+      "plan": 0,
+      "compose": 65.848,
+      "critic": 0,
+      "total": 70.208
+    },
+    "budgets": {
+      "transcript": 45,
+      "plan": 25,
+      "compose": 90,
+      "critic": 60,
+      "total": 240
+    },
+    "checks": [
+      {
+        "stage": "transcript",
+        "max": 45,
+        "seconds": 0.091,
+        "ok": true
+      },
+      {
+        "stage": "plan",
+        "max": 25,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "compose",
+        "max": 90,
+        "seconds": 65.848,
+        "ok": true
+      },
+      {
+        "stage": "critic",
+        "max": 60,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "total",
+        "max": 240,
+        "seconds": 70.208,
+        "ok": true
+      }
+    ],
+    "hardware": {
+      "platform": "win32",
+      "cores": 4,
+      "model": "AMD EPYC 9V74 80-Core Processor                "
+    },
+    "preview": false,
+    "source_seconds": 8.008,
+    "representative": false
+  },
+  "output_sha256": "4dfc717a2f182a026f420569198316be1e7ce9cd5a599c6ccd47823b80035c28"
+}
