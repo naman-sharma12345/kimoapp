@@ -42,7 +42,7 @@ jobs:
       BENCH_BASELINE_MODE: ${{ inputs.baseline_mode && '1' || '0' }}
       KIMO_PERFORMANCE_PROFILE: ci
       KIMO_WORKER_THREADS: '4'
-      KIMO_HW_DECODE: off
+      KIMO_HW_DECODE: 'off'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
       BENCH_BASELINE_MODE: '1'
       KIMO_PERFORMANCE_PROFILE: ci
       KIMO_WORKER_THREADS: '4'
-      KIMO_HW_DECODE: off
+      KIMO_HW_DECODE: 'off'
       KIMO_BENCH_VENDOR: ${{ github.workspace }}/desktop/vendor
     steps:
       - uses: actions/checkout@v4

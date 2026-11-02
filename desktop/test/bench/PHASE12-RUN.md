@@ -91,3 +91,22 @@ segments remain FFV1. Tiny regression batch completed before the AMD report:
 37/37pass, zero skips; frame IDs at seven rates, alpha gaps, exact A/B pixels,
 colour mean A/B difference0, measured camera residual0.2504px, actual preview
 and encoded-picture-preserving remix. Further qualification is hosted-only.
+
+Candidate002deea28db7fe378c41a21125c225a688471674 (lossless caches, fixed CI
+camera, explicit no-GPU decode) Windows release=false41442099649; initial full
+baseline41442412531. Previous full41440298549 confirmed completed/cancelled;
+its rendered review artifacts13140167572/13140662153 remain preserved remotely.
+Do not repeat local tests. Performance41440304538 (old FFV1) reached measurement;
+collect it, then dispatch exactly one performance replacement on the new code.
+
+Performance41440304538 completed FAIL (four-core FFV1): transcript43.846s,
+compose636.738s,total840.243s. Artifact13140927705 extracted JSON-only to
+LOCALAPPDATA/kimo/phase12/performance-threaded. Replacement41442585685 runs
+lossless opaque caches on002deea; do not duplicate. Plan/critic=0 here denotes
+the explicitly offline deterministic fixture, not measured paid AI latency.
+
+Crash checkpoints expanded to started/transcript/plan/camera before compile,
+preserving the edit ID and allowance even if a crash predates a compiled EDL.
+New hosted regression seeds a completed plan/transcript with exhausted allowance
+and verifies both are reused. No new local media execution. This and published
+asset-download verification still need pushing/hosted checks.

@@ -28,7 +28,7 @@ jobs:
       KIMO_FFPROBE: ${{ github.workspace }}/desktop/vendor/ffmpeg/ffprobe.exe
       KIMO_PERFORMANCE_PROFILE: ci
       KIMO_WORKER_THREADS: '4'
-      KIMO_HW_DECODE: off
+      KIMO_HW_DECODE: 'off'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -143,3 +143,23 @@ jobs:
             desktop/dist/kimo-Setup-*.exe.blockmap
             desktop/dist/latest.yml
           fail_on_unmatched_files: true
+      - name: Verify published installer, blockmap and feed
+        if: inputs.release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $published=Join-Path $env:RUNNER_TEMP 'published-release'
+          New-Item -ItemType Directory -Force $published | Out-Null
+          gh release download "v${{ steps.version.outputs.v }}" --repo $env:GITHUB_REPOSITORY --dir $published --pattern 'kimo-Setup-*.exe' --pattern '*.blockmap' --pattern 'latest.yml'
+          if ($LASTEXITCODE -ne 0) { throw 'Published release assets could not be retrieved' }
+          node desktop/test/verify-release.mjs $published
+          if ($LASTEXITCODE -ne 0) { throw 'Published installer/feed verification failed' }
+          foreach ($name in @('kimo-Setup-${{ steps.version.outputs.v }}.exe','kimo-Setup-${{ steps.version.outputs.v }}.exe.blockmap','latest.yml')) {
+            if ((Get-FileHash -LiteralPath (Join-Path 'desktop/dist' $name) -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $published $name) -Algorithm SHA256).Hash) { throw "Published bytes differ: $name" }
+          }
+      - uses: actions/upload-artifact@v4
+        if: inputs.release && always()
+        with:
+          name: published-release-verification
+          path: ${{ runner.temp }}/published-release/release-verification.json
+          if-no-files-found: warn
