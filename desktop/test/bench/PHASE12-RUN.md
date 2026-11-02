@@ -110,3 +110,22 @@ preserving the edit ID and allowance even if a crash predates a compiled EDL.
 New hosted regression seeds a completed plan/transcript with exhausted allowance
 and verifies both are reused. No new local media execution. This and published
 asset-download verification still need pushing/hosted checks.
+
+User explicitly approved publishing after remaining correctness checks pass WITH
+the measured performance gap documented (2 November). Do not claim that gate
+passed. Latest lossless run41442585685 FAIL: transcript32.390s, compose397.055s
+(old counter excluded final encode), total532.819s =8.9minutes. Artifact13141595602
+JSON preserved in LOCALAPPDATA/kimo/phase12/performance-lossless. New counter
+also includes creator_delivery (x264 master); report that correction honestly.
+
+All9 full template cases +report41442412531 SUCCESS on002deea. Initial measured
+baseline from artifact13144865692 is now release-baseline.json, with extraction
+proof in baselines/phase12-initial. Preserve these actual scores even if low.
+Need normal threshold run; an analyze_run input now remeasures saved exact outputs
+without rerendering. New v6 references reproduce the recorded colour LUT by key
+and SHA256, retaining the same95%/fit thresholds. Independent follow/drift is
+explicitly unsupported in physical full-golden measurements. Short fixed fixture
+has neither, allowing measurement. Unit grade test must still catch injected
+repeats/skips. Windows41442099649 failed73.7 because nonlinear grade invalidated
+ungraded registration; repeats0 at100%coverage. Its artifact13141188418 smalls
+preserved in LOCALAPPDATA/kimo/phase12/windows3. Never relax confidence for green.

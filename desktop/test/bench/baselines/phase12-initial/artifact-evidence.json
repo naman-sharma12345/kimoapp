@@ -1,0 +1,16 @@
+{
+  "artifact": {
+    "id": 13144865692,
+    "name": "creator-full-results",
+    "digest": "sha256:c6ab385262ea9273f29074e073ca9a4e3e48c0ea1a1c19609ae20cc4bbc1b5b5",
+    "size_in_bytes": 4378
+  },
+  "fetchedBytes": 8069,
+  "files": [
+    {
+      "name": "release-baseline.json",
+      "bytes": 54317,
+      "sha256": "8e389d2ecd84eaaed0f2a0e43c0c488d9ee18b01c8f3c2a7352489f026516251"
+    }
+  ]
+}

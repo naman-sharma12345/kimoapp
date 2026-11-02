@@ -1,5 +1,2024 @@
 {
   "version": 1,
-  "status": "awaiting first hosted v0.4.0 qualification measurements",
-  "rows": []
+  "commit": "002deea28db7fe378c41a21125c225a688471674",
+  "scope": "Actual hosted deterministic-plan replay, modern measurement v5, fixed prepared raw-v2 bytes; not provider adherence.",
+  "rows": [
+    {
+      "clip": "MUSIC-1",
+      "template": "music-montage",
+      "score": 55.6,
+      "metrics": {
+        "first_speech_s": null,
+        "hook_text": false,
+        "dead_air_ratio": null,
+        "filler_count": null,
+        "repeat_takes": null,
+        "median_shot_s": 2.16,
+        "max_static_s": 2.2,
+        "framing_variety": 3,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": null,
+        "caption_safe": null,
+        "caption_face_overlap": null,
+        "lufs": -14.1,
+        "true_peak": -1.5,
+        "lra": 0.7,
+        "duck_depth_db": null,
+        "sfx_count_per_min": 8.858267716535432,
+        "aspect": "16:9",
+        "clip_delta_e": 2.526573480725441,
+        "clipped_pct": 0.40020165479234204,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.5,
+            "value": "-1.5",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "not-applicable",
+            "measured": null,
+            "value": "not applicable",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "not-applicable",
+            "measured": null,
+            "value": "not applicable",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "not-applicable",
+            "measured": null,
+            "value": "not applicable",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0,
+          "plan": 0,
+          "compose": 514.872,
+          "critic": 0,
+          "total": 741.316
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 514.872,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 741.316,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 20,
+        "representative": false
+      },
+      "output_sha256": "fb65aabdfcd6aaa6355a704d627c6ca6358da08cc4c350223e3b72a3bfc64085"
+    },
+    {
+      "clip": "POD-1",
+      "template": "podcast-clips",
+      "score": 56.6,
+      "metrics": {
+        "first_speech_s": 0,
+        "hook_text": true,
+        "dead_air_ratio": 0.025793367391510634,
+        "filler_count": 3,
+        "repeat_takes": 0,
+        "median_shot_s": 41.124398,
+        "max_static_s": 3.2,
+        "framing_variety": 0,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.083,
+        "caption_safe": true,
+        "caption_face_overlap": null,
+        "lufs": -16.1,
+        "true_peak": -2.3,
+        "lra": 4.9,
+        "duck_depth_db": null,
+        "sfx_count_per_min": 1.024616409231794,
+        "aspect": "9:16",
+        "clip_delta_e": 1.7389382311042572,
+        "clipped_pct": 0.10319615219820154,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -2.3,
+            "value": "-2.3",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0.025793367391510634,
+            "value": "0.025793367391510634",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.278,
+          "plan": 0,
+          "compose": 326.125,
+          "critic": 0,
+          "total": 450.188
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.278,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 326.125,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 450.188,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 60.018292,
+        "representative": true
+      },
+      "output_sha256": "6a1af2a3f77dedb934d94f8e10fa0f83ba2732b1dbd006b0323fa50a4bab6db8"
+    },
+    {
+      "clip": "TH-1",
+      "template": "documentary",
+      "score": 64.3,
+      "metrics": {
+        "first_speech_s": 0.03,
+        "hook_text": false,
+        "dead_air_ratio": 0,
+        "filler_count": 0,
+        "repeat_takes": 0,
+        "median_shot_s": 5.038371705038372,
+        "max_static_s": 5.77,
+        "framing_variety": 1,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.033,
+        "caption_safe": true,
+        "caption_face_overlap": 0,
+        "lufs": -14,
+        "true_peak": -1.5,
+        "lra": 3.9,
+        "duck_depth_db": -2.083886655323603,
+        "sfx_count_per_min": 0,
+        "aspect": "16:9",
+        "clip_delta_e": 1.6465683237275417,
+        "clipped_pct": 0.032353379754368514,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.5,
+            "value": "-1.5",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0.03,
+            "value": "0.03",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.286,
+          "plan": 0,
+          "compose": 358.885,
+          "critic": 0,
+          "total": 461.562
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.286,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 358.885,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 461.562,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 60.026633,
+        "representative": true
+      },
+      "output_sha256": "fea846b2edcdcd375810cbc48548169295c0d33c4b6e3dbab55b7d6bb7d52a33"
+    },
+    {
+      "clip": "TH-1",
+      "template": "shorts-clean",
+      "score": 73.6,
+      "metrics": {
+        "first_speech_s": 0.03,
+        "hook_text": true,
+        "dead_air_ratio": 0,
+        "filler_count": 0,
+        "repeat_takes": 0,
+        "median_shot_s": 3.503503503503504,
+        "max_static_s": 3.07,
+        "framing_variety": 2,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.033,
+        "caption_safe": true,
+        "caption_face_overlap": 18.57,
+        "lufs": -14,
+        "true_peak": -1.5,
+        "lra": 3.8,
+        "duck_depth_db": 6.284837607582176,
+        "sfx_count_per_min": 1.0904801687093983,
+        "aspect": "9:16",
+        "clip_delta_e": 0.9226491600680033,
+        "clipped_pct": 0.00986206140667547,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip11",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.5,
+            "value": "-1.5",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0.03,
+            "value": "0.03",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.329,
+          "plan": 0,
+          "compose": 485.769,
+          "critic": 0,
+          "total": 634.686
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.329,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 485.769,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 634.686,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 60.026633,
+        "representative": true
+      },
+      "output_sha256": "e9031c68bc40d2749cd691b6cc411121caa0c5184ff7a1ab8cc99233eea39ec4"
+    },
+    {
+      "clip": "TH-1",
+      "template": "youtube-talking",
+      "score": 65.9,
+      "metrics": {
+        "first_speech_s": 0.03,
+        "hook_text": false,
+        "dead_air_ratio": 0,
+        "filler_count": 0,
+        "repeat_takes": 0,
+        "median_shot_s": 4.5045045045045065,
+        "max_static_s": 5.77,
+        "framing_variety": 1,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.033,
+        "caption_safe": true,
+        "caption_face_overlap": 0,
+        "lufs": -14,
+        "true_peak": -1.5,
+        "lra": 3.8,
+        "duck_depth_db": 6.284837607582176,
+        "sfx_count_per_min": 0,
+        "aspect": "16:9",
+        "clip_delta_e": 1.2644678427342855,
+        "clipped_pct": 0.021999411745703745,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.5,
+            "value": "-1.5",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0.03,
+            "value": "0.03",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.21,
+          "plan": 0,
+          "compose": 284.959,
+          "critic": 0,
+          "total": 369.241
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.21,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 284.959,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 369.241,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 9V74 80-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 60.026633,
+        "representative": true
+      },
+      "output_sha256": "4a098429429deb06a0d26921bd84c899d15c8008332a145971d020f32238fd6c"
+    },
+    {
+      "clip": "TH-2",
+      "template": "shorts-punchy",
+      "score": 75.9,
+      "metrics": {
+        "first_speech_s": 0,
+        "hook_text": true,
+        "dead_air_ratio": 0,
+        "filler_count": 0,
+        "repeat_takes": 0,
+        "median_shot_s": 4.504504504504503,
+        "max_static_s": 2.3,
+        "framing_variety": 3,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.167,
+        "caption_safe": true,
+        "caption_face_overlap": null,
+        "lufs": -14,
+        "true_peak": -1.5,
+        "lra": 3.3,
+        "duck_depth_db": 1.1496479219335356,
+        "sfx_count_per_min": 2.8514597394676686,
+        "aspect": "9:16",
+        "clip_delta_e": 4.272530673840148,
+        "clipped_pct": 0.15203930587341416,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip11",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip12",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.5,
+            "value": "-1.5",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.241,
+          "plan": 0,
+          "compose": 372.929,
+          "critic": 0,
+          "total": 491.751
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.241,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 372.929,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 491.751,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 9V74 80-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 45.003292,
+        "representative": false
+      },
+      "output_sha256": "dc75e24eabdc456b49967ac9daa835df7a1ce4bbaddaf58c63e7759b7f60d96c"
+    },
+    {
+      "clip": "TUT-1",
+      "template": "explainer",
+      "score": 63.5,
+      "metrics": {
+        "first_speech_s": 0,
+        "hook_text": false,
+        "dead_air_ratio": 0.024723960158925355,
+        "filler_count": 1,
+        "repeat_takes": 0,
+        "median_shot_s": 2.8666666666666654,
+        "max_static_s": 5.69,
+        "framing_variety": 1,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.166,
+        "caption_safe": true,
+        "caption_face_overlap": null,
+        "lufs": -14.3,
+        "true_peak": -1.4,
+        "lra": 3.2,
+        "duck_depth_db": -1.6451438570039443,
+        "sfx_count_per_min": 0,
+        "aspect": "16:9",
+        "clip_delta_e": 7.8345309531039,
+        "clipped_pct": 0.19986584934364543,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip11",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip12",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip13",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip14",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip15",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip16",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip17",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip18",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip19",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip20",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip21",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip22",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.4,
+            "value": "-1.4",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0.024723960158925355,
+            "value": "0.024723960158925355",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.384,
+          "plan": 0,
+          "compose": 483.74300000000005,
+          "critic": 0,
+          "total": 593.49
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.384,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 483.74300000000005,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 593.49,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 75,
+        "representative": false
+      },
+      "output_sha256": "e07e7840a501ff1818bf32f5fd301063de499f699aa090daba593faf6b671d85"
+    },
+    {
+      "clip": "TUT-1",
+      "template": "tutorial",
+      "score": 63.3,
+      "metrics": {
+        "first_speech_s": 0,
+        "hook_text": false,
+        "dead_air_ratio": 0.030138297280512056,
+        "filler_count": 1,
+        "repeat_takes": 0,
+        "median_shot_s": 4.200000000000003,
+        "max_static_s": 5.69,
+        "framing_variety": 1,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.166,
+        "caption_safe": true,
+        "caption_face_overlap": null,
+        "lufs": -14.3,
+        "true_peak": -1.4,
+        "lra": 3.1,
+        "duck_depth_db": -1.6451438570039443,
+        "sfx_count_per_min": 0.8579599618684461,
+        "aspect": "16:9",
+        "clip_delta_e": 8.268432792309223,
+        "clipped_pct": 0.21908277230826756,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip11",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip12",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip13",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip14",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip15",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip16",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip17",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.4,
+            "value": "-1.4",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0.030138297280512056,
+            "value": "0.030138297280512056",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.37,
+          "plan": 0,
+          "compose": 458.905,
+          "critic": 0,
+          "total": 587.698
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.37,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 458.905,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 587.698,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 75,
+        "representative": false
+      },
+      "output_sha256": "4fbe1804e0eaa49f5e9729facb500c71d42ae92444b0afd2efef36c9e2ba7938"
+    },
+    {
+      "clip": "VLOG-1",
+      "template": "youtube-vlog",
+      "score": 66.9,
+      "metrics": {
+        "first_speech_s": 0,
+        "hook_text": false,
+        "dead_air_ratio": 0,
+        "filler_count": 1,
+        "repeat_takes": 0,
+        "median_shot_s": 3.0030030030030033,
+        "max_static_s": 3.87,
+        "framing_variety": 3,
+        "jitter_px": null,
+        "repeated_frames": null,
+        "skipped_frames": null,
+        "frame_match_coverage": 0,
+        "caption_min_word_s": 0.043,
+        "caption_safe": true,
+        "caption_face_overlap": null,
+        "lufs": -14,
+        "true_peak": -1.5,
+        "lra": 2,
+        "duck_depth_db": null,
+        "sfx_count_per_min": 0,
+        "aspect": "16:9",
+        "clip_delta_e": 3.472438054418805,
+        "clipped_pct": 0.1514252431311082,
+        "frame_match": [
+          {
+            "id": "clip1",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip2",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip3",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip4",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip5",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip6",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip7",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip8",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip9",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip10",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip11",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip12",
+            "unavailable": "nonlinear/animated source mapping"
+          },
+          {
+            "id": "clip13",
+            "unavailable": "nonlinear/animated source mapping"
+          }
+        ],
+        "camera_registration_coverage": 0,
+        "closed_gop": true,
+        "cfr_ok": true
+      },
+      "gates": {
+        "checks": [
+          {
+            "id": "repeated_frames",
+            "label": "repeated frames",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 0,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 0"
+          },
+          {
+            "id": "jitter_px",
+            "label": "camera jitter",
+            "stage": "compose",
+            "state": "unverified",
+            "measured": null,
+            "value": "unavailable",
+            "limit": 1,
+            "critical": true,
+            "ok": false,
+            "warn": true,
+            "want": "≤ 1"
+          },
+          {
+            "id": "true_peak",
+            "label": "true peak",
+            "stage": "sound",
+            "state": "pass",
+            "measured": -1.5,
+            "value": "-1.5",
+            "limit": -1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ -1"
+          },
+          {
+            "id": "caption_safe",
+            "label": "caption safe area",
+            "stage": "captions",
+            "state": "pass",
+            "measured": true,
+            "value": "inside",
+            "limit": true,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "inside safe area"
+          },
+          {
+            "id": "dead_air_ratio",
+            "label": "dead air",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 0.06,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 0.06"
+          },
+          {
+            "id": "first_speech_s",
+            "label": "first speech",
+            "stage": "cut",
+            "state": "pass",
+            "measured": 0,
+            "value": "0",
+            "limit": 1,
+            "critical": true,
+            "ok": true,
+            "warn": false,
+            "want": "≤ 1"
+          }
+        ],
+        "passed": false,
+        "red": false,
+        "unverified": true
+      },
+      "performance": {
+        "seconds": {
+          "transcript": 0.6679999999999999,
+          "plan": 0,
+          "compose": 492.567,
+          "critic": 0,
+          "total": 612.377
+        },
+        "budgets": {
+          "transcript": 45,
+          "plan": 25,
+          "compose": 90,
+          "critic": 60,
+          "total": 240
+        },
+        "checks": [
+          {
+            "stage": "transcript",
+            "max": 45,
+            "seconds": 0.6679999999999999,
+            "ok": true
+          },
+          {
+            "stage": "plan",
+            "max": 25,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "compose",
+            "max": 90,
+            "seconds": 492.567,
+            "ok": false
+          },
+          {
+            "stage": "critic",
+            "max": 60,
+            "seconds": 0,
+            "ok": true
+          },
+          {
+            "stage": "total",
+            "max": 240,
+            "seconds": 612.377,
+            "ok": false
+          }
+        ],
+        "hardware": {
+          "platform": "win32",
+          "cores": 4,
+          "model": "AMD EPYC 7763 64-Core Processor                "
+        },
+        "preview": false,
+        "source_seconds": 10.01,
+        "representative": false
+      },
+      "output_sha256": "161dadc101e588268245017ff2e8776d967071d4e9249880032f7e92133054e1"
+    }
+  ]
 }
