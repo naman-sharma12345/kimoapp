@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "id": 13142418730,
+    "name": "creator-review-TUT-1-explainer",
+    "digest": "sha256:e254cc5393faa579a3a00ce2f388fbf4e52692a7ed8f410980146e81c4052292",
+    "size_in_bytes": 96873691
+  },
+  "fetchedBytes": 457602,
+  "files": [
+    {
+      "name": "TUT-1-explainer/edit.edl.json",
+      "bytes": 403776,
+      "sha256": "8122ead6db601c75d81e0cb1fec944e9c70cebf9b0410dab052b15d87020a434"
+    },
+    {
+      "name": "TUT-1-explainer/fixture-plan.json",
+      "bytes": 58252,
+      "sha256": "1c38b9f9cdd336de2efad7610415f95e197fab3aadf678860d8b50e3a8ab1780"
+    },
+    {
+      "name": "TUT-1-explainer/hook.jpg",
+      "bytes": 69349,
+      "sha256": "ad593b97bab2d7a8ce48f29bba10f082630211c1d58de5f3ea4cdba6c1ceccad"
+    },
+    {
+      "name": "TUT-1-explainer/metrics.json",
+      "bytes": 37046,
+      "sha256": "cb85f7bcbecd08ca3f3e5dc89cb2062a4043d5fd562e4dde2591e2c41c29961c"
+    },
+    {
+      "name": "TUT-1-explainer/sources.json",
+      "bytes": 263,
+      "sha256": "c8fbf50f7054140826c4295439e7ec5c2ca30b5363b9809856d77e2d61caf30f"
+    },
+    {
+      "name": "TUT-1-explainer/sheet.jpg",
+      "bytes": 298754,
+      "sha256": "34918402821b19b3aac6d4757952e7a3c2130e3caba16ba9ec4b85ef6a7a99de"
+    }
+  ]
+}

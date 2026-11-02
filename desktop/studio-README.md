@@ -1,4 +1,4 @@
-# Creator Studio (Phase 11)
+# Creator Studio
 
 Creator projects expose saved decisions in Home and Studio. Earlier projects keep
 the existing viewer, chat, captions-only and SAM paths; explicitly re-run an old
@@ -97,4 +97,22 @@ OS playback/account/provider/installer behaviour is outside this fixture.
 The actual 1.2-second FFmpeg regression verifies progressive preview delivery and
 gain-only remix with identical encoded H264 picture. It is synthetic functional
 coverage, not a natural-footage score, full benchmark or sustained CPU measurement.
-No release, installer or later phase is part of this change.
+Phase 12 adds installed hosted qualification separately from this fixture.
+
+## Preview, failures and recovery
+
+Creator edits now render at a 540-pixel short side using x264 ultrafast. The chip
+`preview · full quality on export` identifies this delivery. Export queues the
+full-resolution saved EDL with software x264 medium; it waits for completion
+before copying the MP4. Preview and full-resolution pass caches are separate.
+
+Critical repeats, jitter, encoded AAC true peak, caption safety, dead air and
+first speech get one local repair per failing stage. A still-red result raises
+an alert and stays visible in Quality. Missing evidence stays unverified. The
+release UI fixture deliberately injects a red true-peak result to exercise that
+state; its numbers are not a measurement of the sample media.
+
+Interrupted creator projects retain the EDL and pass checkpoints. `resume edit`
+continues matching saved work without resetting the planner allowance. Settings
+shows cache size and `clean cache`; saved projects and input copies are kept.
+The native job/tree stop and installed package checks run on hosted Windows.

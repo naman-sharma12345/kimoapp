@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "id": 13143655930,
+    "name": "creator-review-VLOG-1-youtube-vlog",
+    "digest": "sha256:c3ccafc29ee25a712beb8edf88d7f465fbc40df590b7e72ec6564328a9eba2f4",
+    "size_in_bytes": 74254714
+  },
+  "fetchedBytes": 698901,
+  "files": [
+    {
+      "name": "VLOG-1-youtube-vlog/edit.edl.json",
+      "bytes": 289656,
+      "sha256": "1d1ad4bb13922aad06724e5469358f6f06ad238d7b32248b15171062d70aeacb"
+    },
+    {
+      "name": "VLOG-1-youtube-vlog/fixture-plan.json",
+      "bytes": 40920,
+      "sha256": "22715acabeee04a95bad167d064c588402c21c8ee64c246440dea5e041bf3f45"
+    },
+    {
+      "name": "VLOG-1-youtube-vlog/metrics.json",
+      "bytes": 26266,
+      "sha256": "d7e56251e066ba3d33be97c7839241b72589f03966257d52cc32138cbce53eea"
+    },
+    {
+      "name": "VLOG-1-youtube-vlog/hook.jpg",
+      "bytes": 88090,
+      "sha256": "2004bc0d80aa6951119c745da370a0fa640013a05d6513a217a14772ae0eaf62"
+    },
+    {
+      "name": "VLOG-1-youtube-vlog/sources.json",
+      "bytes": 1394,
+      "sha256": "4c398c0cd17ae37b1d36aa264ec1b6a9e4339e43217c287ee98491172a9586c7"
+    },
+    {
+      "name": "VLOG-1-youtube-vlog/sheet.jpg",
+      "bytes": 504008,
+      "sha256": "8a5bb313cf66603049a790b6ad004f795b54f0a27e4444cc03a06fa3fcc748e4"
+    }
+  ]
+}

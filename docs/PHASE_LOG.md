@@ -544,3 +544,53 @@ Runtime behaviour, history/render selection, reproduction commands, preview
 credits and limitations are in `desktop/studio-README.md`. All eleven preview
 assets derive from the hash-verified existing ProPublica CC-BY-3.0 raw source;
 template labels are not dialogue or endorsement. No full source footage is bundled.
+
+## Desktop Phase 12 — quality, performance and v0.4.0 (2 November 2026)
+
+The supplied desktop brief authorizes full hosted qualification and publication.
+No engine/backend/web behaviour changes. After reported AMD driver errors, all
+local media/browser/GPU tests stopped; further tests run on hosted runners.
+The user explicitly accepted publication with the measured performance gap after
+correctness checks pass. The performance acceptance item remains failed, not green.
+
+### Acceptance checklist
+
+- [x] Six critical rules, one repair per failing stage, final encoded AAC
+      measurement/correction, and honest red/unverified Studio reporting.
+      Screens: `docs/screens/phase-12-critical-quality.png` and
+      `docs/screens/phase-12-cache-settings.png` (mock quality data, not benchmarks).
+- [x] Reduced editing preview, full export on request, separate content-keyed
+      picture/overlay/stem caches, lossless opaque intermediates and x264 medium
+      final master. Alpha segments remain FFV1. GPU probing is absent from startup/
+      status refresh; decode is CPU by default with an explicit hardware opt-in.
+- [x] VFR/CFR, actual display rotation, PQ/HLG Hable SDR, 4K60 ten-bit, odd sizes,
+      no-audio, long-file refusal and non-ASCII fixtures are in hosted tests.
+- [x] Process-tree cancellation, staged transcript/plan/camera/EDL/pass checkpoints,
+      allowance-preserving resume and safe cache cleaning have regression coverage.
+- [x] Windows workflow defines unit/schema/renderer, install, two strict offline
+      creator smokes, actual audio/delivery/frame measurements and review artifacts.
+      Publication requires its strict smoke score≥75 and all critical gates green.
+- [x] Nine-template full replay41442412531 passed. Its actual measured baseline is
+      committed. The manual full workflow retains a >3-point regression threshold
+      and uploads reports without automatic commits. Archived remeasurement also
+      checks final-video SHA256 against the committed baseline.
+- [ ] Four-core full-export budget: latest532.819s against240s; corrected compose
+      through delivery479.973s against 90s. The user explicitly approved this
+      documented exception. No laptop-lag or paid-critic latency pass is claimed.
+- [x] Desktop/root docs, template-picker GIF, actual credited raw/creator sheets,
+      release notes, all-six critical table, source credits and honest visual
+      critiques are written in `desktop/test/bench/FINAL.md` and `PHASE12-REVIEW.md`.
+- [x] Version and lock are0.4.0. The real electron-updater parser verifies feed
+      version/name/size/SHA512 and installer/blockmap presence. Publication adds
+      a hosted download/byte comparison. Interactive old-profile upgrade is the
+      explicitly unperformed manual test in `desktop/test/UPDATER.md`.
+- [ ] Final publication/remote-asset verification and final hosted run IDs: pending
+      the remaining strict installed measurement; do not mark released early.
+
+Local checks before the AMD report passed root lint/typecheck/311 tests/build,
+renderer build and the latest37-test tiny media regression. Later required root
+commands pass on hosted CI (e.g.41463473526); broader web budget jobs retain the
+pre-existing120KB landing-cap failure and are not claimed green. No new paid
+AI/SAM calls; the historical USD5.49 reservation ledger is unchanged. Fixtures
+use deterministic saved plans, not provider responses. Full natural camera/frame
+metrics can remain unverified; independent barcode tests have a narrower scope.

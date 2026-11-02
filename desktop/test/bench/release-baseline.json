@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "commit": "002deea28db7fe378c41a21125c225a688471674",
-  "scope": "Actual hosted deterministic-plan replay, modern measurement v5, fixed prepared raw-v2 bytes; not provider adherence.",
+  "commit": "ca1a762d17cf2f5b280a337b60848afba665ca55",
+  "scope": "Actual hosted deterministic-plan replay, modern measurement v6 with hash-attested grade references, fixed prepared raw-v2 bytes; not provider adherence.",
   "rows": [
     {
       "clip": "MUSIC-1",
@@ -75,7 +75,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 20.32
       },
       "gates": {
         "checks": [
@@ -260,7 +261,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 58.5585
       },
       "gates": {
         "checks": [
@@ -473,7 +475,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 55.188467
       },
       "gates": {
         "checks": [
@@ -694,7 +697,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 55.021633
       },
       "gates": {
         "checks": [
@@ -911,7 +915,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 55.088375
       },
       "gates": {
         "checks": [
@@ -1136,7 +1141,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 42.083708
       },
       "gates": {
         "checks": [
@@ -1401,7 +1407,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 69.466667
       },
       "gates": {
         "checks": [
@@ -1646,7 +1653,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 69.933333
       },
       "gates": {
         "checks": [
@@ -1875,7 +1883,8 @@
         ],
         "camera_registration_coverage": 0,
         "closed_gop": true,
-        "cfr_ok": true
+        "cfr_ok": true,
+        "duration_s": 53.219833
       },
       "gates": {
         "checks": [

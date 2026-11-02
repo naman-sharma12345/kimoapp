@@ -1,0 +1,136 @@
+{
+  "artifact": {
+    "id": 13042205221,
+    "name": "raw-v2-comparison-41193701206-TUT-1",
+    "digest": "sha256:988030c007cc263833f56021297de2b8b09543ae658b55df9fd032349b15fb4a",
+    "size_in_bytes": 321304485
+  },
+  "fetchedBytes": 11392265,
+  "files": [
+    {
+      "name": "16x9/compose-metrics.json",
+      "bytes": 58211,
+      "sha256": "e85f89068e79bd24b7a1732d18b1c669f34ec23bff1792bd559277a3670e7b41"
+    },
+    {
+      "name": "16x9/compose-words.json",
+      "bytes": 14929,
+      "sha256": "0e528a68c889dff90a17cc88d9ae0a4e440e22bfbff5306d8f490239cdc7991a"
+    },
+    {
+      "name": "16x9/CREDITS.txt",
+      "bytes": 224,
+      "sha256": "c2a5910a7faf2a06fe5b82cc1a7d5cf041b6a13078dcbab4a6f9a6ed4fc47d56"
+    },
+    {
+      "name": "16x9/legacy-metrics.json",
+      "bytes": 58825,
+      "sha256": "444dbebd80b9a8954f188ba5a2c77083a8eb9908b0476569b9b69869f840f761"
+    },
+    {
+      "name": "16x9/legacy-run.json",
+      "bytes": 320,
+      "sha256": "bbb46bcf450db277bb1149839e3d5358d404ce9e1e6f7cb384258c49d4d664cd"
+    },
+    {
+      "name": "16x9/legacy-words-provenance.json",
+      "bytes": 153,
+      "sha256": "d40b75ff05b4f4dbb7c58d1ec64d7f882c74042b8e46a3117015dec9c20658f1"
+    },
+    {
+      "name": "16x9/legacy-words.json",
+      "bytes": 15130,
+      "sha256": "dd3b0ee131cc56d0ed3426c8fefbbfdd92b5954db3dc21b80ba4668dc81a4478"
+    },
+    {
+      "name": "16x9/ops.jsonl",
+      "bytes": 361105,
+      "sha256": "b22f76cbe83063e9954721035cb593fc2229dc2e04e223988f449d77aab497a5"
+    },
+    {
+      "name": "16x9/planner-current.kimo.json",
+      "bytes": 1110472,
+      "sha256": "afca76cd38e8094bb6fbbdffaea22999ef2a889edd1ea7bc94470d35ad8702ed"
+    },
+    {
+      "name": "16x9/project.kimo.json",
+      "bytes": 1110472,
+      "sha256": "afca76cd38e8094bb6fbbdffaea22999ef2a889edd1ea7bc94470d35ad8702ed"
+    },
+    {
+      "name": "16x9/edit.edl.json",
+      "bytes": 2929221,
+      "sha256": "b5038b318b811702819d79b9176c71feb9b2b2e0519e6af5667146db36e1e9ff"
+    },
+    {
+      "name": "16x9/run.json",
+      "bytes": 778,
+      "sha256": "39f6e8106dd1c3d2c52f99dd9705e0298073e9e8553a4bd73192bbe489d251ae"
+    },
+    {
+      "name": "9x16/compose-metrics.json",
+      "bytes": 59096,
+      "sha256": "10dfb1ee6c4c2561e0176e46238cf3ca1ea42121a63ad85b3546f64ccee90a02"
+    },
+    {
+      "name": "9x16/compose-words.json",
+      "bytes": 14929,
+      "sha256": "0e528a68c889dff90a17cc88d9ae0a4e440e22bfbff5306d8f490239cdc7991a"
+    },
+    {
+      "name": "9x16/CREDITS.txt",
+      "bytes": 224,
+      "sha256": "c2a5910a7faf2a06fe5b82cc1a7d5cf041b6a13078dcbab4a6f9a6ed4fc47d56"
+    },
+    {
+      "name": "9x16/legacy-metrics.json",
+      "bytes": 59175,
+      "sha256": "2a62b6cfd67f9cbdadb51ddf866046784ff466aaaa22241ca52e6587f59cf36f"
+    },
+    {
+      "name": "9x16/legacy-run.json",
+      "bytes": 217,
+      "sha256": "b06456d7d4c3f1844a5a61caa10ecdcc7762d526f9d855071b96e627e30a29fd"
+    },
+    {
+      "name": "9x16/legacy-words.json",
+      "bytes": 15130,
+      "sha256": "dd3b0ee131cc56d0ed3426c8fefbbfdd92b5954db3dc21b80ba4668dc81a4478"
+    },
+    {
+      "name": "9x16/ops.jsonl",
+      "bytes": 354203,
+      "sha256": "5cbd78ced439b4fa9cab07426f79d578d8ee4fec17fca8fb0843e3b7b32249e4"
+    },
+    {
+      "name": "9x16/planner-current.kimo.json",
+      "bytes": 1110286,
+      "sha256": "b985bef7501f43473ae1a0c19f2b518c91a710815801b13b10fcef234cc08240"
+    },
+    {
+      "name": "9x16/edit.edl.json",
+      "bytes": 2928663,
+      "sha256": "051e412db48d9b58eb25867c8d50baeb915d5d8e2a87c378f5b1487b29da7fab"
+    },
+    {
+      "name": "9x16/project.kimo.json",
+      "bytes": 1110286,
+      "sha256": "b985bef7501f43473ae1a0c19f2b518c91a710815801b13b10fcef234cc08240"
+    },
+    {
+      "name": "9x16/run.json",
+      "bytes": 778,
+      "sha256": "133fbda92224b4d98079ea2576431f78ed7a7b4bda004188bddf3ebdcaec3991"
+    },
+    {
+      "name": "CREDITS.txt",
+      "bytes": 224,
+      "sha256": "c2a5910a7faf2a06fe5b82cc1a7d5cf041b6a13078dcbab4a6f9a6ed4fc47d56"
+    },
+    {
+      "name": "prepared.json",
+      "bytes": 8692,
+      "sha256": "69d6e9a321cd73baa7d8c90722b3a331fc6a8282d59f6feccbb583bc3cd3d56f"
+    }
+  ]
+}

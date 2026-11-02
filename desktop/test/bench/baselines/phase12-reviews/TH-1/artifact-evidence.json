@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "id": 13142260217,
+    "name": "creator-review-TH-1-shorts-clean",
+    "digest": "sha256:4608ecf3a1f97756d77a6dfa930a5bbe62f0ed52be33f93e03693fcb563f4e27",
+    "size_in_bytes": 72968486
+  },
+  "fetchedBytes": 947318,
+  "files": [
+    {
+      "name": "TH-1-shorts-clean/fixture-plan.json",
+      "bytes": 39206,
+      "sha256": "0e6327425a7a3e3dbdb1d69b3a854c5299526dfe4fe912280f7ae2becf3d7959"
+    },
+    {
+      "name": "TH-1-shorts-clean/edit.edl.json",
+      "bytes": 328464,
+      "sha256": "ec399a46ae09d48b03c95e7de6f246ef6a6ad09be2b493c35d232205bfb47a06"
+    },
+    {
+      "name": "TH-1-shorts-clean/metrics.json",
+      "bytes": 36319,
+      "sha256": "c962d48d4d579a4c910688b8d25bec679649fb0e8dea47680c993bdeb807fa2b"
+    },
+    {
+      "name": "TH-1-shorts-clean/hook.jpg",
+      "bytes": 178468,
+      "sha256": "f213dae1d10130a9318f3ea6c8515dcb1f3ff1d88237e88bfd920747c092cc8b"
+    },
+    {
+      "name": "TH-1-shorts-clean/sources.json",
+      "bytes": 262,
+      "sha256": "eb7872b9eef0144b8739aea393555f2f5f9aeab5b83478a1419e2e86b7bffa38"
+    },
+    {
+      "name": "TH-1-shorts-clean/sheet.jpg",
+      "bytes": 668746,
+      "sha256": "6c1f521e0880618bfbee09f7af1bacd74fa7a7420d7eb7173628306559ec900b"
+    }
+  ]
+}

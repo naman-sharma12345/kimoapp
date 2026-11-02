@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "id": 13141477543,
+    "name": "creator-review-TH-2-shorts-punchy",
+    "digest": "sha256:8ea867d991abe5e2b00e379171a018290328dc73c39c70bd75036506ded5d3ce",
+    "size_in_bytes": 60169842
+  },
+  "fetchedBytes": 1036959,
+  "files": [
+    {
+      "name": "TH-2-shorts-punchy/edit.edl.json",
+      "bytes": 228267,
+      "sha256": "f34e27135243a035e6eb46313a8da7c1ad1f3984c0a5bd1201382208cca93fb0"
+    },
+    {
+      "name": "TH-2-shorts-punchy/fixture-plan.json",
+      "bytes": 27675,
+      "sha256": "2200bc82e5292272644c196619d03b834d522d6e2b26a53d19e576b5ccef4d13"
+    },
+    {
+      "name": "TH-2-shorts-punchy/metrics.json",
+      "bytes": 31121,
+      "sha256": "d131196876089f60359783fe084425ebec6de8ff79e5fd696bbd715ae817ce88"
+    },
+    {
+      "name": "TH-2-shorts-punchy/hook.jpg",
+      "bytes": 201520,
+      "sha256": "76859b1edd0814175a5c8a2abf4c0243ca104a9b1aa70aa479c329537025d97a"
+    },
+    {
+      "name": "TH-2-shorts-punchy/sources.json",
+      "bytes": 262,
+      "sha256": "ffbe4a1332487cac819111f90d52747e38ff6d419ca8295f5d6e4dc32f7a976a"
+    },
+    {
+      "name": "TH-2-shorts-punchy/sheet.jpg",
+      "bytes": 744860,
+      "sha256": "49cba8d45d14d2a8cf637621437da2ee0b3a49bfced99e14db6ac0f0c0166fe4"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "id": 13143312349,
+    "name": "creator-review-POD-1-podcast-clips",
+    "digest": "sha256:a2f5be25f439c6572b1cdfd058e6523c6f2b7c2812e244812cb339fa286a6e1f",
+    "size_in_bytes": 80290044
+  },
+  "fetchedBytes": 1855629,
+  "files": [
+    {
+      "name": "POD-1-podcast-clips/edit.edl.json",
+      "bytes": 248224,
+      "sha256": "efeef4386bdd6d1f741162e3f89439918dc5c49442f6256ead3bb7d6d8b7afda"
+    },
+    {
+      "name": "POD-1-podcast-clips/fixture-plan.json",
+      "bytes": 43424,
+      "sha256": "f33ba7be2e22defbeab454296c0c60a977cee5ab2db3000e15f080fde89f0eae"
+    },
+    {
+      "name": "POD-1-podcast-clips/metrics.json",
+      "bytes": 29450,
+      "sha256": "bce506f855e23ce9ebf61b7f549bb8c48dfce89583cc84c3f48772abc33c363b"
+    },
+    {
+      "name": "POD-1-podcast-clips/hook.jpg",
+      "bytes": 374629,
+      "sha256": "2a2dcd46070fd5cc5a3a7c0b628376c3395822cf931eff2f7910cfec435f6e4c"
+    },
+    {
+      "name": "POD-1-podcast-clips/sources.json",
+      "bytes": 263,
+      "sha256": "403fcbd8b75525680425e8356b233a4cb8ad84f502ba6d846181b3ee968208e5"
+    },
+    {
+      "name": "POD-1-podcast-clips/sheet.jpg",
+      "bytes": 1378119,
+      "sha256": "125632ed2d7113ee93048d45fbf164cc51d11f7af0b859f0743d75d21dd6e9b3"
+    }
+  ]
+}

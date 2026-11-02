@@ -129,3 +129,30 @@ has neither, allowing measurement. Unit grade test must still catch injected
 repeats/skips. Windows41442099649 failed73.7 because nonlinear grade invalidated
 ungraded registration; repeats0 at100%coverage. Its artifact13141188418 smalls
 preserved in LOCALAPPDATA/kimo/phase12/windows3. Never relax confidence for green.
+
+Latest normal regression41463788275 SUCCESS onca1a762: nine templates all
+scores identical to initial calibration, all9 final-video SHA256 hashes match.
+Measured v6 baseline now committed-candidate release-baseline.json; v5 original
+retained in baselines/phase12-initial. Report artifact13151361431, proof under
+baselines/phase12-regression. Three new review links updated in FINAL generator.
+
+Windows41463186835 unit/robustness/renderer/build/install passed; SAM73.7 still
+failed jitter coverage99/106=93.396%, despite grade-aware mean MAD0.612 (down
+from5.103) and mean fit RMSE0.713. Its hidden captions were still masking source
+pixels. New fix skips non-rendered overlays in measurement events, retaining95%
+threshold. Artifact13150642846 small evidence preserved LOCALAPPDATA/kimo/phase12/
+windows4. Need strict installed smoke on the final source; do not publish on red.
+
+User's AMD report also prompted CPU-default decode and removal of GPU probing
+from startup/status. Settings copy now says GPU checked only for small copy.
+Only explicit small-copy action detects hardware encoders. Hosted qualification
+sets hardware decode off. No local media/browser/build commands after that report.
+Windows workflow now uploads small kimo-renderer-build artifact for committing
+built assets without running Vite on the user's PC. Publication requires successful
+full_bench_run41463788275 and validates downloaded published assets on the runner.
+
+Ready candidate docs/evidence: six actual first-second/contact sheets inspected,
+10-line critiques each in PHASE12-REVIEW.md, FINAL/RESULTS/release notes, pickerGIF
+and credited raw/creator first-second sheets. CPU/codec and zero paid-call limits
+remain explicit. User accepted the failed performance budget only, not false
+correctness results. Ledger Git blob unchanged f33b9339c1459b02a4d3633b6dad989ffdf6d8db.

@@ -299,3 +299,42 @@ picture. The user's lightweight verification excludes full footage benchmarks,
 paid provider requests, releases and installers. Browser checks use a mock preload
 and synthetic metrics, not native OS/account/provider evidence. Missing quality
 measurements remain unverified.
+
+## Desktop Phase 12 — release qualification
+
+The desktop release brief explicitly authorizes hosted full qualification and a
+v0.4.0 release, superseding Phase 11's lightweight-only check scope. Full renders
+and installer builds stay on standard GitHub runners. No paid AI/SAM allowance is
+renewed: saved deterministic plan fixtures disable network and are labelled as
+fixtures, not recorded provider responses or evidence of planner adherence.
+
+Use existing error/warning/focus and control tokens for the critical alert,
+preview chip, resume and cache controls; no new palette or motion values. Missing
+applicable measurements are unverified, never a substitute zero. One local repair
+per initially failing stage bounds retries. Final encoded AAC is measured after
+delivery, including a bounded limiter correction if its peak needs repair.
+
+Default media work keeps one thread and below-normal process priority to protect
+the foreground PC. An explicit hosted CI profile uses the four-core budget and
+allows filter threading. Preview/full passes have distinct content caches; the
+preview is 540 pixels on the short side, x264 ultrafast, while full export uses
+x264 medium. Hardware decode has a CPU fallback; hardware encoding remains for
+the optional small copy. Exact contiguous frame selections avoid the JavaScript
+pixel round-trip; noncontiguous selections retain strict sampling. Camera filter
+files avoid Windows command-line limits without truncating keys or precision.
+
+After the user reported AMD driver errors, stop every local media/browser/GPU
+test, including tiny ones; all remaining verification runs on hosted machines.
+No FFmpeg/Whisper process remained locally when checked. Driver probing is also
+removed from app startup/status refresh. Decode defaults to CPU; the explicit
+KIMO_HW_DECODE=auto switch enables hardware decode with CPU fallback. The optional
+small-copy action retains its explicit GPU encoder detection. Settings describes
+that distinction using existing row tokens. No driver/registry/machine changes.
+
+The user explicitly approved publishing with the measured performance gap after
+correctness checks pass. Preserve the failed budget: latest total 532.819s, against
+240s. Opaque passes 397.055s plus final encode 82.918s give 479.973s of composition
+through delivery against 90s. The old composition counter omitted the final
+creator_delivery operation; correct it and retain its regression assertion.
+Do not turn that performance workflow green or represent skipped AI latency as
+a measured critic loop. Dataset scores and editorial weaknesses remain honest.

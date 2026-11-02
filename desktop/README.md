@@ -1,51 +1,113 @@
 # kimo for Windows
 
-A desktop video editor that runs the **real kimo v6 engine** on your PC. Everything is
-inside one installer: kimo-mcp, FFmpeg/FFprobe, whisper.cpp with the small model, fonts
-and the UI. No Docker, no separate engine, no size or length caps (long videos and 4K
-are fine).
+Creator editing with local Whisper, a frame-exact compositor, FFmpeg and fonts in
+one Windows installer. The bundled kimo v6 engine remains a read-only tool; creator
+picture rendering runs in this repository's compositor.
 
-## Install
+## Install and edit
 
-1. Download `kimo-Setup-<version>.exe` from
-   [Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
-2. The installer is not code-signed yet, so Windows SmartScreen may say "Windows
-   protected your PC". Click **More info → Run anyway**.
-3. kimo updates itself from GitHub Releases (it asks before restarting).
+Download the installer from [GitHub Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
+The installer is unsigned; Windows may show its SmartScreen confirmation. Updates
+come from GitHub Releases and ask before restarting.
 
-## What it does
+Drop files or a folder, choose a template, and describe the edit. AI planning needs
+the existing AI access configuration; captions-only transcription works offline.
+Each project keeps its plan, EDL, history and operation log locally. Inputs longer
+than three hours are refused with a trimming message. Large/4K sources work within
+available disk and memory; no real-time or maximum-size guarantee is made.
 
-- Drag in files or whole folders; each edit is saved in your local library with its
-  history, edit script and full op log.
-- **AI edit, live**: kimo writes the edit script and drives kimo tools (rough cut,
-  captions, titles, grade, punch-ins, reframe, audio finish…). Every AI step and tool
-  call streams with timers; the preview and a visual timeline update after each change;
-  renders show % and ETA.
-- **Style presets**: Energetic (MrBeast-style), Documentary, Podcast clip, Cinematic,
-  Tutorial, Auto.
-- **Quality**: kimo export at CRF 16, then a YouTube upload master (H.264 High, closed
-  GOP, recommended bitrate, AAC 384 kbps, -14 LUFS / ≤ -1 dBTP). Each pass is measured
-  (loudness, true peak, black frames, dead air) and AI-checked on 18 frames; faults are
-  fixed and re-rendered (up to 3 passes).
-- **Edit it yourself**: drag-to-edit timeline (move, trim, delete, caption text), or ask
-  kimo for changes in chat; both apply on top of the saved project.
-- **YouTube pack**: thumbnail, title, description, chapters.
-- **Captions only**: fully offline — whisper on your PC, no internet needed.
-- Formats: YouTube 16:9 (1080p or 4K), Shorts/Reels/TikTok 9:16, square 1:1, feed 4:5.
-- Batch: drop several videos, tick *Batch*, one prompt edits each one in a queue.
-- **Small copy** re-encodes on your GPU (NVENC, Quick Sync or AMF) when there is one.
+## Templates
+
+![The desktop template picker](../docs/readme/creator-picker.gif)
+
+| Template | Starting direction |
+|---|---|
+| Shorts — Clean | Restrained portrait captions and concise speech cuts |
+| Shorts — Punchy | Faster portrait cuts, punch-ins and accented captions |
+| YouTube — Talking | Landscape speech, varied framing and supporting visuals |
+| YouTube — Vlog | Speech and context shots arranged into a story |
+| Tutorial | Readable demonstrations, labels and measured pacing |
+| Podcast clips | Portrait extracts from conversation |
+| Documentary | Landscape narrative, lower thirds and supporting images |
+| Music montage | Visual rhythm and music rather than speech-first cuts |
+| Explainer | Speech-synced cards, callouts and supporting visuals |
+
+Length, aspect, captions, look and music can be overridden. A template is a
+starting policy, not a promise to imitate a particular creator. The small card
+previews demonstrate framing/caption styles, not complete generated edits.
+Preview footage: ProPublica, *Unedited: ProPublica Interviews President Biden,
+September 2023*, [source](https://commons.wikimedia.org/wiki/File:Unedited-_ProPublica_Interviews_President_Biden,_September_2023.webm),
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/); cropped, styled and
+captioned as a demonstration. Labels are not dialogue or endorsement.
+
+| Before: prepared raw interview | After: clean-shorts fixture |
+| --- | --- |
+| ![Raw first second](../docs/readme/creator-before.jpg) | ![Creator first second](../docs/readme/creator-after.jpg) |
+
+Actual benchmark first-second sheets, using the ProPublica source credited above.
+The after image is a deterministic offline fixture. Its weak opening and
+competing hook/caption text are retained as honest evidence, not a quality claim.
+
+## Preview, export and quality
+
+Editing renders a reduced preview: 540 pixels on the short side, with x264
+ultrafast. Export renders the saved full-resolution EDL with software x264 medium,
+then produces H.264/AAC delivery. A compatible GPU is used only for the optional
+small upload copy. Decode defaults to CPU; `KIMO_HW_DECODE=auto` opts into
+hardware decode with CPU fallback on a supported driver. Startup and engine-status
+refreshes do not probe GPU encoders. This avoids unnecessary driver activity.
+One background job runs at a time with a conservative default worker budget.
+These limits reduce contention; rendering still consumes CPU and disk.
+
+Base picture, caption/graphic overlays, dry audio stems and mastered passes have
+separate content keys. Gain-only changes copy the encoded picture. Captions reuse
+the base; structural camera/story changes rebuild it. Studio has timeline edits,
+source-anchored overrides, undo/redo, live stages and a Quality tab. See
+[Studio controls](studio-README.md).
+
+Critical checks cover repeats, camera jitter, encoded true peak, caption safe
+area, dead air and first speech. A failing stage gets at most one automatic local
+retry. Remaining failures are shown in Studio; unavailable measurements stay
+unverified and cannot produce an all-green result. Creator Score is a heuristic,
+not a human editorial rating. Natural footage can be too ambiguous for unique
+frame matching; synthetic barcode tests independently check frame selection.
+
+Input preparation converts detected VFR to a standard CFR, bakes rotation and
+tone-maps PQ/HLG to SDR BT.709 using Hable. Checkpoints retain completed stages;
+an interrupted creator edit can resume without renewing its AI call allowance.
+Stop cancels the worker process tree. Settings shows the cache size and can clear
+rebuildable cache while keeping projects and input copies.
+
+## Evidence and limitations
+
+[Final qualification](test/bench/FINAL.md), [measurements](test/bench/RESULTS.md)
+and [baseline provenance](test/bench/release-baseline.json) describe the actual
+hosted results, known limits and source credits. Before/after comparisons are
+benchmark evidence, not a promise that every AI plan improves the source.
+Provider adherence, human taste and interactive updater behaviour are distinct
+from offline replay tests. See [updater verification](test/UPDATER.md).
 
 ## Privacy
 
-Media never leaves your PC. AI edit sends only the prompt, text results from the engine
-and two contact sheets + two frames + measured audio numbers per check to `api.getkimo.tech` (no API key is
-in the app). SAM features (subject tracking, 9:16 follow-reframe, text behind subject,
-background blur/replace, object blur) upload a downscaled (~720p, silent) copy of only the
-clip segment being processed to Meta via the same proxy, and delete it after. See `THIRD_PARTY_NOTICES.md` for bundled licenses.
+Rendering and transcription run locally. AI editing sends prompts, text tool
+results and selected review images/audio numbers through the existing kimo proxy.
+SAM effects send a downscaled silent segment for tracking; the proxy deletes that
+upload afterwards. This is not a wholly offline AI service. No provider key is
+bundled. [Third-party notices](THIRD_PARTY_NOTICES.md) list asset/tool licences.
 
-## Build
+## Build and qualification
 
-`.github/workflows/desktop.yml` (windows-latest) downloads the bundled tools into
-`desktop/vendor`, builds the NSIS installer with electron-builder, installs it on the
-runner, runs `kimo.exe --smoke <clip>` (engine start, ffmpeg, whisper captions, one real
-render) and publishes the release.
+```sh
+npm ci --prefix desktop
+npm test --prefix desktop
+npm run build:renderer --prefix desktop
+```
+
+Bundled tools must be in `desktop/vendor`; the workflow bootstraps them. The
+manual [Windows workflow](../.github/workflows/desktop.yml) builds and installs
+the NSIS package, runs renderer/schema/robustness tests and two installed creator
+replays, and uploads video, metrics and HTML reviews. Only `release=true` publishes
+after those steps pass. `creator-full-bench.yml` separately runs all nine template
+cases or the four-core performance budget. Replays have no paid fallback and
+never renew the historical spending ledger. Full media work belongs on hosted
+runners, not a foreground development PC.

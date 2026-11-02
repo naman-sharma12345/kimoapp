@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "id": 13143409790,
+    "name": "creator-review-MUSIC-1-music-montage",
+    "digest": "sha256:e482bcd8d18794ef1d2a76d3c084577d95f78a8044a5297eeaff0bfb61e88eaa",
+    "size_in_bytes": 31830369
+  },
+  "fetchedBytes": 373010,
+  "files": [
+    {
+      "name": "MUSIC-1-music-montage/edit.edl.json",
+      "bytes": 55208,
+      "sha256": "fd881f310972478098f382655f8dee7b77a666b5d9efcd56246709a59c392402"
+    },
+    {
+      "name": "MUSIC-1-music-montage/fixture-plan.json",
+      "bytes": 3570,
+      "sha256": "96a479308f2df7070a104608bb5cabde5d587fa5fa8a2d4b9c8eb78617af533a"
+    },
+    {
+      "name": "MUSIC-1-music-montage/hook.jpg",
+      "bytes": 122164,
+      "sha256": "83d52e73d071de05407c76ab422a633e15f6b1f93f1f86e6f125224fee6b0e2d"
+    },
+    {
+      "name": "MUSIC-1-music-montage/metrics.json",
+      "bytes": 13443,
+      "sha256": "ac3e2bb21a03e2b315c905ef3dea044f696867eb04336df2d0b9971f640f9f0e"
+    },
+    {
+      "name": "MUSIC-1-music-montage/sources.json",
+      "bytes": 265,
+      "sha256": "40782e783b383c95c38e4893e712fabec8d24b5481fa5452c62bc2323402d6fd"
+    },
+    {
+      "name": "MUSIC-1-music-montage/sheet.jpg",
+      "bytes": 175504,
+      "sha256": "655ed6fa5c2522d1f89f7e0f252f992a90148bff3b91607832878c5a9b12a2fd"
+    }
+  ]
+}

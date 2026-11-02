@@ -1,5 +1,50 @@
 # Creator benchmark results
 
+## Phase 12 — release qualification, 2 November 2026
+
+The user explicitly approved publication after correctness checks, with the
+performance gap documented. The full-export budget remains FAILED; it was not
+relaxed. Full media/installer work runs on standard GitHub-hosted Windows VMs.
+After the AMD driver report, every local media/browser/GPU test stopped, including
+tiny fixtures. Only file, JSON, image inspection and Git operations continue locally.
+No paid AI/SAM requests; the fully reserved USD 5.49 historical ledger is unchanged.
+
+| Hosted performance run | Whisper s | Opaque compose passes s | Final encode s | End-to-end s | Budget |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 41427786326, initial FFV1 | 44.024 | 806.454 | not separately retained here | 1009.450 | fail |
+| 41440304538, bounded filter threads | 43.846 | 636.738 | 137.090 | 840.243 | fail |
+| 41442585685, lossless opaque x264 caches | 32.390 | 397.055 | 82.918 | 532.819 | fail |
+
+Four virtual CPU cores, source 60.026633s at 1920×1080, full 1080×1920 delivery,
+software x264 medium and no GPU. The latest VM used EPYC 9V74, earlier EPYC 7763;
+this is not a controlled comparison on one physical laptop. Correct composition
+through delivery is 397.055 + 82.918 = 479.973s against 90s. The counter now includes
+creator_delivery; old raw metrics keep their original excluded-delivery number.
+Plan/AI critic0s denotes the deterministic fixture, not measured model latency.
+Actual critical/audio checks and preprocessing remain included in total time.
+
+The initial nine-case full replay41442412531 passed and produced the committed
+release-baseline.json. Scores: shorts-clean73.6, shorts-punchy75.9, talking65.9,
+vlog66.9, tutorial63.3, podcast56.6, documentary64.3, explainer63.5, montage55.6.
+Full-golden physical frame/jitter evidence remains unverified for unsupported
+animated/follow mappings; no zero is substituted. Delivery and narrative checks
+are distinct from physical identity. See FINAL.md for all six legacy→creator
+comparisons, source-specific critical metrics, artifact links and honest gaps.
+
+Measurement v6 reproduces each saved colour LUT by content key and SHA256 before
+source registration, retaining the 95% confidence/coverage and fit limits. Hidden
+caption overlays must not mask reference pixels. An injected nonlinear-grade
+repeat/skip fixture verifies faults are still detected. Normal archived-output
+remeasurement checks exact final-video SHA256 against the committed baseline and
+the existing >3-point regression threshold; it does not silently rerender footage.
+
+Local verification before the AMD report: root lint/typecheck,311 tests/build;
+198 desktop passes with one hosted-only skip; renderer build and four critical/
+cache screenshots. Latest completed tiny opaque-cache regression37/37 passed,
+including all7rates, alpha gaps, zero A/B mean RGB difference and0.2504px observed
+camera residual. Further regression, full robustness, installed creator smokes
+and screenshots run on hosted Windows; record their final run below.
+
 ## Phase 11 Studio — 1 November 2026
 
 Nine-template Home, ten-stage live feed, creator score details, seven timeline

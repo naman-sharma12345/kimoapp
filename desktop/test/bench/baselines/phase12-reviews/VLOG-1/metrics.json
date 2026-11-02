@@ -1,0 +1,1196 @@
+{
+  "version": 5,
+  "values": {
+    "first_speech_s": 0,
+    "hook_text": false,
+    "dead_air_ratio": 0,
+    "filler_count": 1,
+    "repeat_takes": 0,
+    "median_shot_s": 3.0030030030030033,
+    "max_static_s": 3.87,
+    "framing_variety": 3,
+    "jitter_px": null,
+    "repeated_frames": null,
+    "skipped_frames": null,
+    "frame_match_coverage": 0,
+    "caption_min_word_s": 0.043,
+    "caption_safe": true,
+    "caption_face_overlap": null,
+    "lufs": -14,
+    "true_peak": -1.5,
+    "lra": 2,
+    "duck_depth_db": null,
+    "sfx_count_per_min": 0,
+    "aspect": "16:9",
+    "clip_delta_e": 3.472438054418805,
+    "clipped_pct": 0.1514252431311082,
+    "frame_match": [
+      {
+        "id": "clip1",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip2",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip3",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip4",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip5",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip6",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip7",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip8",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip9",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip10",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip11",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip12",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip13",
+        "unavailable": "nonlinear/animated source mapping"
+      }
+    ],
+    "camera_registration_coverage": 0,
+    "closed_gop": true,
+    "cfr_ok": true
+  },
+  "creator": {
+    "score": 66.9,
+    "groups": {
+      "hook": 0.5,
+      "dead_air": 1,
+      "filler": 0.9375,
+      "cadence": 1,
+      "framing": 1,
+      "motion": 0,
+      "captions": 0.412962962962963,
+      "sound": 0.6342857142857143,
+      "colour": 1
+    },
+    "missing": [
+      "jitter_px",
+      "repeated_frames",
+      "skipped_frames",
+      "caption_face_overlap",
+      "duck_depth_db"
+    ],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "gates": {
+    "checks": [
+      {
+        "id": "repeated_frames",
+        "label": "repeated frames",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 0,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 0"
+      },
+      {
+        "id": "jitter_px",
+        "label": "camera jitter",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 1,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 1"
+      },
+      {
+        "id": "true_peak",
+        "label": "true peak",
+        "stage": "sound",
+        "state": "pass",
+        "measured": -1.5,
+        "value": "-1.5",
+        "limit": -1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ -1"
+      },
+      {
+        "id": "caption_safe",
+        "label": "caption safe area",
+        "stage": "captions",
+        "state": "pass",
+        "measured": true,
+        "value": "inside",
+        "limit": true,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "inside safe area"
+      },
+      {
+        "id": "dead_air_ratio",
+        "label": "dead air",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 0.06,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 0.06"
+      },
+      {
+        "id": "first_speech_s",
+        "label": "first speech",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 1"
+      }
+    ],
+    "passed": false,
+    "red": false,
+    "unverified": true
+  },
+  "performance": {
+    "seconds": {
+      "transcript": 0.6679999999999999,
+      "plan": 0,
+      "compose": 492.567,
+      "critic": 0,
+      "total": 612.377
+    },
+    "budgets": {
+      "transcript": 45,
+      "plan": 25,
+      "compose": 90,
+      "critic": 60,
+      "total": 240
+    },
+    "checks": [
+      {
+        "stage": "transcript",
+        "max": 45,
+        "seconds": 0.6679999999999999,
+        "ok": true
+      },
+      {
+        "stage": "plan",
+        "max": 25,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "compose",
+        "max": 90,
+        "seconds": 492.567,
+        "ok": false
+      },
+      {
+        "stage": "critic",
+        "max": 60,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "total",
+        "max": 240,
+        "seconds": 612.377,
+        "ok": false
+      }
+    ],
+    "hardware": {
+      "platform": "win32",
+      "cores": 4,
+      "model": "AMD EPYC 7763 64-Core Processor                "
+    },
+    "preview": false,
+    "source_seconds": 10.01,
+    "representative": false
+  },
+  "replay": {
+    "networkAttempts": 0,
+    "paidCalls": 0,
+    "mode": "saved deterministic plan replay",
+    "providerAdherence": false,
+    "staticCamera": false
+  },
+  "events": [
+    {
+      "id": "clip1",
+      "kind": "cut",
+      "start": 0,
+      "end": 2.002002002002002,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 0,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip2",
+      "kind": "cut",
+      "start": 2.002002,
+      "end": 3.962295626960294,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 2.168836,
+      "speed": 1,
+      "raw": {
+        "start": 2.002002,
+        "props": {
+          "scale": {
+            "base": 1.33,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.027600000000000013
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip3",
+      "kind": "cut",
+      "start": 3.962296,
+      "end": 7.215549253253252,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 5.630631,
+      "speed": 1,
+      "raw": {
+        "start": 3.962296,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip4",
+      "kind": "cut",
+      "start": 7.215549,
+      "end": 14.139139256923592,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/2.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 7.215549,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              },
+              {
+                "t": 2.07,
+                "v": 1
+              },
+              {
+                "t": 2.2785,
+                "v": 1.15
+              },
+              {
+                "t": 4.81,
+                "v": 1.15
+              },
+              {
+                "t": 5.0185,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip5",
+      "kind": "cut",
+      "start": 14.139139,
+      "end": 16.099423,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/2.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 8.049716,
+      "speed": 1,
+      "raw": {
+        "start": 14.139139,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip6",
+      "kind": "cut",
+      "start": 16.099433,
+      "end": 17.058725625959294,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/3.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 16.099433,
+        "props": {
+          "scale": {
+            "base": 1.33,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.027600000000000013
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip7",
+      "kind": "cut",
+      "start": 17.058726,
+      "end": 25.942609883883883,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/3.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 1.042709,
+      "speed": 1,
+      "raw": {
+        "start": 17.058726,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 1.3873,
+                "v": 1.15
+              },
+              {
+                "t": 1.5958,
+                "v": 1.33
+              },
+              {
+                "t": 4.9473,
+                "v": 1.33
+              },
+              {
+                "t": 5.1558,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip8",
+      "kind": "cut",
+      "start": 25.94261,
+      "end": 28.945613003003,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/4.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 25.94261,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip9",
+      "kind": "cut",
+      "start": 28.945613,
+      "end": 35.660651,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/4.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 3.294962,
+      "speed": 1,
+      "raw": {
+        "start": 28.945613,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2.635,
+                "v": 1.15
+              },
+              {
+                "t": 2.8436,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip10",
+      "kind": "cut",
+      "start": 35.660661,
+      "end": 45.670660999999996,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/5.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 35.660661,
+        "props": {
+          "scale": {
+            "base": 1.33,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.33
+              },
+              {
+                "t": 2.22,
+                "v": 1.33
+              },
+              {
+                "t": 2.4285,
+                "v": 1.15
+              },
+              {
+                "t": 6.17,
+                "v": 1.15
+              },
+              {
+                "t": 6.3785,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.027600000000000013
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip11",
+      "kind": "cut",
+      "start": 45.670671,
+      "end": 50.88421788021355,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/6.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 45.670671,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 1.97,
+                "v": 1.15
+              },
+              {
+                "t": 2.1785,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip12",
+      "kind": "cut",
+      "start": 50.884218,
+      "end": 52.55255300166833,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/6.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 6.089423,
+      "speed": 1,
+      "raw": {
+        "start": 50.884218,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip13",
+      "kind": "cut",
+      "start": 52.552553,
+      "end": 53.178169000000004,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/6.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 9.384384,
+      "speed": 1,
+      "raw": {
+        "start": 52.552553,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "cap001",
+      "kind": "caption",
+      "start": 0,
+      "end": 0.792,
+      "text": "- How long have",
+      "box": {
+        "x": 0.37658125000000003,
+        "y": 0.8388,
+        "w": 0.2468375,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap002",
+      "kind": "caption",
+      "start": 0.792,
+      "end": 2.043,
+      "text": "you been in the cast",
+      "box": {
+        "x": 0.349728125,
+        "y": 0.8388,
+        "w": 0.30054375,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap003",
+      "kind": "caption",
+      "start": 2.044,
+      "end": 3.963,
+      "text": "- That was crazy .",
+      "box": {
+        "x": 0.36719687500000003,
+        "y": 0.8388,
+        "w": 0.26560625,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap004",
+      "kind": "caption",
+      "start": 3.962,
+      "end": 5.839,
+      "text": "Weddings here .",
+      "box": {
+        "x": 0.37668958333333336,
+        "y": 0.8388,
+        "w": 0.24662083333333334,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap005",
+      "kind": "caption",
+      "start": 5.839,
+      "end": 7.174,
+      "text": "They do a parade .",
+      "box": {
+        "x": 0.36362187499999993,
+        "y": 0.8388,
+        "w": 0.27275625,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap006",
+      "kind": "caption",
+      "start": 7.174,
+      "end": 9.218,
+      "text": "You know, the road was lined up,",
+      "box": {
+        "x": 0.2684239583333333,
+        "y": 0.8388,
+        "w": 0.4631520833333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap007",
+      "kind": "caption",
+      "start": 9.218,
+      "end": 11.637,
+      "text": "and it was like a motorhome.",
+      "box": {
+        "x": 0.29401770833333335,
+        "y": 0.8388,
+        "w": 0.41196458333333336,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap008",
+      "kind": "caption",
+      "start": 11.637,
+      "end": 12.888,
+      "text": "Well, how many years have",
+      "box": {
+        "x": 0.3044583333333334,
+        "y": 0.8388,
+        "w": 0.3910833333333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap009",
+      "kind": "caption",
+      "start": 12.888,
+      "end": 14.139,
+      "text": "you been with Renfest?",
+      "box": {
+        "x": 0.3262604166666667,
+        "y": 0.8388,
+        "w": 0.3474791666666667,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap010",
+      "kind": "caption",
+      "start": 14.139,
+      "end": 16.058,
+      "text": "21 years.",
+      "box": {
+        "x": 0.424396875,
+        "y": 0.8388,
+        "w": 0.15120625,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap011",
+      "kind": "caption",
+      "start": 16.058,
+      "end": 17.393,
+      "text": "And what I like",
+      "box": {
+        "x": 0.384746875,
+        "y": 0.8388,
+        "w": 0.23050625,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap012",
+      "kind": "caption",
+      "start": 17.392,
+      "end": 19.311,
+      "text": "about them so I got",
+      "box": {
+        "x": 0.3547114583333333,
+        "y": 0.8388,
+        "w": 0.2905770833333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap013",
+      "kind": "caption",
+      "start": 19.311,
+      "end": 20.604,
+      "text": "on here when I went",
+      "box": {
+        "x": 0.35009375000000004,
+        "y": 0.8388,
+        "w": 0.2998125,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap014",
+      "kind": "caption",
+      "start": 20.604,
+      "end": 21.98,
+      "text": "to work for the state,",
+      "box": {
+        "x": 0.34202291666666673,
+        "y": 0.8388,
+        "w": 0.31595416666666665,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap015",
+      "kind": "caption",
+      "start": 21.98,
+      "end": 22.856,
+      "text": "what I found out",
+      "box": {
+        "x": 0.37442812499999995,
+        "y": 0.8388,
+        "w": 0.25114375,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap016",
+      "kind": "caption",
+      "start": 22.856,
+      "end": 24.566000000000003,
+      "text": "with the demographics and all",
+      "box": {
+        "x": 0.2838072916666667,
+        "y": 0.8388,
+        "w": 0.4323854166666667,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap017",
+      "kind": "caption",
+      "start": 24.566,
+      "end": 25.901,
+      "text": "the castes made up.",
+      "box": {
+        "x": 0.34985,
+        "y": 0.8388,
+        "w": 0.3003,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap018",
+      "kind": "caption",
+      "start": 25.901,
+      "end": 28.112,
+      "text": "And all of a sudden those prejudices",
+      "box": {
+        "x": 0.24295208333333335,
+        "y": 0.8388,
+        "w": 0.5140958333333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap019",
+      "kind": "caption",
+      "start": 28.111,
+      "end": 29.529,
+      "text": "that we all have started kind",
+      "box": {
+        "x": 0.29346250000000007,
+        "y": 0.8388,
+        "w": 0.413075,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap020",
+      "kind": "caption",
+      "start": 29.529,
+      "end": 31.573,
+      "text": "of going by the wayside",
+      "box": {
+        "x": 0.32569166666666666,
+        "y": 0.8388,
+        "w": 0.3486166666666667,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap021",
+      "kind": "caption",
+      "start": 31.573,
+      "end": 33.241,
+      "text": "and it got to the",
+      "box": {
+        "x": 0.3768927083333333,
+        "y": 0.8388,
+        "w": 0.24621458333333332,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap022",
+      "kind": "caption",
+      "start": 33.242,
+      "end": 35.285999999999994,
+      "text": "point, this is for the people",
+      "box": {
+        "x": 0.30592083333333336,
+        "y": 0.8388,
+        "w": 0.3881583333333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap023",
+      "kind": "caption",
+      "start": 35.285,
+      "end": 37.662,
+      "text": "who think these weird.",
+      "box": {
+        "x": 0.3328416666666667,
+        "y": 0.8388,
+        "w": 0.3343166666666667,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap024",
+      "kind": "caption",
+      "start": 37.663,
+      "end": 37.872,
+      "text": "He got the points and",
+      "box": {
+        "x": 0.34089895833333334,
+        "y": 0.8388,
+        "w": 0.31820208333333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap025",
+      "kind": "caption",
+      "start": 37.871,
+      "end": 39.373000000000005,
+      "text": "so have the kids.",
+      "box": {
+        "x": 0.3715572916666667,
+        "y": 0.8388,
+        "w": 0.25688541666666664,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap026",
+      "kind": "caption",
+      "start": 39.373,
+      "end": 41.791999999999994,
+      "text": "Huge darks, enduro shrieks,",
+      "box": {
+        "x": 0.2988791666666667,
+        "y": 0.8388,
+        "w": 0.4022416666666667,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap027",
+      "kind": "caption",
+      "start": 41.792,
+      "end": 42.918,
+      "text": "as my fam.",
+      "box": {
+        "x": 0.411396875,
+        "y": 0.8388,
+        "w": 0.17720625000000004,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap028",
+      "kind": "caption",
+      "start": 42.918,
+      "end": 45.461999999999996,
+      "text": "I've adopted all of them",
+      "box": {
+        "x": 0.327546875,
+        "y": 0.8388,
+        "w": 0.34490625,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap029",
+      "kind": "caption",
+      "start": 45.462,
+      "end": 47.214000000000006,
+      "text": "as I'm very happy to see",
+      "box": {
+        "x": 0.32460833333333333,
+        "y": 0.8388,
+        "w": 0.3507833333333333,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap030",
+      "kind": "caption",
+      "start": 47.214,
+      "end": 48.674,
+      "text": "that so what makes",
+      "box": {
+        "x": 0.3518541666666667,
+        "y": 0.8388,
+        "w": 0.2962916666666667,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap031",
+      "kind": "caption",
+      "start": 48.674,
+      "end": 50.592999999999996,
+      "text": "this Ohio's run fast different",
+      "box": {
+        "x": 0.2956427083333333,
+        "y": 0.8388,
+        "w": 0.40871458333333344,
+        "h": 0.1144
+      }
+    },
+    {
+      "id": "cap032",
+      "kind": "caption",
+      "start": 50.592,
+      "end": 53.178,
+      "text": "than all the others are Based",
+      "box": {
+        "x": 0.292325,
+        "y": 0.8388,
+        "w": 0.41535,
+        "h": 0.1144
+      }
+    }
+  ],
+  "evidence": {
+    "scope": "Modern EDL caption/cut statistics plus independent source matching, source-residual registration, sampled colour and final-audio measurement.",
+    "limits": "Animated/non-centre source mappings or ambiguous natural footage remain unverified; no zero is substituted. CI short fixtures explicitly hold a centred wide camera to isolate frame selection; separate barcode/camera unit tests cover moving cameras. Saved deterministic plan replay is not provider adherence."
+  }
+}

@@ -1,0 +1,1406 @@
+{
+  "version": 5,
+  "values": {
+    "first_speech_s": 0,
+    "hook_text": true,
+    "dead_air_ratio": 0,
+    "filler_count": 0,
+    "repeat_takes": 0,
+    "median_shot_s": 4.504504504504503,
+    "max_static_s": 2.3,
+    "framing_variety": 3,
+    "jitter_px": null,
+    "repeated_frames": null,
+    "skipped_frames": null,
+    "frame_match_coverage": 0,
+    "caption_min_word_s": 0.167,
+    "caption_safe": true,
+    "caption_face_overlap": null,
+    "lufs": -14,
+    "true_peak": -1.5,
+    "lra": 3.3,
+    "duck_depth_db": 1.1496479219335356,
+    "sfx_count_per_min": 2.8514597394676686,
+    "aspect": "9:16",
+    "clip_delta_e": 4.272530673840148,
+    "clipped_pct": 0.15203930587341416,
+    "frame_match": [
+      {
+        "id": "clip1",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip2",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip3",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip4",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip5",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip6",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip7",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip8",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip9",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip10",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip11",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip12",
+        "unavailable": "nonlinear/animated source mapping"
+      }
+    ],
+    "camera_registration_coverage": 0,
+    "closed_gop": true,
+    "cfr_ok": true
+  },
+  "creator": {
+    "score": 75.9,
+    "groups": {
+      "hook": 1,
+      "dead_air": 1,
+      "filler": 1,
+      "cadence": 0.8990990990990995,
+      "framing": 1,
+      "motion": 0,
+      "captions": 0.6425925925925926,
+      "sound": 0.7270208534209667,
+      "colour": 0.9914834164424954
+    },
+    "missing": [
+      "jitter_px",
+      "repeated_frames",
+      "skipped_frames",
+      "caption_face_overlap"
+    ],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "gates": {
+    "checks": [
+      {
+        "id": "repeated_frames",
+        "label": "repeated frames",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 0,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 0"
+      },
+      {
+        "id": "jitter_px",
+        "label": "camera jitter",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 1,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 1"
+      },
+      {
+        "id": "true_peak",
+        "label": "true peak",
+        "stage": "sound",
+        "state": "pass",
+        "measured": -1.5,
+        "value": "-1.5",
+        "limit": -1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ -1"
+      },
+      {
+        "id": "caption_safe",
+        "label": "caption safe area",
+        "stage": "captions",
+        "state": "pass",
+        "measured": true,
+        "value": "inside",
+        "limit": true,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "inside safe area"
+      },
+      {
+        "id": "dead_air_ratio",
+        "label": "dead air",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 0.06,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 0.06"
+      },
+      {
+        "id": "first_speech_s",
+        "label": "first speech",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 1"
+      }
+    ],
+    "passed": false,
+    "red": false,
+    "unverified": true
+  },
+  "performance": {
+    "seconds": {
+      "transcript": 0.241,
+      "plan": 0,
+      "compose": 372.929,
+      "critic": 0,
+      "total": 491.751
+    },
+    "budgets": {
+      "transcript": 45,
+      "plan": 25,
+      "compose": 90,
+      "critic": 60,
+      "total": 240
+    },
+    "checks": [
+      {
+        "stage": "transcript",
+        "max": 45,
+        "seconds": 0.241,
+        "ok": true
+      },
+      {
+        "stage": "plan",
+        "max": 25,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "compose",
+        "max": 90,
+        "seconds": 372.929,
+        "ok": false
+      },
+      {
+        "stage": "critic",
+        "max": 60,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "total",
+        "max": 240,
+        "seconds": 491.751,
+        "ok": false
+      }
+    ],
+    "hardware": {
+      "platform": "win32",
+      "cores": 4,
+      "model": "AMD EPYC 9V74 80-Core Processor                "
+    },
+    "preview": false,
+    "source_seconds": 45.003292,
+    "representative": false
+  },
+  "replay": {
+    "networkAttempts": 0,
+    "paidCalls": 0,
+    "mode": "saved deterministic plan replay",
+    "providerAdherence": false,
+    "staticCamera": false
+  },
+  "events": [
+    {
+      "id": "clip1",
+      "kind": "cut",
+      "start": 0,
+      "end": 1.3346680013346681,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 0,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip2",
+      "kind": "cut",
+      "start": 1.334668,
+      "end": 2.127127125792459,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 1.376376,
+      "speed": 1,
+      "raw": {
+        "start": 1.334668,
+        "props": {
+          "scale": {
+            "base": 1.25,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.018699999999999994
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip3",
+      "kind": "cut",
+      "start": 2.127127,
+      "end": 8.174841381047715,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 2.544211,
+      "speed": 1,
+      "raw": {
+        "start": 2.127127,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2,
+                "v": 1.15
+              },
+              {
+                "t": 2.2085,
+                "v": 1.25
+              },
+              {
+                "t": 4.2085,
+                "v": 1.25
+              },
+              {
+                "t": 4.4171,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip4",
+      "kind": "cut",
+      "start": 8.174841,
+      "end": 13.888888380714048,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 8.967301,
+      "speed": 1,
+      "raw": {
+        "start": 8.174841,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              },
+              {
+                "t": 2,
+                "v": 1
+              },
+              {
+                "t": 2.2085,
+                "v": 1.15
+              },
+              {
+                "t": 4.2085,
+                "v": 1.15
+              },
+              {
+                "t": 4.4171,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip5",
+      "kind": "cut",
+      "start": 13.888888,
+      "end": 17.80947525392059,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 15.015015,
+      "speed": 1,
+      "raw": {
+        "start": 13.888888,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2,
+                "v": 1.15
+              },
+              {
+                "t": 2.2085,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip6",
+      "kind": "cut",
+      "start": 17.809475,
+      "end": 23.481814005672337,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 19.019019,
+      "speed": 1,
+      "raw": {
+        "start": 17.809475,
+        "props": {
+          "scale": {
+            "base": 1.25,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.25
+              },
+              {
+                "t": 2,
+                "v": 1.25
+              },
+              {
+                "t": 2.2085,
+                "v": 1.15
+              },
+              {
+                "t": 4.2085,
+                "v": 1.15
+              },
+              {
+                "t": 4.4171,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.018699999999999994
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip7",
+      "kind": "cut",
+      "start": 23.481814,
+      "end": 24.858190376376378,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 25.817484,
+      "speed": 1,
+      "raw": {
+        "start": 23.481814,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip8",
+      "kind": "cut",
+      "start": 24.85819,
+      "end": 25.525524000667335,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 27.277277,
+      "speed": 1,
+      "raw": {
+        "start": 24.85819,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip9",
+      "kind": "cut",
+      "start": 25.525524,
+      "end": 31.489821630964297,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 28.069736,
+      "speed": 1,
+      "raw": {
+        "start": 25.525524,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2,
+                "v": 1.15
+              },
+              {
+                "t": 2.2085,
+                "v": 1.25
+              },
+              {
+                "t": 4.2085,
+                "v": 1.25
+              },
+              {
+                "t": 4.4171,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip10",
+      "kind": "cut",
+      "start": 31.489822,
+      "end": 35.9943265045045,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 34.075742,
+      "speed": 1,
+      "raw": {
+        "start": 31.489822,
+        "props": {
+          "scale": {
+            "base": 1.25,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.25
+              },
+              {
+                "t": 2,
+                "v": 1.25
+              },
+              {
+                "t": 2.2085,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.018699999999999994
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip11",
+      "kind": "cut",
+      "start": 35.994327,
+      "end": 37.28728662629296,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 38.580247,
+      "speed": 1,
+      "raw": {
+        "start": 35.994327,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip12",
+      "kind": "cut",
+      "start": 37.287287,
+      "end": 42.083705,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 23.976023976023978,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 40.206874,
+      "speed": 1,
+      "raw": {
+        "start": 37.287287,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              },
+              {
+                "t": 2,
+                "v": 1
+              },
+              {
+                "t": 2.2085,
+                "v": 1.15
+              },
+              {
+                "t": 4.2085,
+                "v": 1.15
+              },
+              {
+                "t": 4.4171,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "gfx-progress-1",
+      "kind": "graphic",
+      "start": 0,
+      "end": 42.083705,
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 0.003125
+      }
+    },
+    {
+      "id": "gfx-hook_title-1",
+      "kind": "graphic",
+      "start": 0.083,
+      "end": 2.083,
+      "text": "long have you been in the",
+      "box": {
+        "x": 0.12962962962962962,
+        "y": 0.16197916666666667,
+        "w": 0.7407407407407407,
+        "h": 0.125
+      }
+    },
+    {
+      "id": "gfx-sticker-1",
+      "kind": "graphic",
+      "start": 3.42,
+      "end": 4.72,
+      "box": {
+        "x": 0.5509259259259259,
+        "y": 0.17083333333333334,
+        "w": 0.3351851851851852,
+        "h": 0.18854166666666666
+      }
+    },
+    {
+      "id": "gfx-sticker-2",
+      "kind": "graphic",
+      "start": 39.623,
+      "end": 40.922999999999995,
+      "box": {
+        "x": 0.5509259259259259,
+        "y": 0.17083333333333334,
+        "w": 0.3351851851851852,
+        "h": 0.18854166666666666
+      }
+    },
+    {
+      "id": "cap001",
+      "kind": "caption",
+      "start": 0,
+      "end": 0.751,
+      "text": "LONG HAVE",
+      "box": {
+        "x": 0.08827281832408587,
+        "y": 0.5797775000000001,
+        "w": 0.8234543633518283,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap002",
+      "kind": "caption",
+      "start": 0.751,
+      "end": 1.377,
+      "text": "YOU BEEN",
+      "box": {
+        "x": 0.1412197524541186,
+        "y": 0.5797775000000001,
+        "w": 0.7175604950917628,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap003",
+      "kind": "caption",
+      "start": 1.376,
+      "end": 2.168,
+      "text": "IN THE CAST",
+      "box": {
+        "x": 0.06739587992602072,
+        "y": 0.5797775000000001,
+        "w": 0.8652082401479586,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap004",
+      "kind": "caption",
+      "start": 2.169,
+      "end": 5.047000000000001,
+      "text": "THAT WAS CRAZY",
+      "box": {
+        "x": 0.04478871243704657,
+        "y": 0.5964591325,
+        "w": 0.910422575125907,
+        "h": 0.087081735
+      }
+    },
+    {
+      "id": "cap005",
+      "kind": "caption",
+      "start": 5.047,
+      "end": 5.630999999999999,
+      "text": "THEY'VE GOT",
+      "box": {
+        "x": 0.04495080174135722,
+        "y": 0.5800183899999999,
+        "w": 0.9100983965172855,
+        "h": 0.11996322
+      }
+    },
+    {
+      "id": "cap006",
+      "kind": "caption",
+      "start": 5.631,
+      "end": 6.34,
+      "text": "FULL WEDDINGS",
+      "box": {
+        "x": 0.045193362839664214,
+        "y": 0.5927253374999999,
+        "w": 0.9096132743206715,
+        "h": 0.09454932500000002
+      }
+    },
+    {
+      "id": "cap007",
+      "kind": "caption",
+      "start": 6.34,
+      "end": 7.091,
+      "text": "HERE",
+      "box": {
+        "x": 0.3091156124626547,
+        "y": 0.5797775000000001,
+        "w": 0.38176877507469054,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap008",
+      "kind": "caption",
+      "start": 7.09,
+      "end": 7.757,
+      "text": "THEY DO",
+      "box": {
+        "x": 0.1883815108834827,
+        "y": 0.5797775000000001,
+        "w": 0.6232369782330347,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap009",
+      "kind": "caption",
+      "start": 7.758,
+      "end": 8.55,
+      "text": "A PARADE .",
+      "box": {
+        "x": 0.09443528809218944,
+        "y": 0.5797775000000001,
+        "w": 0.8111294238156211,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap010",
+      "kind": "caption",
+      "start": 8.55,
+      "end": 9.760000000000002,
+      "text": "I MEAN THEY'VE",
+      "box": {
+        "x": 0.0448269222649025,
+        "y": 0.5909186624999999,
+        "w": 0.910346155470195,
+        "h": 0.098162675
+      }
+    },
+    {
+      "id": "cap011",
+      "kind": "caption",
+      "start": 9.76,
+      "end": 11.094999999999999,
+      "text": "GOT IT ALL",
+      "box": {
+        "x": 0.11921093185374874,
+        "y": 0.5797775000000001,
+        "w": 0.7615781362925025,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap012",
+      "kind": "caption",
+      "start": 11.094,
+      "end": 11.886,
+      "text": "THEY'RE GONNA",
+      "box": {
+        "x": 0.04519797840375572,
+        "y": 0.5915208874999999,
+        "w": 0.9096040431924887,
+        "h": 0.09695822500000002
+      }
+    },
+    {
+      "id": "cap013",
+      "kind": "caption",
+      "start": 11.887,
+      "end": 12.221,
+      "text": "WALK",
+      "box": {
+        "x": 0.2777373225209845,
+        "y": 0.5797775000000001,
+        "w": 0.444525354958031,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap014",
+      "kind": "caption",
+      "start": 12.221,
+      "end": 12.43,
+      "text": "THEM THROUGH",
+      "box": {
+        "x": 0.04497079078104982,
+        "y": 0.591219775,
+        "w": 0.9100584184379004,
+        "h": 0.09756045000000002
+      }
+    },
+    {
+      "id": "cap015",
+      "kind": "caption",
+      "start": 12.429,
+      "end": 13.931000000000001,
+      "text": "ALL THE WAY",
+      "box": {
+        "x": 0.04494349732821167,
+        "y": 0.5829090699999999,
+        "w": 0.9101130053435766,
+        "h": 0.11418186000000001
+      }
+    },
+    {
+      "id": "cap016",
+      "kind": "caption",
+      "start": 13.931,
+      "end": 16.183,
+      "text": "TO THE CHAPEL",
+      "box": {
+        "x": 0.04478146084507045,
+        "y": 0.5901959925,
+        "w": 0.9104370783098591,
+        "h": 0.099608015
+      }
+    },
+    {
+      "id": "cap017",
+      "kind": "caption",
+      "start": 16.183,
+      "end": 18.185,
+      "text": "FULL MUSIC .",
+      "box": {
+        "x": 0.04796523545312277,
+        "y": 0.5797775000000001,
+        "w": 0.9040695290937545,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap018",
+      "kind": "caption",
+      "start": 18.185,
+      "end": 19.019,
+      "text": "MOVING",
+      "box": {
+        "x": 0.20749774363351825,
+        "y": 0.5797775000000001,
+        "w": 0.5850045127329635,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap019",
+      "kind": "caption",
+      "start": 19.019,
+      "end": 19.519,
+      "text": "EVERYBODY",
+      "box": {
+        "x": 0.06708146820315829,
+        "y": 0.5797775000000001,
+        "w": 0.8658370635936834,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap020",
+      "kind": "caption",
+      "start": 19.519,
+      "end": 20.02,
+      "text": "AROUND",
+      "box": {
+        "x": 0.18850727557262764,
+        "y": 0.5797775000000001,
+        "w": 0.6229854488547448,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap021",
+      "kind": "caption",
+      "start": 20.02,
+      "end": 20.729,
+      "text": "JUST",
+      "box": {
+        "x": 0.3233270223360364,
+        "y": 0.5797775000000001,
+        "w": 0.3533459553279272,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap022",
+      "kind": "caption",
+      "start": 20.729,
+      "end": 23.482,
+      "text": "PHENOMENAL",
+      "box": {
+        "x": 0.04490452536633935,
+        "y": 0.5845953,
+        "w": 0.9101909492673214,
+        "h": 0.11080940000000002
+      }
+    },
+    {
+      "id": "cap023",
+      "kind": "caption",
+      "start": 23.482,
+      "end": 23.774,
+      "text": "HOW",
+      "box": {
+        "x": 0.31144225921183666,
+        "y": 0.5797775000000001,
+        "w": 0.37711548157632674,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap024",
+      "kind": "caption",
+      "start": 23.774,
+      "end": 24.692,
+      "text": "ABOUT THOSE",
+      "box": {
+        "x": 0.04506011012092746,
+        "y": 0.5851373025,
+        "w": 0.9098797797581452,
+        "h": 0.10972539500000002
+      }
+    },
+    {
+      "id": "cap025",
+      "kind": "caption",
+      "start": 24.691,
+      "end": 25.901,
+      "text": "BAG PIPES THAT",
+      "box": {
+        "x": 0.04491005775501495,
+        "y": 0.5924844475000001,
+        "w": 0.9101798844899702,
+        "h": 0.09503110500000002
+      }
+    },
+    {
+      "id": "cap026",
+      "kind": "caption",
+      "start": 25.901,
+      "end": 27.069,
+      "text": "WAS INCREDIBLE",
+      "box": {
+        "x": 0.045138836301038474,
+        "y": 0.5948933474999999,
+        "w": 0.909722327397923,
+        "h": 0.09021330500000001
+      }
+    },
+    {
+      "id": "cap027",
+      "kind": "caption",
+      "start": 27.069,
+      "end": 27.361,
+      "text": ".",
+      "box": {
+        "x": 0.47204376724996444,
+        "y": 0.5797775000000001,
+        "w": 0.05591246550007114,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap028",
+      "kind": "caption",
+      "start": 27.361,
+      "end": 28.529,
+      "text": "WHAT A WEDDING",
+      "box": {
+        "x": 0.04503549797126192,
+        "y": 0.5983862525,
+        "w": 0.9099290040574762,
+        "h": 0.08322749500000001
+      }
+    },
+    {
+      "id": "cap029",
+      "kind": "caption",
+      "start": 28.528,
+      "end": 29.195,
+      "text": "EXPERIENCE",
+      "box": {
+        "x": 0.061484939536207095,
+        "y": 0.5797775000000001,
+        "w": 0.8770301209275858,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap030",
+      "kind": "caption",
+      "start": 29.196,
+      "end": 29.863000000000003,
+      "text": "THAT WOULD BE",
+      "box": {
+        "x": 0.044965610533504015,
+        "y": 0.5935684524999999,
+        "w": 0.9100687789329921,
+        "h": 0.09286309500000002
+      }
+    },
+    {
+      "id": "cap031",
+      "kind": "caption",
+      "start": 29.863,
+      "end": 30.53,
+      "text": "TO BE PARADED",
+      "box": {
+        "x": 0.04497187738796409,
+        "y": 0.5921833349999999,
+        "w": 0.9100562452240718,
+        "h": 0.09563333000000002
+      }
+    },
+    {
+      "id": "cap032",
+      "kind": "caption",
+      "start": 30.53,
+      "end": 31.197000000000003,
+      "text": "THROUGH",
+      "box": {
+        "x": 0.15109228055199886,
+        "y": 0.5797775000000001,
+        "w": 0.6978154388960024,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap033",
+      "kind": "caption",
+      "start": 31.198,
+      "end": 31.782,
+      "text": "THIS WHOLE",
+      "box": {
+        "x": 0.05645435197040828,
+        "y": 0.5797775000000001,
+        "w": 0.8870912960591835,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap034",
+      "kind": "caption",
+      "start": 31.782,
+      "end": 32.366,
+      "text": "TOWN ALL",
+      "box": {
+        "x": 0.12317251956181531,
+        "y": 0.5797775000000001,
+        "w": 0.7536549608763695,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap035",
+      "kind": "caption",
+      "start": 32.366,
+      "end": 32.783,
+      "text": "THE WAY",
+      "box": {
+        "x": 0.1671272784179826,
+        "y": 0.5797775000000001,
+        "w": 0.6657454431640348,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap036",
+      "kind": "caption",
+      "start": 32.783,
+      "end": 33.617000000000004,
+      "text": "TO THE CHAPEL",
+      "box": {
+        "x": 0.04478146084507045,
+        "y": 0.5901959925,
+        "w": 0.9104370783098591,
+        "h": 0.099608015
+      }
+    },
+    {
+      "id": "cap037",
+      "kind": "caption",
+      "start": 33.617,
+      "end": 34.034,
+      "text": "WITH THE",
+      "box": {
+        "x": 0.1487656338028169,
+        "y": 0.5797775000000001,
+        "w": 0.7024687323943662,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap038",
+      "kind": "caption",
+      "start": 34.034,
+      "end": 35.202,
+      "text": "BAGPIPES",
+      "box": {
+        "x": 0.1444267520273154,
+        "y": 0.5797775000000001,
+        "w": 0.7111464959453693,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap039",
+      "kind": "caption",
+      "start": 35.202,
+      "end": 36.036,
+      "text": "SC REAMING",
+      "box": {
+        "x": 0.06387446862996154,
+        "y": 0.5797775000000001,
+        "w": 0.872251062740077,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap040",
+      "kind": "caption",
+      "start": 36.036,
+      "end": 37.287,
+      "text": ", YELLING",
+      "box": {
+        "x": 0.16769321951913496,
+        "y": 0.5797775000000001,
+        "w": 0.6646135609617301,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap041",
+      "kind": "caption",
+      "start": 37.287,
+      "end": 38.205,
+      "text": "IT'S A SIGHT",
+      "box": {
+        "x": 0.07896623132735806,
+        "y": 0.5797775000000001,
+        "w": 0.8420675373452838,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap042",
+      "kind": "caption",
+      "start": 38.205,
+      "end": 39.580999999999996,
+      "text": "TO BE SEEN",
+      "box": {
+        "x": 0.09154270024185514,
+        "y": 0.5797775000000001,
+        "w": 0.8169145995162899,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap043",
+      "kind": "caption",
+      "start": 39.581,
+      "end": 40.373000000000005,
+      "text": "LOOK",
+      "box": {
+        "x": 0.29760814340588987,
+        "y": 0.5797775000000001,
+        "w": 0.4047837131882202,
+        "h": 0.120445
+      }
+    },
+    {
+      "id": "cap044",
+      "kind": "caption",
+      "start": 40.374,
+      "end": 41.625,
+      "text": "AT THIS COLOR",
+      "box": {
+        "x": 0.04512195364916777,
+        "y": 0.5885097625,
+        "w": 0.9097560927016646,
+        "h": 0.10298047500000002
+      }
+    },
+    {
+      "id": "cap045",
+      "kind": "caption",
+      "start": 41.625,
+      "end": 42.083705,
+      "text": "IN THIS",
+      "box": {
+        "x": 0.24472409162042963,
+        "y": 0.5797775000000001,
+        "w": 0.5105518167591407,
+        "h": 0.120445
+      }
+    }
+  ],
+  "evidence": {
+    "scope": "Modern EDL caption/cut statistics plus independent source matching, source-residual registration, sampled colour and final-audio measurement.",
+    "limits": "Animated/non-centre source mappings or ambiguous natural footage remain unverified; no zero is substituted. CI short fixtures explicitly hold a centred wide camera to isolate frame selection; separate barcode/camera unit tests cover moving cameras. Saved deterministic plan replay is not provider adherence."
+  }
+}

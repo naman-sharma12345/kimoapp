@@ -1,0 +1,1621 @@
+{
+  "version": 5,
+  "values": {
+    "first_speech_s": 0.03,
+    "hook_text": true,
+    "dead_air_ratio": 0,
+    "filler_count": 0,
+    "repeat_takes": 0,
+    "median_shot_s": 3.503503503503504,
+    "max_static_s": 3.07,
+    "framing_variety": 2,
+    "jitter_px": null,
+    "repeated_frames": null,
+    "skipped_frames": null,
+    "frame_match_coverage": 0,
+    "caption_min_word_s": 0.033,
+    "caption_safe": true,
+    "caption_face_overlap": 18.57,
+    "lufs": -14,
+    "true_peak": -1.5,
+    "lra": 3.8,
+    "duck_depth_db": 6.284837607582176,
+    "sfx_count_per_min": 1.0904801687093983,
+    "aspect": "9:16",
+    "clip_delta_e": 0.9226491600680033,
+    "clipped_pct": 0.00986206140667547,
+    "frame_match": [
+      {
+        "id": "clip1",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip2",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip3",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip4",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip5",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip6",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip7",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip8",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip9",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip10",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip11",
+        "unavailable": "nonlinear/animated source mapping"
+      }
+    ],
+    "camera_registration_coverage": 0,
+    "closed_gop": true,
+    "cfr_ok": true
+  },
+  "creator": {
+    "score": 73.6,
+    "groups": {
+      "hook": 1,
+      "dead_air": 1,
+      "filler": 1,
+      "cadence": 1,
+      "framing": 0.6666666666666666,
+      "motion": 0,
+      "captions": 0.6127083333333333,
+      "sound": 0.7789849425996886,
+      "colour": 1
+    },
+    "missing": [
+      "jitter_px",
+      "repeated_frames",
+      "skipped_frames"
+    ],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "gates": {
+    "checks": [
+      {
+        "id": "repeated_frames",
+        "label": "repeated frames",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 0,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 0"
+      },
+      {
+        "id": "jitter_px",
+        "label": "camera jitter",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 1,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 1"
+      },
+      {
+        "id": "true_peak",
+        "label": "true peak",
+        "stage": "sound",
+        "state": "pass",
+        "measured": -1.5,
+        "value": "-1.5",
+        "limit": -1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ -1"
+      },
+      {
+        "id": "caption_safe",
+        "label": "caption safe area",
+        "stage": "captions",
+        "state": "pass",
+        "measured": true,
+        "value": "inside",
+        "limit": true,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "inside safe area"
+      },
+      {
+        "id": "dead_air_ratio",
+        "label": "dead air",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0,
+        "value": "0",
+        "limit": 0.06,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 0.06"
+      },
+      {
+        "id": "first_speech_s",
+        "label": "first speech",
+        "stage": "cut",
+        "state": "pass",
+        "measured": 0.03,
+        "value": "0.03",
+        "limit": 1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 1"
+      }
+    ],
+    "passed": false,
+    "red": false,
+    "unverified": true
+  },
+  "performance": {
+    "seconds": {
+      "transcript": 0.329,
+      "plan": 0,
+      "compose": 485.769,
+      "critic": 0,
+      "total": 634.686
+    },
+    "budgets": {
+      "transcript": 45,
+      "plan": 25,
+      "compose": 90,
+      "critic": 60,
+      "total": 240
+    },
+    "checks": [
+      {
+        "stage": "transcript",
+        "max": 45,
+        "seconds": 0.329,
+        "ok": true
+      },
+      {
+        "stage": "plan",
+        "max": 25,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "compose",
+        "max": 90,
+        "seconds": 485.769,
+        "ok": false
+      },
+      {
+        "stage": "critic",
+        "max": 60,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "total",
+        "max": 240,
+        "seconds": 634.686,
+        "ok": false
+      }
+    ],
+    "hardware": {
+      "platform": "win32",
+      "cores": 4,
+      "model": "AMD EPYC 7763 64-Core Processor                "
+    },
+    "preview": false,
+    "source_seconds": 60.026633,
+    "representative": true
+  },
+  "replay": {
+    "networkAttempts": 0,
+    "paidCalls": 0,
+    "mode": "saved deterministic plan replay",
+    "providerAdherence": false,
+    "staticCamera": false
+  },
+  "events": [
+    {
+      "id": "clip1",
+      "kind": "cut",
+      "start": 0,
+      "end": 3.0697364030697365,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 0,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.06730000000000003
+          },
+          "y": {
+            "base": -0.052800000000000014
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip2",
+      "kind": "cut",
+      "start": 3.069736,
+      "end": 8.842175105772439,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 3.903904,
+      "speed": 1,
+      "raw": {
+        "start": 3.069736,
+        "props": {
+          "scale": {
+            "base": 1.25,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.25
+              },
+              {
+                "t": 2.8,
+                "v": 1.25
+              },
+              {
+                "t": 2.9668,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.14480000000000004
+          },
+          "y": {
+            "base": -0.09350000000000003
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip3",
+      "kind": "cut",
+      "start": 8.842175,
+      "end": 11.444777602602601,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 9.90991,
+      "speed": 1,
+      "raw": {
+        "start": 8.842175,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.10150000000000003
+          },
+          "y": {
+            "base": -0.029500000000000026
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip4",
+      "kind": "cut",
+      "start": 11.444778,
+      "end": 14.948281503503503,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 13.480147,
+      "speed": 1,
+      "raw": {
+        "start": 11.444778,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              },
+              {
+                "t": 2.8,
+                "v": 1
+              },
+              {
+                "t": 2.9668,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.10150000000000003
+          },
+          "y": {
+            "base": -0.060199999999999976
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip5",
+      "kind": "cut",
+      "start": 14.948282,
+      "end": 19.45278650450451,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 17.484151,
+      "speed": 1,
+      "raw": {
+        "start": 14.948282,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2.8,
+                "v": 1.15
+              },
+              {
+                "t": 2.9668,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0.05479999999999996
+          },
+          "y": {
+            "base": 0.14490000000000003
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip6",
+      "kind": "cut",
+      "start": 19.452787,
+      "end": 21.621622502168837,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 22.255589,
+      "speed": 1,
+      "raw": {
+        "start": 19.452787,
+        "props": {
+          "scale": {
+            "base": 1.25,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0.08560000000000001
+          },
+          "y": {
+            "base": -0.04909999999999998
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip7",
+      "kind": "cut",
+      "start": 21.621623,
+      "end": 24.691359403069736,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 24.524525,
+      "speed": 1,
+      "raw": {
+        "start": 21.621623,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.10540000000000005
+          },
+          "y": {
+            "base": -0.013900000000000023
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip8",
+      "kind": "cut",
+      "start": 24.691359,
+      "end": 29.72973070503837,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 28.228228,
+      "speed": 1,
+      "raw": {
+        "start": 24.691359,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              },
+              {
+                "t": 2.8,
+                "v": 1
+              },
+              {
+                "t": 2.9668,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.14659999999999995
+          },
+          "y": {
+            "base": -0.07300000000000001
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip9",
+      "kind": "cut",
+      "start": 29.729731,
+      "end": 49.18251711945279,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 34.467801,
+      "speed": 1,
+      "raw": {
+        "start": 29.729731,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2.8,
+                "v": 1.15
+              },
+              {
+                "t": 2.9668,
+                "v": 1.25
+              },
+              {
+                "t": 5.7668,
+                "v": 1.25
+              },
+              {
+                "t": 5.9337,
+                "v": 1.15
+              },
+              {
+                "t": 8.7337,
+                "v": 1.15
+              },
+              {
+                "t": 8.9005,
+                "v": 1.25
+              },
+              {
+                "t": 11.7005,
+                "v": 1.25
+              },
+              {
+                "t": 11.8673,
+                "v": 1.15
+              },
+              {
+                "t": 14.6673,
+                "v": 1.15
+              },
+              {
+                "t": 14.8342,
+                "v": 1.25
+              },
+              {
+                "t": 17.6342,
+                "v": 1.25
+              },
+              {
+                "t": 17.801,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0.07489999999999997
+          },
+          "y": {
+            "base": -0.022399999999999975
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip10",
+      "kind": "cut",
+      "start": 49.182517,
+      "end": 49.71638420053387,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 53.987321,
+      "speed": 1,
+      "raw": {
+        "start": 49.182517,
+        "props": {
+          "scale": {
+            "base": 1.25,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0.019399999999999973
+          },
+          "y": {
+            "base": 0.119
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip11",
+      "kind": "cut",
+      "start": 49.716384,
+      "end": 55.021629,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 29.97002997002997,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 54.721388,
+      "speed": 1,
+      "raw": {
+        "start": 49.716384,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              },
+              {
+                "t": 2.8,
+                "v": 1.15
+              },
+              {
+                "t": 2.9668,
+                "v": 1.25
+              }
+            ]
+          },
+          "x": {
+            "base": 0.01739999999999997
+          },
+          "y": {
+            "base": 0.1058
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "gfx-hook_title-1",
+      "kind": "graphic",
+      "start": 0.1,
+      "end": 2.1,
+      "text": "Could the threat to democracy be",
+      "box": {
+        "x": 0.12777777777777777,
+        "y": 0.16927083333333334,
+        "w": 0.7444444444444445,
+        "h": 0.109375
+      }
+    },
+    {
+      "id": "cap001",
+      "kind": "caption",
+      "start": 0,
+      "end": 0.634,
+      "text": "Could the threat",
+      "box": {
+        "x": 0.10120493827160494,
+        "y": 0.6788,
+        "w": 0.7975901234567901,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap002",
+      "kind": "caption",
+      "start": 0.634,
+      "end": 1.268,
+      "text": "to democracy",
+      "box": {
+        "x": 0.15581563786008226,
+        "y": 0.6788,
+        "w": 0.6883687242798354,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap003",
+      "kind": "caption",
+      "start": 1.268,
+      "end": 2.302,
+      "text": "be smaller",
+      "box": {
+        "x": 0.22536296296296301,
+        "y": 0.6788,
+        "w": 0.5492740740740741,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap004",
+      "kind": "caption",
+      "start": 2.302,
+      "end": 3.103,
+      "text": "than you think?",
+      "box": {
+        "x": 0.1187522633744856,
+        "y": 0.6788,
+        "w": 0.7624954732510288,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap005",
+      "kind": "caption",
+      "start": 3.103,
+      "end": 3.9370000000000003,
+      "text": "Well,",
+      "box": {
+        "x": 0.3394633744855967,
+        "y": 0.11679999999999999,
+        "w": 0.32107325102880657,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap006",
+      "kind": "caption",
+      "start": 3.937,
+      "end": 4.471,
+      "text": "I think",
+      "box": {
+        "x": 0.311601646090535,
+        "y": 0.11679999999999999,
+        "w": 0.37679670781893004,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap007",
+      "kind": "caption",
+      "start": 4.471,
+      "end": 5.405,
+      "text": "the obvious",
+      "box": {
+        "x": 0.1989135802469136,
+        "y": 0.11679999999999999,
+        "w": 0.6021728395061728,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap008",
+      "kind": "caption",
+      "start": 5.405,
+      "end": 7.107,
+      "text": "thing's happened,",
+      "box": {
+        "x": 0.07612510288065841,
+        "y": 0.11679999999999999,
+        "w": 0.8477497942386832,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap009",
+      "kind": "caption",
+      "start": 7.107,
+      "end": 7.140000000000001,
+      "text": ".",
+      "box": {
+        "x": 0.4325925925925926,
+        "y": 0.11679999999999999,
+        "w": 0.1348148148148148,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap010",
+      "kind": "caption",
+      "start": 7.14,
+      "end": 7.606999999999999,
+      "text": "I think",
+      "box": {
+        "x": 0.311601646090535,
+        "y": 0.11679999999999999,
+        "w": 0.37679670781893004,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap011",
+      "kind": "caption",
+      "start": 7.608,
+      "end": 9.276,
+      "text": "that this is sort",
+      "box": {
+        "x": 0.12521481481481478,
+        "y": 0.11679999999999999,
+        "w": 0.7495703703703704,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap012",
+      "kind": "caption",
+      "start": 9.276,
+      "end": 10.811,
+      "text": "of the last",
+      "box": {
+        "x": 0.22908641975308644,
+        "y": 0.6788,
+        "w": 0.5418271604938271,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap013",
+      "kind": "caption",
+      "start": 10.811,
+      "end": 11.478,
+      "text": "gasp",
+      "box": {
+        "x": 0.34061893004115223,
+        "y": 0.6788,
+        "w": 0.3187621399176955,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap014",
+      "kind": "caption",
+      "start": 11.478,
+      "end": 12.846,
+      "text": "maybe the first",
+      "box": {
+        "x": 0.12414485596707815,
+        "y": 0.6788,
+        "w": 0.7517102880658437,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap015",
+      "kind": "caption",
+      "start": 12.846,
+      "end": 13.947,
+      "text": "big gasp",
+      "box": {
+        "x": 0.2658930041152264,
+        "y": 0.6788,
+        "w": 0.4682139917695473,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap016",
+      "kind": "caption",
+      "start": 13.947,
+      "end": 14.981,
+      "text": "of the mega",
+      "box": {
+        "x": 0.19373497942386833,
+        "y": 0.6788,
+        "w": 0.6125300411522635,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap017",
+      "kind": "caption",
+      "start": 14.982,
+      "end": 15.449,
+      "text": "Republicans And",
+      "box": {
+        "x": 0.09273086419753084,
+        "y": 0.6788,
+        "w": 0.8145382716049383,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap018",
+      "kind": "caption",
+      "start": 15.449,
+      "end": 16.417,
+      "text": "I think Trump",
+      "box": {
+        "x": 0.16869794238683128,
+        "y": 0.11679999999999999,
+        "w": 0.6626041152263374,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap019",
+      "kind": "caption",
+      "start": 16.416,
+      "end": 17.584,
+      "text": "has concluded",
+      "box": {
+        "x": 0.14002304526748968,
+        "y": 0.11679999999999999,
+        "w": 0.7199539094650206,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap020",
+      "kind": "caption",
+      "start": 17.584,
+      "end": 19.119,
+      "text": "that he has",
+      "box": {
+        "x": 0.20969876543209875,
+        "y": 0.6173614583333332,
+        "w": 0.5806024691358026,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap021",
+      "kind": "caption",
+      "start": 19.119,
+      "end": 19.82,
+      "text": "to win",
+      "box": {
+        "x": 0.3148971193415638,
+        "y": 0.11679999999999999,
+        "w": 0.3702057613168724,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap022",
+      "kind": "caption",
+      "start": 19.82,
+      "end": 20.821,
+      "text": "and he'll pull",
+      "box": {
+        "x": 0.18256460905349794,
+        "y": 0.11679999999999999,
+        "w": 0.6348707818930042,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap023",
+      "kind": "caption",
+      "start": 20.821,
+      "end": 21.321,
+      "text": "out all",
+      "box": {
+        "x": 0.31224362139917694,
+        "y": 0.11679999999999999,
+        "w": 0.3755127572016461,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap024",
+      "kind": "caption",
+      "start": 21.321,
+      "end": 22.088,
+      "text": "the stops.",
+      "box": {
+        "x": 0.23520658436213993,
+        "y": 0.11679999999999999,
+        "w": 0.5295868312757201,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap025",
+      "kind": "caption",
+      "start": 22.089,
+      "end": 22.689999999999998,
+      "text": "I mean,",
+      "box": {
+        "x": 0.2960658436213992,
+        "y": 0.6788,
+        "w": 0.40786831275720165,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap026",
+      "kind": "caption",
+      "start": 22.689,
+      "end": 23.39,
+      "text": "the quotes",
+      "box": {
+        "x": 0.21765925925925927,
+        "y": 0.6788,
+        "w": 0.5646814814814815,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap027",
+      "kind": "caption",
+      "start": 23.39,
+      "end": 23.991,
+      "text": "he uses",
+      "box": {
+        "x": 0.2829267489711934,
+        "y": 0.6788,
+        "w": 0.4341465020576132,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap028",
+      "kind": "caption",
+      "start": 23.991,
+      "end": 24.725,
+      "text": "are just,",
+      "box": {
+        "x": 0.2741958847736626,
+        "y": 0.6788,
+        "w": 0.4516082304526749,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap029",
+      "kind": "caption",
+      "start": 24.725,
+      "end": 25.092000000000002,
+      "text": "I never",
+      "box": {
+        "x": 0.30090205761316874,
+        "y": 0.6788,
+        "w": 0.3981958847736625,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap030",
+      "kind": "caption",
+      "start": 25.092,
+      "end": 25.558999999999997,
+      "text": "thought I'd",
+      "box": {
+        "x": 0.21890041152263373,
+        "y": 0.6788,
+        "w": 0.5621991769547325,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap031",
+      "kind": "caption",
+      "start": 25.559,
+      "end": 26.226000000000003,
+      "text": "hear a president",
+      "box": {
+        "x": 0.10343045267489712,
+        "y": 0.6788,
+        "w": 0.7931390946502057,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap032",
+      "kind": "caption",
+      "start": 26.226,
+      "end": 26.726,
+      "text": "say some",
+      "box": {
+        "x": 0.2462913580246914,
+        "y": 0.6788,
+        "w": 0.5074172839506172,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap033",
+      "kind": "caption",
+      "start": 26.727,
+      "end": 27.461,
+      "text": "of the stuff",
+      "box": {
+        "x": 0.2043489711934156,
+        "y": 0.6788,
+        "w": 0.5913020576131688,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap034",
+      "kind": "caption",
+      "start": 27.461,
+      "end": 28.162,
+      "text": "he says.",
+      "box": {
+        "x": 0.2749234567901234,
+        "y": 0.6788,
+        "w": 0.4501530864197531,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap035",
+      "kind": "caption",
+      "start": 28.161,
+      "end": 28.962,
+      "text": "And so think",
+      "box": {
+        "x": 0.18179423868312758,
+        "y": 0.6788,
+        "w": 0.6364115226337449,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap036",
+      "kind": "caption",
+      "start": 28.962,
+      "end": 29.762999999999998,
+      "text": "that ,",
+      "box": {
+        "x": 0.33539753086419755,
+        "y": 0.6788,
+        "w": 0.32920493827160496,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap037",
+      "kind": "caption",
+      "start": 29.763,
+      "end": 30.597,
+      "text": "s happening",
+      "box": {
+        "x": 0.18996872427983535,
+        "y": 0.6788,
+        "w": 0.6200625514403293,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap038",
+      "kind": "caption",
+      "start": 30.597,
+      "end": 31.231,
+      "text": "in terms",
+      "box": {
+        "x": 0.27197037037037036,
+        "y": 0.6788,
+        "w": 0.4560592592592592,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap039",
+      "kind": "caption",
+      "start": 31.231,
+      "end": 31.731,
+      "text": "of what",
+      "box": {
+        "x": 0.28322633744855963,
+        "y": 0.6788,
+        "w": 0.4335473251028807,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap040",
+      "kind": "caption",
+      "start": 31.732,
+      "end": 32.866,
+      "text": "the mega Republicans",
+      "box": {
+        "x": 0.044973422222222136,
+        "y": 0.6858356,
+        "w": 0.9100531555555558,
+        "h": 0.10032880000000002
+      }
+    },
+    {
+      "id": "cap041",
+      "kind": "caption",
+      "start": 32.866,
+      "end": 33.333,
+      "text": "are doing",
+      "box": {
+        "x": 0.24834567901234572,
+        "y": 0.11679999999999999,
+        "w": 0.5033086419753087,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap042",
+      "kind": "caption",
+      "start": 33.333,
+      "end": 33.934,
+      "text": "in the House",
+      "box": {
+        "x": 0.18440493827160492,
+        "y": 0.11679999999999999,
+        "w": 0.6311901234567902,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap043",
+      "kind": "caption",
+      "start": 33.934,
+      "end": 34.835,
+      "text": "They don't make",
+      "box": {
+        "x": 0.10171851851851853,
+        "y": 0.11679999999999999,
+        "w": 0.796562962962963,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap044",
+      "kind": "caption",
+      "start": 34.835,
+      "end": 35.636,
+      "text": "up a majority",
+      "box": {
+        "x": 0.1713942386831276,
+        "y": 0.11679999999999999,
+        "w": 0.6572115226337448,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap045",
+      "kind": "caption",
+      "start": 35.636,
+      "end": 36.403000000000006,
+      "text": "of the House",
+      "box": {
+        "x": 0.1774716049382716,
+        "y": 0.11679999999999999,
+        "w": 0.6450567901234568,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap046",
+      "kind": "caption",
+      "start": 36.403,
+      "end": 36.637,
+      "text": "but they re",
+      "box": {
+        "x": 0.21513415637860084,
+        "y": 0.11679999999999999,
+        "w": 0.5697316872427984,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap047",
+      "kind": "caption",
+      "start": 36.637,
+      "end": 37.304,
+      "text": "bringing everything",
+      "box": {
+        "x": 0.04501236872427983,
+        "y": 0.11800119999999997,
+        "w": 0.9099752625514403,
+        "h": 0.11199760000000003
+      }
+    },
+    {
+      "id": "cap048",
+      "kind": "caption",
+      "start": 37.304,
+      "end": 38.272000000000006,
+      "text": "to a scree",
+      "box": {
+        "x": 0.23653333333333335,
+        "y": 0.11679999999999999,
+        "w": 0.5269333333333333,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap049",
+      "kind": "caption",
+      "start": 38.272,
+      "end": 39.373,
+      "text": "ching halt.",
+      "box": {
+        "x": 0.2266469135802469,
+        "y": 0.5760854166666666,
+        "w": 0.5467061728395062,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap050",
+      "kind": "caption",
+      "start": 39.373,
+      "end": 39.806999999999995,
+      "text": "- As you",
+      "box": {
+        "x": 0.27436707818930045,
+        "y": 0.5760854166666666,
+        "w": 0.45126584362139915,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap051",
+      "kind": "caption",
+      "start": 39.806,
+      "end": 40.073,
+      "text": "think",
+      "box": {
+        "x": 0.33411358024691357,
+        "y": 0.5760854166666666,
+        "w": 0.3317728395061728,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap052",
+      "kind": "caption",
+      "start": 40.073,
+      "end": 41.174,
+      "text": "about the threat",
+      "box": {
+        "x": 0.10180411522633746,
+        "y": 0.5760854166666666,
+        "w": 0.796391769547325,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap053",
+      "kind": "caption",
+      "start": 41.174,
+      "end": 42.242,
+      "text": "to democracy,",
+      "box": {
+        "x": 0.14618600823045266,
+        "y": 0.5760854166666666,
+        "w": 0.7076279835390947,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap054",
+      "kind": "caption",
+      "start": 42.242,
+      "end": 42.976,
+      "text": "do you think",
+      "box": {
+        "x": 0.18577448559670784,
+        "y": 0.5760854166666666,
+        "w": 0.6284510288065843,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap055",
+      "kind": "caption",
+      "start": 42.976,
+      "end": 44.411,
+      "text": "of it specifically",
+      "box": {
+        "x": 0.10685432098765432,
+        "y": 0.5760854166666666,
+        "w": 0.7862913580246914,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap056",
+      "kind": "caption",
+      "start": 44.411,
+      "end": 45.445,
+      "text": "as the refusal",
+      "box": {
+        "x": 0.15632921810699588,
+        "y": 0.5760854166666666,
+        "w": 0.6873415637860083,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap057",
+      "kind": "caption",
+      "start": 45.445,
+      "end": 46.279,
+      "text": "to accept",
+      "box": {
+        "x": 0.2434238683127572,
+        "y": 0.5760854166666666,
+        "w": 0.5131522633744856,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap058",
+      "kind": "caption",
+      "start": 46.28,
+      "end": 47.982,
+      "text": "election defeats",
+      "box": {
+        "x": 0.10039176954732511,
+        "y": 0.5760854166666666,
+        "w": 0.7992164609053498,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap059",
+      "kind": "caption",
+      "start": 47.981,
+      "end": 49.216,
+      "text": "and peaceful",
+      "box": {
+        "x": 0.17156543209876543,
+        "y": 0.5760854166666666,
+        "w": 0.6568691358024692,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap060",
+      "kind": "caption",
+      "start": 49.216,
+      "end": 49.75,
+      "text": "transfer of",
+      "box": {
+        "x": 0.21680329218106995,
+        "y": 0.5760854166666666,
+        "w": 0.5663934156378602,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap061",
+      "kind": "caption",
+      "start": 49.75,
+      "end": 50.017,
+      "text": "power",
+      "box": {
+        "x": 0.3111308641975309,
+        "y": 0.5760854166666666,
+        "w": 0.3777382716049383,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap062",
+      "kind": "caption",
+      "start": 50.017,
+      "end": 50.384,
+      "text": "or is it",
+      "box": {
+        "x": 0.31374156378600826,
+        "y": 0.5760854166666666,
+        "w": 0.37251687242798354,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap063",
+      "kind": "caption",
+      "start": 50.384,
+      "end": 51.118,
+      "text": "more broadly",
+      "box": {
+        "x": 0.16694320987654324,
+        "y": 0.5760854166666666,
+        "w": 0.6661135802469137,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap064",
+      "kind": "caption",
+      "start": 51.118,
+      "end": 52.119,
+      "text": "encompass ing some",
+      "box": {
+        "x": 0.04522255144032917,
+        "y": 0.5805470166666666,
+        "w": 0.9095548971193417,
+        "h": 0.10547680000000001
+      }
+    },
+    {
+      "id": "cap065",
+      "kind": "caption",
+      "start": 52.119,
+      "end": 52.686,
+      "text": "of the long",
+      "box": {
+        "x": 0.21778765432098765,
+        "y": 0.5760854166666666,
+        "w": 0.5644246913580246,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap066",
+      "kind": "caption",
+      "start": 52.686,
+      "end": 53.487,
+      "text": "standing features",
+      "box": {
+        "x": 0.07051851851851851,
+        "y": 0.5760854166666666,
+        "w": 0.858962962962963,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap067",
+      "kind": "caption",
+      "start": 53.487,
+      "end": 54.455,
+      "text": "of democracy,",
+      "box": {
+        "x": 0.1461004115226337,
+        "y": 0.5760854166666666,
+        "w": 0.7077991769547326,
+        "h": 0.11440000000000002
+      }
+    },
+    {
+      "id": "cap068",
+      "kind": "caption",
+      "start": 54.454,
+      "end": 55.021,
+      "text": "like",
+      "box": {
+        "x": 0.36582716049382713,
+        "y": 0.5760854166666666,
+        "w": 0.2683456790123457,
+        "h": 0.11440000000000002
+      }
+    }
+  ],
+  "evidence": {
+    "scope": "Modern EDL caption/cut statistics plus independent source matching, source-residual registration, sampled colour and final-audio measurement.",
+    "limits": "Animated/non-centre source mappings or ambiguous natural footage remain unverified; no zero is substituted. CI short fixtures explicitly hold a centred wide camera to isolate frame selection; separate barcode/camera unit tests cover moving cameras. Saved deterministic plan replay is not provider adherence."
+  }
+}

@@ -1,0 +1,605 @@
+{
+  "version": 5,
+  "values": {
+    "first_speech_s": null,
+    "hook_text": false,
+    "dead_air_ratio": null,
+    "filler_count": null,
+    "repeat_takes": null,
+    "median_shot_s": 2.16,
+    "max_static_s": 2.2,
+    "framing_variety": 3,
+    "jitter_px": null,
+    "repeated_frames": null,
+    "skipped_frames": null,
+    "frame_match_coverage": 0,
+    "caption_min_word_s": null,
+    "caption_safe": null,
+    "caption_face_overlap": null,
+    "lufs": -14.1,
+    "true_peak": -1.5,
+    "lra": 0.7,
+    "duck_depth_db": null,
+    "sfx_count_per_min": 8.858267716535432,
+    "aspect": "16:9",
+    "clip_delta_e": 2.526573480725441,
+    "clipped_pct": 0.40020165479234204,
+    "frame_match": [
+      {
+        "id": "clip1",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip2",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip3",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip4",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip5",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip6",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip7",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip8",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip9",
+        "unavailable": "nonlinear/animated source mapping"
+      },
+      {
+        "id": "clip10",
+        "unavailable": "nonlinear/animated source mapping"
+      }
+    ],
+    "camera_registration_coverage": 0,
+    "closed_gop": true,
+    "cfr_ok": true
+  },
+  "creator": {
+    "score": 55.6,
+    "groups": {
+      "hook": 0,
+      "dead_air": null,
+      "filler": null,
+      "cadence": 1,
+      "framing": 1,
+      "motion": 0,
+      "captions": null,
+      "sound": 0.835,
+      "colour": 1
+    },
+    "missing": [
+      "first_speech_s",
+      "dead_air_ratio",
+      "filler_count",
+      "repeat_takes",
+      "jitter_px",
+      "repeated_frames",
+      "skipped_frames",
+      "caption_min_word_s",
+      "caption_safe",
+      "caption_face_overlap",
+      "duck_depth_db"
+    ],
+    "policy": "Unavailable applicable measurements score zero; explicitly speech-free groups are excluded and weights renormalized. Delivery is a separate gate."
+  },
+  "gates": {
+    "checks": [
+      {
+        "id": "repeated_frames",
+        "label": "repeated frames",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 0,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 0"
+      },
+      {
+        "id": "jitter_px",
+        "label": "camera jitter",
+        "stage": "compose",
+        "state": "unverified",
+        "measured": null,
+        "value": "unavailable",
+        "limit": 1,
+        "critical": true,
+        "ok": false,
+        "warn": true,
+        "want": "≤ 1"
+      },
+      {
+        "id": "true_peak",
+        "label": "true peak",
+        "stage": "sound",
+        "state": "pass",
+        "measured": -1.5,
+        "value": "-1.5",
+        "limit": -1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ -1"
+      },
+      {
+        "id": "caption_safe",
+        "label": "caption safe area",
+        "stage": "captions",
+        "state": "not-applicable",
+        "measured": null,
+        "value": "not applicable",
+        "limit": true,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "inside safe area"
+      },
+      {
+        "id": "dead_air_ratio",
+        "label": "dead air",
+        "stage": "cut",
+        "state": "not-applicable",
+        "measured": null,
+        "value": "not applicable",
+        "limit": 0.06,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 0.06"
+      },
+      {
+        "id": "first_speech_s",
+        "label": "first speech",
+        "stage": "cut",
+        "state": "not-applicable",
+        "measured": null,
+        "value": "not applicable",
+        "limit": 1,
+        "critical": true,
+        "ok": true,
+        "warn": false,
+        "want": "≤ 1"
+      }
+    ],
+    "passed": false,
+    "red": false,
+    "unverified": true
+  },
+  "performance": {
+    "seconds": {
+      "transcript": 0,
+      "plan": 0,
+      "compose": 514.872,
+      "critic": 0,
+      "total": 741.316
+    },
+    "budgets": {
+      "transcript": 45,
+      "plan": 25,
+      "compose": 90,
+      "critic": 60,
+      "total": 240
+    },
+    "checks": [
+      {
+        "stage": "transcript",
+        "max": 45,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "plan",
+        "max": 25,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "compose",
+        "max": 90,
+        "seconds": 514.872,
+        "ok": false
+      },
+      {
+        "stage": "critic",
+        "max": 60,
+        "seconds": 0,
+        "ok": true
+      },
+      {
+        "stage": "total",
+        "max": 240,
+        "seconds": 741.316,
+        "ok": false
+      }
+    ],
+    "hardware": {
+      "platform": "win32",
+      "cores": 4,
+      "model": "AMD EPYC 7763 64-Core Processor                "
+    },
+    "preview": false,
+    "source_seconds": 20,
+    "representative": false
+  },
+  "replay": {
+    "networkAttempts": 0,
+    "paidCalls": 0,
+    "mode": "saved deterministic plan replay",
+    "providerAdherence": false,
+    "staticCamera": false
+  },
+  "events": [
+    {
+      "id": "clip1",
+      "kind": "cut",
+      "start": 0,
+      "end": 2.16,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 0,
+      "speed": 1,
+      "raw": {
+        "start": 0,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip2",
+      "kind": "cut",
+      "start": 2.16,
+      "end": 4.36,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 2.12,
+      "speed": 1,
+      "raw": {
+        "start": 2.16,
+        "props": {
+          "scale": {
+            "base": 1.33,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.027600000000000013
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip3",
+      "kind": "cut",
+      "start": 4.36,
+      "end": 6.5200000000000005,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 4.28,
+      "speed": 1,
+      "raw": {
+        "start": 4.36,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip4",
+      "kind": "cut",
+      "start": 6.52,
+      "end": 8.72,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 6.4,
+      "speed": 1,
+      "raw": {
+        "start": 6.52,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip5",
+      "kind": "cut",
+      "start": 8.72,
+      "end": 10.88,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 8.56,
+      "speed": 1,
+      "raw": {
+        "start": 8.72,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip6",
+      "kind": "cut",
+      "start": 10.88,
+      "end": 13.08,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 10.68,
+      "speed": 1,
+      "raw": {
+        "start": 10.88,
+        "props": {
+          "scale": {
+            "base": 1.33,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.027600000000000013
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip7",
+      "kind": "cut",
+      "start": 13.08,
+      "end": 15.24,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 12.84,
+      "speed": 1,
+      "raw": {
+        "start": 13.08,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip8",
+      "kind": "cut",
+      "start": 15.24,
+      "end": 17.4,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 15,
+      "speed": 1,
+      "raw": {
+        "start": 15.24,
+        "props": {
+          "scale": {
+            "base": 1,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.04670000000000002
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip9",
+      "kind": "cut",
+      "start": 17.4,
+      "end": 19.599999999999998,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 17.12,
+      "speed": 1,
+      "raw": {
+        "start": 17.4,
+        "props": {
+          "scale": {
+            "base": 1.15,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.15
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.031899999999999984
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "clip10",
+      "kind": "cut",
+      "start": 19.6,
+      "end": 20.32,
+      "path": "D:/a/kimoapp/kimoapp/.qualification-data/prepared/1.mp4",
+      "sourceFps": 25,
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "in_point": 19.28,
+      "speed": 1,
+      "raw": {
+        "start": 19.6,
+        "props": {
+          "scale": {
+            "base": 1.33,
+            "keys": [
+              {
+                "t": 0,
+                "v": 1.33
+              }
+            ]
+          },
+          "x": {
+            "base": 0
+          },
+          "y": {
+            "base": -0.027600000000000013
+          },
+          "opacity": {
+            "base": 1
+          }
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "scope": "Modern EDL caption/cut statistics plus independent source matching, source-residual registration, sampled colour and final-audio measurement.",
+    "limits": "Animated/non-centre source mappings or ambiguous natural footage remain unverified; no zero is substituted. CI short fixtures explicitly hold a centred wide camera to isolate frame selection; separate barcode/camera unit tests cover moving cameras. Saved deterministic plan replay is not provider adherence."
+  }
+}

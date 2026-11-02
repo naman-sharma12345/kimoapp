@@ -1,55 +1,57 @@
-kimo for Windows 0.3.2: a new studio-design window and live tool calls, on top of the 0.3.1 smoothness work.
+# kimo for Windows v0.4.0 — Creator edits
 
-**New desktop UI**
-- The window is rebuilt on the kimo studio design system: the same fonts, colours and panels as the web studio
-- Library, live editor feed and timeline stay side by side down to the 1080 px minimum window
+This release adds the creator pipeline and Studio controls to the Windows app:
 
-**Live tool calls fixed**
-- Each tool call (trim, grade, captions, render, QA...) now shows in the feed the moment it starts, with its timer, and ticks off when it finishes. Before, a tool call's own id replaced the project id on live events, so steps only appeared after the edit
+- Own frame-exact compositor, transcript cuts and a float camera director.
+- Nine templates, creator captions, graphics/b-roll and speech-synced explainer visuals.
+- Voice/music/SFX finishing, colour matching and graded looks.
+- Structured planner/critic, saved decisions, timeline edits and undo/redo.
+- Reduced editing previews; full x264 medium delivery on export.
+- Bounded critical-stage repairs, final AAC peak measurement, resumable checkpoints,
+  VFR/rotation/HDR normalization and cache cleaning.
+- Lossless opaque pass caches, retained alpha segments and bounded background work.
 
-**Included from 0.3.1**
-- Smooth, gimbal-like camera: sub-pixel follow-reframe, eased punch-ins, the footage's own frame rate with no repeated or dropped frames
-- Cleaner text-behind-the-subject titles with soft, steady mask edges
-- Camera smoothness check in the quality panel
+GPU probing no longer runs on startup or an engine-status refresh. Decode defaults
+to CPU; hardware decode is opt-in with KIMO_HW_DECODE=auto. The optional small-copy
+action can detect/use a hardware encoder. Final masters remain software x264.
 
-kimo for Windows 0.3.1: smooth, gimbal-like camera moves and a cleaner text-behind look.
+## Measured before / after
+| Clip | Best tested template | Legacy reference | v0.4.0 fixture |
+|---|---|---:|---:|
+| TH-1 | shorts-clean | 63.5 | 73.6 |
+| TH-2 | shorts-punchy | 78.3 | 75.9 |
+| TUT-1 | explainer | 53.6 | 63.5 |
+| VLOG-1 | youtube-vlog | 79.2 | 66.9 |
+| POD-1 | podcast-clips | 56.6 | 56.6 |
+| MUSIC-1 | music-montage | 46.8 | 55.6 |
 
-**Smooth camera (no more jitter)**
-- The follow-reframe and punch-ins are cut with sub-pixel precision (bicubic, every frame its own exact float window) instead of whole/even-pixel crops that stepped 3-7 px at a time
-- The subject path is smoothed like a gimbal: outlier filter, dead zone (the camera holds still while the subject moves a little), speed limit, and heavy zero-phase easing; the 12 fps track is interpolated with a smooth spline
-- Punch-ins ease in and out (0.45 s) instead of jumping
-- Videos keep the footage's own frame rate (a 24 fps clip is no longer put on a 30 fps canvas, which repeated every 4th frame), constant frame rate, no duplicated or dropped frames
-- SAM-only edits take the picture frame for frame from the SAM render, with kimo's finished audio
+Best tested template for each of six golden IDs; all nine templates were tested.
+The legacy column is the retained native-renderer reference for the v0.3.2 path,
+not a fresh old-install run. Plans and measurement versions differ. These are
+actual heuristic scores, not a controlled editorial-quality comparison or live
+AI-provider adherence test. VLOG regresses and POD does not improve.
 
-**Text behind the subject**
-- The title is placed from the subject's matte, so the head overlaps the lower part of the letters and the word stays readable
-- Mask edges are softened in space and across neighbouring frames, so cut-out edges don't shimmer
-- Big upscales from small footage get a light sharpen after the lanczos scale
+## Known limits
 
-**Measured**
-- New *camera smoothness* check in the quality panel and the op log: residual shake in px per frame (at 1080 px) and repeated frames; a SAM render that shakes is re-rendered once with stronger smoothing
+**Performance exception accepted by the user:** the four-core, no-GPU 60-second
+portrait export takes 532.819 seconds (8.88 minutes), exceeding the four-minute
+target. Whisper takes 32.390s; opaque composites 397.055s; final x26482.918s.
+Composition through delivery is 479.973s against 90s. The performance gate remains
+red. Earlier measured totals were 1009.450s and 840.243s on different hosted CPUs.
+Preview rendering reduces editing load; full export still consumes CPU and disk.
 
-kimo for Windows 0.3.0: Meta SAM 3.1 (Segment Anything) inside kimo. Name a subject, and kimo tracks it through your clip.
+Natural frame/jitter metrics for animated/follow camera mappings remain unverified,
+not zero. Barcode/camera tests separately cover exact frame selection. Offline
+CI fixtures use deterministic saved plans with network blocked, not captured
+provider replies. Their centred camera isolates frame selection; they do not
+showcase the camera director or prove model quality.
 
-**Subject tracking + smart reframe**
-- SAM 3.1 tracks the main subject (a person by default, or anything you type: "dog", "skateboard", "red car")
-- 9:16, 1:1 and 4:5 exports follow the subject with a smoothed, dead-zoned virtual camera instead of a centre crop
-- Punch-in zooms centred on the subject (automatic, or placed by the AI editor)
+Outputs still need better hook selection, reliable face/speaker localization,
+caption placement, human transcript correction and more purposeful b-roll. The
+music case has only one underlying shot. Full visual critiques, critical metrics,
+artifact links, dataset limitations and source credits are in desktop/test/bench/FINAL.md.
+No new paid AI/SAM requests were made; the historical reservation ledger is unchanged.
 
-**Background and cutout**
-- Text behind the subject: big titles sit between the background and the person
-- Background blur, solid colour or your own image, with the subject kept sharp
-- Subject cutout as a transparent ProRes 4444 .mov
-
-**Object blur**
-- Blur every match for "face", "license plate", "logo" or any object you name
-
-**In the editor**
-- New *Subject effects · Meta SAM 3.1* panel: type an object, press *Show masks* to see SAM's masks on a frame, pick an effect, then run it alone (*SAM effect only*), before captions, or before a full AI edit
-- The AI edit planner (Muse Spark) can call `sam_reframe`, `sam_text_behind`, `sam_background` and `sam_redact` itself
-- Every SAM step shows live in the op log with timings (downscaled copy, tracking with progress, matte, render) and the preview updates after it
-- Tracks are cached per clip and object, so trying another effect or text costs no new SAM call
-
-**Privacy and cost**
-- SAM features upload a downscaled copy (≤720p, no sound) of only the clip segment being processed to Meta through kimo's proxy, which deletes the upload afterwards. The rest of the clip and every render stay on your PC. No API key is in the app.
-- Tracking-only uses 12 fps; masks follow the clip's frame rate (max 30 fps). One request covers up to 60 s.
+Inputs longer than three hours are refused. The installer is unsigned. Automated
+updater feed/size/hash verification is separate from the documented manual
+v0.3.2 profile-and-restart upgrade test; an interactive old-install upgrade is not claimed.
