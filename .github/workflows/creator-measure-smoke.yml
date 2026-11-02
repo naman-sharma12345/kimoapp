@@ -6,6 +6,10 @@ on:
         type: string
         default: '41466604893'
         description: Installed qualification artifact to remeasure without rendering
+      fresh_golden:
+        type: boolean
+        default: false
+        description: Preflight the short golden fixture on the same runtime before installed qualification
 permissions:
   contents: read
   actions: read
@@ -20,9 +24,10 @@ jobs:
       KIMO_PERFORMANCE_PROFILE: ci
       KIMO_WORKER_THREADS: '4'
       BENCH_SHORT: '1'
-      BENCH_CASE: SAM-PERSON
-      BENCH_TEMPLATE: shorts-punchy
+      BENCH_CASE: ${{ inputs.fresh_golden && 'TH-2' || 'SAM-PERSON' }}
+      BENCH_TEMPLATE: ${{ inputs.fresh_golden && 'youtube-talking' || 'shorts-punchy' }}
       BENCH_OUTPUT: ${{ github.workspace }}/saved/_temp/release-evidence
+      BENCH_INPUT: ${{ github.workspace }}/prepared
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,11 +41,23 @@ jobs:
         run: ./desktop/test/bench/bootstrap.ps1
       - run: npm ci --prefix desktop
       - uses: actions/download-artifact@v4
+        if: '!inputs.fresh_golden'
         with:
           run-id: ${{ inputs.artifact_run }}
           name: kimo-windows-qualification
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: saved
+      - uses: actions/download-artifact@v4
+        if: inputs.fresh_golden
+        with:
+          run-id: 41099499282
+          name: raw-v2-prepared-41099499282-TH-2
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: prepared
+      - if: inputs.fresh_golden
+        run: node desktop/test/bench/creator-release.mjs prepare
+      - if: inputs.fresh_golden
+        run: node desktop/test/bench/creator-release.mjs run
       - run: node desktop/test/bench/creator-release.mjs measure
       - uses: actions/upload-artifact@v4
         if: always()
