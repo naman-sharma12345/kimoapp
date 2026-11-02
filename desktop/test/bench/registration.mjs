@@ -1,13 +1,24 @@
 // Source-referenced small-translation least squares. Physical source motion cancels
 // because each decoded output is registered to its own expected source frame.
 // This is an estimate, not a replacement for source-frame identity or barcode tests.
-export function registerTranslation(output, reference, width, height, mask) {
+export function registerTranslation(
+  output,
+  reference,
+  width,
+  height,
+  mask,
+  rejected,
+) {
+  const fail = (reason, values = {}) => {
+    rejected?.({ reason, ...values });
+    return null;
+  };
   if (
     !reference ||
     output.length !== width * height ||
     reference.length !== output.length
   )
-    return null;
+    return fail('missing-frame');
   let n = 0,
     sr = 0,
     so = 0,
@@ -33,10 +44,11 @@ export function registerTranslation(output, reference, width, height, mask) {
       ro += r * o;
     }
   const variance = rr - (sr * sr) / n;
-  if (n < width * height * 0.2 || !(variance / n > 4)) return null;
+  if (n < width * height * 0.2 || !(variance / n > 4))
+    return fail('texture-or-mask', { pixels: n, variance: variance / n });
   const gain = (ro - (sr * so) / n) / variance,
     bias = (so - gain * sr) / n;
-  if (!(gain > 0.5 && gain < 2)) return null;
+  if (!(gain > 0.5 && gain < 2)) return fail('photometric-gain', { gain });
   let xx = 0,
     xy = 0,
     yy = 0,
@@ -61,11 +73,15 @@ export function registerTranslation(output, reference, width, height, mask) {
     determinant / (xx + yy) ** 2 < 0.001 ||
     (xx + yy) / n < 0.5
   )
-    return null;
+    return fail('aperture', {
+      determinant,
+      isotropy: determinant / (xx + yy) ** 2,
+      energy: (xx + yy) / n,
+    });
   const dx = (yy * xt - xy * yt) / determinant,
     dy = (xx * yt - xy * xt) / determinant;
   // A first-order fit is only meaningful for small residuals. Reject major framing differences.
-  if (Math.hypot(dx, dy) > 0.75) return null;
+  if (Math.hypot(dx, dy) > 0.75) return fail('large-offset', { dx, dy });
   let error = 0;
   for (let y = 2; y < height - 2; y++)
     for (let x = 2; x < width - 2; x++) {
@@ -77,7 +93,9 @@ export function registerTranslation(output, reference, width, height, mask) {
         (output[k] - (gain * reference[k] + bias + gx * dx + gy * dy)) ** 2;
     }
   const rmse = Math.sqrt(error / n);
-  return rmse <= 6 ? { dx, dy, rmse, gain, pixels: n } : null;
+  return rmse <= 6
+    ? { dx, dy, rmse, gain, pixels: n }
+    : fail('fit-error', { rmse, dx, dy });
 }
 
 export function sourceResidualJitter(
@@ -85,8 +103,16 @@ export function sourceResidualJitter(
   reference,
   { width, height, outputWidth, outputHeight, masks } = {},
 ) {
+  const rejections = [];
   const shifts = output.map((frame, i) =>
-    registerTranslation(frame, reference[i], width, height, masks?.[i]),
+    registerTranslation(
+      frame,
+      reference[i],
+      width,
+      height,
+      masks?.[i],
+      (detail) => rejections.push({ frame: i, ...detail }),
+    ),
   );
   const weights = [-2, 3, 6, 7, 6, 3, -2].map((v) => v / 21);
   const scaleX =
@@ -113,6 +139,7 @@ export function sourceResidualJitter(
     measured,
     eligible,
     coverage,
+    rejections,
     mean_fit_rmse: shifts.some(Boolean)
       ? shifts.filter(Boolean).reduce((s, v) => s + v.rmse, 0) /
         shifts.filter(Boolean).length
