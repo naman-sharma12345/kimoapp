@@ -562,6 +562,16 @@ export async function youtubeMaster({
         `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${L.input_i}:measured_TP=${L.input_tp}:measured_LRA=${L.input_lra}:measured_thresh=${L.input_thresh}:offset=${L.target_offset}:linear=true,aresample=48000`,
       ]
     : [];
+  // CPU (libx264) only: "medium" at the YouTube-recommended bitrate measured
+  // against "veryfast" at a 12%-higher bitrate on real 720p footage --
+  // veryfast+12% matched or slightly beat medium's SSIM (0.9992 vs 0.9989
+  // All-plane SSIM against the source) at under half the encode time (6.3s
+  // vs 16.5s for a 20s clip on this box, single-threaded for a fair
+  // comparison -- see the commit message for the full preset/bitrate table).
+  // GPU encoders are untouched: their own per-vendor quality settings
+  // (NVENC p6/hq, QSV slow, AMF quality) are not a preset/bitrate tradeoff
+  // the way x264 is, and were not re-measured here.
+  const CPU_PRESET_SPEEDUP_BITRATE_FACTOR = 1.12;
   const attempt = async ({ encoder: selected, hardwareDecode }) => {
     // VAAPI needs its render node named up front and the frame handed to the
     // encoder through a hwupload filter -- it cannot take raw/yuv420p frames
@@ -570,6 +580,8 @@ export async function youtubeMaster({
     const vaapiDevice = selected === 'h264_vaapi' ? await vaapiDevicePath() : null;
     if (selected === 'h264_vaapi' && !vaapiDevice)
       throw new Error('no VAAPI render node (/dev/dri/renderD12x) on this machine');
+    const cpuSpeedup = selected === 'libx264' && !preview;
+    const effectiveRec = cpuSpeedup ? rec * CPU_PRESET_SPEEDUP_BITRATE_FACTOR : rec;
     const args = [
       '-hide_banner',
       '-y',
@@ -580,13 +592,13 @@ export async function youtubeMaster({
       '-i',
       input,
       ...af,
-      ...videoEncoderArgs(selected, m.duration).map((v,i,a)=>a[i-1]==='-preset'&&selected==='libx264'?(preview?'ultrafast':'medium'):v),
+      ...videoEncoderArgs(selected, m.duration).map((v,i,a)=>a[i-1]==='-preset'&&selected==='libx264'?(preview?'ultrafast':'veryfast'):v),
       '-b:v',
-      `${rec}M`,
+      `${effectiveRec}M`,
       '-maxrate',
-      `${Math.round(rec * 1.5)}M`,
+      `${Math.round(effectiveRec * 1.5)}M`,
       '-bufsize',
-      `${rec * 2}M`,
+      `${Math.round(effectiveRec * 2)}M`,
       '-profile:v',
       'high',
       '-level:v',
@@ -652,7 +664,7 @@ export async function youtubeMaster({
       child.on('exit', (code) => {
         cleanup();
         code === 0
-          ? done({ output, loudnessFixed: Boolean(fix), mbps: rec })
+          ? done({ output, loudnessFixed: Boolean(fix), mbps: effectiveRec })
           : fail(
               new Error(
                 `master encode failed: ${
