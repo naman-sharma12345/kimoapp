@@ -11,7 +11,9 @@ on:
         type: boolean
         default: false
 permissions:
-  contents: read
+  # GitHub lists draft releases only to callers with push access. This lets the
+  # CDN qualify the new payload before the release becomes public/latest.
+  contents: write
 concurrency:
   group: desktop-installer-cdn
   cancel-in-progress: false
