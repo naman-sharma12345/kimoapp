@@ -599,8 +599,29 @@ export function segmentConcurrency({
   const byMem = Math.max(1, Math.floor(totalMemGB / 3));
   return Math.max(1, Math.min(jobCount, byCores, byMem, 8));
 }
-async function renderSegmentsConcurrently(toRender, { ffmpeg, canvas, signal, emit, total, started }) {
-  const concurrency = segmentConcurrency({ jobCount: toRender.length });
+// Phase 4 task 2: how many 30s stages of the >600s "complex" renderer run at
+// once. Each concurrent stage is much heavier than one segment render -- its
+// own bakeTracks() (itself now internally parallel, see
+// renderSegmentsConcurrently below) plus its own composite encode -- so this
+// sizes by cores/RAM separately from segmentConcurrency(), with its own env
+// override and the same background-profile opt-out.
+export function stageConcurrency({
+  parallelism = os.availableParallelism(),
+  totalMemGB = os.totalmem() / 1024 ** 3,
+  jobCount = Infinity,
+} = {}) {
+  const profile = String(process.env.KIMO_PERFORMANCE_PROFILE || '').toLowerCase();
+  if (profile === 'background' || profile === 'low-cpu' || profile === 'low_cpu') return 1;
+  const requested = Number(process.env.KIMO_STAGE_CONCURRENCY);
+  if (Number.isInteger(requested) && requested > 0) return Math.max(1, Math.min(requested, jobCount));
+  // ~4 GB headroom per concurrent stage (several clip segments plus the
+  // stage's own composite encode can be in flight at once within one stage).
+  const byCores = Math.max(1, parallelism - 1);
+  const byMem = Math.max(1, Math.floor(totalMemGB / 4));
+  return Math.max(1, Math.min(jobCount, byCores, byMem, 4));
+}
+async function renderSegmentsConcurrently(toRender, { ffmpeg, canvas, signal, emit, total, started, concurrencyOverride }) {
+  const concurrency = concurrencyOverride ?? segmentConcurrency({ jobCount: toRender.length });
   // Deliberately NOT dividing each concurrent process's own thread count down
   // by concurrency. Measured on this box (4 cores): two of these segment
   // renders (ffv1 decode + camera filter + ffv1 encode) run one after another
@@ -642,6 +663,7 @@ async function renderSegmentsConcurrently(toRender, { ffmpeg, canvas, signal, em
         plan: item.plan,
         output: item.segment,
         signal,
+        strictSampling: item.strictSampling,
         onProgress: (n) => reportProgress(i, n, item.plan.start),
       });
     }
@@ -748,12 +770,52 @@ async function contrastPass(edl, { ffmpeg, base, from, to, signal }) {
   }
   return boosted;
 }
-async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampling=false }) {
+async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit, strictSampling=false, segmentConcurrencyOverride }) {
   const fps = rate(edl.canvas.fps),
     layers = [],
-    sources = [];
+    sources = [],
+    totalFrames = frameCount(edl);
+  // Phase 1 (sync, cheap): which clips, across every track, are actually
+  // active in this stage's [from,to) window, and their exact plans/gaps --
+  // bakedTrackPlans() is pure, so this needs no rendering yet.
+  const trackPieces = [];
   for (const [ti, track] of edl.video.entries()) {
-    const pieces = [];
+    const pieces = bakedTrackPlans(track, edl.sources, edl.canvas.fps, from, to);
+    if (!pieces.length) continue;
+    trackPieces.push({ ti, track, pieces });
+  }
+  // Phase 2: render every clip's own mapped-*.mkv segment, across every
+  // track in this stage, concurrently -- nothing about one clip's segment
+  // depends on another's (this is the same renderSegmentsConcurrently()
+  // phase 2's parallel-segment-compose fix already uses for non-complex
+  // timelines; complex-mode stages never hit that path -- their baked clips
+  // always skip it -- so it needed wiring in here too). When stages
+  // themselves are already running in parallel (segmentConcurrencyOverride),
+  // this stays serial internally rather than oversubscribing the machine.
+  const toRender = [];
+  for (const { ti, pieces } of trackPieces)
+    for (const piece of pieces) {
+      piece.segmentPath = join(
+        dir,
+        `mapped-${ti}-${piece.clip.id.replace(/[^a-z0-9_-]/gi, '_')}-${from}.mkv`,
+      );
+      toRender.push({ clip: piece.clip, source: piece.source, plan: piece.plan, segment: piece.segmentPath, strictSampling });
+    }
+  if (toRender.length)
+    await renderSegmentsConcurrently(toRender, {
+      ffmpeg,
+      canvas: edl.canvas,
+      signal,
+      emit,
+      total: totalFrames,
+      started: Date.now(),
+      concurrencyOverride: segmentConcurrencyOverride,
+    });
+  // Phase 3: now that every clip segment for this stage exists, assemble
+  // each track's own piece order (blanks are cheap and stay sequential) and
+  // concat it into one flattened, "_baked" source for the main composite.
+  for (const { ti, track, pieces } of trackPieces) {
+    const concatPieces = [];
     let cursor = from;
     const blank = async (count) => {
       if (count <= 0) return;
@@ -786,45 +848,21 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampl
             'tv',
             path,
           ],
-          { signal, onProgress: n => emit({ t: 'progress', phase: 'compose', label: 'filling timeline gap', frame: Math.min(to, cursor + n), total: frameCount(edl), f: Math.min(to, cursor + n) / frameCount(edl) }) },
+          { signal, onProgress: n => emit({ t: 'progress', phase: 'compose', label: 'filling timeline gap', frame: Math.min(to, cursor + n), total: totalFrames, f: Math.min(to, cursor + n) / totalFrames }) },
         );
-      pieces.push(path);
+      concatPieces.push(path);
     };
-    for (const { clip, source, plan, gap } of bakedTrackPlans(track, edl.sources, edl.canvas.fps, from, to)) {
-      await blank(gap);
-      const path = join(
-        dir,
-        `mapped-${ti}-${clip.id.replace(/[^a-z0-9_-]/gi, '_')}-${from}.mkv`,
-      );
-      await mappedSegment({
-        ffmpeg,
-        source,
-        clip,
-        strictSampling,
-        canvas: edl.canvas,
-        plan,
-        output: path,
-        signal,
-        onProgress: (n) =>
-          emit({
-            t: 'progress',
-            phase: 'compose',
-            label: 'mapping source frames',
-            frame: plan.start + n,
-            total: frameCount(edl),
-            f: (plan.start + n) / frameCount(edl),
-          }),
-      });
-      pieces.push(path);
-      cursor = plan.end;
+    for (const piece of pieces) {
+      await blank(piece.gap);
+      concatPieces.push(piece.segmentPath);
+      cursor = piece.plan.end;
     }
-    if (!pieces.length) continue;
     await blank(to - cursor);
     const path = join(dir, `track-${ti}-${from}.mkv`),
       list = join(dir, `track-${ti}-${from}.ffcat`);
     await writeFile(
       list,
-      pieces.map((p) => `file '${basename(p)}'`).join('\n'),
+      concatPieces.map((p) => `file '${basename(p)}'`).join('\n'),
     );
     await ffmpegRun(
       ffmpeg,
@@ -854,6 +892,156 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampl
   }
   return { clips: layers, sources };
 }
+
+// Phase 4 task 2: one >600s "complex" stage, fully self-contained in its own
+// private stage-${from} subdirectory (never the shared workspace `dir`) so
+// multiple stages can safely render at once -- no directory-diffing, no
+// shared filenames, nothing for one stage's cleanup to race against
+// another's. Only picture-${from}.mkv (verified by real decoded frame count)
+// is moved out to `dir` for the final concat; everything else this stage
+// made is deleted with it in one `rm -rf` of its own private directory.
+//
+// cacheable/baseFile/pictureCursor (the caption-only re-render cache) never
+// apply here -- that path is gated on `!complex` by compose() itself -- so
+// overlayCursor always starts at 0, exactly as bakedTrackPlans()/bakeTracks()
+// already compute each stage's own overlay-track layering purely from this
+// stage's own [from,to) window and nothing carried from a prior stage.
+async function renderComplexStage({
+  edl,
+  ffmpeg,
+  ffprobe,
+  signal,
+  emit,
+  dir,
+  fontDir,
+  total,
+  started,
+  id,
+  clockN,
+  clockD,
+  fps,
+  from,
+  to,
+  strictSampling,
+  segmentConcurrencyOverride,
+}) {
+  const length = to - from;
+  const stageDir = join(dir, `stage-${from}`);
+  await mkdir(stageDir, { recursive: true });
+  const args = [
+      '-f',
+      'lavfi',
+      '-i',
+      `color=c=${edl.canvas.bg ?? 'black'}:s=${edl.canvas.w}x${edl.canvas.h}:r=${edl.canvas.fps},format=rgb24`,
+    ],
+    graph = [
+      `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[base0]`,
+    ];
+  let input = 1,
+    layer = 0,
+    base = 'base0',
+    overlayCursor = 0,
+    pass = 0;
+  const baked = await bakeTracks(edl, { ffmpeg, dir: stageDir, from, to, signal, emit, strictSampling, segmentConcurrencyOverride });
+  for (const clip of baked.clips) {
+    const source = baked.sources.find((s) => s.id === clip.src),
+      plan = framePlan(clip, source, edl.canvas.fps, from, to);
+    if (!plan.indices.length) continue;
+    if (clip._overlayIndex != null) {
+      const ass = join(stageDir, `before-${from}-${clip._overlayIndex}.ass`);
+      const text = subtitles(
+        { ...edl, overlays: edl.overlays.slice(overlayCursor, clip._overlayIndex) },
+        from,
+        to,
+      );
+      await writeFile(ass, text);
+      const textBase = `textBefore${clip._overlayIndex}`;
+      graph.push(`[${base}]${textFilter(ass, fontDir, text)}[${textBase}]`);
+      base = textBase;
+      overlayCursor = clip._overlayIndex + 1;
+    }
+    // Every activeClip in complex mode is a baked, flattened track (bakeTracks
+    // guarantees _baked:true), so this is the only branch the original
+    // per-clip loop's if/else-if/else ever takes here.
+    args.push('-i', source.path);
+    const vf = 'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
+    const name = `clip${layer}`,
+      next = `base${layer + 1}`;
+    graph.push(
+      `[${input}:v]${vf},settb=1/${clockN},setpts=N*${clockD}+${(plan.start - from) * clockD}[${name}]`,
+    );
+    graph.push(
+      `[${base}][${name}]overlay=eof_action=pass:repeatlast=0:format=auto:enable='gte(t,${safe((plan.start - from - 0.25) / fps)})*lt(t,${safe((plan.end - from - 0.25) / fps)})',setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[${next}]`,
+    );
+    base = next;
+    input++;
+    layer++;
+    if (layer === 20) {
+      const stage = join(stageDir, `layers-${from}-${pass}.mkv`),
+        stageScript = join(stageDir, `layers-${from}-${pass}.ffgraph`);
+      pass++;
+      graph.push(`[${base}]format=yuv444p[staged]`);
+      await writeFile(stageScript, graph.join(';\n'));
+      await ffmpegRun(
+        ffmpeg,
+        [...args, await scriptOption(ffmpeg), stageScript, '-map', '[staged]', '-an', '-frames:v', String(length), ...lossless, stage],
+        { signal, cwd: stageDir },
+      );
+      args.length = 0;
+      args.push('-i', stage);
+      graph.length = 0;
+      graph.push(`[0:v]settb=1/${clockN},setpts=N*${clockD},format=yuv444p[base0]`);
+      base = 'base0';
+      input = 1;
+      layer = 0;
+    }
+  }
+  const ass = join(stageDir, `overlays-${from}.ass`);
+  const text = finalScript(edl, edl.overlays.slice(overlayCursor), from, to);
+  await writeFile(ass, text);
+  graph.push(`[${base}]${textFilter(ass, fontDir, text)}[composed]`);
+  const script = join(stageDir, `picture-${from}.ffgraph`),
+    stageChunk = join(stageDir, `picture-${from}.mkv`);
+  await writeFile(script, graph.join(';\n'));
+  await ffmpegRun(
+    ffmpeg,
+    [...args, await scriptOption(ffmpeg), script, '-map', '[composed]', '-an', '-frames:v', String(length), ...lossless, stageChunk],
+    {
+      signal,
+      cwd: stageDir,
+      onProgress: (n) => {
+        const elapsed = (Date.now() - started) / 1000,
+          done = from + n;
+        emit({
+          t: 'progress',
+          id,
+          opId: id,
+          tool: 'compose',
+          phase: 'compose',
+          label: `compositing frame ${done}/${total} \u00b7 ${(done / Math.max(0.001, elapsed)).toFixed(1)} fps`,
+          frame: done,
+          total,
+          f: done / total,
+          fps: done / Math.max(0.001, elapsed),
+          eta: done ? (elapsed * (total - done)) / done : null,
+        });
+      },
+    },
+  );
+  // Verify (real decoded frame count, not container metadata -- see
+  // countFrames()) before deleting anything; a short/corrupt stage keeps its
+  // whole private stageDir for inspection instead of losing the evidence.
+  const stageFrames = await countFrames(ffprobe, stageChunk);
+  if (stageFrames !== length)
+    throw new Error(
+      `stage at frame ${from}: composite picture has ${stageFrames} frames, expected ${length} (kept at ${stageDir} for inspection)`,
+    );
+  const finalChunk = join(dir, `picture-${from}.mkv`);
+  await rename(stageChunk, finalChunk);
+  await rm(stageDir, { recursive: true, force: true });
+  return finalChunk;
+}
+
 async function inspect(ffprobe, path) {
   const child = spawnBackground(
     ffprobe,
@@ -1369,7 +1557,56 @@ export async function compose({
     const outputs = [];
     const baseFiles = new Set();
     let boosted = 0;
-    for (let from = begin; from < finish; from += chunkSize) {
+    if (complex) {
+      // Phase 4 task 2: whole 30s stages render concurrently (not just clip
+      // segments within one), sized by cores/RAM via stageConcurrency() --
+      // the real lever at 21,000 frames, where stages otherwise run strictly
+      // one after another even though nothing about one stage's picture
+      // depends on another's (overlayCursor/caption bookkeeping is already
+      // purely a function of each stage's own [from,to) window -- see
+      // renderComplexStage()'s own comment). When more than one stage runs
+      // at once, bakeTracks()'s own inner segment concurrency is forced down
+      // to 1 to avoid oversubscribing the machine with two layers of
+      // parallelism at once; KIMO_PERFORMANCE_PROFILE=background/low-cpu
+      // still forces everything serial, same as segmentConcurrency().
+      const stages = [];
+      for (let from = begin; from < finish; from += chunkSize) stages.push(from);
+      const stageConc = stageConcurrency({ jobCount: stages.length });
+      const segmentConcurrencyOverride = stageConc > 1 ? 1 : undefined;
+      const stageResults = new Array(stages.length);
+      let nextStage = 0;
+      const stageWorker = async () => {
+        while (nextStage < stages.length) {
+          const idx = nextStage++;
+          const from = stages[idx],
+            to = Math.min(finish, from + chunkSize);
+          stageResults[idx] = await renderComplexStage({
+            edl,
+            ffmpeg,
+            ffprobe,
+            signal,
+            emit,
+            dir,
+            fontDir,
+            total,
+            started,
+            id,
+            clockN,
+            clockD,
+            fps,
+            from,
+            to,
+            strictSampling,
+            segmentConcurrencyOverride,
+          });
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(stageConc, stages.length) }, stageWorker),
+      );
+      for (const chunk of stageResults) outputs.push(chunk);
+    } else {
+      for (let from = begin; from < finish; from += chunkSize) {
       const to = Math.min(finish, from + chunkSize),
         length = to - from,
         args = [
@@ -1381,15 +1618,9 @@ export async function compose({
         graph = [
           `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[base0]`,
         ];
-      // Disk bound (task 1): snapshot the workspace before this stage creates
-      // anything, so every file the stage adds (per-clip ffv1 "mapped-*"
-      // segments, per-track "track-*" concats, blank-gap fillers, this
-      // stage's own tiny .ass/.ffgraph scripts) can be deleted the moment
-      // the stage's own picture-${from}.mkv is written and verified below --
-      // keeping only what the final concat actually reads. Only the
-      // chunked-stage ('complex') renderer accumulates these; the
-      // single-stage path's own cache files are left alone.
-      const stageDirSnapshot = complex ? new Set(readdirSync(dir)) : null;
+      // This branch only ever runs when !complex (the complex/chunked-stage
+      // path is handled entirely by renderComplexStage(), including its own
+      // disk-bound cleanup -- see the `if (complex)` branch above).
       let input = 1,
         layer = 0,
         base = 'base0';
@@ -1636,28 +1867,7 @@ export async function compose({
         },
       );
       outputs.push(chunk);
-      if (stageDirSnapshot) {
-        // Verify the stage's composite has the frame count it should before
-        // deleting anything this stage made to produce it -- a corrupt or
-        // short chunk must not lose its own evidence (mapped-*/track-*
-        // intermediates) before the problem is diagnosed. Container-level
-        // nb_frames metadata is frequently absent/0 on a freshly muxed mkv
-        // without a second pass, so this actually counts decoded frames
-        // (ffprobe -count_frames) rather than trusting the box.
-        const stageFrames = await countFrames(ffprobe, chunk);
-        if (stageFrames !== length)
-          throw new Error(
-            `stage at frame ${from}: composite picture has ${stageFrames} frames, expected ${length} (intermediates kept for inspection)`,
-          );
-        for (const name of readdirSync(dir)) {
-          if (stageDirSnapshot.has(name) || name === basename(chunk)) continue;
-          try {
-            unlinkSync(join(dir, name));
-          } catch {
-            /* best-effort; the final workspace cleanup still runs on exit */
-          }
-        }
-      }
+    }
     }
     if (cacheDir && baseFiles.size) {
       // one cached base per edit: drop stale composites of earlier versions
