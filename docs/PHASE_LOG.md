@@ -632,3 +632,30 @@ User requested a 1–2 MB initial download and a fast internet download during s
 Proof: `desktop/distribution/QUALIFICATION.md` and its `evidence/` directory.
 Interactive wizard cancellation/network dialogs and a real old-profile upgrade
 remain unautomated manual checks; no screenshot or UI-interaction pass is claimed.
+
+## Windows preview hotfix v0.4.1 — 2026-11-03
+
+- [x] Fixed mismatched Windows backslash / saved forward-slash source identity
+      during preview compilation, plus consistent transcript/word/b-roll lookups.
+- [x] Added five-source saved-EDL regression and a clear unknown-source guard;
+      extended the real tiny render test to generate a saved-plan preview.
+- [x] Read-only compilation of the user's existing saved project produces a
+      nonempty preview timeline with all 43 clips; no original project is changed
+      and no source media is opened/rendered/uploaded for that metadata check.
+- [x] Windows run 41643764413 passes all 205 desktop tests (zero skips), renderer
+      build, installer/feed hash verification and actual installed-app preview.
+      Synthetic source only; model network blocked, preview output 1,390,214 bytes.
+- [x] Online run 41645405182 passes error/integrity fixtures, installs old v0.4.0,
+      upgrades to 0.4.1.0 in the same folder with spaces, and preserves saved
+      project data. New launcher 218,091 bytes; payload 369,147,985 bytes.
+- [x] Root required lint/typecheck/311 tests/build passed in hosted 41645085598.
+      Its later pre-existing web bundle-budget failure is not claimed green.
+- [x] CDN payload/range validation passes in 41645088476; versioned manifests keep
+      original v0.4.0 URLs usable alongside the new payload.
+- [x] CDN launcher qualification 41646235112 verifies the exact 218,091-byte
+      launcher and both old/new full payloads, including checksums and ranges.
+
+Build proof: `desktop/distribution/evidence/0.4.1/`; release summary:
+`desktop/distribution/PATCH-0.4.1.md`. Interactive update/restart remains a manual
+check. No local GPU/browser/media tests, full benchmarks or paid calls. Historical
+Phase 12 performance/dataset limitations and spending reservations stay unchanged.

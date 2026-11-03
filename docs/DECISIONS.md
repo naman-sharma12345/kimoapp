@@ -352,3 +352,13 @@ under its per-file limit, streamed by a dedicated installer-only Worker at the
 previously unused downloads.getkimo.tech hostname, with HEAD/range support and
 GitHub fallback. No application API/engine/backend changes or new runtime library.
 No paid service activation and no regional speed guarantee without measurements.
+
+## Windows saved-preview patch (2026-11-03)
+
+Normalize separators only when matching imported source/transcript paths in the
+creator compiler. Keep original filesystem paths and user project files intact;
+reject unmatched selected media before an invalid `s0` source can be emitted.
+Five-source metadata and real installed-preview regressions cover the failure.
+Publish this app change as v0.4.1 so electron-updater can detect the fixed build.
+Keep old versioned CDN URLs intact by retaining both payload manifests/pieces;
+the new launcher pins the new payload length/hash, with no runtime dependency.

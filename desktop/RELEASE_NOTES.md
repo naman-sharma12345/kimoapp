@@ -1,81 +1,32 @@
-# kimo for Windows v0.4.0 — Creator edits
+# kimo v0.4.1 — Windows preview fix
 
-**Small online setup, added 2026-11-03:**
-[Download the 218 KB launcher](https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe).
-It downloads the 369 MB app during setup from Cloudflare's CDN, checks the pinned
-SHA-512, then installs the same qualified v0.4.0 app. GitHub is the backup server;
-the original offline installer and updater feed remain available. This uses free
-static hosting without R2 or a payment card. Hosted Windows download/install:
-33.94s; actual connection/disk speeds vary. [Verification and limitations](https://github.com/naman-sharma12345/kimoapp/blob/main/desktop/distribution/QUALIFICATION.md).
+[Download the recommended online installer (218 KB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.1/kimo-Online-Setup-0.4.1.exe)
 
-This release adds the creator pipeline and Studio controls to the Windows app:
+[Fast Cloudflare mirror](https://downloads.getkimo.tech/desktop/v0.4.1/kimo-Online-Setup-0.4.1.exe) · [Full offline installer (369 MB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.1/kimo-Setup-0.4.1.exe)
 
-- Own frame-exact compositor, transcript cuts and a float camera director.
-- Nine templates, creator captions, graphics/b-roll and speech-synced explainer visuals.
-- Voice/music/SFX finishing, colour matching and graded looks.
-- Structured planner/critic, saved decisions, timeline edits and undo/redo.
-- Reduced editing previews; full x264 medium delivery on export.
-- Bounded critical-stage repairs, final AAC peak measurement, resumable checkpoints,
-  VFR/rotation/HDR normalization and cache cleaning.
-- Lossless opaque pass caches, retained alpha segments and bounded background work.
+Fixes `EDL timeline: at least one frame required` when generating or resuming a
+creator preview on Windows. Saved EDL paths use forward slashes; transcript paths
+can use backslashes. The compiler now matches those representations consistently
+and rejects genuinely missing selected media before creating invalid source IDs.
+Existing saved plans and source files do not need to be deleted or reimported.
+Install v0.4.1, reopen kimo and choose **resume edit** on the failed project.
 
-GPU probing no longer runs on startup or an engine-status refresh. Decode defaults
-to CPU; hardware decode is opt-in with KIMO_HW_DECODE=auto. The optional small-copy
-action can detect/use a hardware encoder. Final masters remain software x264.
+This patch keeps the small online setup and Cloudflare CDN delivery. The full app
+still downloads during setup. No render-quality, GPU-driver or AI-budget changes.
+Initial setup: **218,091 bytes**. App payload: **369,147,985 bytes**.
 
-## Measured before / after
-| Clip | Best tested template | Legacy reference | v0.4.0 fixture |
-|---|---|---:|---:|
-| TH-1 | shorts-clean | 63.5 | 73.6 |
-| TH-2 | shorts-punchy | 78.3 | 75.9 |
-| TUT-1 | explainer | 53.6 | 63.5 |
-| VLOG-1 | youtube-vlog | 79.2 | 66.9 |
-| POD-1 | podcast-clips | 56.6 | 56.6 |
-| MUSIC-1 | music-montage | 46.8 | 55.6 |
+Qualification: five-source saved-preview regression, missing-source guard, full
+desktop tests, renderer build, updater feed/hash verification and a two-second
+synthetic preview through the actually installed Windows app. All build/media
+checks run on standard GitHub-hosted runners with model network calls blocked.
+No full benchmarks or user footage are uploaded. The previously documented
+v0.4.0 export-performance gap remains; this patch makes no new performance claim.
 
-Best tested template for each of six golden IDs; all nine templates were tested.
-The legacy column is the retained native-renderer reference for the v0.3.2 path,
-not a fresh old-install run. Plans and measurement versions differ. These are
-actual heuristic scores, not a controlled editorial-quality comparison or live
-AI-provider adherence test. VLOG regresses and POD does not improve.
+All **205 desktop tests pass with zero skips**. The actually installed app
+created a nonempty preview with model network access blocked. A separate hosted
+test installed v0.4.0, upgraded the same directory through the new online setup,
+verified executable version **0.4.1.0**, and preserved a saved-project sentinel.
+Interactive old-profile UI behavior remains a manual check.
 
-## Known limits
-
-**Performance exception accepted by the user:** the four-core, no-GPU 60-second
-portrait export takes 532.819 seconds (8.88 minutes), exceeding the four-minute
-target. Whisper takes 32.390s; opaque composites 397.055s; final x26482.918s.
-Composition through delivery is 479.973s against 90s. The performance gate remains
-red. Earlier measured totals were 1009.450s and 840.243s on different hosted CPUs.
-Preview rendering reduces editing load; full export still consumes CPU and disk.
-
-Natural frame/jitter metrics for animated/follow camera mappings remain unverified,
-not zero. Barcode/camera tests separately cover exact frame selection. Offline
-CI fixtures use deterministic saved plans with network blocked, not captured
-provider replies. Their centred camera isolates frame selection; they do not
-showcase the camera director or prove model quality.
-
-Outputs still need better hook selection, reliable face/speaker localization,
-caption placement, human transcript correction and more purposeful b-roll. The
-music case has only one underlying shot. Full visual critiques, critical metrics,
-artifact links, dataset limitations and source credits are in desktop/test/bench/FINAL.md.
-No new paid AI/SAM requests were made; the historical reservation ledger is unchanged.
-
-Inputs longer than three hours are refused. The installer is unsigned. Automated
-updater feed/size/hash verification is separate from the documented manual
-v0.3.2 profile-and-restart upgrade test; an interactive old-install upgrade is not claimed.
-
-CI-only test excerpt: *Tears of Steel* (c) Blender Foundation,
-[source](https://mango.blender.org/), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
-It is framed, captioned, graded and audio-finished for regression testing; the
-full source clip is not installed. Other benchmark source credits accompany their
-outputs and are linked in the final report.
-
-## Release verification
-
-[Windows qualification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41472140170)
-passes 203 desktop tests with zero skips, renderer/robustness/schema checks,
-installation and offline captions. Installed creator fixtures score 81.2 and 80.4
-with all critical gates green. The nine-template regression run also passes.
-The published installer, blockmap and latest.yml were downloaded on the hosted
-runner and verified against the built files, including feed size and SHA512.
-No media/GPU testing ran locally after the reported AMD driver errors.
+[Build and installed preview verification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41643764413) · [Online upgrade verification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41645405182).
+Checksums and reports are in [patch evidence](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.1).

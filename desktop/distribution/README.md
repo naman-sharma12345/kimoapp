@@ -1,9 +1,10 @@
 # Small online setup
 
-The native NSIS launcher downloads the frozen, published v0.4.0 offline installer
+The native NSIS launcher downloads the pinned, qualified offline installer
 during setup instead of embedding Electron, FFmpeg, Whisper and models. The initial
-EXE is **218,072 bytes** (0.218 MB), under the 2,000,000-byte build gate; the later app download is still 369,147,721
-bytes (about 369 MB / 352 MiB). This does not reduce the installed app size.
+EXE is 218,091 bytes for v0.4.1, under the 2,000,000-byte build gate.
+The v0.4.1 app download is 369,147,985 bytes (about 369 MB / 352 MiB).
+This does not reduce the installed app size.
 
 `payload.json` pins the exact published EXE's length and SHA-512. HTTPS/TLS and the
 checksum are both required. Setup downloads into its private temporary directory,
@@ -54,11 +55,16 @@ The free Worker daily request/CPU limits apply; GitHub remains the fallback.
 No regional speed guarantee is made. No Cloudflare credential enters setup.
 
 The same verified launcher is also served directly as a small static file:
-https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe .
+https://downloads.getkimo.tech/desktop/v0.4.1/kimo-Online-Setup-0.4.1.exe .
 Reproduce with the online workflow's publish option, then the CDN workflow's
 `include_online=true` option. Both refuse unverified files. Existing release
 assets are never clobbered; publish a newly versioned launcher for future changes.
 Exact measured proof and test limitations: [QUALIFICATION.md](QUALIFICATION.md).
+
+The versioned CDN manifest retains both v0.4.0 and v0.4.1 pieces and launchers;
+publishing the patch does not remove immutable URLs used by an older setup.
+The online qualification also installs the pinned v0.4.0 payload first, upgrades
+that same location through the new launcher, and checks a saved project sentinel.
 
 Distribution uses NSIS/zlib, InetC (NSIS licence), and StdUtils (LGPL 2.1+), the
 same setup plug-ins already used by electron-builder. Upstream licence and source:
