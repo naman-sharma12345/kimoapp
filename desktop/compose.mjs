@@ -602,9 +602,24 @@ export function segmentConcurrency({
 // Phase 4 task 2: how many 30s stages of the >600s "complex" renderer run at
 // once. Each concurrent stage is much heavier than one segment render -- its
 // own bakeTracks() (itself now internally parallel, see
-// renderSegmentsConcurrently below) plus its own composite encode -- so this
-// sizes by cores/RAM separately from segmentConcurrency(), with its own env
-// override and the same background-profile opt-out.
+// renderSegmentsConcurrently below) plus its own composite encode, each of
+// which already wants several threads for its own ffmpeg filter graph -- so
+// this sizes by cores/RAM separately from segmentConcurrency(), with its own
+// env override and the same background-profile opt-out.
+//
+// Measured on the real 700s/21,184-frame target (this 4-core/8GB box,
+// Naman's actual clips, captions, camera moves -- not a synthetic
+// no-overlay timeline): stages serial + bakeTracks' own full segment
+// concurrency (2) finished compose in 1253.0s; stages at concurrency 2 with
+// inner segment concurrency forced to 1 (avoiding oversubscription the
+// other way) took LONGER at 1358.1s -- running two full stage pipelines at
+// once oversubscribes the same small core count worse than running one
+// stage with its own segments parallel, because each stage's composite
+// encode alone already asks for cores-1 threads. byCores below reflects
+// that each concurrent stage needs real spare capacity beyond what one
+// stage's own internal parallelism already uses (one "slot" per ~4 cores,
+// not per ~1); on this box that now correctly resolves to 1, matching the
+// measurement, while a machine with real spare cores (8+) still gets >1.
 export function stageConcurrency({
   parallelism = os.availableParallelism(),
   totalMemGB = os.totalmem() / 1024 ** 3,
@@ -616,7 +631,7 @@ export function stageConcurrency({
   if (Number.isInteger(requested) && requested > 0) return Math.max(1, Math.min(requested, jobCount));
   // ~4 GB headroom per concurrent stage (several clip segments plus the
   // stage's own composite encode can be in flight at once within one stage).
-  const byCores = Math.max(1, parallelism - 1);
+  const byCores = Math.max(1, Math.floor(parallelism / 4));
   const byMem = Math.max(1, Math.floor(totalMemGB / 4));
   return Math.max(1, Math.min(jobCount, byCores, byMem, 4));
 }

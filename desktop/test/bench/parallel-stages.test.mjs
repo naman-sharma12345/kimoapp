@@ -13,10 +13,16 @@ const tools = toolPaths(),
   ffprobe = process.env.KIMO_FFPROBE || tools.ffprobe;
 
 test('stageConcurrency: sized by cores and RAM, capped at 4, forced serial under background profile', () => {
-  // This box: 4 cores, 8GB -> 2 (the task's own expected number).
-  assert.equal(stageConcurrency({ parallelism: 4, totalMemGB: 8, jobCount: 10 }), 2);
+  // Measured on the real 700s/21,184-frame target on THIS 4-core/8GB box:
+  // stages serial (with bakeTracks' own full segment concurrency) beat
+  // stages at concurrency 2 (with inner concurrency forced to 1) -- 1253.0s
+  // vs 1358.1s compose time -- so this box must resolve to 1, not 2; see
+  // stageConcurrency()'s own comment for the measurement and reasoning.
+  assert.equal(stageConcurrency({ parallelism: 4, totalMemGB: 8, jobCount: 10 }), 1);
   assert.equal(stageConcurrency({ parallelism: 4, totalMemGB: 8, jobCount: 1 }), 1);
   assert.equal(stageConcurrency({ parallelism: 32, totalMemGB: 4, jobCount: 10 }), 1);
+  // A machine with real spare cores still gets real stage concurrency.
+  assert.equal(stageConcurrency({ parallelism: 8, totalMemGB: 16, jobCount: 10 }), 2);
   assert.equal(stageConcurrency({ parallelism: 64, totalMemGB: 256, jobCount: 50 }), 4);
   const prev = process.env.KIMO_PERFORMANCE_PROFILE;
   process.env.KIMO_PERFORMANCE_PROFILE = 'background';
