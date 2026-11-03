@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { decodeMaskToRaster, parseImageStream, parseVideoStream } from '@meta-sam/parser';
 import { aiHeaders, proxyError } from './kimo-auth.mjs';
+import { effectiveRate } from './vfr-rate.mjs';
 
 export const SAM_URL =
   process.env.KIMO_SAM_URL || (process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai').replace(/\/ai$/, '/sam');
@@ -41,11 +42,8 @@ const probeJson = (ffprobe, path) =>
           const j = JSON.parse(out);
           const s = j.streams?.[0] ?? {};
           // phones write variable frame rate: when r_frame_rate is far above the average rate, use the average
-          const fr = (x) => String(x ?? '').split('/').map(Number);
-          let [a, b] = fr(s.r_frame_rate || '30/1');
-          const [aa, ab] = fr(s.avg_frame_rate);
-          if (aa && ab && b && a / b > (aa / ab) * 1.5) [a, b] = [aa, ab];
-          done({ width: s.width, height: s.height, rate: b ? `${a}/${b}` : String(a), fps: b ? a / b : a, frames: Number(s.nb_read_packets) || 0, duration: Number(j.format?.duration) || 0 });
+          const eff = effectiveRate(s.r_frame_rate, s.avg_frame_rate);
+          done({ width: s.width, height: s.height, rate: eff.rate, fps: eff.fps, frames: Number(s.nb_read_packets) || 0, duration: Number(j.format?.duration) || 0 });
         } catch {
           done(null);
         }

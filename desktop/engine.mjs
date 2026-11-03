@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { colorConfig } from './color/plan.mjs';
 import { prepareInputs } from './input-media.mjs';
+import { effectiveRate } from './vfr-rate.mjs';
 import { criticalGates } from './quality-gates.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
@@ -1464,15 +1465,9 @@ export function probe(ffprobe, path) {
           const j = JSON.parse(stdout);
           const v = j.streams?.find((s) => s.codec_type === 'video'),a=j.streams?.find(s=>s.codec_type==='audio');
           const isImage = /\.(png|jpe?g|webp)$/i.test(path);
-          const rate = (x) => {
-            const [a, b] = String(x ?? '').split('/').map(Number);
-            return a && b ? a / b : 0;
-          };
-          const fr = rate(v?.r_frame_rate);
-          const avg = rate(v?.avg_frame_rate);
-          const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
+          const eff = effectiveRate(v?.r_frame_rate, v?.avg_frame_rate);
           const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
-          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&fr>0&&avg>0&&Math.abs(fr-avg)>.01,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&eff.vfr,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: v ? eff.rate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: v ? eff.fps : 0, audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }
