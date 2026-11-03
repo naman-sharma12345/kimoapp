@@ -1147,7 +1147,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       emit({ t: 'think', text: 'the render lost the source sound; restoring it and rendering again' });
       const mediaClips = (timeline?.tracks_bottom_to_top ?? []).flatMap((t) => t.clips).filter((c) => c.in != null && !/^text:/.test(c.src ?? ''));
       for (const c of mediaClips.slice(0, 60)) await silent('set_audio', { clip_id: c.id, mute: false });
-      await call('finish_audio', { target_lufs: -14, keep_ambience: true }, 'keep the original sound');
+      await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 }, 'keep the original sound');
       await call('export', { path: out, crf: 16 });
       m = await measure(ffmpeg, ffprobe, out);
     }
@@ -1261,12 +1261,12 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       }
       await refreshTimeline();
       if (mode === 'sam') {
-        await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+        await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 });
         await check(1);
       } else {
       emit({ t: 'status', text: 'captions from the transcript, on this PC' });
       if (!(await startCaptions())) await call('auto_captions', { ...(clipIds.length ? { clip_ids: clipIds } : {}), style: S.captions.style, max_words_per_line: S.captions.max_words_per_line, keywords: true });
-      await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+      await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 });
       await check(1);
       }
     } else if (mode === 'manual') {
