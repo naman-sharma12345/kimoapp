@@ -435,7 +435,7 @@ async function mappedSegment({
     const input= colorFloat?inputFilters(source):source.alpha?'null':'scale=out_color_matrix=bt709:out_range=tv',
       tags=colorFloat?'setparams=colorspace=gbr:color_primaries=bt709:color_trc=bt709:range=full':source.alpha?'null':'setparams=colorspace=bt709:range=limited';
     await writeFile(filterFile,`trim=end_frame=${plan.indices.length},${input},format=${rawFormat},${tags},settb=expr=1/(${canvas.fps}),setpts=N,${geometry(clip,source,canvas,plan,colorFloat)}`);
-    const args=['-noautorotate','-ss',String(seek),'-accurate_seek','-i',source.path,'-map','0:v:0','-an',vfOption,filterFile,'-frames:v',String(plan.indices.length),'-r',String(canvas.fps),'-c:v','ffv1','-level','3','-pix_fmt','yuva444p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-fps_mode','cfr',output];
+    const args=['-noautorotate','-ss',String(seek),'-accurate_seek','-i',source.path,'-map','0:v:0','-an',vfOption,filterFile,'-frames:v',String(plan.indices.length),'-r',String(canvas.fps),'-c:v','ffvhuff','-level','3','-pix_fmt','yuva444p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-fps_mode','cfr',output];
     try{await ffmpegRun(ffmpeg,[...hwAccelFlags(),...args],{signal,onProgress});}
     catch(error){stop(signal);await ffmpegRun(ffmpeg,args,{signal,onProgress});}
     return;
@@ -501,7 +501,7 @@ async function mappedSegment({
       '-frames:v',
       String(plan.indices.length),
       '-c:v',
-      'ffv1',
+      'ffvhuff',
       '-level',
       '3',
       '-pix_fmt',
@@ -848,7 +848,7 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit, strictSamp
             String(count),
             '-an',
             '-c:v',
-            'ffv1',
+            'ffvhuff',
             '-level',
             '3',
             '-pix_fmt',
