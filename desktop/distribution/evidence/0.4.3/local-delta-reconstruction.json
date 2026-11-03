@@ -1,0 +1,11 @@
+{
+  "fromVersion": "0.4.1",
+  "toVersion": "0.4.2",
+  "networkBytes": 3756949,
+  "downloadBytes": 2985847,
+  "reusedBytes": 366162961,
+  "outputBytes": 369148808,
+  "sha512": "iw9KEsvuElVM1KpS6+3lZxU4D749PQA8X3EVQKKh/08b3Nzn7K6x9rWnZarQ/9S5Z8ZZRcn5I1r18E+sDxHCWA==",
+  "seconds": 12.217,
+  "scope": "Live CDN ranges, previously downloaded published blockmaps; no installer executed"
+}

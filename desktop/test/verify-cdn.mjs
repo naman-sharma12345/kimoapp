@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
+import { gunzipSync } from 'node:zlib';
 const here = dirname(fileURLToPath(import.meta.url));
 const p = JSON.parse(
   await readFile(
@@ -12,6 +13,20 @@ const p = JSON.parse(
 );
 const url = `https://downloads.getkimo.tech/desktop/v${p.version}/${p.file}`;
 const source = await readFile(process.argv[2]);
+const mapResponse = await fetch(url + '.blockmap');
+assert.equal(mapResponse.status, 200);
+const mapBytes = Buffer.from(await mapResponse.arrayBuffer());
+assert(mapBytes.length < 2 * 1024 * 1024);
+if (p.blockmapSha256)
+  assert.equal(
+    createHash('sha256').update(mapBytes).digest('hex'),
+    p.blockmapSha256,
+  );
+assert.equal(
+  JSON.parse(gunzipSync(mapBytes, { maxOutputLength: 16 * 1024 * 1024 })).files
+    .length,
+  1,
+);
 // A newly created custom domain can take a short time to resolve and issue TLS.
 let ready = false;
 for (let attempt = 0; attempt < 24; attempt++) {

@@ -1,0 +1,12 @@
+{
+  "version": "0.4.3",
+  "installer": "kimo-Setup-0.4.3.exe",
+  "size": 369152135,
+  "sha512": "YK44UCedfOODMdCKI22KMJNMU5XoPDSCurKD6X3vGVmXzPAcUm66G+RUElfmwFCUH9SqQg9mA/zzBIUv+2EkfQ==",
+  "blockmap": "kimo-Setup-0.4.3.exe.blockmap",
+  "feed": "latest.yml",
+  "parser": "electron-updater provider parseUpdateInfo/getFileList",
+  "upgradeFrom": "0.4.2",
+  "upgradeAvailable": true,
+  "scope": "Actual feed parser and installer bytes verified. Interactive restart/installation over an existing user profile requires the documented manual test."
+}

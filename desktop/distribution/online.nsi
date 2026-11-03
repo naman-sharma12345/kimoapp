@@ -52,7 +52,9 @@ Function .onInit
   SetRegView 64
   !ifndef KIMO_FIXTURE_BUILD
   ReadRegStr $deltaRuntime HKCU "Software\${APP_GUID}" "InstallLocation"
-  StrCpy $deltaRuntime "$deltaRuntime\kimo.exe"
+  ${If} $deltaRuntime != ""
+    StrCpy $deltaRuntime "$deltaRuntime\kimo.exe"
+  ${EndIf}
   !endif
   ; The frozen x64 installer records its directory in the 64-bit registry view.
   ; Respect an explicit /D, otherwise retain an existing per-user location.
@@ -153,6 +155,8 @@ Section "install kimo"
       ${If} $deltaExit == "0"
         Call VerifyPayload
         ${If} $digest != ""
+          CreateDirectory "$LOCALAPPDATA\kimo\installers"
+          CopyFiles /SILENT "$PLUGINSDIR\delta-proof.json" "$LOCALAPPDATA\kimo\installers\last-update-transfer.json"
           Goto verified
         ${EndIf}
       ${EndIf}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, stat, rename } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -234,6 +234,38 @@ if (real.proof.version !== '0.4.0') {
     version: priorVersion,
     ...oldInstall,
   });
+  if (real.proof.version === '0.4.3') {
+    const cached = join(
+      process.env.LOCALAPPDATA,
+      'kimo-desktop-updater/installer.exe',
+    );
+    const held = cached + '.qualification-held';
+    const oldAsar = createHash('sha256')
+      .update(await readFile(join(target, 'resources/app.asar')))
+      .digest('hex');
+    await rename(cached, held);
+    try {
+      const missingBase = await install(real.exe, target);
+      assert.equal(
+        missingBase.code,
+        2,
+        'Silent setup refuses a full fallback when the cached base is missing',
+      );
+      assert.equal(
+        createHash('sha256')
+          .update(await readFile(join(target, 'resources/app.asar')))
+          .digest('hex'),
+        oldAsar,
+      );
+      results.push({
+        name: 'missing-base-no-full-fallback',
+        ...missingBase,
+        oldAppUnchanged: true,
+      });
+    } finally {
+      await rename(held, cached);
+    }
+  }
 }
 const outcome = await install(real.exe, target);
 if (outcome.code !== 0) {
@@ -246,6 +278,29 @@ if (outcome.code !== 0) {
   );
 }
 assert.equal(outcome.code, 0, 'Real internet installation');
+let transfer;
+if (real.proof.version === '0.4.3') {
+  transfer = JSON.parse(
+    await readFile(
+      join(
+        process.env.LOCALAPPDATA,
+        'kimo/installers/last-update-transfer.json',
+      ),
+      'utf8',
+    ),
+  );
+  assert.equal(transfer.fromVersion, '0.4.2');
+  assert.equal(transfer.toVersion, real.proof.version);
+  assert(
+    transfer.networkBytes < 10 * 1024 * 1024,
+    'Code-only update must transfer less than 10 MB including maps',
+  );
+  assert(
+    transfer.reusedBytes > real.proof.payload.bytes * 0.9,
+    'Reuse the installed tools/models/runtime blocks',
+  );
+  assert.equal(transfer.sha512, real.proof.payload.sha512);
+}
 if (profilePath)
   assert.equal(
     await readFile(profilePath, 'utf8'),
@@ -283,6 +338,7 @@ results.push({
   stubSha256: real.proof.sha256,
   payload: real.proof.payload,
   savedProjectPreserved: Boolean(profilePath),
+  transfer,
 });
 await writeFile(
   join(root, 'online-install-tests.json'),
