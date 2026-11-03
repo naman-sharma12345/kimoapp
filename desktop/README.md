@@ -6,12 +6,15 @@ picture rendering runs in this repository's compositor.
 
 ## Install and edit
 
-Download the [small v0.4.2 online setup](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe).
-This patch fixes an unlimited transparent-frame job on rounded cut boundaries,
-and includes the earlier fix for Windows/saved path separators.
+Download the [small v0.4.3 online setup](https://downloads.getkimo.tech/desktop/v0.4.3/kimo-Online-Setup-0.4.3.exe).
+This patch downloads changed installer blocks and reuses the cached previous
+installer for updates. It includes the earlier bounded-render and Windows path fixes.
 Update the app and resume the saved edit; no reimport or project deletion is needed.
-Setup downloads and verifies the 369 MB app through Cloudflare's CDN before
-installing, with GitHub as backup. The complete offline installer remains in
+First installation downloads and verifies the 369 MB app through Cloudflare's CDN,
+with GitHub as backup. Updates reconstruct the same verified installer locally;
+they need the previous installer in the updater cache and sufficient free disk
+space. If a small update is unavailable, setup and background updates ask before
+a full download. Silent setup fails instead. The complete offline installer remains in
 [GitHub Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
 The installer is unsigned; Windows may show its SmartScreen confirmation. Updates
 come from GitHub Releases and ask before restarting.
@@ -22,6 +25,7 @@ download/upgrade checks preserve saved project data; connection speed and
 disk/antivirus conditions affect actual installation time.
 See [distribution verification](distribution/QUALIFICATION.md) for exact hashes,
 failure checks and hosting details.
+The [v0.4.3 patch record](distribution/PATCH-0.4.3.md) explains incremental updates.
 The [v0.4.2 patch record](distribution/PATCH-0.4.2.md) includes the bounded-render,
 frame-ID, local CPU and installed-app regression checks.
 

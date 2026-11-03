@@ -1,0 +1,9 @@
+{
+  "fromVersion": "0.4.1",
+  "toVersion": "0.4.3",
+  "downloadBytes": 2950078,
+  "reusedBytes": 366202057,
+  "mapBytes": 771365,
+  "outputBytes": 369152135,
+  "scope": "Published blockmaps and official planner only; not an install or reconstruction"
+}

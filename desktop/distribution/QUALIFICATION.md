@@ -1,5 +1,10 @@
 # Online installer qualification — 2026-11-03
 
+This section records the original v0.4.0 first-install bootstrap. For current
+incremental updates, see [v0.4.3](PATCH-0.4.3.md) and its
+[qualification evidence](evidence/0.4.3/). v0.4.3 changes both setup and background
+updater behavior; the historical measurements below remain unchanged.
+
 The initial download is **218,072 bytes** (218 KB / 0.218 MB), below the requested
 1–2 MB ceiling. Setup then retrieves the unchanged **369,147,721-byte** v0.4.0
 app. This is a delivery change; application size, render quality and the accepted
@@ -9,7 +14,7 @@ Phase 12 performance gap are unchanged.
   `21b62e4034af02e7406119e03e7b051f3585f6eec26de44c3f35f446d5929da1`.
 - Original offline EXE SHA-256:
   `1031acc75d3946fbe1e5da5ac2d8fac9833af5bf6672506e9520f26e7f96f2ce`.
-- App payload SHA-512 is pinned in [payload.json](payload.json); NSIS checks both
+- App payload SHA-512 is pinned in [payload-0.4.0.json](payload-0.4.0.json); NSIS checks both
   exact length and SHA-512 before executing any app-changing operation.
 - [Windows publication run 41621814250](https://github.com/naman-sharma12345/kimoapp/actions/runs/41621814250),
   source `d457bfe8926bd4676dd907a4e89630ffda5b1302`, passed the native fixtures,

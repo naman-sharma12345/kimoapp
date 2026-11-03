@@ -1,4 +1,5 @@
-// Windows-hosted integration checks. Never invokes Electron, FFmpeg, or a GPU.
+// Windows-hosted integration checks. The installed Electron runs only the Node
+// delta helper; no app window, FFmpeg render or GPU test is started.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -174,8 +175,9 @@ try {
   await new Promise((r) => server.close(r));
 }
 
-// Real network install: no adjacent payload or local package is supplied. The
-// exact published v0.4.0 EXE is fetched and SHA-512 verified by the native stub.
+// Real network install: the current native stub gets no adjacent target payload.
+// Upgrade checks seed the previous public installer, then require bounded delta
+// transfer and an exact SHA-512 before the native child installer can run.
 const real = await buildOnline();
 const target = join(root, 'actual installed app');
 let profilePath, profileValue;

@@ -695,3 +695,39 @@ Proof: `desktop/distribution/evidence/0.4.2/` and `PATCH-0.4.2.md`. This fixes
 the unbounded helper job; the full user project has not been rendered in these
 checks and existing export-performance limitations remain. No paid AI calls or
 changes to the historical USD5.49 reservation ledger.
+
+## Incremental updates v0.4.3 — 2026-11-03
+
+The earlier 218 KB setup was a first-install bootstrap and fetched the full app
+when run again. v0.4.3 replaces that update behavior in both setup and the app.
+
+- [x] Reuse the cached installer through the existing electron-updater blockmap
+      planner; no new runtime library. Bound range requests, verify exact size
+      and SHA-512 before installation, preserve the old cached installer on failure.
+- [x] Require explicit approval before a full-download fallback. Silent setup
+      fails instead. Missing base, ignored ranges, corrupt responses and oversized
+      deltas are covered by focused tests; 215 desktop tests pass, zero skips.
+- [x] Hosted build/install qualification 41670978027 passes normal preview and
+      the forced-fallback rounded-cut render (30 frames, zero model requests).
+- [x] Local low-priority reconstruction only: v0.4.1 → v0.4.2 uses 3,756,949
+      network bytes including both maps, reuses 366,162,961 bytes and matches the
+      published SHA-512 in 12.217 seconds. No installer was executed by this test.
+
+- [x] Native Windows upgrade 41673388999: launcher 224,178 bytes; v0.4.2 →
+      v0.4.3.0 transfers 3,725,466 bytes including both maps, reuses 366,197,822
+      bytes, verifies exact SHA-512 and preserves the saved project sentinel.
+      Missing-cache silent setup exits 2 with the old app checksum unchanged.
+      Actual upgrade takes 41.955 seconds on the hosted runner.
+- [x] CDN verification 41673382598 passes exact full-file hashes, public blockmaps,
+      HEAD, ranges and immutable prior versions. Initial post-deploy 404 was edge
+      propagation; bounded availability retries precede strict byte checks.
+- [x] Root lint/typecheck/311 tests/build chain passes in CI 41672767876. The
+      later, existing web landing bundle-budget failure remains; broader CI is
+      not claimed fully green.
+- [x] Final CDN publication 41674085002 verifies the exact GitHub-published
+      launcher SHA-256, current full payload and all preserved earlier versions.
+      Verified 224 KB launcher saved to Downloads, without executing setup.
+
+No GPU tests, full user-project renders, benchmarks or paid
+AI requests are part of this update. First install still downloads the full app;
+small updates depend on the cached base and still reconstruct a full file on disk.

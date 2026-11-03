@@ -1,46 +1,38 @@
-# kimo v0.4.2 — Runaway render fix
+# kimo v0.4.3 — Incremental updates
 
-[Download the recommended online installer (218 KB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.2/kimo-Online-Setup-0.4.2.exe)
+[Download the small online installer (224 KB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Online-Setup-0.4.3.exe)
 
-[Fast Cloudflare mirror](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe) · [Full offline installer](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.2/kimo-Setup-0.4.2.exe)
+[Fast Cloudflare mirror](https://downloads.getkimo.tech/desktop/v0.4.3/kimo-Online-Setup-0.4.3.exe) · [Full offline installer](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Setup-0.4.3.exe)
 
-Fixes an unlimited FFmpeg job when rounded adjacent cuts produced a negative
-one-frame gap in the fallback compositor. The baked timeline now assigns each
-boundary frame once, gives the later cut ownership, and never generates padding
-for a nonpositive gap. Every explicit compositor FFmpeg frame limit is checked
-before launch; negative, zero, noninteger and nonfinite counts are rejected.
+The previous small setup always downloaded the complete app when run again.
+This version reuses the cached previous installer and downloads changed blocks.
+Both the online setup and background app updater now require approval before
+falling back to a full download; silent setup stops instead.
 
-Old picture caches are invalidated for the corrected compositor. Saved plans,
-original media and the previous Windows path fix are retained. Positive gap
-padding now reports progress. This fixes a hang, not the existing export-speed
-limitations: legitimate renders can still take time.
+First installation still needs the complete 369 MB application once. Keep the
+updater cache: without a matching previous installer, a small update cannot be
+prepared. Reconstruction and installation need local disk space and disk I/O.
+The final installer must match its exact expected size and SHA-512 before use.
+Ignored HTTP ranges, corrupt blocks and oversized deltas cannot silently trigger
+a full download.
 
-Publication requires frame-limit and chunk-boundary regressions, an actual
-rounded-cut render with independently decoded source frame IDs, all desktop
-tests, an installer build, and both normal-preview and forced-fallback boundary
-checks through the installed Windows app. All media tests/builds run on standard
-GitHub-hosted runners with no paid model calls or user footage uploads.
+The [actual Windows upgrade test](https://github.com/naman-sharma12345/kimoapp/actions/runs/41673388999)
+installs v0.4.2, upgrades the same folder to v0.4.3.0, and preserves saved project
+data. It downloads **3.73 MB total**, including both blockmaps, and reuses
+**366.20 MB locally**. With the cached base removed, silent setup stops and leaves
+the existing app unchanged. The tested launcher is **224,178 bytes**.
 
-Verified: **208 desktop tests pass, zero skips**. The installed Windows app
-completes both a normal preview and the forced-fallback boundary reproduction;
-the latter produces exactly **30 frames**, exits normally and makes zero model
-network calls. [Windows build/install checks](https://github.com/naman-sharma12345/kimoapp/actions/runs/41663467603).
+Verified application checks: **215 desktop tests pass, zero skips**. The actual
+installed Windows app completes both a normal preview and the forced-fallback
+rounded-cut reproduction, producing exactly 30 frames with zero model requests.
+[Hosted build and installed-app checks](https://github.com/naman-sharma12345/kimoapp/actions/runs/41670978027).
+All v0.4.2 render-boundary safeguards and Windows source-path fixes are retained.
+The previously documented export-performance gap is unchanged.
 
-At the user's explicit request, a local **CPU-only, one-core, below-normal-priority**
-test rendered a 192×128 synthetic source and checked all 30 output source frame
-IDs. The two focused tests completed successfully in about **2.1 seconds**.
-No local GPU test or full-project render was run. A separate read-only metadata
-check of the existing 43-clip project found **three old negative gaps and zero
-after the fix**, with correct coverage across every 30-second chunk.
+A local reconstruction of v0.4.1 → v0.4.2 transferred **3,756,949 bytes** including
+both blockmaps, reused **366,162,961 bytes**, and matched the published installer
+SHA-512. It took 12.217 seconds and did not execute the installer or touch a project.
+The published-version upgrade qualification and transfer measurements are recorded
+in [the patch record](https://github.com/naman-sharma12345/kimoapp/blob/main/desktop/distribution/PATCH-0.4.3.md).
 
-Install v0.4.2 and choose **resume edit** on the saved project. The full project
-has not been rendered as part of these checks, and this patch does not claim to
-meet the previously missed export-performance targets.
-[Detailed evidence](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.2).
-
-Initial launcher: **218,135 bytes**. App download during setup: **369,148,808 bytes**.
-[Upgrade qualification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41665698493)
-installs v0.4.1, upgrades the same folder through the new online launcher, verifies
-version **0.4.2.0** and preserves a saved project sentinel. The initial attempt
-41665176638 crashed while seeding the older installer; the fresh-runner retry
-passed. This is a silent installation check, not an interactive UI/profile test.
+[Machine-readable evidence](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.3).

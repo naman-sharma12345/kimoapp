@@ -1,0 +1,88 @@
+{
+  "at": "2026-11-03T16:24:33.967Z",
+  "requests": [
+    "/missing",
+    "/payload",
+    "/missing",
+    "/payload",
+    "/tampered",
+    "/missing",
+    "/payload"
+  ],
+  "results": [
+    {
+      "name": "backup-server",
+      "code": 0,
+      "seconds": 1.238065,
+      "stubBytes": 218188,
+      "oldInstallPreserved": false
+    },
+    {
+      "name": "registered-upgrade-path",
+      "code": 0,
+      "seconds": 0.2107404999999999,
+      "stubBytes": 218188,
+      "oldInstallPreserved": false
+    },
+    {
+      "name": "tampered",
+      "code": 2,
+      "seconds": 0.15483580000000075,
+      "stubBytes": 218067,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "missing",
+      "code": 2,
+      "seconds": 0.14152990000000046,
+      "stubBytes": 217994,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "child-failure",
+      "code": 3,
+      "seconds": 0.20066479999999956,
+      "stubBytes": 217994,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "prior-version-installed",
+      "version": "0.4.2",
+      "code": 0,
+      "seconds": 17.688534100000002
+    },
+    {
+      "name": "missing-base-no-full-fallback",
+      "code": 2,
+      "seconds": 0.32275940000000264,
+      "oldAppUnchanged": true
+    },
+    {
+      "name": "real-online-install",
+      "code": 0,
+      "seconds": 41.9545891,
+      "version": "0.4.3.0",
+      "stubBytes": 224178,
+      "stubSha256": "346f8ed45269705658bd4c559d758f6af7d6bcf8fc19e24131481b3997455879",
+      "payload": {
+        "version": "0.4.3",
+        "file": "kimo-Setup-0.4.3.exe",
+        "bytes": 369152135,
+        "sha512": "YK44UCedfOODMdCKI22KMJNMU5XoPDSCurKD6X3vGVmXzPAcUm66G+RUElfmwFCUH9SqQg9mA/zzBIUv+2EkfQ==",
+        "blockmapSha256": "4611565d02b48eea631ac1be201d190f72e4e363917732a8e77f5a2757d852e7",
+        "primary": "https://downloads.getkimo.tech/desktop/v0.4.3/kimo-Setup-0.4.3.exe",
+        "fallback": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Setup-0.4.3.exe"
+      },
+      "savedProjectPreserved": true,
+      "transfer": {
+        "fromVersion": "0.4.2",
+        "toVersion": "0.4.3",
+        "networkBytes": 3725466,
+        "downloadBytes": 2954313,
+        "reusedBytes": 366197822,
+        "outputBytes": 369152135,
+        "sha512": "YK44UCedfOODMdCKI22KMJNMU5XoPDSCurKD6X3vGVmXzPAcUm66G+RUElfmwFCUH9SqQg9mA/zzBIUv+2EkfQ=="
+      }
+    }
+  ]
+}
