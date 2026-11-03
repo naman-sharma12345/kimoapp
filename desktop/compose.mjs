@@ -24,6 +24,7 @@ import {
   curveSampler,
 } from './edl.mjs';
 import { rectFilter, splineExpr } from './sam.mjs';
+import { effectiveRate } from './vfr-rate.mjs';
 import { coverGeometry, zoomCap, cameraRect, clipCameraAt } from './camera.mjs';
 import { subtitles } from './compose-text.mjs';
 import { AssDocument } from './ass.mjs';
@@ -1159,10 +1160,7 @@ export async function compose({
         : video
           ? 'video'
           : 'audio';
-      source.fps ||=
-        video?.r_frame_rate && video.r_frame_rate !== '0/0'
-          ? video.r_frame_rate
-          : edl.canvas.fps;
+      source.fps ||= effectiveRate(video?.r_frame_rate, video?.avg_frame_rate, edl.canvas.fps).rate;
       source.audio = info.streams.some((s) => s.codec_type === 'audio');
       if (video) {
         source.pixel_format=video.pix_fmt;

@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { colorConfig } from './color/plan.mjs';
 import { prepareInputs } from './input-media.mjs';
+import { effectiveRate } from './vfr-rate.mjs';
 import { criticalGates } from './quality-gates.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
@@ -1215,7 +1216,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       emit({ t: 'think', text: 'the render lost the source sound; restoring it and rendering again' });
       const mediaClips = (timeline?.tracks_bottom_to_top ?? []).flatMap((t) => t.clips).filter((c) => c.in != null && !/^text:/.test(c.src ?? ''));
       for (const c of mediaClips.slice(0, 60)) await silent('set_audio', { clip_id: c.id, mute: false });
-      await call('finish_audio', { target_lufs: -14, keep_ambience: true }, 'keep the original sound');
+      await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 }, 'keep the original sound');
       await call('export', { path: out, crf: 16 });
       m = await measure(ffmpeg, ffprobe, out);
     }
@@ -1329,12 +1330,12 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       }
       await refreshTimeline();
       if (mode === 'sam') {
-        await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+        await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 });
         await check(1);
       } else {
       emit({ t: 'status', text: 'captions from the transcript, on this PC' });
       if (!(await startCaptions())) await call('auto_captions', { ...(clipIds.length ? { clip_ids: clipIds } : {}), style: S.captions.style, max_words_per_line: S.captions.max_words_per_line, keywords: true });
-      await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+      await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 });
       await check(1);
       }
     } else if (mode === 'manual') {
@@ -1537,15 +1538,9 @@ export function probe(ffprobe, path) {
           const j = JSON.parse(stdout);
           const v = j.streams?.find((s) => s.codec_type === 'video'),a=j.streams?.find(s=>s.codec_type==='audio');
           const isImage = /\.(png|jpe?g|webp)$/i.test(path);
-          const rate = (x) => {
-            const [a, b] = String(x ?? '').split('/').map(Number);
-            return a && b ? a / b : 0;
-          };
-          const fr = rate(v?.r_frame_rate);
-          const avg = rate(v?.avg_frame_rate);
-          const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
+          const eff = effectiveRate(v?.r_frame_rate, v?.avg_frame_rate);
           const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
-          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&fr>0&&avg>0&&Math.abs(fr-avg)>.01,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&eff.vfr,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: v ? eff.rate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: v ? eff.fps : 0, audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }
