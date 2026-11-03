@@ -1,0 +1,10 @@
+{
+  "boundaryExit": 0,
+  "previewExit": 0,
+  "installerExit": 0,
+  "version": "0.4.2.0",
+  "previewBytes": 1364366,
+  "networkCalls": 0,
+  "boundaryFrames": 30,
+  "fixture": "Synthetic two-second clip, no user footage or paid calls"
+}

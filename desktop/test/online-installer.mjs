@@ -180,8 +180,12 @@ const real = await buildOnline();
 const target = join(root, 'actual installed app');
 let profilePath, profileValue;
 if (real.proof.version !== '0.4.0') {
+  const priorVersion = real.proof.version === '0.4.1' ? '0.4.0' : '0.4.1';
   const legacy = JSON.parse(
-    await readFile(resolve('desktop/distribution/payload-0.4.0.json'), 'utf8'),
+    await readFile(
+      resolve(`desktop/distribution/payload-${priorVersion}.json`),
+      'utf8',
+    ),
   );
   const response = await fetch(legacy.primary, {
     signal: AbortSignal.timeout(240000),
@@ -207,7 +211,7 @@ if (real.proof.version !== '0.4.0') {
   assert.equal(
     oldInstall.code,
     0,
-    'Install the prior v0.4.0 at the upgrade destination',
+    'Install the prior version at the upgrade destination',
   );
   profilePath = join(
     process.env.APPDATA,
@@ -222,7 +226,7 @@ if (real.proof.version !== '0.4.0') {
   await writeFile(profilePath, profileValue);
   results.push({
     name: 'prior-version-installed',
-    version: '0.4.0',
+    version: priorVersion,
     ...oldInstall,
   });
 }

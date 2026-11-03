@@ -40,10 +40,12 @@ jobs:
         run: gh release download 'v${{ steps.version.outputs.v }}' --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/payload" --pattern 'kimo-Setup-${{ steps.version.outputs.v }}.exe'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Preserve the original immutable v0.4.0 CDN URLs and launcher
+      - name: Preserve previous immutable CDN URLs and launchers
         run: |
-          gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/legacy" --pattern 'kimo-Setup-0.4.0.exe' --pattern 'kimo-Online-Setup-0.4.0.exe' --pattern 'online-verification.json'
-          node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/legacy/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/legacy" desktop/distribution/payload-0.4.0.json
+          for prior in 0.4.0 0.4.1; do
+            gh release download "v$prior" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/legacy-$prior" --pattern "kimo-Setup-$prior.exe" --pattern "kimo-Online-Setup-$prior.exe" --pattern 'online-verification.json'
+            node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/legacy-$prior/kimo-Setup-$prior.exe" "$RUNNER_TEMP/legacy-$prior" "desktop/distribution/payload-$prior.json"
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify and split the exact release into static pieces
@@ -68,8 +70,11 @@ jobs:
       - name: Verify CDN payload and published launcher
         if: inputs.include_online
         run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe" "$RUNNER_TEMP/online"
-      - name: Verify preserved original CDN payload and launcher
-        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/legacy/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/legacy" desktop/distribution/payload-0.4.0.json
+      - name: Verify preserved previous CDN payloads and launchers
+        run: |
+          for prior in 0.4.0 0.4.1; do
+            node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/legacy-$prior/kimo-Setup-$prior.exe" "$RUNNER_TEMP/legacy-$prior" "desktop/distribution/payload-$prior.json"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

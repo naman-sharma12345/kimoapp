@@ -1,0 +1,10 @@
+✔ rounded adjacent cuts have one frame owner and no negative gaps across chunks (1.8758ms)
+✔ fallback render completes rounded adjacent cuts with exact source frame IDs (1196.4163ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1972.3739

@@ -50,7 +50,8 @@ export async function verifyRelease(dir, version = '0.4.0') {
     blockmap: name + '.blockmap',
     feed: 'latest.yml',
     parser: 'electron-updater provider parseUpdateInfo/getFileList',
-    upgradeFrom: version === '0.4.0' ? '0.3.2' : '0.4.0',
+    upgradeFrom:
+      version === '0.4.0' ? '0.3.2' : version === '0.4.1' ? '0.4.0' : '0.4.1',
     upgradeAvailable: true,
     scope:
       'Actual feed parser and installer bytes verified. Interactive restart/installation over an existing user profile requires the documented manual test.',
