@@ -368,6 +368,36 @@ async function* frames(stream, size) {
   if (offset) throw new Error('compose decoder returned a partial frame');
 }
 /** Strict JS sampling for nonintegral speed/rate ratios, including deliberate slow-motion holds. */
+/**
+ * Hardware-accelerated decode where the machine has one, plain software
+ * decode everywhere else: the `-hwaccel auto` flag existed in this file
+ * already but was gated behind an undocumented KIMO_HW_DECODE=auto opt-in
+ * nobody set, so every decode ran on CPU regardless of hardware -- the same
+ * shape as the GPU ENCODE bug the prior commit found (code built, never
+ * actually reached). `-hwaccel auto` is ffmpeg's own safe default: it tries
+ * whatever hardware decoder it can find for the input codec and returns
+ * ordinary system-memory frames either way (no `-hwaccel_output_format`
+ * pin), so the existing software filter chain downstream needs no change;
+ * if no hardware decoder is available or it fails to initialise, ffmpeg
+ * itself falls through to software decode before a single frame is
+ * produced -- it does not silently produce wrong output. mappedSegment()'s
+ * existing try/catch around the oracle decode is the second, outer safety
+ * net: if a hardware decoder DOES attach but then fails mid-stream (seen in
+ * the wild with marginal drivers), the whole segment is retried once, in
+ * full, on software only (no flags at all, see the catch block below).
+ * KIMO_HW_DECODE=off (or "0"/"disable"/"software"/"none") opts back out.
+ * No GPU exists on the box this was written and tested on -- unit-tested
+ * argument construction only (this function + its tests); the automatic
+ * software fallback is real ffmpeg behaviour and also exercised by every
+ * existing compose test (none of them has hardware decode available
+ * either, and they all still produce correct frames).
+ */
+export function hwAccelFlags(env = process.env) {
+  const optOut = ['off', '0', 'disable', 'disabled', 'software', 'none'].includes(
+    String(env.KIMO_HW_DECODE || '').toLowerCase(),
+  );
+  return optOut ? [] : ['-hwaccel', 'auto'];
+}
 function segmentPathFor(dir, clip, source, canvas, plan) {
   const key = createHash('sha256')
     .update(JSON.stringify([clip, source, canvas, plan.start, plan.end]))
@@ -406,7 +436,7 @@ async function mappedSegment({
       tags=colorFloat?'setparams=colorspace=gbr:color_primaries=bt709:color_trc=bt709:range=full':source.alpha?'null':'setparams=colorspace=bt709:range=limited';
     await writeFile(filterFile,`trim=end_frame=${plan.indices.length},${input},format=${rawFormat},${tags},settb=expr=1/(${canvas.fps}),setpts=N,${geometry(clip,source,canvas,plan,colorFloat)}`);
     const args=['-noautorotate','-ss',String(seek),'-accurate_seek','-i',source.path,'-map','0:v:0','-an',vfOption,filterFile,'-frames:v',String(plan.indices.length),'-r',String(canvas.fps),'-c:v','ffv1','-level','3','-pix_fmt','yuva444p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-fps_mode','cfr',output];
-    try{await ffmpegRun(ffmpeg,[...(process.env.KIMO_HW_DECODE==='auto'?['-hwaccel','auto']:[]),...args],{signal,onProgress});}
+    try{await ffmpegRun(ffmpeg,[...hwAccelFlags(),...args],{signal,onProgress});}
     catch(error){stop(signal);await ffmpegRun(ffmpeg,args,{signal,onProgress});}
     return;
   }
