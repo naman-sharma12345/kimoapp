@@ -180,7 +180,12 @@ const real = await buildOnline();
 const target = join(root, 'actual installed app');
 let profilePath, profileValue;
 if (real.proof.version !== '0.4.0') {
-  const priorVersion = real.proof.version === '0.4.1' ? '0.4.0' : '0.4.1';
+  const priorVersion =
+    real.proof.version === '0.4.1'
+      ? '0.4.0'
+      : real.proof.version === '0.4.2'
+        ? '0.4.1'
+        : '0.4.2';
   const legacy = JSON.parse(
     await readFile(
       resolve(`desktop/distribution/payload-${priorVersion}.json`),

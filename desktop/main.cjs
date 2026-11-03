@@ -725,7 +725,20 @@ app.whenReady().then(async () => {
   createWindow();
   if (app.isPackaged)
     try {
-      const { autoUpdater } = require('electron-updater');
+      const { NsisUpdater } = require('electron-updater');
+      const { incrementalUpdater } = require('./updater-policy.cjs');
+      const Update = incrementalUpdater(NsisUpdater, {
+        log: (message) => log('updater', message),
+        confirmFull: async ({ bytes }) => (await dialog.showMessageBox({
+          type: 'question', title: 'kimo update',
+          message: `A smaller update could not be prepared. Download the full app (${Math.round(bytes / 1e6)} MB)?`,
+          buttons: ['download full update', 'later'], defaultId: 1, cancelId: 1, noLink: true,
+        })).response === 0,
+      });
+      const autoUpdater = new Update();
+      autoUpdater.disableDifferentialDownload = false;
+      autoUpdater.disableWebInstaller = true;
+      autoUpdater.logger = { info: (m) => log('updater', m), warn: (m) => log('updater', m), error: (m) => log('updater', m) };
       autoUpdater.on('update-downloaded', (info) => send('update', { version: info.version }));
       autoUpdater.on('error', (err) => log('updater', err?.message || err));
       autoUpdater.checkForUpdates().catch(() => undefined);

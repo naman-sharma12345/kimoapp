@@ -37,13 +37,13 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Retrieve the qualified release from GitHub
-        run: gh release download 'v${{ steps.version.outputs.v }}' --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/payload" --pattern 'kimo-Setup-${{ steps.version.outputs.v }}.exe'
+        run: gh release download 'v${{ steps.version.outputs.v }}' --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/payload" --pattern 'kimo-Setup-${{ steps.version.outputs.v }}.exe' --pattern 'kimo-Setup-${{ steps.version.outputs.v }}.exe.blockmap'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Preserve previous immutable CDN URLs and launchers
         run: |
-          for prior in 0.4.0 0.4.1; do
-            gh release download "v$prior" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/legacy-$prior" --pattern "kimo-Setup-$prior.exe" --pattern "kimo-Online-Setup-$prior.exe" --pattern 'online-verification.json'
+          for prior in 0.4.0 0.4.1 0.4.2; do
+            gh release download "v$prior" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/legacy-$prior" --pattern "kimo-Setup-$prior.exe" --pattern "kimo-Setup-$prior.exe.blockmap" --pattern "kimo-Online-Setup-$prior.exe" --pattern 'online-verification.json'
             node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/legacy-$prior/kimo-Setup-$prior.exe" "$RUNNER_TEMP/legacy-$prior" "desktop/distribution/payload-$prior.json"
           done
         env:
@@ -72,7 +72,7 @@ jobs:
         run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe" "$RUNNER_TEMP/online"
       - name: Verify preserved previous CDN payloads and launchers
         run: |
-          for prior in 0.4.0 0.4.1; do
+          for prior in 0.4.0 0.4.1 0.4.2; do
             node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/legacy-$prior/kimo-Setup-$prior.exe" "$RUNNER_TEMP/legacy-$prior" "desktop/distribution/payload-$prior.json"
           done
       - uses: actions/upload-artifact@v4

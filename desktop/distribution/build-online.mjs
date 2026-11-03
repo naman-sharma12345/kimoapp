@@ -76,7 +76,11 @@ export async function buildOnline({ out, fixtureConfig } = {}) {
       .toUpperCase(),
     PRIMARY_URL: p.primary,
     FALLBACK_URL: p.fallback,
+    DELTA_SCRIPT: join(here, 'delta.cjs'),
+    DELTA_MANIFEST: join(out, 'payload.json'),
+    ...(fixture ? { KIMO_FIXTURE_BUILD: 1 } : {}),
   };
+  await writeFile(join(out, 'payload.json'), JSON.stringify(p));
   const header = Object.entries(defines)
     .map(([k, v]) => `!define ${k} "${v}"`)
     .join('\n');

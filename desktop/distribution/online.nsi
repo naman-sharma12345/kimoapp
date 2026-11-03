@@ -21,7 +21,7 @@ VIAddVersionKey /LANG=1033 "FileDescription" "kimo online setup"
 VIAddVersionKey /LANG=1033 "FileVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=1033 "LegalCopyright" "kimo"
 !define MUI_WELCOMEPAGE_TITLE "install kimo ${APP_VERSION}"
-!define MUI_WELCOMEPAGE_TEXT "Setup will download the app and its offline tools (about ${PAYLOAD_MB} MB), verify them, and install kimo.$\r$\n$\r$\nAn internet connection is required. Your existing installation stays in place if the download fails or is cancelled."
+!define MUI_WELCOMEPAGE_TEXT "Setup will install kimo. For an update, it reuses the cached app and downloads changed blocks. A full download is used only for a first installation or with your approval (about ${PAYLOAD_MB} MB).$\r$\n$\r$\nAn internet connection is required. Your existing installation stays in place if download or verification fails."
 !define MUI_CUSTOMFUNCTION_ABORT kimoAbort
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
@@ -37,6 +37,11 @@ Var payloadSize
 Var mutex
 Var installExit
 Var installing
+!ifndef KIMO_FIXTURE_BUILD
+Var oldNodeMode
+Var deltaExit
+Var deltaRuntime
+!endif
 
 Function .onInit
   ${IfNot} ${RunningX64}
@@ -45,6 +50,10 @@ Function .onInit
     Quit
   ${EndIf}
   SetRegView 64
+  !ifndef KIMO_FIXTURE_BUILD
+  ReadRegStr $deltaRuntime HKCU "Software\${APP_GUID}" "InstallLocation"
+  StrCpy $deltaRuntime "$deltaRuntime\kimo.exe"
+  !endif
   ; The frozen x64 installer records its directory in the 64-bit registry view.
   ; Respect an explicit /D, otherwise retain an existing per-user location.
   ${StdUtils.GetParameter} $0 "D" ""
@@ -123,6 +132,44 @@ Section "install kimo"
   InitPluginsDir
   StrCpy $payload "$PLUGINSDIR\kimo-verified-setup.exe"
   retry:
+  !ifndef KIMO_FIXTURE_BUILD
+    ${If} ${FileExists} "$INSTDIR\kimo.exe"
+      StrCpy $deltaRuntime "$INSTDIR\kimo.exe"
+    ${EndIf}
+    ${If} ${FileExists} "$deltaRuntime"
+      File /oname=$PLUGINSDIR\delta.cjs "${DELTA_SCRIPT}"
+      File /oname=$PLUGINSDIR\payload.json "${DELTA_MANIFEST}"
+      DetailPrint "downloading changed blocks and reusing the existing app"
+      ReadEnvStr $oldNodeMode ELECTRON_RUN_AS_NODE
+      System::Call 'kernel32::SetEnvironmentVariableW(w "ELECTRON_RUN_AS_NODE", w "1")'
+      nsExec::ExecToLog /TIMEOUT=240000 '"$deltaRuntime" "$PLUGINSDIR\delta.cjs" "$INSTDIR"'
+      Pop $deltaExit
+      System::Call 'kernel32::SetEnvironmentVariableW(w "ELECTRON_RUN_AS_NODE", w "$oldNodeMode")'
+      ${If} $deltaExit == "10"
+        DetailPrint "kimo is already up to date"
+        SetErrorLevel 0
+        Goto done
+      ${EndIf}
+      ${If} $deltaExit == "0"
+        Call VerifyPayload
+        ${If} $digest != ""
+          Goto verified
+        ${EndIf}
+      ${EndIf}
+      Delete "$payload"
+      ${If} ${Silent}
+        ; Background automation and app updates must never silently fetch 369 MB.
+        SetErrorLevel 2
+        Quit
+      ${EndIf}
+      MessageBox MB_YESNO|MB_ICONQUESTION "A smaller update could not be prepared. Download the full app (about ${PAYLOAD_MB} MB)?" IDYES full_download
+      SetErrorLevel 2
+      Quit
+    ${EndIf}
+  !endif
+  !ifndef KIMO_FIXTURE_BUILD
+    full_download:
+  !endif
   DetailPrint "downloading kimo (about ${PAYLOAD_MB} MB)"
   !insertmacro Fetch "${PRIMARY_URL}"
   ${If} $digest == ""
@@ -140,6 +187,9 @@ Section "install kimo"
     SetErrorLevel 2
     Quit
   ${EndIf}
+  !ifndef KIMO_FIXTURE_BUILD
+    verified:
+  !endif
   ; The only app-changing operation. All failure/cancel paths above leave the
   ; previous installation untouched. The frozen electron-builder installer uses
   ; StdUtils' D parser, which requires the whole token quoted for spaced paths.

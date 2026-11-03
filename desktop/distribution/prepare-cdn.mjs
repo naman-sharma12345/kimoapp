@@ -49,6 +49,17 @@ await writeFile(
   join(out, '_headers'),
   '/pieces/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n/desktop/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n',
 );
+const target = join(out, 'desktop/v' + p.version);
+await mkdir(target, { recursive: true });
+const blockmapPath = resolve(process.argv[2]) + '.blockmap';
+const blockmap = await readFile(blockmapPath);
+if (
+  blockmap.length > 2 * 1024 * 1024 ||
+  (p.blockmapSha256 &&
+    createHash('sha256').update(blockmap).digest('hex') !== p.blockmapSha256)
+)
+  throw Error('Invalid CDN update block map');
+await copyFile(blockmapPath, join(target, p.file + '.blockmap'));
 if (process.argv[3]) {
   const online = resolve(process.argv[3]);
   const proof = JSON.parse(
@@ -68,8 +79,6 @@ if (process.argv[3]) {
     proof.payload.sha512 !== p.sha512
   )
     throw Error('Published online setup failed verification');
-  const target = join(out, 'desktop/v' + p.version);
-  await mkdir(target, { recursive: true });
   await copyFile(join(online, proof.file), join(target, proof.file));
   await copyFile(
     join(online, 'online-verification.json'),
