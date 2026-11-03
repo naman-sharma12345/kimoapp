@@ -11,6 +11,26 @@ import {
 import { command, probeFile } from './io.mjs';
 import { inspectDelivery } from './metrics.mjs';
 
+test('VideoToolbox and VAAPI argument construction (untested on real hardware; see engine.mjs detectGpu)', () => {
+  const vt = videoEncoderArgs('h264_videotoolbox');
+  assert.deepEqual(vt, ['-c:v', 'h264_videotoolbox', '-profile:v', 'high', '-allow_sw', '0']);
+  const va = videoEncoderArgs('h264_vaapi');
+  assert.deepEqual(va, ['-c:v', 'h264_vaapi']);
+  assert.deepEqual(
+    encodingAttempts('h264_videotoolbox', {}),
+    [
+      { encoder: 'h264_videotoolbox', hardwareDecode: false },
+      { encoder: 'libx264', hardwareDecode: false },
+    ],
+  );
+  assert.deepEqual(
+    encodingAttempts('h264_vaapi', {}),
+    [
+      { encoder: 'h264_vaapi', hardwareDecode: false },
+      { encoder: 'libx264', hardwareDecode: false },
+    ],
+  );
+});
 test('high-quality NVENC settings keep work on video hardware with bounded surfaces', () => {
   const args = videoEncoderArgs('h264_nvenc');
   const value = (key) => args[args.indexOf(key) + 1];

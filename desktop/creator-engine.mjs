@@ -76,7 +76,7 @@ async function sampleInput(ffmpeg, files, dir, signal) {
 }
 export async function runCreatorEdit(
   options,
-  { ask, P, probe, youtubeMaster, canvasFps },
+  { ask, P, probe, youtubeMaster, canvasFps, detectGpu = async () => null },
 ) {
   const {
     files,
@@ -644,12 +644,15 @@ export async function runCreatorEdit(
             { signal, title: 'delivery: picture copied; updating audio only' },
           );
         } else {
+          // Detection was implemented but never called here either -- every
+          // creator delivery took the CPU-only path regardless of hardware.
+          const gpuEncoder = await detectGpu(ffmpeg).catch(() => null);
           await youtubeMaster({
             ffmpeg,
             input: rendered.master,
             output: finalOut + '.partial.mp4',
             P: renderCanvas,
-            encoder: null,
+            encoder: gpuEncoder,
             preview: isPreview,
             m: measured,
             signal,

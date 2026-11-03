@@ -254,15 +254,62 @@ export async function creatorAsk(kind,text,images,signal){
   return (await response.json()).record??{};
 }
 
-/** Detects a working hardware H.264 encoder (NVENC, QSV, AMF), else null. */
-export async function detectGpu(ffmpeg) {
-  for (const enc of ['h264_nvenc', 'h264_qsv', 'h264_amf']) {
-    const ok = await new Promise((done) =>
-      execFile(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=black:s=256x256:d=0.2', '-c:v', enc, '-f', 'null', '-'],
-        { windowsHide: true, timeout: 20_000 }, (err) => done(!err)));
-    if (ok) return enc;
-  }
+// Every hardware encoder FFmpeg can name, in the order we try them. We do not
+// assume which one a given machine has -- ffmpeg -encoders says which are even
+// built into this FFmpeg, then a real 1-frame trial encode says which of those
+// actually work on this machine's hardware/drivers right now. NVENC and QSV
+// are proven on real hardware (see PERFORMANCE.md); AMF, VideoToolbox and
+// VAAPI are implemented and unit-tested against a mocked FFmpeg but have no
+// real-GPU run behind them yet -- stated plainly, not claimed.
+const HARDWARE_ENCODERS = ['h264_nvenc', 'h264_qsv', 'h264_amf', 'h264_videotoolbox', 'h264_vaapi'];
+
+/** Which of FFmpeg's built-in encoders this FFmpeg binary actually lists. */
+export async function listEncoders(ffmpeg) {
+  return new Promise((done) =>
+    execFile(ffmpeg, ['-hide_banner', '-encoders'], { windowsHide: true, timeout: 10_000 }, (err, stdout) =>
+      done(new Set(err ? [] : [...String(stdout ?? '').matchAll(/\s(h264_\w+)\s/g)].map((m) => m[1]))),
+    ));
+}
+
+/** The first VAAPI render node that exists on this machine, else null. */
+export async function vaapiDevicePath(
+  candidates = ['/dev/dri/renderD128', '/dev/dri/renderD129'],
+) {
+  for (const path of candidates) if (existsSync(path)) return path;
   return null;
+}
+
+/** A real 1-frame trial encode: the only way to know an encoder actually works. */
+async function trialEncode(ffmpeg, enc, device) {
+  const args =
+    enc === 'h264_vaapi'
+      ? ['-hide_banner', '-loglevel', 'error', '-vaapi_device', device, '-f', 'lavfi', '-i', 'color=black:s=256x256:d=0.2', '-vf', 'format=nv12,hwupload', '-c:v', enc, '-f', 'null', '-']
+      : ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=black:s=256x256:d=0.2', '-c:v', enc, '-f', 'null', '-'];
+  return new Promise((done) =>
+    execFile(ffmpeg, args, { windowsHide: true, timeout: 20_000 }, (err) => done(!err)));
+}
+
+// Detection is one real trial encode per candidate (hundreds of ms to a
+// couple of seconds each); cache the winner per FFmpeg binary for the life of
+// the process instead of repeating it for every master (PERFORMANCE.md).
+const gpuCache = new Map();
+/** Detects a working hardware H.264 encoder (NVENC, QSV, AMF, VideoToolbox, VAAPI), else null. */
+export async function detectGpu(ffmpeg, { refresh = false, vaapiCandidates } = {}) {
+  if (!refresh && gpuCache.has(ffmpeg)) return gpuCache.get(ffmpeg);
+  const built = await listEncoders(ffmpeg);
+  let found = null;
+  for (const enc of HARDWARE_ENCODERS) {
+    if (!built.has(enc)) continue;
+    const device =
+      enc === 'h264_vaapi' ? await vaapiDevicePath(vaapiCandidates) : null;
+    if (enc === 'h264_vaapi' && !device) continue;
+    if (await trialEncode(ffmpeg, enc, device)) {
+      found = enc;
+      break;
+    }
+  }
+  gpuCache.set(ffmpeg, found);
+  return found;
 }
 
 /** GPU (or CPU) delivery encode of the kimo master at the preset bitrate. */
@@ -515,13 +562,21 @@ export async function youtubeMaster({
         `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${L.input_i}:measured_TP=${L.input_tp}:measured_LRA=${L.input_lra}:measured_thresh=${L.input_thresh}:offset=${L.target_offset}:linear=true,aresample=48000`,
       ]
     : [];
-  const attempt = ({ encoder: selected, hardwareDecode }) => {
+  const attempt = async ({ encoder: selected, hardwareDecode }) => {
+    // VAAPI needs its render node named up front and the frame handed to the
+    // encoder through a hwupload filter -- it cannot take raw/yuv420p frames
+    // directly the way NVENC/QSV/AMF/VideoToolbox can. Untested on real VAAPI
+    // hardware (see detectGpu in this file); argument construction only.
+    const vaapiDevice = selected === 'h264_vaapi' ? await vaapiDevicePath() : null;
+    if (selected === 'h264_vaapi' && !vaapiDevice)
+      throw new Error('no VAAPI render node (/dev/dri/renderD12x) on this machine');
     const args = [
       '-hide_banner',
       '-y',
       ...(hardwareDecode
         ? ['-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda']
         : []),
+      ...(vaapiDevice ? ['-vaapi_device', vaapiDevice] : []),
       '-i',
       input,
       ...af,
@@ -538,7 +593,9 @@ export async function youtubeMaster({
       Math.max(P.width, P.height) >= 3840 ? (fps > 30 ? '5.2' : '5.1') : '4.2',
       ...(hardwareDecode
         ? ['-vf', 'scale_cuda=format=nv12', '-pix_fmt', 'cuda']
-        : ['-pix_fmt', 'yuv420p']),
+        : vaapiDevice
+          ? ['-vf', 'format=nv12,hwupload']
+          : ['-pix_fmt', 'yuv420p']),
       '-g',
       String(gop),
       '-keyint_min',
@@ -671,7 +728,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   if(!legacy_kimo_render&&mode==='followup'&&!creatorEdl?.creator_plan)throw new Error('re-run this older edit once to enable plan-based follow-ups');
   if(!legacy_kimo_render&&(mode==='ai'||(['followup','manual'].includes(mode)&&creatorEdl?.creator_plan))){
     const releaseCreator=acquireExclusive('render');
-    try{await normalize();return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo,creatorOptions,studioHistory,studioAppend,preview},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps});}
+    try{await normalize();return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo,creatorOptions,studioHistory,studioAppend,preview},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps,detectGpu});}
     finally{releaseCreator();}
   }
   const release = acquireExclusive('render');
@@ -1383,13 +1440,17 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     // ---------- YouTube upload master ----------
     const m0 = checks.at(-1)?.m ?? (await measure(ffmpeg, ffprobe, out));
     const soundTarget=pictures.lastEdl?.sound?.target_lufs??-14;
-    emit({ t: 'status', text: `encoding the YouTube upload master (H.264 High, closed GOP, AAC 384k, ${soundTarget} LUFS)` });
+    // GPU detection was implemented (detectGpu, above) but never actually
+    // called here -- every export silently took the CPU-only libx264 path
+    // regardless of what hardware encoder the machine had. This is the fix.
+    const gpuEncoder = await detectGpu(ffmpeg).catch(() => null);
+    emit({ t: 'status', text: `encoding the YouTube upload master (${gpuEncoder ? gpuEncoder + ' hardware encode' : 'H.264 High'}, closed GOP, AAC 384k, ${soundTarget} LUFS)` });
     const id = randomUUID().slice(0, 8);
     emit({ t: 'op', id, phase: 'start', tool: 'youtube_master', title: `youtube_master ${recommendedMbps(P.width, P.height, m0.fps)} Mbps · ${P.width}x${P.height}`, at: Date.now() });
     const t0 = Date.now();
     let master;
     try {
-      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, audioMastered:Boolean(pictures.lastEdl?.sound?.enabled), onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
+      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, encoder: gpuEncoder, audioMastered:Boolean(pictures.lastEdl?.sound?.enabled), onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
       emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: `${master.encoder} · ${master.loudnessFixed ? 'loudness corrected to -14 LUFS' : 'loudness already on target'}` });
     } catch (err) {
       if (signal?.aborted) throw err;

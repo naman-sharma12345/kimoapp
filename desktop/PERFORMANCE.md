@@ -26,3 +26,58 @@ Phase 2 replaces the engine's picture renderer with the app-owned compositor des
 On the local RTX 4050 laptop, a 1.2-second synthetic test verified NVDEC/CUDA + NVENC, H.264 High/yuv420p, dimensions, CFR, IDR/closed GOPs, BT.709 and AAC 48 kHz stereo. Queue, worker priority, thread limits, lock recovery, GPU fallback and cancellation have automated coverage. This test does not establish real-footage CPU percentages, visual quality or responsiveness under a sustained render. The full bench was stopped after the user reported lag and was not restarted.
 
 These app changes take effect in the next desktop build. No installer/release was produced in this phase.
+
+
+## Ideas studied from other editors (citations, not code)
+
+Kimo is MIT-licensed. The projects below are GPL (MLT/Kdenlive/Shotcut) or
+proprietary (Premiere, Resolve); nothing was copied from any of them -- these
+are techniques and citations only, reimplemented from scratch where adopted.
+
+- **Proxy editing** (Kdenlive, built on the MLT framework; Olive). Edit against
+  a small, fast-to-decode stand-in for each source clip, and only touch the
+  full-resolution original for the final export. Kdenlive's own docs recommend
+  this as the first fix for a laggy timeline
+  (https://docs.kdenlive.org/en/project_and_setup/proxy_clips.html). Kimo's
+  compositor already works frame-exact against the original source for every
+  preview and export; a proxy mode (smaller intermediate during editing,
+  original-resolution only on final export) is the single biggest structural
+  change left on the table here -- see "what's untested / next" below.
+- **GPU-resident decode-filter-encode, no CPU round trip** (NVIDIA's own FFmpeg
+  guidance: https://docs.nvidia.com/video-technologies/video-codec-sdk/13.1/ffmpeg-with-nvidia-gpu/index.html;
+  FFmpeg's own HWAccelIntro: https://trac.ffmpeg.org/wiki/HWAccelIntro).
+  Decode with NVDEC, filter on a CUDA/NV12 surface, encode with NVENC, so a
+  frame never crosses into system memory and back. `encodingAttempts()` in
+  encoding.mjs already takes this path for the 8-bit H.264-in, H.264-out case
+  (hwaccel cuda decode + scale_cuda filter + NVENC); this pass is what makes
+  it actually get *picked* (GPU detection was built but never called).
+- **GPU-resident compositing** (Olive: "Olive's compositing/rendering pipeline
+  is 100% OpenGL" -- https://github.com/olive-editor/olive/issues/633; the
+  public descriptions of Premiere's Mercury Playback Engine and Resolve's GPU
+  pipeline describe the same shape: effects and color run as GPU shaders, not
+  CPU filters). Kimo's own compositor (desktop/COMPOSITOR.md, PERFORMANCE.md
+  "Phase 2") runs its frame mapping, transforms and text on bounded CPU
+  workers by design, with NVENC only accelerating the final compression step.
+  Moving the compositor itself onto the GPU is out of scope for this pass (it
+  is a renderer rewrite, not a config/threading fix) but is the next-biggest
+  lever after proxy editing for closing the remaining gap to Premiere/Resolve.
+- **Parallel segment encoding** (the general technique behind most NLEs'
+  background "render farm" exports, and FFmpeg's own documented pattern of
+  splitting a long encode into independent segments across processes, then
+  concatenating or stitching the results -- see FFmpeg's concat demuxer docs,
+  https://ffmpeg.org/ffmpeg-formats.html#concat). compose.mjs already renders
+  independent caption/graphics segments to separate intermediate files and
+  concatenates them; the segments are not currently rendered in parallel
+  with each other (one ffmpeg process at a time, now with more threads each).
+  Running independent segments as separate OS processes rather than
+  separate threads inside one ffmpeg process is a further lever not taken in
+  this pass -- noted, not implemented, given the time box.
+- **Single filter graph over per-frame pipes** (general FFmpeg filtergraph
+  practice: https://ffmpeg.org/ffmpeg-filters.html). compose.mjs already
+  builds one `-filter_complex_script` per segment rather than a JS-side
+  per-frame loop; the remaining per-frame JS work is in the RGBA pipe-based
+  raw-frame compositor path used for SAM effects and a few camera/fx cases
+  (search `spawnRgbaPipe`/`encoder.stdin.write(frame)` in compose.mjs), not
+  the main picture-composite path. Collapsing those into pure filtergraph
+  expressions where ffmpeg's own filters (overlay, zoompan, geq) can express
+  the same transform is flagged for follow-up, not done in this pass.
