@@ -11,6 +11,7 @@ import { existsSync, statSync, readdirSync, unlinkSync } from 'node:fs';
 import { join, resolve, sep, basename } from 'node:path';
 import { once } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
+import os from 'node:os';
 import { spawnBackground, execFileBackground } from './resources.cjs';
 import { mixSound } from './audio/mix.mjs';
 import { prepareColor } from './color/plan.mjs';
@@ -367,6 +368,13 @@ async function* frames(stream, size) {
   if (offset) throw new Error('compose decoder returned a partial frame');
 }
 /** Strict JS sampling for nonintegral speed/rate ratios, including deliberate slow-motion holds. */
+function segmentPathFor(dir, clip, source, canvas, plan) {
+  const key = createHash('sha256')
+    .update(JSON.stringify([clip, source, canvas, plan.start, plan.end]))
+    .digest('hex')
+    .slice(0, 20);
+  return join(dir, `segment-${key}.mkv`);
+}
 async function mappedSegment({
   ffmpeg,
   source,
@@ -529,6 +537,88 @@ async function mappedSegment({
     signal?.removeEventListener('abort', abort);
   }
 }
+
+/**
+ * Render several independent clip segments at once instead of one ffmpeg
+ * process at a time. mappedSegment() writes each clip's own picture segment
+ * to its own file (segment-<hash>.mkv) and only reads its own clip/source/
+ * canvas -- no shared mutable state between clips -- so clips with no
+ * dependency on each other (most of a timeline) are free to render
+ * concurrently. The final composite pass that overlays them in order still
+ * runs afterward, unchanged and sequential (it genuinely depends on every
+ * segment existing first).
+ *
+ * Concurrency is sized to the machine, the same spirit as
+ * resources.cjs's workerThreads(): leave a core for the UI, and don't
+ * oversubscribe RAM. Per-segment ffmpeg thread count is divided down so N
+ * concurrent renders add up to roughly the same total CPU budget as one
+ * render using every available thread, not N times it.
+ */
+export function segmentConcurrency({
+  parallelism = os.availableParallelism(),
+  totalMemGB = os.totalmem() / 1024 ** 3,
+  jobCount = Infinity,
+} = {}) {
+  const profile = String(process.env.KIMO_PERFORMANCE_PROFILE || '').toLowerCase();
+  if (profile === 'background' || profile === 'low-cpu' || profile === 'low_cpu') return 1;
+  const requested = Number(process.env.KIMO_SEGMENT_CONCURRENCY);
+  if (Number.isInteger(requested) && requested > 0) return Math.max(1, Math.min(requested, jobCount));
+  // ~3 GB headroom per concurrent ffmpeg (lossless FFV1/yuv444p intermediates
+  // are not small); leave one core free for the UI, same as workerThreads().
+  const byCores = Math.max(1, parallelism - 1);
+  const byMem = Math.max(1, Math.floor(totalMemGB / 3));
+  return Math.max(1, Math.min(jobCount, byCores, byMem, 8));
+}
+async function renderSegmentsConcurrently(toRender, { ffmpeg, canvas, signal, emit, total, started }) {
+  const concurrency = segmentConcurrency({ jobCount: toRender.length });
+  // Deliberately NOT dividing each concurrent process's own thread count down
+  // by concurrency. Measured on this box (4 cores): two of these segment
+  // renders (ffv1 decode + camera filter + ffv1 encode) run one after another
+  // at the default (cores-1=3) thread count each in 15.2s; run concurrently
+  // at that SAME per-process thread count (deliberately oversubscribed, OS
+  // timeshares it) in 10.7s (-29%); run concurrently with the threads divided
+  // down to 1 each (no oversubscription) in 18.3s -- WORSE than sequential.
+  // This filter graph's own ffmpeg threading does not scale linearly past a
+  // couple of threads (common for a single h264 decode + small filter graph),
+  // so a process actually waiting on non-parallel decode work leaves real
+  // cycles for a second process's turn; halving each one's thread request
+  // instead just makes each one slower without buying back a matching amount
+  // of concurrency. Left as the machine's own default per-process thread
+  // count; only how many run at once is new here.
+  let next = 0;
+  const progressByIndex = new Array(toRender.length).fill(0);
+  const reportProgress = (i, n, planStart) => {
+    progressByIndex[i] = planStart + n;
+    const frame = Math.max(...progressByIndex);
+    emit({
+      t: 'progress',
+      phase: 'compose',
+      label: 'mapping source frames',
+      frame,
+      total,
+      f: frame / total,
+      fps: n / Math.max(0.001, (Date.now() - started) / 1000),
+    });
+  };
+  const worker = async () => {
+    while (next < toRender.length) {
+      const i = next++;
+      const item = toRender[i];
+      await mappedSegment({
+        ffmpeg,
+        source: item.source,
+        clip: item.clip,
+        canvas,
+        plan: item.plan,
+        output: item.segment,
+        signal,
+        onProgress: (n) => reportProgress(i, n, item.plan.start),
+      });
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, toRender.length) }, worker));
+}
+
 // Opaque cache passes need exact pixels, not FFV1's compression cost. CRF 0
 // retains the full 4:4:4 samples; alpha-bearing segments above still use FFV1.
 // This is an intermediate format. Final delivery continues to use x264 medium.
@@ -1280,6 +1370,24 @@ export async function compose({
           : null;
         const activeClips = baked?.clips ?? clips,
           activeSources = baked?.sources ?? edl.sources;
+        // Parallel segment pre-render: figure out which clips in this stage
+        // need a fresh mapped-source segment (the same condition the main
+        // loop below checks -- not baked, not arithmetic, not already cached
+        // on disk), then render the independent ones concurrently. The main
+        // loop afterward is unchanged and still builds the filter graph in
+        // order; its own mappedSegment() call becomes a no-op existsSync hit.
+        {
+          const toRender = [];
+          for (const clip of activeClips) {
+            const source = activeSources.find((s) => s.id === clip.src),
+              plan = framePlan(clip, source, edl.canvas.fps, from, to);
+            if (!plan.indices.length || clip._baked || plan.arithmetic) continue;
+            const segment = segmentPathFor(dir, clip, source, edl.canvas, plan);
+            if (!existsSync(segment)) toRender.push({ clip, source, plan, segment });
+          }
+          if (toRender.length)
+            await renderSegmentsConcurrently(toRender, { ffmpeg, canvas: edl.canvas, signal, emit, total, started });
+        }
         let pass = 0;
         for (const clip of activeClips) {
           const source = activeSources.find((s) => s.id === clip.src),
@@ -1310,19 +1418,7 @@ export async function compose({
             vf =
               'setpts=PTS-STARTPTS,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709';
           } else if (!plan.arithmetic) {
-            const key = createHash('sha256')
-                .update(
-                  JSON.stringify([
-                    clip,
-                    source,
-                    edl.canvas,
-                    plan.start,
-                    plan.end,
-                  ]),
-                )
-                .digest('hex')
-                .slice(0, 20),
-              segment = join(dir, `segment-${key}.mkv`);
+            const segment = segmentPathFor(dir, clip, source, edl.canvas, plan);
             if (!existsSync(segment))
               await mappedSegment({
                 ffmpeg,
