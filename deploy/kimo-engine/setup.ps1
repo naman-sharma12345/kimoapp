@@ -12,7 +12,7 @@ $ProgressPreference = 'SilentlyContinue'
 $Tunnel = $env:KIMO_TUNNEL_TOKEN; $Token = $env:KIMO_ENGINE_TOKEN
 if (-not $Tunnel -or -not $Token -or $Token.Length -lt 32) { throw 'Set KIMO_TUNNEL_TOKEN and KIMO_ENGINE_TOKEN first (see the README).' }
 $Raw = 'https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/deploy/kimo-engine'
-$Kimo = '6.0.0'; $Whisper = 'b5454'
+$Kimo = '8.12.1'; $Whisper = 'b5454'
 $Dir = Join-Path $env:LOCALAPPDATA 'kimo-engine'
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
 Set-Location $Dir

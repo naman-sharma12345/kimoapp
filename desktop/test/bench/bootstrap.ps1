@@ -5,7 +5,7 @@ $vendorRoot = Join-Path $desktopRoot 'vendor'
 if ((Test-Path -LiteralPath "$vendorRoot/kimo/bin/kimo-mcp.exe") -and (Test-Path -LiteralPath "$vendorRoot/ffmpeg/ffmpeg.exe") -and (Test-Path -LiteralPath "$vendorRoot/whisper/whisper-cli.exe") -and (Test-Path -LiteralPath "$vendorRoot/models/ggml-small-q5_1.bin")) { exit 0 }
 $stageRoot = Join-Path $env:RUNNER_TEMP 'kimo-bench-vendor-download'
 New-Item -ItemType Directory -Force $stageRoot, "$vendorRoot/kimo", "$vendorRoot/ffmpeg", "$vendorRoot/whisper", "$vendorRoot/models" | Out-Null
-Invoke-WebRequest 'https://github.com/naman-sharma12345/kimo/releases/download/v6.0.0/kimo-6.0.0-windows-x86_64.zip' -OutFile "$stageRoot/kimo.zip"
+Invoke-WebRequest 'https://github.com/naman-sharma12345/kimo/releases/download/v8.12.1/kimo-8.12.1-windows-x86_64.zip' -OutFile "$stageRoot/kimo.zip"
 Expand-Archive -LiteralPath "$stageRoot/kimo.zip" -DestinationPath "$stageRoot/kimo" -Force
 $engineBin = Get-ChildItem -LiteralPath "$stageRoot/kimo" -Filter kimo-mcp.exe -Recurse | Select-Object -First 1
 if (-not $engineBin) { throw 'Downloaded engine executable missing' }

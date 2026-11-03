@@ -1,7 +1,7 @@
 # kimo engine from the prebuilt kimo v6 release (x86_64): no Rust build, ready in a few
 # minutes. Used by setup.ps1 / setup.sh when Docker is available on Naman's PC.
 FROM ubuntu:24.04
-ARG KIMO_VERSION=6.0.0
+ARG KIMO_VERSION=8.12.1
 ARG WHISPER_BUILD=b5454
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg nodejs ca-certificates curl libgomp1 \
  && rm -rf /var/lib/apt/lists/*
