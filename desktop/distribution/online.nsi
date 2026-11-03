@@ -44,6 +44,16 @@ Function .onInit
     SetErrorLevel 2
     Quit
   ${EndIf}
+  SetRegView 64
+  ; The frozen x64 installer records its directory in the 64-bit registry view.
+  ; Respect an explicit /D, otherwise retain an existing per-user location.
+  ${StdUtils.GetParameter} $0 "D" ""
+  ${If} $0 == ""
+    ReadRegStr $0 HKCU "Software\${APP_GUID}" "InstallLocation"
+    ${If} $0 != ""
+      StrCpy $INSTDIR $0
+    ${EndIf}
+  ${EndIf}
   System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Local\kimo-online-setup-${APP_GUID}") p .r0 ?e'
   Pop $1
   StrCpy $mutex $0

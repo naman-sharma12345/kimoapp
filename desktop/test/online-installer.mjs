@@ -69,7 +69,7 @@ const results = [];
 async function install(exe, target, extraEnv = {}) {
   return new Promise((resolveRun, reject) => {
     const started = performance.now();
-    const child = spawn(exe, ['/S', `/D=${target}`], {
+    const child = spawn(exe, target ? ['/S', `/D=${target}`] : ['/S'], {
       windowsHide: true,
       // NSIS requires the final /D argument without wrapping quotes, even
       // when the target contains spaces. Node's normal quoting hides it.
@@ -91,7 +91,31 @@ async function install(exe, target, extraEnv = {}) {
     });
   });
 }
-async function check(name, p, expectedCode, env) {
+function fixtureRegistry(target) {
+  const { UUID } = require('builder-util-runtime');
+  const guid = UUID.v5(
+    'tech.getkimo.desktop',
+    UUID.parse('50e065bc-3134-11e6-9bab-38c9862bdaf3'),
+  );
+  const run = spawnSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-Command',
+      "$root=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::CurrentUser,[Microsoft.Win32.RegistryView]::Registry64); $key=$root.CreateSubKey($env:KIMO_FIXTURE_KEY); if ($env:KIMO_FIXTURE_TARGET) {$key.SetValue('InstallLocation',$env:KIMO_FIXTURE_TARGET)} else {$key.DeleteValue('InstallLocation',$false)}; $key.Close(); $root.Close()",
+    ],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        KIMO_FIXTURE_KEY: `Software\\fixture-${guid}`,
+        KIMO_FIXTURE_TARGET: target ?? '',
+      },
+    },
+  );
+  assert.equal(run.status, 0, run.stderr);
+}
+async function check(name, p, expectedCode, env, registered = false) {
   const out = join(root, name),
     target = join(out, 'installed app');
   await mkdir(target, { recursive: true });
@@ -99,7 +123,13 @@ async function check(name, p, expectedCode, env) {
   const config = join(out, 'payload.json');
   await writeFile(config, JSON.stringify(p));
   const { exe, proof } = await buildOnline({ out, fixtureConfig: config });
-  const outcome = await install(exe, target, env);
+  let outcome;
+  if (registered) fixtureRegistry(target);
+  try {
+    outcome = await install(exe, registered ? undefined : target, env);
+  } finally {
+    if (registered) fixtureRegistry();
+  }
   assert.equal(outcome.code, expectedCode, name);
   assert.equal(
     await readFile(join(target, 'kimo.exe'), 'utf8'),
@@ -120,6 +150,7 @@ try {
   );
   assert.throws(() => validatePayload({ ...base, sha512: '' }, true));
   await check('backup-server', base, 0);
+  await check('registered-upgrade-path', base, 0, {}, true);
   await check(
     'tampered',
     { ...base, primary: url + '/tampered', fallback: url + '/tampered' },

@@ -65,6 +65,33 @@ test('full response streams every byte in order', async () => {
   assert.deepEqual(body, data);
   assert.equal(calls.length, 3);
 });
+test('asset binding may omit Content-Length and ignore Range', async () => {
+  const waits = [];
+  const env = {
+    ASSETS: {
+      async fetch(req) {
+        const c = manifest.chunks.find(
+          (c) => c.path === new URL(req.url).pathname,
+        );
+        return new Response(data.subarray(c.start, c.start + c.bytes));
+      },
+    },
+  };
+  const r = await handler(
+    new Request('https://downloads.getkimo.tech/desktop/v0.4.0/app.exe', {
+      headers: { Range: 'bytes=8-22' },
+    }),
+    env,
+    {
+      waitUntil(p) {
+        waits.push(p);
+      },
+    },
+  );
+  assert.equal(r.status, 206);
+  assert.deepEqual(Buffer.from(await r.arrayBuffer()), data.subarray(8, 23));
+  await Promise.all(waits);
+});
 test('resume across chunk boundaries, clamping, suffix and single byte', async () => {
   for (const [range, start, end] of [
     ['bytes=8-22', 8, 22],

@@ -6,6 +6,10 @@ on:
         description: Verify the existing deployment without redeploying
         type: boolean
         default: false
+      include_online:
+        description: Also deploy the qualified online launcher from the published release
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -32,7 +36,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify and split the exact release into static pieces
+        if: ${{ !inputs.include_online }}
         run: node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe"
+      - name: Retrieve and verify the qualified small launcher
+        if: inputs.include_online
+        run: |
+          gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/online" --pattern 'kimo-Online-Setup-0.4.0.exe' --pattern 'online-verification.json'
+          node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/online"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy only the installer distribution Worker and static assets
         if: ${{ !inputs.verify_only }}
         working-directory: desktop/distribution/cdn
@@ -40,7 +52,11 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Verify complete and resumed public CDN downloads
+        if: ${{ !inputs.include_online }}
         run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe"
+      - name: Verify CDN payload and published launcher
+        if: inputs.include_online
+        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/online"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

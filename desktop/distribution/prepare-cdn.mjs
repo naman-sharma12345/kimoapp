@@ -1,6 +1,6 @@
 // Hosted runner only: verify the original release, then split for the free
 // Static Assets 25 MiB/file limit. The public byte stream remains identical.
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,8 +36,35 @@ await writeFile(
 );
 await writeFile(
   join(out, '_headers'),
-  '/pieces/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n',
+  '/pieces/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n/desktop/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n',
 );
+if (process.argv[3]) {
+  const online = resolve(process.argv[3]);
+  const proof = JSON.parse(
+    await readFile(join(online, 'online-verification.json'), 'utf8'),
+  );
+  if (
+    proof.fixture ||
+    proof.version !== p.version ||
+    proof.file !== `kimo-Online-Setup-${p.version}.exe` ||
+    proof.bytes > 2_000_000
+  )
+    throw Error('Invalid published online setup manifest');
+  const body = await readFile(join(online, proof.file));
+  if (
+    body.length !== proof.bytes ||
+    createHash('sha256').update(body).digest('hex') !== proof.sha256 ||
+    proof.payload.sha512 !== p.sha512
+  )
+    throw Error('Published online setup failed verification');
+  const target = join(out, 'desktop/v' + p.version);
+  await mkdir(target, { recursive: true });
+  await copyFile(join(online, proof.file), join(target, proof.file));
+  await copyFile(
+    join(online, 'online-verification.json'),
+    join(target, 'online-verification.json'),
+  );
+}
 console.log(
   `Prepared ${chunks.length} immutable pieces, exact ${body.length} bytes`,
 );

@@ -79,6 +79,25 @@ const proof = {
   head: head.status,
   invalidRange: bad.status,
 };
+if (process.argv[3]) {
+  const expected = JSON.parse(
+    await readFile(join(process.argv[3], 'online-verification.json'), 'utf8'),
+  );
+  const launcherUrl = `https://downloads.getkimo.tech/desktop/v${p.version}/${expected.file}`;
+  const r = await fetch(launcherUrl);
+  assert.equal(r.status, 200);
+  const body = Buffer.from(await r.arrayBuffer());
+  assert.equal(body.length, expected.bytes);
+  assert.equal(
+    createHash('sha256').update(body).digest('hex'),
+    expected.sha256,
+  );
+  proof.launcher = {
+    url: launcherUrl,
+    bytes: body.length,
+    sha256: expected.sha256,
+  };
+}
 await mkdir('distribution-evidence', { recursive: true });
 await writeFile(
   'distribution-evidence/cdn-verification.json',

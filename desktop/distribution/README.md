@@ -34,13 +34,23 @@ and the executable's 0.4.0 version. It never launches Electron or renders media.
 Only after passing may its publish option add the new launcher and manifest to
 v0.4.0; it does not overwrite the offline EXE, blockmap, `latest.yml`, or tag.
 
-Hosting status: GitHub Release assets are the current working source. Cloudflare
-R2 preflight on 2026-11-03 returned error 10042: enable R2 in the dashboard. The
-separate `downloads.getkimo.tech` CDN endpoint is pending that user account step;
-no regional speed claim is made before it exists and is measured. Once enabled,
-upload the exact pinned EXE, enable the dedicated custom domain and caching, test
-full/ranged downloads and the checksum, then make it primary with GitHub fallback
-and rebuild/requalify the launcher. Never embed Cloudflare credentials in setup.
+The primary server is `downloads.getkimo.tech` on Cloudflare Workers Static
+Assets, with the exact GitHub release as backup. R2 needed a payment card, so this
+uses the existing free account without R2 or paid storage. The large EXE is split
+into 19 immutable pieces of at most 20 MB (under the 25 MiB static-asset limit).
+A dedicated distribution Worker streams them as one EXE with native `pipeTo` and
+backpressure. It buffers no whole application, validates the source before
+deployment, and supports HEAD, single byte ranges and resume across piece
+boundaries. Only range-boundary pieces pass through a bounded slicing stream.
+Assets bindings need not supply Content-Length or implement Range themselves.
+The client still verifies the whole EXE's pinned SHA-512 before execution.
+
+This is a separate installer service: web/API Workers, routes, secrets, engine and
+databases are unchanged. `guard-cdn.mjs` refuses an unrelated existing DNS/service
+on this hostname. `.github/workflows/desktop-cdn.yml` deploys only this service and
+tests full-length/SHA-512, cross-piece ranges, end ranges, HEAD and 416 handling.
+The free Worker daily request/CPU limits apply; GitHub remains the fallback.
+No regional speed guarantee is made. No Cloudflare credential enters setup.
 
 Distribution uses NSIS/zlib, InetC (NSIS licence), and StdUtils (LGPL 2.1+), the
 same setup plug-ins already used by electron-builder. Upstream licence and source:

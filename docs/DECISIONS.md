@@ -346,6 +346,9 @@ Use the existing NSIS toolchain and native Windows setup controls without custom
 fonts, colors or animations. A small launcher downloads and hashes the already
 qualified v0.4.0 offline installer before invoking it; this preserves the frozen
 release and avoids a new Electron/media build. No app/backend/UI behavior changes.
-R2 is not enabled in the existing Cloudflare account (API error 10042); fast CDN
-hosting requires that account step. Keep GitHub as a working source until then
-and do not claim a regional speed improvement without measurements.
+R2 is not enabled (API error 10042) and the user cannot add the required card.
+Use the existing free Workers Static Assets service instead: 19 immutable pieces
+under its per-file limit, streamed by a dedicated installer-only Worker at the
+previously unused downloads.getkimo.tech hostname, with HEAD/range support and
+GitHub fallback. No application API/engine/backend changes or new runtime library.
+No paid service activation and no regional speed guarantee without measurements.
