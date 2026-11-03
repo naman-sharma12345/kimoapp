@@ -872,6 +872,27 @@ async function inspect(ffprobe, path) {
   if (code) throw new Error(`Cannot probe ${path}: ${error}`);
   return JSON.parse(text);
 }
+// Real decoded frame count, not container metadata (nb_frames is frequently
+// absent/0 on a freshly muxed mkv). Used to verify a stage's own composite
+// before its intermediates are deleted (disk-bound cleanup, see compose()).
+async function countFrames(ffprobe, path) {
+  const child = spawnBackground(
+    ffprobe,
+    ['-v', 'error', '-count_frames', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_frames', '-of', 'csv=p=0', path],
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  let text = '',
+    error = '';
+  child.stdout.on('data', (d) => {
+    text += d;
+  });
+  child.stderr.on('data', (d) => {
+    error += d;
+  });
+  const [code] = await once(child, 'close');
+  if (code) throw new Error(`Cannot count frames in ${path}: ${error}`);
+  return Number(text.trim()) || 0;
+}
 function volumeExpression(curve, fallback = 1) {
   const keys = (curve?.keys ?? [])
     .map((k) => ({ t: k.t ?? k.time, v: k.v ?? k.value }))
@@ -1332,8 +1353,16 @@ export async function compose({
       ) +
       (clips.filter((c) => c._overlayIndex != null).length + 1) * 7;
     const [clockN, clockD = 1] = String(edl.canvas.fps).split('/').map(Number);
+    // KIMO_COMPLEX_STAGE_THRESHOLD_S: test-only override for the >600s
+    // threshold that switches to the chunked-stage renderer below. Lets a
+    // short timeline be forced through the same disk-bound/parallel-stage
+    // code paths a real 700s render takes, without rendering 600+ real
+    // seconds in a test. Undocumented in the app UI on purpose; the
+    // production default (600) is unchanged when the env var is unset.
+    const complexThresholdS =
+      Number(process.env.KIMO_COMPLEX_STAGE_THRESHOLD_S) || 600;
     const complex =
-      strategy === 'B' || estimatedNodes > 200 || total / fps > 600;
+      strategy === 'B' || estimatedNodes > 200 || total / fps > complexThresholdS;
     const chunkSize = complex ? Math.max(1, Math.floor(fps * 30)) : total;
     const begin = frame == null ? 0 : Math.max(0, Math.min(total - 1, frame)),
       finish = frame == null ? total : begin + 1;
@@ -1352,6 +1381,15 @@ export async function compose({
         graph = [
           `[0:v]trim=end_frame=${length},settb=1/${clockN},setpts=N*${clockD},scale=out_color_matrix=bt709:out_range=tv,format=yuv444p,setparams=range=limited:colorspace=bt709:color_primaries=bt709:color_trc=bt709[base0]`,
         ];
+      // Disk bound (task 1): snapshot the workspace before this stage creates
+      // anything, so every file the stage adds (per-clip ffv1 "mapped-*"
+      // segments, per-track "track-*" concats, blank-gap fillers, this
+      // stage's own tiny .ass/.ffgraph scripts) can be deleted the moment
+      // the stage's own picture-${from}.mkv is written and verified below --
+      // keeping only what the final concat actually reads. Only the
+      // chunked-stage ('complex') renderer accumulates these; the
+      // single-stage path's own cache files are left alone.
+      const stageDirSnapshot = complex ? new Set(readdirSync(dir)) : null;
       let input = 1,
         layer = 0,
         base = 'base0';
@@ -1598,6 +1636,28 @@ export async function compose({
         },
       );
       outputs.push(chunk);
+      if (stageDirSnapshot) {
+        // Verify the stage's composite has the frame count it should before
+        // deleting anything this stage made to produce it -- a corrupt or
+        // short chunk must not lose its own evidence (mapped-*/track-*
+        // intermediates) before the problem is diagnosed. Container-level
+        // nb_frames metadata is frequently absent/0 on a freshly muxed mkv
+        // without a second pass, so this actually counts decoded frames
+        // (ffprobe -count_frames) rather than trusting the box.
+        const stageFrames = await countFrames(ffprobe, chunk);
+        if (stageFrames !== length)
+          throw new Error(
+            `stage at frame ${from}: composite picture has ${stageFrames} frames, expected ${length} (intermediates kept for inspection)`,
+          );
+        for (const name of readdirSync(dir)) {
+          if (stageDirSnapshot.has(name) || name === basename(chunk)) continue;
+          try {
+            unlinkSync(join(dir, name));
+          } catch {
+            /* best-effort; the final workspace cleanup still runs on exit */
+          }
+        }
+      }
     }
     if (cacheDir && baseFiles.size) {
       // one cached base per edit: drop stale composites of earlier versions
