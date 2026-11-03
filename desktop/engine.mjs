@@ -6,7 +6,7 @@ import { spawnBackground as spawn, execFileBackground as execFile, acquireExclus
 import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
+import { samEffect, SAM_EFFECTS, jitterAccumulator, JITTER_SCALE_WIDTH, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { colorConfig } from './color/plan.mjs';
 import { prepareInputs } from './input-media.mjs';
 import { effectiveRate } from './vfr-rate.mjs';
@@ -449,10 +449,34 @@ export async function measure(ffmpeg, ffprobe, path) {
     akbps: a ? Math.round((Number(a.bit_rate) || 0) / 1000) : 0,
     black: [], silences: [],
   };
-  const filter = a
-    ? '[0:v]blackdetect=d=0.2:pix_th=0.10[v];[0:a]silencedetect=n=-45dB:d=0.7,loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json[a]'
-    : '[0:v]blackdetect=d=0.2:pix_th=0.10[v]';
-  const r = await runTool(ffmpeg, ['-hide_banner', '-nostats', '-i', path, '-filter_complex', filter, '-map', '[v]', ...(a ? ['-map', '[a]'] : []), '-f', 'null', '-']);
+  // One ffmpeg process, one decode: blackdetect/silencedetect/loudnorm (which need
+  // the whole file) and the motion-jitter frame stream (capped at 90s) used to
+  // both read off a single [0:v] via split, instead of this file being decoded
+  // twice (a second full ffmpeg process -- motionJitter() -- previously redecoded
+  // up to 90s of the same video a measure() had just decoded in full for
+  // blackdetect/silencedetect). Source width/height is already known from the
+  // ffprobe above, so no extra ffprobe spawn for the jitter side either.
+  const acc = v.width ? jitterAccumulator(v.width, v.height) : null;
+  const JITTER_SECONDS = 90;
+  const filterParts = acc
+    ? [`[0:v]split=2[vb][vj]`, `[vb]blackdetect=d=0.2:pix_th=0.10[v]`, `[vj]trim=duration=${JITTER_SECONDS},scale=${JITTER_SCALE_WIDTH}:-2:flags=area,format=gray[j]`]
+    : [`[0:v]blackdetect=d=0.2:pix_th=0.10[v]`];
+  if (a) filterParts.push('[0:a]silencedetect=n=-45dB:d=0.7,loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json[a]');
+  const filter = filterParts.join(';');
+  const maps = ['-map', '[v]', ...(a ? ['-map', '[a]'] : [])];
+  const args = [
+    '-hide_banner', '-nostats', '-i', path, '-filter_complex', filter,
+    ...maps, '-f', 'null', '-',
+    ...(acc ? ['-map', '[j]', '-f', 'rawvideo', 'pipe:1'] : []),
+  ];
+  const r = await new Promise((done) => {
+    const child = spawn(ffmpeg, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let err = '';
+    child.stdout.on('data', (d) => acc?.feed(d));
+    child.stderr.on('data', (d) => (err = (err + d).slice(-200_000)));
+    child.on('error', (e) => done({ code: -1, err: String(e.message) }));
+    child.on('exit', (code) => done({ code, err }));
+  });
   for (const x of r.err.matchAll(/black_start:([\d.]+) black_end:([\d.]+)/g)) m.black.push([+x[1], +x[2]]);
   let open = null;
   for (const x of r.err.matchAll(/silence_(start|end): (-?[\d.]+)/g)) {
@@ -461,8 +485,8 @@ export async function measure(ffmpeg, ffprobe, path) {
   }
   if (open != null) m.silences.push([open, m.duration]);
   // camera smoothness: residual frame-to-frame shake and judder (repeated frames)
-  if (v.width) {
-    const mo = await motionJitter(ffmpeg, path).catch(() => null);
+  if (acc) {
+    const mo = acc.finish();
     if (mo) Object.assign(m, { jitter: mo.jitter, jitterP95: mo.p95, dupFrames: mo.dup, frames: mo.frames });
   }
   const ln = /\{\s*"input_i"[\s\S]*?\}/.exec(r.err);
