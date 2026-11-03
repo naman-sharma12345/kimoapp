@@ -15,14 +15,23 @@ await mkdir(root, { recursive: true });
 const {
   NSIS_PATH,
   NsisTargetOptions,
+  nsisTemplatesDir,
 } = require('app-builder-lib/out/targets/nsis/nsisUtil.js');
 NsisTargetOptions.resolve({});
 const nsis = await NSIS_PATH();
+const { getBinFromUrl } = require('app-builder-lib/out/binDownload.js');
+const resources = await getBinFromUrl(
+  'nsis-resources',
+  '3.4.1',
+  'Dqd6g+2buwwvoG1Vyf6BHR1b+25QMmPcwZx40atOT57gH27rkjOei1L0JTldxZu4NFoEmW4kJgZ3DlSWVON3+Q==',
+);
 const fixture = join(root, 'fixture-payload.exe');
 const compiled = spawnSync(
   join(nsis, 'Bin/makensis.exe'),
   [
     '-WX',
+    `-X!addincludedir "${join(nsisTemplatesDir, 'include')}"`,
+    `-X!addplugindir /x86-unicode "${join(resources, 'plugins/x86-unicode')}"`,
     `-DFIXTURE_EXE=${fixture}`,
     resolve('desktop/distribution/fixture.nsi'),
   ],
@@ -135,6 +144,15 @@ try {
 const real = await buildOnline();
 const target = join(root, 'actual installed app');
 const outcome = await install(real.exe, target);
+if (outcome.code !== 0) {
+  console.log('Real setup failed:', outcome);
+  console.log(
+    await readFile(
+      join(process.env.TEMP, 'kimo-online-setup-status.txt'),
+      'utf8',
+    ).catch(() => 'No child-install diagnostic (download or init failed)'),
+  );
+}
 assert.equal(outcome.code, 0, 'Real internet installation');
 for (const file of [
   'kimo.exe',

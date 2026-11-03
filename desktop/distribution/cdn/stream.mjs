@@ -74,18 +74,51 @@ export function createHandler(manifest, makeStream) {
       const start = Math.max(0, range.start - c.start),
         end = Math.min(c.bytes - 1, range.end - c.start);
       const partial = start !== 0 || end !== c.bytes - 1;
+      // Bindings may omit Content-Length and ignore Range. Slice boundary
+      // pieces in a bounded stream; full pieces stay on native pipeTo.
       const res = await env.ASSETS.fetch(
-        new Request(new URL(c.path, request.url), {
-          headers: partial ? { Range: `bytes=${start}-${end}` } : {},
-        }),
+        new Request(new URL(c.path, request.url)),
       );
+      const suppliedLength = res.headers.get('Content-Length');
       if (
-        res.status !== (partial ? 206 : 200) ||
-        Number(res.headers.get('Content-Length')) !== end - start + 1 ||
+        res.status !== 200 ||
+        (suppliedLength !== null && Number(suppliedLength) !== c.bytes) ||
         !res.body
       )
         throw Error('CDN piece unavailable or invalid');
-      return res;
+      if (!partial) return res;
+      const reader = res.body.getReader();
+      let offset = 0;
+      return {
+        body: new ReadableStream({
+          async pull(controller) {
+            while (offset <= end) {
+              const { value, done } = await reader.read();
+              if (done) {
+                controller.error(Error('Truncated CDN piece'));
+                return;
+              }
+              const blockStart = offset;
+              offset += value.length;
+              if (offset <= start) continue;
+              controller.enqueue(
+                value.subarray(
+                  Math.max(0, start - blockStart),
+                  Math.min(value.length, end + 1 - blockStart),
+                ),
+              );
+              if (offset > end) {
+                controller.close();
+                await reader.cancel();
+              }
+              return;
+            }
+          },
+          cancel(reason) {
+            return reader.cancel(reason);
+          },
+        }),
+      };
     }
     let first;
     try {

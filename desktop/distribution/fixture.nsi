@@ -4,6 +4,13 @@ RequestExecutionLevel user
 SilentInstall silent
 OutFile "${FIXTURE_EXE}"
 InstallDir "$TEMP\kimo-distribution-fixture"
+!include "StdUtils.nsh"
+Function .onInit
+  ; Match the frozen electron-builder installer's directory-argument parser.
+  ${StdUtils.GetParameter} $0 "D" ""
+  StrCmp $0 "" +2
+  StrCpy $INSTDIR $0
+FunctionEnd
 Section
   ReadEnvStr $0 KIMO_FIXTURE_FAIL
   StrCmp $0 "1" fail

@@ -131,11 +131,12 @@ Section "install kimo"
     Quit
   ${EndIf}
   ; The only app-changing operation. All failure/cancel paths above leave the
-  ; previous installation untouched. /D is the last argument, as NSIS requires.
+  ; previous installation untouched. The frozen electron-builder installer uses
+  ; StdUtils' D parser, which requires the whole token quoted for spaced paths.
   DetailPrint "installing kimo"
   StrCpy $installing "1"
   ClearErrors
-  ExecWait '"$payload" /S /currentuser /D=$INSTDIR' $installExit
+  ExecWait '"$payload" /S /currentuser "/D=$INSTDIR"' $installExit
   IfErrors install_failed
   ${If} $installExit != 0
     Goto install_failed
@@ -147,6 +148,9 @@ Section "install kimo"
   SetErrorLevel 0
   Goto done
   install_failed:
+  FileOpen $0 "$TEMP\kimo-online-setup-status.txt" w
+  FileWrite $0 "child exit=$installExit; target=$INSTDIR"
+  FileClose $0
   Delete "$payload"
   MessageBox MB_OK|MB_ICONEXCLAMATION "kimo could not finish installing (exit $installExit). Please run setup again." /SD IDOK
   SetErrorLevel 3
