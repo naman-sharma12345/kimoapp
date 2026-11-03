@@ -362,3 +362,16 @@ Five-source metadata and real installed-preview regressions cover the failure.
 Publish this app change as v0.4.1 so electron-updater can detect the fixed build.
 Keep old versioned CDN URLs intact by retaining both payload manifests/pieces;
 the new launcher pins the new payload length/hash, with no runtime dependency.
+
+## Bounded fallback rendering (2026-11-03)
+
+The user reported an hour-long render; the active child was an unlimited
+transparent generator with `-frames:v -1`. Stop only that verified child, keeping
+the compiled checkpoint. Rounded adjacent cuts can overlap by a quantized frame:
+give the later clip ownership, trim the previous baked interval, and fill only
+positive gaps. Validate every explicit compositor frame cap before launching
+FFmpeg. Bump the compositor cache key so saved base/picture caches are rebuilt.
+The user then explicitly requested a light render on their PC, superseding the
+earlier ban only for a tiny local CPU test. Run that one on a single logical core
+at below-normal priority, with no hardware decode/encode and a hard timeout.
+Keep the full suite, installer builds and installed-app checks on hosted runners.

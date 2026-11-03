@@ -1,0 +1,72 @@
+{
+  "at": "2026-11-03T15:39:49.470Z",
+  "requests": [
+    "/missing",
+    "/payload",
+    "/missing",
+    "/payload",
+    "/tampered",
+    "/missing",
+    "/payload"
+  ],
+  "results": [
+    {
+      "name": "backup-server",
+      "code": 0,
+      "seconds": 1.9407512000000002,
+      "stubBytes": 218059,
+      "oldInstallPreserved": false
+    },
+    {
+      "name": "registered-upgrade-path",
+      "code": 0,
+      "seconds": 0.1961207000000004,
+      "stubBytes": 218059,
+      "oldInstallPreserved": false
+    },
+    {
+      "name": "tampered",
+      "code": 2,
+      "seconds": 0.13656129999999939,
+      "stubBytes": 217999,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "missing",
+      "code": 2,
+      "seconds": 0.1288009000000002,
+      "stubBytes": 218134,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "child-failure",
+      "code": 3,
+      "seconds": 0.18458389999999963,
+      "stubBytes": 217999,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "prior-version-installed",
+      "version": "0.4.1",
+      "code": 0,
+      "seconds": 19.5910832
+    },
+    {
+      "name": "real-online-install",
+      "code": 0,
+      "seconds": 63.808501,
+      "version": "0.4.2.0",
+      "stubBytes": 218135,
+      "stubSha256": "f5cd50297f5998a5d2642b96d970cbb8c3c74d873c57c06f7ff212a9c92390ee",
+      "payload": {
+        "version": "0.4.2",
+        "file": "kimo-Setup-0.4.2.exe",
+        "bytes": 369148808,
+        "sha512": "iw9KEsvuElVM1KpS6+3lZxU4D749PQA8X3EVQKKh/08b3Nzn7K6x9rWnZarQ/9S5Z8ZZRcn5I1r18E+sDxHCWA==",
+        "primary": "https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Setup-0.4.2.exe",
+        "fallback": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.2/kimo-Setup-0.4.2.exe"
+      },
+      "savedProjectPreserved": true
+    }
+  ]
+}

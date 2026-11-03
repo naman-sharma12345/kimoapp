@@ -1,0 +1,29 @@
+{
+  "at": "2026-11-03T15:34:10.432Z",
+  "url": "https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Setup-0.4.2.exe",
+  "bytes": 369148808,
+  "sha512": "iw9KEsvuElVM1KpS6+3lZxU4D749PQA8X3EVQKKh/08b3Nzn7K6x9rWnZarQ/9S5Z8ZZRcn5I1r18E+sDxHCWA==",
+  "seconds": 56.11002442099999,
+  "megabytesPerSecond": 6.5790170617327455,
+  "cfRay": "a54c6f85f8705bd9-ARN",
+  "note": "Hosted runner route; not a regional or user-connection speed guarantee",
+  "ranges": [
+    {
+      "start": 0,
+      "end": 999999,
+      "status": 206
+    },
+    {
+      "start": 19999950,
+      "end": 20000049,
+      "status": 206
+    },
+    {
+      "start": 369144712,
+      "end": 369148807,
+      "status": 206
+    }
+  ],
+  "head": 200,
+  "invalidRange": 416
+}

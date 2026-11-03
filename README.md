@@ -13,7 +13,7 @@
 A Windows video editor with local Whisper, FFmpeg, fonts and the kimo v6 engine
 in one installer.
 
-[Download for Windows · small online setup](https://downloads.getkimo.tech/desktop/v0.4.1/kimo-Online-Setup-0.4.1.exe)
+[Download for Windows · small online setup](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe)
 · [All releases](https://github.com/naman-sharma12345/kimoapp/releases)
 · [Desktop guide](desktop/README.md)
 
@@ -62,8 +62,9 @@ prove provider adherence or interactive updater behaviour.
 
 ## Install and privacy
 
-Download the [small v0.4.1 online setup](https://downloads.getkimo.tech/desktop/v0.4.1/kimo-Online-Setup-0.4.1.exe).
-v0.4.1 fixes the Windows preview error `EDL timeline: at least one frame required`.
+Download the [small v0.4.2 online setup](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe).
+v0.4.2 fixes unlimited rendering on rounded cut boundaries and includes the prior
+Windows fix for `EDL timeline: at least one frame required`.
 After updating, resume the existing edit; its sources and saved plan are retained.
 It downloads the 369 MB app during installation from Cloudflare's CDN, with GitHub
 as backup. No card or R2 account is needed. The full offline installer remains in

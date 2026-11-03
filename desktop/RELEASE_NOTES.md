@@ -1,32 +1,46 @@
-# kimo v0.4.1 — Windows preview fix
+# kimo v0.4.2 — Runaway render fix
 
-[Download the recommended online installer (218 KB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.1/kimo-Online-Setup-0.4.1.exe)
+[Download the recommended online installer (218 KB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.2/kimo-Online-Setup-0.4.2.exe)
 
-[Fast Cloudflare mirror](https://downloads.getkimo.tech/desktop/v0.4.1/kimo-Online-Setup-0.4.1.exe) · [Full offline installer (369 MB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.1/kimo-Setup-0.4.1.exe)
+[Fast Cloudflare mirror](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe) · [Full offline installer](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.2/kimo-Setup-0.4.2.exe)
 
-Fixes `EDL timeline: at least one frame required` when generating or resuming a
-creator preview on Windows. Saved EDL paths use forward slashes; transcript paths
-can use backslashes. The compiler now matches those representations consistently
-and rejects genuinely missing selected media before creating invalid source IDs.
-Existing saved plans and source files do not need to be deleted or reimported.
-Install v0.4.1, reopen kimo and choose **resume edit** on the failed project.
+Fixes an unlimited FFmpeg job when rounded adjacent cuts produced a negative
+one-frame gap in the fallback compositor. The baked timeline now assigns each
+boundary frame once, gives the later cut ownership, and never generates padding
+for a nonpositive gap. Every explicit compositor FFmpeg frame limit is checked
+before launch; negative, zero, noninteger and nonfinite counts are rejected.
 
-This patch keeps the small online setup and Cloudflare CDN delivery. The full app
-still downloads during setup. No render-quality, GPU-driver or AI-budget changes.
-Initial setup: **218,091 bytes**. App payload: **369,147,985 bytes**.
+Old picture caches are invalidated for the corrected compositor. Saved plans,
+original media and the previous Windows path fix are retained. Positive gap
+padding now reports progress. This fixes a hang, not the existing export-speed
+limitations: legitimate renders can still take time.
 
-Qualification: five-source saved-preview regression, missing-source guard, full
-desktop tests, renderer build, updater feed/hash verification and a two-second
-synthetic preview through the actually installed Windows app. All build/media
-checks run on standard GitHub-hosted runners with model network calls blocked.
-No full benchmarks or user footage are uploaded. The previously documented
-v0.4.0 export-performance gap remains; this patch makes no new performance claim.
+Publication requires frame-limit and chunk-boundary regressions, an actual
+rounded-cut render with independently decoded source frame IDs, all desktop
+tests, an installer build, and both normal-preview and forced-fallback boundary
+checks through the installed Windows app. All media tests/builds run on standard
+GitHub-hosted runners with no paid model calls or user footage uploads.
 
-All **205 desktop tests pass with zero skips**. The actually installed app
-created a nonempty preview with model network access blocked. A separate hosted
-test installed v0.4.0, upgraded the same directory through the new online setup,
-verified executable version **0.4.1.0**, and preserved a saved-project sentinel.
-Interactive old-profile UI behavior remains a manual check.
+Verified: **208 desktop tests pass, zero skips**. The installed Windows app
+completes both a normal preview and the forced-fallback boundary reproduction;
+the latter produces exactly **30 frames**, exits normally and makes zero model
+network calls. [Windows build/install checks](https://github.com/naman-sharma12345/kimoapp/actions/runs/41663467603).
 
-[Build and installed preview verification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41643764413) · [Online upgrade verification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41645405182).
-Checksums and reports are in [patch evidence](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.1).
+At the user's explicit request, a local **CPU-only, one-core, below-normal-priority**
+test rendered a 192×128 synthetic source and checked all 30 output source frame
+IDs. The two focused tests completed successfully in about **2.1 seconds**.
+No local GPU test or full-project render was run. A separate read-only metadata
+check of the existing 43-clip project found **three old negative gaps and zero
+after the fix**, with correct coverage across every 30-second chunk.
+
+Install v0.4.2 and choose **resume edit** on the saved project. The full project
+has not been rendered as part of these checks, and this patch does not claim to
+meet the previously missed export-performance targets.
+[Detailed evidence](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.2).
+
+Initial launcher: **218,135 bytes**. App download during setup: **369,148,808 bytes**.
+[Upgrade qualification](https://github.com/naman-sharma12345/kimoapp/actions/runs/41665698493)
+installs v0.4.1, upgrades the same folder through the new online launcher, verifies
+version **0.4.2.0** and preserves a saved project sentinel. The initial attempt
+41665176638 crashed while seeding the older installer; the fresh-runner retry
+passed. This is a silent installation check, not an interactive UI/profile test.

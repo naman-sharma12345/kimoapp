@@ -659,3 +659,39 @@ Build proof: `desktop/distribution/evidence/0.4.1/`; release summary:
 `desktop/distribution/PATCH-0.4.1.md`. Interactive update/restart remains a manual
 check. No local GPU/browser/media tests, full benchmarks or paid calls. Historical
 Phase 12 performance/dataset limitations and spending reservations stay unchanged.
+
+## Rounded-cut runaway render fix v0.4.2 — 2026-11-03
+
+- [x] Stopped only the identified FFmpeg child generating an unlimited transparent
+      clip (`-frames:v -1`); the compiled 43-clip project checkpoint was retained.
+- [x] Fallback track plans assign rounded boundary frames to one clip (later cut
+      wins), trim baked ranges to the next cut, and generate only positive gaps.
+      Explicit compositor frame limits reject nonpositive/nonfinite/fractional
+      values before launch. Padding reports progress; compositor caches bump to v3.
+- [x] Read-only metadata check of the actual saved preview: 21,106 frames,
+      43 clips, three old negative gaps, zero fixed negative gaps, and exact
+      coverage across all 30-second chunks. No user footage is uploaded/rendered.
+- [x] User explicitly requested a light local render. Two focused tests passed
+      on the user's PC in about 2.1s: 192×128 synthetic source, 30 output frames,
+      independently decoded frame IDs all correct. CPU only, one logical core,
+      below-normal priority and a hard timeout. No local GPU/full-project test.
+- [x] Windows run 41663467603 passes all 208 desktop tests with zero skips,
+      renderer build, feed/hash verification and actual installed app tests.
+      Product version 0.4.2.0; normal preview succeeds; the forced-fallback
+      rounded-boundary case exits successfully with exactly 30 frames and no
+      model network calls.
+- [x] Online upgrade run 41665698493 passes native failure/hash fixtures and
+      upgrades v0.4.1 to v0.4.2.0, retaining a saved project sentinel. Launcher
+      218,135 bytes; payload 369,148,808 bytes. Initial attempt 41665176638
+      crashed in the old v0.4.1 seed installer before the new setup ran; fresh
+      hosted retry passed. No failed check was weakened.
+- [x] CDN run 41666387076 verifies the exact new launcher, full payload SHA-512,
+      range/resume behavior and both prior immutable versions. Latest v0.4.2
+      release uses this qualified launcher and the same tested offline payload.
+- [x] Required root lint/typecheck/311 tests/build passed in hosted 41664617007.
+      Its later pre-existing web bundle-budget failure remains documented.
+
+Proof: `desktop/distribution/evidence/0.4.2/` and `PATCH-0.4.2.md`. This fixes
+the unbounded helper job; the full user project has not been rendered in these
+checks and existing export-performance limitations remain. No paid AI calls or
+changes to the historical USD5.49 reservation ledger.

@@ -6,8 +6,9 @@ picture rendering runs in this repository's compositor.
 
 ## Install and edit
 
-Download the [small v0.4.1 online setup](https://downloads.getkimo.tech/desktop/v0.4.1/kimo-Online-Setup-0.4.1.exe).
-This patch fixes empty preview timelines caused by Windows/saved path separators.
+Download the [small v0.4.2 online setup](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe).
+This patch fixes an unlimited transparent-frame job on rounded cut boundaries,
+and includes the earlier fix for Windows/saved path separators.
 Update the app and resume the saved edit; no reimport or project deletion is needed.
 Setup downloads and verifies the 369 MB app through Cloudflare's CDN before
 installing, with GitHub as backup. The complete offline installer remains in
@@ -16,13 +17,13 @@ The installer is unsigned; Windows may show its SmartScreen confirmation. Update
 come from GitHub Releases and ask before restarting.
 
 The CDN uses the existing free Cloudflare account without R2 or a payment card.
-The v0.4.1 setup is 218,091 bytes. A hosted Windows download/upgrade check took
-58.95s and preserved saved project data; connection speed and disk/antivirus
-conditions affect actual installation time.
+The small setup stays below 2 MB and the app payload is about 369 MB. Hosted
+download/upgrade checks preserve saved project data; connection speed and
+disk/antivirus conditions affect actual installation time.
 See [distribution verification](distribution/QUALIFICATION.md) for exact hashes,
 failure checks and hosting details.
-The [v0.4.1 patch record](distribution/PATCH-0.4.1.md) includes the preview and
-upgrade regression checks.
+The [v0.4.2 patch record](distribution/PATCH-0.4.2.md) includes the bounded-render,
+frame-ID, local CPU and installed-app regression checks.
 
 Drop files or a folder, choose a template, and describe the edit. AI planning needs
 the existing AI access configuration; captions-only transcription works offline.
