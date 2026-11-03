@@ -26,6 +26,25 @@ export function parseRange(value, size) {
   return { start, end, partial: true };
 }
 
+export function createDistributionHandler(releases, makeStream) {
+  const handlers = new Map(
+    Object.entries(releases).map(([version, manifest]) => {
+      if (version !== manifest.version)
+        throw Error('Distribution version mismatch');
+      return [version, createHandler(manifest, makeStream)];
+    }),
+  );
+  return (request, env, ctx) => {
+    const version = /^\/desktop\/v(\d+\.\d+\.\d+)\//.exec(
+      new URL(request.url).pathname,
+    )?.[1];
+    const handle = handlers.get(version);
+    return handle
+      ? handle(request, env, ctx)
+      : new Response('Not found', { status: 404 });
+  };
+}
+
 export function createHandler(manifest, makeStream) {
   const etag = `"sha512-${manifest.sha512}"`;
   const path = `/desktop/v${manifest.version}/${manifest.file}`;

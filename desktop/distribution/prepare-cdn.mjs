@@ -5,7 +5,9 @@ import { createHash } from 'node:crypto';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
-const p = JSON.parse(await readFile(join(here, 'payload.json'), 'utf8'));
+const p = JSON.parse(
+  await readFile(process.argv[4] ?? join(here, 'payload.json'), 'utf8'),
+);
 const body = await readFile(resolve(process.argv[2]));
 if (
   body.length !== p.bytes ||
@@ -30,9 +32,18 @@ const manifest = {
   sha512: p.sha512,
   chunks,
 };
+const previous = JSON.parse(
+  await readFile(join(out, 'manifest.json'), 'utf8').catch((e) => {
+    if (e.code !== 'ENOENT') throw e;
+    return '{"releases":{}}';
+  }),
+);
+if (!previous.releases)
+  throw Error('Expected a versioned distribution manifest');
+previous.releases[p.version] = manifest;
 await writeFile(
   join(out, 'manifest.json'),
-  JSON.stringify(manifest, null, 2) + '\n',
+  JSON.stringify(previous, null, 2) + '\n',
 );
 await writeFile(
   join(out, '_headers'),

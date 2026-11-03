@@ -4,6 +4,9 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { resolve, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { buildOnline, validatePayload } from '../distribution/build-online.mjs';
@@ -66,10 +69,11 @@ const base = {
   fallback: url + '/payload',
 };
 const results = [];
-async function install(exe, target, extraEnv = {}) {
+async function install(exe, target, extraEnv = {}, builderPayload = false) {
   return new Promise((resolveRun, reject) => {
     const started = performance.now();
-    const child = spawn(exe, target ? ['/S', `/D=${target}`] : ['/S'], {
+    const directoryArg = builderPayload ? `"/D=${target}"` : `/D=${target}`;
+    const child = spawn(exe, target ? ['/S', directoryArg] : ['/S'], {
       windowsHide: true,
       // NSIS requires the final /D argument without wrapping quotes, even
       // when the target contains spaces. Node's normal quoting hides it.
@@ -174,6 +178,54 @@ try {
 // exact published v0.4.0 EXE is fetched and SHA-512 verified by the native stub.
 const real = await buildOnline();
 const target = join(root, 'actual installed app');
+let profilePath, profileValue;
+if (real.proof.version !== '0.4.0') {
+  const legacy = JSON.parse(
+    await readFile(resolve('desktop/distribution/payload-0.4.0.json'), 'utf8'),
+  );
+  const response = await fetch(legacy.primary, {
+    signal: AbortSignal.timeout(240000),
+  });
+  assert.equal(response.status, 200);
+  const oldSetup = join(root, legacy.file);
+  const hash = createHash('sha512');
+  let bytes = 0;
+  await pipeline(
+    Readable.fromWeb(response.body),
+    async function* (source) {
+      for await (const chunk of source) {
+        bytes += chunk.length;
+        hash.update(chunk);
+        yield chunk;
+      }
+    },
+    createWriteStream(oldSetup),
+  );
+  assert.equal(bytes, legacy.bytes);
+  assert.equal(hash.digest('base64'), legacy.sha512);
+  const oldInstall = await install(oldSetup, target, {}, true);
+  assert.equal(
+    oldInstall.code,
+    0,
+    'Install the prior v0.4.0 at the upgrade destination',
+  );
+  profilePath = join(
+    process.env.APPDATA,
+    'kimo/projects/hotfix-upgrade-fixture/checkpoint.json',
+  );
+  await mkdir(join(profilePath, '..'), { recursive: true });
+  profileValue = JSON.stringify({
+    version: 1,
+    stage: 'compiled',
+    fixture: 'Preserve saved edit through the version upgrade',
+  });
+  await writeFile(profilePath, profileValue);
+  results.push({
+    name: 'prior-version-installed',
+    version: '0.4.0',
+    ...oldInstall,
+  });
+}
 const outcome = await install(real.exe, target);
 if (outcome.code !== 0) {
   console.log('Real setup failed:', outcome);
@@ -185,6 +237,12 @@ if (outcome.code !== 0) {
   );
 }
 assert.equal(outcome.code, 0, 'Real internet installation');
+if (profilePath)
+  assert.equal(
+    await readFile(profilePath, 'utf8'),
+    profileValue,
+    'Saved project survives the app upgrade',
+  );
 for (const file of [
   'kimo.exe',
   'resources/app.asar',
@@ -204,7 +262,10 @@ const version = spawnSync(
   },
 );
 assert.equal(version.status, 0);
-assert.match(version.stdout.trim(), /^0\.4\.0(?:\D|$)/);
+assert.match(
+  version.stdout.trim(),
+  new RegExp('^' + real.proof.version.replaceAll('.', '\\.') + '(?:\\D|$)'),
+);
 results.push({
   name: 'real-online-install',
   ...outcome,
@@ -212,6 +273,7 @@ results.push({
   stubBytes: real.proof.bytes,
   stubSha256: real.proof.sha256,
   payload: real.proof.payload,
+  savedProjectPreserved: Boolean(profilePath),
 });
 await writeFile(
   join(root, 'online-install-tests.json'),

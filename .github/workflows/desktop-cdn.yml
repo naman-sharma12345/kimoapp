@@ -27,22 +27,31 @@ jobs:
         with:
           node-version: 24
       - run: node --test desktop/test/cdn.test.mjs
+      - name: Read desktop version
+        id: version
+        run: echo "v=$(node -p "require('./desktop/package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Guard the dedicated download hostname
         run: node desktop/distribution/guard-cdn.mjs
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Retrieve the qualified release from GitHub
-        run: gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/payload" --pattern 'kimo-Setup-0.4.0.exe'
+        run: gh release download 'v${{ steps.version.outputs.v }}' --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/payload" --pattern 'kimo-Setup-${{ steps.version.outputs.v }}.exe'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Preserve the original immutable v0.4.0 CDN URLs and launcher
+        run: |
+          gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/legacy" --pattern 'kimo-Setup-0.4.0.exe' --pattern 'kimo-Online-Setup-0.4.0.exe' --pattern 'online-verification.json'
+          node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/legacy/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/legacy" desktop/distribution/payload-0.4.0.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify and split the exact release into static pieces
         if: ${{ !inputs.include_online }}
-        run: node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe"
+        run: node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe"
       - name: Retrieve and verify the qualified small launcher
         if: inputs.include_online
         run: |
-          gh release download v0.4.0 --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/online" --pattern 'kimo-Online-Setup-0.4.0.exe' --pattern 'online-verification.json'
-          node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/online"
+          gh release download 'v${{ steps.version.outputs.v }}' --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/online" --pattern 'kimo-Online-Setup-${{ steps.version.outputs.v }}.exe' --pattern 'online-verification.json'
+          node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe" "$RUNNER_TEMP/online"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy only the installer distribution Worker and static assets
@@ -53,14 +62,16 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       - name: Verify complete and resumed public CDN downloads
         if: ${{ !inputs.include_online }}
-        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe"
+        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe"
       - name: Verify CDN payload and published launcher
         if: inputs.include_online
-        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/online"
+        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe" "$RUNNER_TEMP/online"
+      - name: Verify preserved original CDN payload and launcher
+        run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/legacy/kimo-Setup-0.4.0.exe" "$RUNNER_TEMP/legacy" desktop/distribution/payload-0.4.0.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: installer-cdn-verification
           path: |
-            distribution-evidence/cdn-verification.json
+            distribution-evidence/cdn-verification*.json
             desktop/distribution/cdn/assets/manifest.json

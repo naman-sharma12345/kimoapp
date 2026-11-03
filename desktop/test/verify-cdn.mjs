@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 const here = dirname(fileURLToPath(import.meta.url));
 const p = JSON.parse(
-  await readFile(join(here, '../distribution/payload.json'), 'utf8'),
+  await readFile(
+    process.argv[4] ?? join(here, '../distribution/payload.json'),
+    'utf8',
+  ),
 );
 const url = `https://downloads.getkimo.tech/desktop/v${p.version}/${p.file}`;
 const source = await readFile(process.argv[2]);
@@ -100,7 +103,7 @@ if (process.argv[3]) {
 }
 await mkdir('distribution-evidence', { recursive: true });
 await writeFile(
-  'distribution-evidence/cdn-verification.json',
+  `distribution-evidence/cdn-verification-${p.version}.json`,
   JSON.stringify(proof, null, 2) + '\n',
 );
 console.log(JSON.stringify(proof));

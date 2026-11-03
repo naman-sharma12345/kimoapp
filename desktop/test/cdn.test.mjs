@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHandler, parseRange } from '../distribution/cdn/stream.mjs';
+import {
+  createHandler,
+  createDistributionHandler,
+  parseRange,
+} from '../distribution/cdn/stream.mjs';
 
 const data = Buffer.from('0123456789abcdefghijklmnopqrstuvwxyz');
 const manifest = {
@@ -45,6 +49,31 @@ function harness(fail = false) {
   };
 }
 const handler = createHandler(manifest, () => new TransformStream());
+test('versioned CDN keeps old installer URLs when publishing a patch', async () => {
+  const serve = createDistributionHandler(
+    { '0.4.0': manifest, '0.4.1': { ...manifest, version: '0.4.1' } },
+    () => new TransformStream(),
+  );
+  for (const version of ['0.4.0', '0.4.1']) {
+    const h = harness();
+    const r = await serve(
+      new Request(`https://downloads.getkimo.tech/desktop/v${version}/app.exe`),
+      h.env,
+      h.ctx,
+    );
+    assert.equal(r.status, 200);
+    assert.deepEqual(Buffer.from(await r.arrayBuffer()), data);
+    await Promise.all(h.waits);
+  }
+  assert.equal(
+    (
+      await serve(
+        new Request('https://downloads.getkimo.tech/desktop/v9.9.9/app.exe'),
+      )
+    ).status,
+    404,
+  );
+});
 async function get(headers, method = 'GET', fail = false) {
   const h = harness(fail);
   const r = await handler(

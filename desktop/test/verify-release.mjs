@@ -50,7 +50,7 @@ export async function verifyRelease(dir, version = '0.4.0') {
     blockmap: name + '.blockmap',
     feed: 'latest.yml',
     parser: 'electron-updater provider parseUpdateInfo/getFileList',
-    upgradeFrom: '0.3.2',
+    upgradeFrom: version === '0.4.0' ? '0.3.2' : '0.4.0',
     upgradeAvailable: true,
     scope:
       'Actual feed parser and installer bytes verified. Interactive restart/installation over an existing user profile requires the documented manual test.',
@@ -61,7 +61,10 @@ if (
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   const dir = resolve(process.argv[2] ?? 'desktop/dist'),
-    proof = await verifyRelease(dir, process.argv[3] ?? '0.4.0');
+    proof = await verifyRelease(
+      dir,
+      process.argv[3] ?? require('../package.json').version,
+    );
   await writeFile(
     join(dir, 'release-verification.json'),
     JSON.stringify(proof, null, 2) + '\n',

@@ -70,6 +70,7 @@ export async function buildOnline({ out, fixtureConfig } = {}) {
     APP_GUID: fixture ? `fixture-${guid}` : guid,
     OUTPUT_EXE: exe,
     PAYLOAD_BYTES: p.bytes,
+    PAYLOAD_MB: Math.round(p.bytes / 1e6),
     PAYLOAD_SHA512: Buffer.from(p.sha512, 'base64')
       .toString('hex')
       .toUpperCase(),
