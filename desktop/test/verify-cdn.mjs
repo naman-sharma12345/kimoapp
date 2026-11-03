@@ -9,6 +9,27 @@ const p = JSON.parse(
 );
 const url = `https://downloads.getkimo.tech/desktop/v${p.version}/${p.file}`;
 const source = await readFile(process.argv[2]);
+// A newly created custom domain can take a short time to resolve and issue TLS.
+let ready = false;
+for (let attempt = 0; attempt < 24; attempt++) {
+  try {
+    const r = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (
+      r.status === 200 &&
+      Number(r.headers.get('Content-Length')) === p.bytes
+    ) {
+      ready = true;
+      break;
+    }
+  } catch {
+    /* DNS/TLS provisioning only; full-byte validation below is strict. */
+  }
+  await new Promise((r) => setTimeout(r, 5000));
+}
+assert(ready, 'CDN domain did not become ready');
 const started = performance.now();
 const response = await fetch(url, { signal: AbortSignal.timeout(240000) });
 assert.equal(response.status, 200);

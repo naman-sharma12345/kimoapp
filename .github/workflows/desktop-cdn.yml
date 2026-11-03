@@ -1,6 +1,11 @@
 name: installer free CDN
 on:
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: Verify the existing deployment without redeploying
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -29,6 +34,7 @@ jobs:
       - name: Verify and split the exact release into static pieces
         run: node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-0.4.0.exe"
       - name: Deploy only the installer distribution Worker and static assets
+        if: ${{ !inputs.verify_only }}
         working-directory: desktop/distribution/cdn
         run: npx --yes wrangler@4 deploy
         env:
