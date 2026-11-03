@@ -37,33 +37,36 @@ jobs:
       - run: ./desktop/test/bench/bootstrap.ps1
       - run: '"$PWD/desktop/vendor/ffmpeg" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
       - run: npm ci --prefix desktop
+      - name: Read desktop version
+        id: version
+        run: '"v=$((Get-Content desktop/package.json | ConvertFrom-Json).version)" >> $env:GITHUB_OUTPUT'
       - name: Desktop tests including Windows saved-preview regression
         run: npm test --prefix desktop
       - run: npm run build:renderer --prefix desktop
-      - name: Build v0.4.1 offline payload
+      - name: Build the patched offline payload
         run: npm exec --prefix desktop -- electron-builder --projectDir desktop --win nsis --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - run: node desktop/test/verify-release.mjs desktop/dist 0.4.1
+      - run: node desktop/test/verify-release.mjs desktop/dist
       - name: Actual installed-app preview with Windows paths and no model network
         run: |
           $installRoot=Join-Path $env:RUNNER_TEMP 'kimo-hotfix-installed'
-          $setup=Get-Item desktop/dist/kimo-Setup-0.4.1.exe
+          $setup=Get-Item 'desktop/dist/kimo-Setup-${{ steps.version.outputs.v }}.exe'
           $process=Start-Process $setup.FullName -ArgumentList @('/S',('/D='+$installRoot)) -PassThru -Wait -WindowStyle Hidden
           if ($process.ExitCode -ne 0) { throw "Installer exit $($process.ExitCode)" }
           $exe=Join-Path $installRoot 'kimo.exe'
           if (-not (Test-Path -LiteralPath $exe)) { throw 'Installed EXE missing' }
           $version=(Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
-          if ($version -notmatch '^0\.4\.1(?:\D|$)') { throw "Wrong installed version $version" }
+          if (-not $version.StartsWith('${{ steps.version.outputs.v }}.')) { throw "Wrong installed version $version" }
           $fixture=Join-Path $env:RUNNER_TEMP 'preview smoke'
           New-Item -ItemType Directory -Force $fixture | Out-Null
-          $input=Join-Path $fixture 'source clip.mkv'
-          & desktop/vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=192x128:r=25:d=2' -f lavfi -i 'sine=frequency=180:sample_rate=48000:duration=2' -c:v ffv1 -c:a pcm_s16le $input
+          $smokeSource=Join-Path $fixture 'source clip.mkv'
+          & desktop/vendor/ffmpeg/ffmpeg.exe -v error -y -f lavfi -i 'testsrc2=s=192x128:r=30:d=2' -f lavfi -i 'sine=frequency=180:sample_rate=48000:duration=2' -c:v ffv1 -c:a pcm_s16le $smokeSource
           if ($LASTEXITCODE -ne 0) { throw 'Synthetic smoke source failed' }
           $words=Join-Path $fixture 'words.json'
           '[{"w":"Preview","start":0.2,"end":0.6},{"w":"works.","start":0.7,"end":1.2}]' | Set-Content -LiteralPath $words -Encoding utf8NoBOM
           $out=Join-Path $fixture 'project'
-          $config=@{directory=$out;template='youtube-talking';preview=$true;canvas=@{width=192;height=128};inputs=@(@{path=$input;words=$words})}
+          $config=@{directory=$out;template='youtube-talking';preview=$true;canvas=@{width=192;height=128};inputs=@(@{path=$smokeSource;words=$words})}
           $configPath=Join-Path $fixture 'config.json'
           $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding utf8NoBOM
           $process=Start-Process $exe -ArgumentList @('--creator-smoke',('"'+$configPath+'"')) -PassThru -WindowStyle Hidden
@@ -71,12 +74,21 @@ jobs:
           if (-not $process.WaitForExit(10*60*1000)) { & taskkill /pid $process.Id /T /F; throw 'Installed preview timed out' }
           if ($process.ExitCode -ne 0) { if(Test-Path "$out/smoke.json"){Get-Content "$out/smoke.json"}; throw 'Installed preview failed' }
           if (-not (Test-Path "$out/preview.mp4")) { throw 'Installed preview output missing' }
-          @{version=$version;installerExit=0;previewExit=$process.ExitCode;previewBytes=(Get-Item "$out/preview.mp4").Length;networkCalls=0;fixture='Synthetic two-second clip, no user footage or paid calls'} | ConvertTo-Json | Set-Content desktop/dist/patch-install-proof.json -Encoding utf8NoBOM
+          $boundary=Join-Path $fixture 'boundary'
+          $config=@{directory=$boundary;roundedBoundary=$true;inputs=@(@{path=$smokeSource})}
+          $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding utf8NoBOM
+          $process=Start-Process $exe -ArgumentList @('--creator-smoke',('"'+$configPath+'"')) -PassThru -WindowStyle Hidden
+          $null=$process.Handle
+          if (-not $process.WaitForExit(90*1000)) { & taskkill /pid $process.Id /T /F; throw 'Installed boundary regression timed out' }
+          if ($process.ExitCode -ne 0) { Get-Content "$boundary/smoke.json"; throw 'Installed boundary regression failed' }
+          $result=Get-Content "$boundary/smoke.json" -Raw | ConvertFrom-Json
+          if ($result.frames -ne 30 -or $result.replay.networkAttempts -ne 0) { throw 'Boundary output is not exactly 30 frames / network-free' }
+          @{version=$version;installerExit=0;previewExit=0;previewBytes=(Get-Item "$out/preview.mp4").Length;boundaryExit=$process.ExitCode;boundaryFrames=$result.frames;networkCalls=$result.replay.networkAttempts;fixture='Synthetic two-second clip, no user footage or paid calls'} | ConvertTo-Json | Set-Content desktop/dist/patch-install-proof.json -Encoding utf8NoBOM
       - name: Create draft release only after qualification
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v0.4.1 --draft --target $env:GITHUB_SHA --title 'kimo for Windows 0.4.1 — Windows preview fix' --notes-file desktop/distribution/PATCH-0.4.1.md desktop/dist/kimo-Setup-0.4.1.exe desktop/dist/kimo-Setup-0.4.1.exe.blockmap desktop/dist/latest.yml
+          gh release create 'v${{ steps.version.outputs.v }}' --draft --target $env:GITHUB_SHA --title 'kimo for Windows ${{ steps.version.outputs.v }} — Render boundary fix' --notes-file 'desktop/distribution/PATCH-${{ steps.version.outputs.v }}.md' 'desktop/dist/kimo-Setup-${{ steps.version.outputs.v }}.exe' 'desktop/dist/kimo-Setup-${{ steps.version.outputs.v }}.exe.blockmap' desktop/dist/latest.yml
           if ($LASTEXITCODE -ne 0) { throw 'Draft release creation failed' }
       - uses: actions/upload-artifact@v4
         if: always()
@@ -86,3 +98,4 @@ jobs:
             desktop/dist/release-verification.json
             desktop/dist/patch-install-proof.json
             ${{ runner.temp }}/preview smoke/project/smoke.json
+            ${{ runner.temp }}/preview smoke/boundary/smoke.json

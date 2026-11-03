@@ -43,7 +43,7 @@ const stop = (signal) => {
   if (signal?.aborted) throw new Error('cancelled');
 };
 const safe = (n) => (Number.isFinite(n) ? Number(n.toFixed(9)) : 0);
-const BASE_CACHE_VERSION = 2;
+export const COMPOSITOR_VERSION = 3;
 const scriptOptions = new Map();
 async function scriptOption(ffmpeg) {
   if (!scriptOptions.has(ffmpeg))
@@ -102,6 +102,7 @@ function processDone(child, signal, onProgress) {
 }
 async function ffmpegRun(ffmpeg, args, { signal, onProgress, cwd } = {}) {
   stop(signal);
+  assertFiniteFrameLimits(args);
   const child = spawnBackground(
     ffmpeg,
     [
@@ -117,6 +118,39 @@ async function ffmpegRun(ffmpeg, args, { signal, onProgress, cwd } = {}) {
     { stdio: ['ignore', 'pipe', 'pipe'], cwd },
   );
   await processDone(child, signal, onProgress);
+}
+// FFmpeg treats -frames:v -1 as unlimited. Never let a timeline arithmetic
+// error turn a synthetic source into an unbounded CPU/disk-writing process.
+export function assertFiniteFrameLimits(args) {
+  for (let i = 0; i < args.length; i++)
+    if (args[i] === '-frames:v') {
+      const count = Number(args[i + 1]);
+      if (!Number.isSafeInteger(count) || count <= 0)
+        throw new Error('Render frame limit must be a finite positive integer');
+    }
+}
+
+export function bakedTrackPlans(track, sources, fps, from, to) {
+  if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || from < 0 || to <= from)
+    throw new Error('Invalid track frame range');
+  const ordered = [...track.clips].sort((a, b) => a.at - b.at).map(clip => {
+    const source = sources.find(s => s.id === clip.src);
+    if (!source) throw new Error('Track clip source is missing');
+    return { clip, source, plan: framePlan(clip, source, fps, from, to) };
+  }).filter(item => item.plan.indices.length);
+  let cursor = from;
+  const pieces = [];
+  for (let i = 0; i < ordered.length; i++) {
+    const { clip, source, plan: original } = ordered[i];
+    // Microsecond-rounded adjacent clips can both claim the same boundary
+    // frame. The later clip owns it, matching layer order in the direct graph.
+    const end = Math.min(original.end, ordered[i + 1]?.plan.start ?? to);
+    const plan = framePlan(clip, source, fps, Math.max(from, cursor), end);
+    if (!plan.indices.length) continue;
+    pieces.push({ clip, source, plan, gap: plan.start - cursor });
+    cursor = plan.end;
+  }
+  return pieces;
 }
 /**
  * One float crop rectangle per planned output frame: camera keys sampled per
@@ -601,7 +635,8 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampl
     const pieces = [];
     let cursor = from;
     const blank = async (count) => {
-      if (!count) return;
+      if (count <= 0) return;
+      if (!Number.isSafeInteger(count)) throw new Error('Invalid transparent gap frame count');
       const path = join(dir, `transparent-${count}.mkv`);
       if (!existsSync(path))
         await ffmpegRun(
@@ -630,15 +665,12 @@ async function bakeTracks(edl, { ffmpeg, dir, from, to, signal, emit,strictSampl
             'tv',
             path,
           ],
-          { signal },
+          { signal, onProgress: n => emit({ t: 'progress', phase: 'compose', label: 'filling timeline gap', frame: Math.min(to, cursor + n), total: frameCount(edl), f: Math.min(to, cursor + n) / frameCount(edl) }) },
         );
       pieces.push(path);
     };
-    for (const clip of [...track.clips].sort((a, b) => a.at - b.at)) {
-      const source = edl.sources.find((s) => s.id === clip.src),
-        plan = framePlan(clip, source, edl.canvas.fps, from, to);
-      if (!plan.indices.length) continue;
-      await blank(plan.start - cursor);
+    for (const { clip, source, plan, gap } of bakedTrackPlans(track, edl.sources, edl.canvas.fps, from, to)) {
+      await blank(gap);
       const path = join(
         dir,
         `mapped-${ti}-${clip.id.replace(/[^a-z0-9_-]/gi, '_')}-${from}.mkv`,
@@ -1222,7 +1254,7 @@ export async function compose({
         const key = createHash('sha256')
           .update(
             JSON.stringify([
-              BASE_CACHE_VERSION,
+              COMPOSITOR_VERSION,
               edl.canvas,
               edl.video,
               edl.sources.map((s) => [s.id, s.path, s.signature, s.fps, s.w, s.h, s.rotation]),

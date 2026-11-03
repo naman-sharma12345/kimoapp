@@ -9,6 +9,7 @@ import { run } from './audio/process.mjs';
 import { runEdit, probe, canvasFps } from './engine.mjs';
 import { headTrack } from './camera-probe.mjs';
 import { applyCaptions } from './captions.mjs';
+import { compose } from './compose.mjs';
 
 export async function runCreatorSmoke(
   config,
@@ -19,6 +20,94 @@ export async function runCreatorSmoke(
   const start = Date.now(),
     dir = config.directory;
   await mkdir(dir, { recursive: true });
+  if (config.roundedBoundary) {
+    const source = await probe(ffprobe, config.inputs[0].path);
+    if (!source || source.duration < 1.5 || Math.abs(source.fps - 30) > 0.01)
+      throw new Error('Boundary fixture requires a two-second 30 fps source');
+    const output = join(dir, 'boundary.mkv');
+    const edl = {
+      edl_version: 1,
+      canvas: { w: 192, h: 128, fps: 30, bg: '#000000' },
+      sources: [
+        {
+          id: 's',
+          path: source.path,
+          w: source.width,
+          h: source.height,
+          fps: 30,
+          duration: source.duration,
+          kind: 'video',
+          audio: false,
+        },
+      ],
+      video: [
+        {
+          track: 'v',
+          clips: [
+            {
+              id: 'first',
+              src: 's',
+              at: 0,
+              in: 0,
+              out: 0.5000003333333333,
+              speed: 1,
+            },
+            { id: 'second', src: 's', at: 0.5, in: 1, out: 1.5, speed: 1 },
+          ],
+        },
+      ],
+      audio: [],
+      overlays: [],
+      master: { lufs: -14, true_peak: -1 },
+    };
+    const originalFetch = globalThis.fetch;
+    let requests = 0;
+    globalThis.fetch = async () => {
+      requests++;
+      throw new Error('Network disabled in boundary smoke');
+    };
+    try {
+      await compose({
+        edl,
+        ffmpeg,
+        ffprobe,
+        output,
+        dir: join(dir, 'work'),
+        strategy: 'B',
+        signal: AbortSignal.timeout(45000),
+        emit,
+      });
+      const decoded = await run(
+        ffmpeg,
+        [
+          '-v',
+          'error',
+          '-i',
+          output,
+          '-an',
+          '-pix_fmt',
+          'rgb24',
+          '-f',
+          'rawvideo',
+          'pipe:1',
+        ],
+        { binary: true, title: 'boundary output frame count' },
+      );
+      const frames = decoded.stdout.length / (192 * 128 * 3);
+      if (frames !== 30 || requests)
+        throw new Error('Boundary smoke output/network mismatch');
+      return {
+        ok: true,
+        output,
+        frames,
+        seconds: 1,
+        fixture: 'Rounded adjacent cuts, forced fallback compositor',
+        replay: { networkAttempts: requests, paidCalls: 0 },
+      };
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
   const files = [],
     clips = [],
     timings = {};

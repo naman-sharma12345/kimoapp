@@ -2,7 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { compose } from '../compose.mjs';
+import { compose, COMPOSITOR_VERSION } from '../compose.mjs';
 import { duration, rate } from '../edl.mjs';
 import { mixSound } from '../audio/mix.mjs';
 import { run } from '../audio/process.mjs';
@@ -26,6 +26,7 @@ export function renderKeys(edl) {
       return { ...s, fingerprint };
     }),
     base = {
+      compositor: COMPOSITOR_VERSION,
       canvas: edl.canvas,
       sources: sources.filter((s) => s.kind !== 'audio'),
       video: edl.video,

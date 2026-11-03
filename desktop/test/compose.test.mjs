@@ -5,7 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { command, filterPath, probeFile } from './bench/io.mjs';
-import { compose, cameraRectsForClip } from '../compose.mjs';
+import {
+  compose,
+  cameraRectsForClip,
+  bakedTrackPlans,
+  assertFiniteFrameLimits,
+} from '../compose.mjs';
 import { rate, frameCount, fromKimoProject, framePlan } from '../edl.mjs';
 import { rectFilter } from '../sam.mjs';
 import { frameSourceMetrics, projectEdl } from './bench/analyze.mjs';
@@ -107,6 +112,115 @@ const W = 192,
   block = 8,
   left = 32,
   top = 60;
+
+test('generated frame limits reject unlimited, zero and noninteger values', () => {
+  for (const count of [-1, 0, NaN, Infinity, 1.5, undefined])
+    assert.throws(
+      () => assertFiniteFrameLimits(['-frames:v', String(count), 'output.mkv']),
+      /finite positive integer/,
+    );
+  assert.doesNotThrow(() =>
+    assertFiniteFrameLimits(['-frames:v', '30', 'output.mkv']),
+  );
+});
+
+test('rounded adjacent cuts have one frame owner and no negative gaps across chunks', () => {
+  const e = {
+    sources: [{ id: 's', path: 'metadata-only.mkv', fps: 30, duration: 1.6 }],
+    video: [{ clips: [] }],
+  };
+  e.video[0].clips = [
+    { id: 'first', src: 's', at: 0, in: 0, out: 0.5000003333333333, speed: 1 },
+    { id: 'second', src: 's', at: 0.5, in: 1, out: 1.5, speed: 1 },
+  ];
+  for (const [from, to] of [
+    [0, 30],
+    [0, 15],
+    [15, 30],
+    [10, 20],
+  ]) {
+    const pieces = bakedTrackPlans(e.video[0], e.sources, 30, from, to);
+    assert(pieces.every((p) => Number.isSafeInteger(p.gap) && p.gap >= 0));
+    assert.equal(
+      pieces.reduce((n, p) => n + p.gap + p.plan.indices.length, 0),
+      to - from,
+    );
+    const boundary = pieces.find((p) => p.plan.start <= 15 && p.plan.end > 15);
+    if (from <= 15 && to > 15) assert.equal(boundary.clip.id, 'second');
+  }
+});
+
+test(
+  'fallback render completes rounded adjacent cuts with exact source frame IDs',
+  { timeout: 45000 },
+  async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kimo-rounded-cut-'));
+    try {
+      const input = await fixture(dir, 30),
+        e = edlFor(input, 30);
+      e.video[0].clips = [
+        {
+          id: 'first',
+          src: 's',
+          at: 0,
+          in: 0,
+          out: 0.5000003333333333,
+          speed: 1,
+        },
+        { id: 'second', src: 's', at: 0.5, in: 1, out: 1.5, speed: 1 },
+      ];
+      const output = join(dir, 'result.mkv');
+      await compose({
+        edl: e,
+        ffmpeg,
+        ffprobe,
+        output,
+        dir: join(dir, 'work'),
+        strategy: 'B',
+        signal: AbortSignal.timeout(30000),
+      });
+      const raw = (
+        await command(ffmpeg, [
+          '-v',
+          'error',
+          '-i',
+          output,
+          '-an',
+          '-pix_fmt',
+          'rgb24',
+          '-f',
+          'rawvideo',
+          'pipe:1',
+        ])
+      ).stdout;
+      const size = W * H * 3;
+      assert.equal(
+        raw.length,
+        size * 30,
+        'exactly 30 output frames, no duplicated boundary',
+      );
+      const ids = Array.from({ length: 30 }, (_, n) => {
+        let id = 0;
+        for (let bit = 0; bit < 16; bit++) {
+          const i = n * size + ((top + 4) * W + left + bit * block + 4) * 3;
+          if ((raw[i] + raw[i + 1] + raw[i + 2]) / 3 > 127) id |= 1 << bit;
+        }
+        return id;
+      });
+      assert.deepEqual(ids, [
+        ...Array.from({ length: 15 }, (_, i) => i),
+        ...Array.from({ length: 15 }, (_, i) => 30 + i),
+      ]);
+    } finally {
+      await rm(dir, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 100,
+      });
+    }
+  },
+);
 
 test(
   'raw-footage frame-ID stripe survives both full-resolution aspect transforms and detects an injected repeat',
