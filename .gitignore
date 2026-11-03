@@ -27,6 +27,8 @@ test-results-matrix/
 desktop/vendor/
 desktop/dist/
 desktop/dist-online/
+desktop/distribution/cdn/assets/
+desktop/distribution/cdn/.wrangler/
 distribution-evidence/
 desktop/node_modules/
 desktop/test/bench/out/
