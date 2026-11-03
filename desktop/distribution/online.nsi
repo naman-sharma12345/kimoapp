@@ -22,6 +22,7 @@ VIAddVersionKey /LANG=1033 "FileVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=1033 "LegalCopyright" "kimo"
 !define MUI_WELCOMEPAGE_TITLE "install kimo ${APP_VERSION}"
 !define MUI_WELCOMEPAGE_TEXT "Setup will download the app and its offline tools (about 369 MB), verify them, and install kimo.$\r$\n$\r$\nAn internet connection is required. Your existing installation stays in place if the download fails or is cancelled."
+!define MUI_CUSTOMFUNCTION_ABORT kimoAbort
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -57,7 +58,7 @@ Function .onInit
   ${EndIf}
 FunctionEnd
 
-Function .onUserAbort
+Function kimoAbort
   ; Let the inner installer finish its atomic setup flow once started.
   ${If} $installing == "1"
     Abort
