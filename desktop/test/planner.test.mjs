@@ -24,6 +24,7 @@ import { runCreatorEdit } from '../creator-engine.mjs';
 import { probe, youtubeMaster, canvasFps } from '../engine.mjs';
 import { command } from './bench/io.mjs';
 import { toolPaths } from './bench/run.mjs';
+import { duration, frameCount } from '../edl.mjs';
 const P = { width: 192, height: 128 },
   files = [
     {
@@ -82,6 +83,74 @@ test('nine complete templates compile into validated EDLs with legacy aliases', 
     );
     assert.equal(edl.camera_report.energy, f.context.template.camera.energy);
   }
+});
+
+test('Windows transcript paths survive saved-EDL preview recompilation across five sources', () => {
+  const f = fixture('documentary');
+  f.context.template.duration.max_s = null;
+  f.files = Array.from({ length: 5 }, (_, i) => ({
+    ...files[0],
+    path: `C:\\Users\\editor\\lesson clips\\पाठ ${i + 1}.mkv`,
+  }));
+  f.clips = f.files.map((file, i) => ({
+    ...structuredClone(f.clips[0]),
+    src: `f${i}`,
+    file,
+  }));
+  f.context = plannerContext({
+    template: f.context.template,
+    files: f.files,
+    clips: f.clips,
+    P,
+  });
+  f.plan = defaultPlan(f.context);
+  const before = JSON.stringify(f.clips);
+  const original = compilePlan(f).edl;
+  const normalizedFiles = original.sources.map((s) => ({
+    path: s.path,
+    kind: s.kind,
+    width: s.w,
+    height: s.h,
+    duration: s.duration,
+    fps: s.fps,
+    audio: s.audio,
+  }));
+  const resumed = compilePlan({
+    ...f,
+    files: normalizedFiles,
+    clips: original.creator_clips,
+    previous: original,
+  }).edl;
+  assert.equal(
+    JSON.stringify(f.clips),
+    before,
+    'Original transcript paths remain unchanged',
+  );
+  assert(frameCount(resumed) > 0);
+  assert.equal(duration(resumed), duration(original));
+  assert.deepEqual(
+    resumed.video.map((t) => t.clips.map((c) => [c.src, c.at, c.in, c.out])),
+    original.video.map((t) => t.clips.map((c) => [c.src, c.at, c.in, c.out])),
+  );
+  assert.equal(
+    new Set(resumed.video.flatMap((t) => t.clips.map((c) => c.src))).size,
+    5,
+  );
+  assert(
+    plannerContext({
+      ...f,
+      files: normalizedFiles,
+      template: f.context.template,
+    }).clips.every((c) => c.type === 'speech'),
+  );
+});
+
+test('missing selected media fails before emitting a nonexistent s0 source', () => {
+  const f = fixture();
+  assert.throws(
+    () => compilePlan({ ...f, files: [{ ...files[0], path: 'C:/other.mkv' }] }),
+    /selected clip is missing/,
+  );
 });
 test('validator rejects invented fields, nonexistent anchors, numbers, empty story and invalid ranges', () => {
   const { plan, context } = fixture();
@@ -387,6 +456,14 @@ test(
       assert.equal(restored.creator.undoDepth, 1);
       assert.deepEqual(restored.creator.passes, ['audio']);
       assert.equal(requests, 2);
+      const preview = await runCreatorEdit(
+        { ...options, mode: 'manual', preview: true },
+        deps,
+      );
+      assert.equal(preview.preview, true);
+      assert(preview.duration > 0);
+      assert(preview.output.endsWith('preview.mp4'));
+      assert.equal(requests, 2, 'Saved preview makes no extra model requests');
       if (process.env.KIMO_PLANNER_SMOKE_EVIDENCE) {
         const { copyFile } = await import('node:fs/promises');
         await mkdir(process.env.KIMO_PLANNER_SMOKE_EVIDENCE, {

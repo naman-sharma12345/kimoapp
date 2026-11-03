@@ -38,6 +38,10 @@ import {
 import { barSeconds } from '../audio/music.mjs';
 import { colorConfig } from '../color/plan.mjs';
 
+// Saved EDL sources use '/', while Windows probe/transcript paths use '\\'.
+// Compare normalized keys without changing paths used to open original files.
+const mediaPath = (path) => path?.replaceAll('\\', '/');
+
 export function plannerContext({ template, note, files, clips = [], P }) {
   const cutTemplate = templateFor(P, template.legacy_style, template.cut),
     analysis = analyzeClips(clips, cutTemplate);
@@ -79,7 +83,8 @@ export function plannerContext({ template, note, files, clips = [], P }) {
       .map((f, i) => ({
         id: `s${i + 1}`,
         type:
-          clips.find((c) => c.file.path === f.path)?.kind ?? 'untranscribed',
+          clips.find((c) => mediaPath(c.file.path) === mediaPath(f.path))
+            ?.kind ?? 'untranscribed',
         duration: f.duration,
         description: `Metadata only: ${basename(f.path)}, ${f.width} by ${f.height}; visual content not inferred.`,
       })),
@@ -128,8 +133,14 @@ export function compilePlan({
   let at = 0;
   const placed = [];
   const add = (f, a, b, k) => {
-    const sourceIndex = videos.findIndex((v) => v.path === f.path),
+    const sourceIndex = videos.findIndex(
+        (v) => mediaPath(v.path) === mediaPath(f.path),
+      ),
       r = frameRange(a, b, Number(f.fps) || fps, fps);
+    if (sourceIndex < 0)
+      throw new Error(
+        'A selected clip is missing from the imported video sources',
+      );
     let d = Math.min(
       r.dur,
       t.duration.max_s == null ? Infinity : Math.max(0, t.duration.max_s - at),
@@ -238,7 +249,7 @@ export function compilePlan({
     for (const c of edl.video[0].clips) {
       const path = edl.sources.find((x) => x.id === c.src)?.path;
       if (
-        path === clips[s.clip]?.file.path.replaceAll('\\', '/') &&
+        mediaPath(path) === mediaPath(clips[s.clip]?.file.path) &&
         s.end > c.in &&
         s.start < c.out
       )
@@ -252,7 +263,9 @@ export function compilePlan({
       (c) =>
         c.kind === 'broll' ||
         plan.broll.some(
-          (b) => videos[Number(b.clip.slice(1)) - 1]?.path === c.file.path,
+          (b) =>
+            mediaPath(videos[Number(b.clip.slice(1)) - 1]?.path) ===
+            mediaPath(c.file.path),
         ),
     )
     .map((c) => ({ path: c.file.path, duration: c.duration }));
@@ -330,7 +343,7 @@ export function compilePlan({
       words.findIndex(
         (v) =>
           v.w === w.w &&
-          v.path === w.path &&
+          mediaPath(v.path) === mediaPath(w.path) &&
           Math.abs((v.src_start ?? v.start) - w.start) < 0.12,
       ),
     );
@@ -340,7 +353,11 @@ export function compilePlan({
     if (!w) return -1;
     for (const c of edl.video[0].clips) {
       const path = edl.sources.find((s) => s.id === c.src)?.path;
-      if (path === w.path && w.start >= c.in - 0.01 && w.start < c.out) {
+      if (
+        mediaPath(path) === mediaPath(w.path) &&
+        w.start >= c.in - 0.01 &&
+        w.start < c.out
+      ) {
         const time = c.at + (w.start - c.in) / (c.speed ?? 1);
         return words.findIndex(
           (v) => Math.abs(v.start - time) < 0.05 && v.w === w.w,

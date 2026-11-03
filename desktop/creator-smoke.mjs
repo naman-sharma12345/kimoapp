@@ -179,7 +179,7 @@ export async function runCreatorSmoke(
       },
       signal: controller.signal,
       emit,
-      preview: false,
+      preview: config.preview === true,
     });
   } finally {
     globalThis.fetch = previousFetch;

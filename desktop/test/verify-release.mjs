@@ -61,7 +61,7 @@ if (
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   const dir = resolve(process.argv[2] ?? 'desktop/dist'),
-    proof = await verifyRelease(dir);
+    proof = await verifyRelease(dir, process.argv[3] ?? '0.4.0');
   await writeFile(
     join(dir, 'release-verification.json'),
     JSON.stringify(proof, null, 2) + '\n',
