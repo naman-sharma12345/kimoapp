@@ -1,11 +1,14 @@
 import { availableParallelism } from 'node:os';
-// Foreground machines retain the existing low-CPU default. CI opts into the
-// four-core budget explicitly; at least one core remains free for coordination.
+// KIMO_PERFORMANCE_PROFILE=background opts into the old low-CPU-while-editing
+// default (1 worker); "ci" and the default ("fast", unset) scale to the
+// machine, leaving one core free for the UI. See resources.cjs.
 export function analysisWorkers(
   env = process.env,
   cores = availableParallelism(),
 ) {
-  return env.KIMO_PERFORMANCE_PROFILE === 'ci' ? Math.max(1, cores - 1) : 1;
+  const raw = String(env.KIMO_PERFORMANCE_PROFILE || '').toLowerCase();
+  if (raw === 'background' || raw === 'low-cpu' || raw === 'low_cpu') return 1;
+  return Math.max(1, cores - 1);
 }
 export async function mapPool(items, fn, workers = analysisWorkers()) {
   let cursor = 0;

@@ -49,7 +49,7 @@ test('release feed uses the real updater parser and rejects altered installer by
     await rm(dir, { recursive: true, force: true });
   }
 });
-test('analysis pool preserves order and its concurrency bound while the default stays low CPU', async () => {
+test('analysis pool preserves order and its concurrency bound; the default now scales to the machine, background opts into low CPU', async () => {
   let active = 0,
     peak = 0;
   const output = await mapPool(
@@ -64,8 +64,9 @@ test('analysis pool preserves order and its concurrency bound while the default 
   );
   assert.deepEqual(output, [6, 2, 4, 8]);
   assert.equal(peak, 2);
-  assert.equal(analysisWorkers({}, 4), 1);
+  assert.equal(analysisWorkers({}, 4), 3);
   assert.equal(analysisWorkers({ KIMO_PERFORMANCE_PROFILE: 'ci' }, 4), 3);
+  assert.equal(analysisWorkers({ KIMO_PERFORMANCE_PROFILE: 'background' }, 4), 1);
 });
 
 test(

@@ -6,7 +6,16 @@ These settings follow [NVIDIA's FFmpeg quality guidance](https://docs.nvidia.com
 
 If hardware decoding fails, the app retries GPU encoding with bounded software decoding. If the hardware encoder fails, it uses the existing high-quality CPU encode with limited app-owned threads. Cancellation never starts another attempt. Failed hardware attempts are reported in the live activity feed. A detected encoder is cached for the process rather than probed for every master.
 
-Media subprocesses run below normal scheduling priority; the Electron UI is not demoted. App-owned FFmpeg decode/encode pools default to one CPU thread, and filter pools use one. Supported Rayon/OpenMP/BLAS environment pools are also bounded. `KIMO_WORKER_THREADS=2` opts into a little more throughput on machines with enough CPU headroom; higher values are capped at two. The bundled engine still controls its own helper arguments; these limits cannot promise a fixed total CPU percentage across that black box. See [Node priority documentation](https://nodejs.org/api/os.html#priority-constants).
+Media subprocesses run below normal scheduling priority; the Electron UI is not demoted. As of v8.13, an export is foreground work the user is actively waiting on, so by default App-owned FFmpeg decode/encode and filter pools (and the supported Rayon/OpenMP/BLAS environment pools) scale to the machine, via `os.availableParallelism()`, leaving one core free for the UI. That had been the single biggest render-speed bug in the app: every export-path FFmpeg call was forced to `-threads 1`/`-filter_threads 1`/`-filter_complex_threads 1` unconditionally, so a render used one core out of however many the PC has, regardless of its size.
+
+`KIMO_PERFORMANCE_PROFILE` is the user-visible choice between the two behaviours:
+  - unset, or `fast` (the new default): scale to the machine as above.
+  - `background` (aliases `low-cpu`/`low_cpu`): the old pre-v8.13 default — caps at 1-2 threads, for someone who wants to keep using the PC for something else heavy while a render runs in the background.
+  - `ci`: unchanged — every core, for hosted test/bench runners.
+
+`KIMO_WORKER_THREADS=N` still requests an explicit thread count; it is now honoured up to the machine's own ceiling instead of being capped at two. The bundled engine still controls its own helper arguments; these limits cannot promise a fixed total CPU percentage across that black box. See [Node priority documentation](https://nodejs.org/api/os.html#priority-constants).
+
+A settings toggle in the desktop UI for `KIMO_PERFORMANCE_PROFILE` (today it's an environment variable only) is the natural next step so "fast" vs "keep my PC free" is a checkbox, not an env var; not done in this pass.
 
 Cross-process locks allow one expensive edit and one benchmark at a time. Dead owners recover safely. The app queue claims its job before awaiting engine import, closing a race that could start two edits. Benchmark SIGINT/SIGTERM cancels its active edit, analysis and transcription before releasing its lock. Analysis output buffers are bounded and unit test files run serially.
 
