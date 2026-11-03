@@ -13,7 +13,21 @@ const p = JSON.parse(
 );
 const url = `https://downloads.getkimo.tech/desktop/v${p.version}/${p.file}`;
 const source = await readFile(process.argv[2]);
-const mapResponse = await fetch(url + '.blockmap');
+// Worker and asset versions can reach edge locations a few seconds apart.
+// Retry only unavailable headers; byte/hash/range assertions remain strict.
+async function available(url, options = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(240000),
+    });
+    if (![404, 503].includes(response.status) || attempt === 23)
+      return response;
+    await response.body?.cancel();
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+}
+const mapResponse = await available(url + '.blockmap');
 assert.equal(mapResponse.status, 200);
 const mapBytes = Buffer.from(await mapResponse.arrayBuffer());
 assert(mapBytes.length < 2 * 1024 * 1024);
@@ -49,7 +63,7 @@ for (let attempt = 0; attempt < 24; attempt++) {
 }
 assert(ready, 'CDN domain did not become ready');
 const started = performance.now();
-const response = await fetch(url, { signal: AbortSignal.timeout(240000) });
+const response = await available(url);
 assert.equal(response.status, 200);
 assert.equal(Number(response.headers.get('Content-Length')), p.bytes);
 const hash = createHash('sha512');
