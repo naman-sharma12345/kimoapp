@@ -35,6 +35,7 @@ Var digest
 Var payloadSize
 Var mutex
 Var installExit
+Var installing
 
 Function .onInit
   ${IfNot} ${RunningX64}
@@ -45,11 +46,23 @@ Function .onInit
   System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Local\kimo-online-setup-${APP_GUID}") p .r0 ?e'
   Pop $1
   StrCpy $mutex $0
+  ${If} $mutex = 0
+    SetErrorLevel 2
+    Quit
+  ${EndIf}
   ${If} $1 = 183
     MessageBox MB_OK "kimo setup is already running." /SD IDOK
     SetErrorLevel 2
     Quit
   ${EndIf}
+FunctionEnd
+
+Function .onUserAbort
+  ; Let the inner installer finish its atomic setup flow once started.
+  ${If} $installing == "1"
+    Abort
+  ${EndIf}
+  SetErrorLevel 1
 FunctionEnd
 
 ; Called only after InetC reports completion. Do not trust status alone, HTTP
@@ -119,6 +132,7 @@ Section "install kimo"
   ; The only app-changing operation. All failure/cancel paths above leave the
   ; previous installation untouched. /D is the last argument, as NSIS requires.
   DetailPrint "installing kimo"
+  StrCpy $installing "1"
   ClearErrors
   ExecWait '"$payload" /S /currentuser /D=$INSTDIR' $installExit
   IfErrors install_failed

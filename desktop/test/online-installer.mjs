@@ -62,6 +62,9 @@ async function install(exe, target, extraEnv = {}) {
     const started = performance.now();
     const child = spawn(exe, ['/S', `/D=${target}`], {
       windowsHide: true,
+      // NSIS requires the final /D argument without wrapping quotes, even
+      // when the target contains spaces. Node's normal quoting hides it.
+      windowsVerbatimArguments: true,
       env: { ...process.env, ...extraEnv },
       stdio: 'ignore',
     });
