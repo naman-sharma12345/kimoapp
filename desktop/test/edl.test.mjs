@@ -275,3 +275,134 @@ test('native transitions map to EDL kinds and audio tracks get VOICE/MUSIC/SFX r
   assert.equal(audio[1].clips[0].duck.under, 'VOICE');
   assert.equal(audio[3].clips[0].duck, undefined, 'planner-written envelope is respected');
 });
+
+test('framePlan(): the fast arithmetic path survives floating-point rounding noise across realistic multi-clip timeline offsets', () => {
+  // Regression for the framePlan() fast-path bug: every output frame's source
+  // index used to be rounded independently (division, then multiplication,
+  // then Math.round(), freshly per frame) instead of incrementally. When a
+  // clip's rate (speed * sourceFps / canvasFps) is an integer -- the common
+  // case of the same fps on both sides at speed 1 -- the true index sequence
+  // is mathematically an exact arithmetic progression, but per-frame float
+  // noise (~1e-13) used to flip Math.round() across frames whenever the cut
+  // point's ideal fractional offset sat within that noise of exactly .5 (a
+  // half-source-frame boundary relative to the canvas grid). That silently
+  // disqualified the clip from compose()'s single-ffmpeg direct-read path
+  // and routed it through the much slower per-frame JS compositor -- on a
+  // real benchmark this was measured as 74% of total export time.
+  const source = { fps: 30, kind: 'video', frames: 1_000_000 };
+  // Six clips at realistic timeline positions (whole seconds plus one odd,
+  // non-frame-aligned start), each with its source cut point intentionally
+  // misaligned by exactly half a source frame relative to its own `at` --
+  // a perfectly ordinary, perfectly contiguous 1:1 mapping that floating
+  // point must round the SAME way for every single frame.
+  const starts = [0, 20.0, 40.0, 60.0, 80.0, 100.0, 33.366];
+  for (const at of starts) {
+    const inPoint = at + 0.5 / 30;
+    const plan = framePlan(
+      { at, in: inPoint, out: inPoint + 20 },
+      source,
+      30,
+      0,
+      Infinity,
+    );
+    assert.equal(plan.indices.length, 600, `clip at ${at}: expected 600 frames`);
+    assert.equal(plan.stride, 1, `clip at ${at}: expected stride 1`);
+    assert.equal(
+      plan.arithmetic,
+      true,
+      `clip at ${at}: a same-fps, speed-1 clip must take the fast direct-read path`,
+    );
+  }
+  // The exact case found while investigating the bug: two timeline positions
+  // whose difference, scaled by fps, lands within float noise of a half
+  // integer (70.727 - 41.377 = 29.35; 29.35 * 30 = 880.5 exactly).
+  const found = framePlan(
+    { at: 70.727, in: 41.377, out: 61.377 },
+    source,
+    30,
+    0,
+    Infinity,
+  );
+  assert.equal(found.arithmetic, true);
+  assert.equal(found.stride, 1);
+});
+
+test('framePlan(): a clean N:1 source/canvas rate (e.g. 60fps on a 30fps canvas) still takes the fast path with the right stride', () => {
+  const source = { fps: 60, kind: 'video', frames: 1_000_000 };
+  const plan = framePlan({ at: 0, in: 0, out: 20 }, source, 30, 0, Infinity);
+  assert.equal(plan.stride, 2);
+  assert.equal(plan.arithmetic, true);
+  assert.deepEqual(plan.indices.slice(0, 5), [0, 2, 4, 6, 8]);
+});
+
+test('framePlan(): genuinely non-contiguous plans still take the slow path -- speed ramps', () => {
+  const source = { fps: 30, kind: 'video', frames: 1_000_000 };
+  const plan = framePlan(
+    { at: 0, in: 0, out: 20, ramp: { at: 5, dur: 5, min: 0.2 } },
+    source,
+    30,
+    0,
+    Infinity,
+  );
+  assert.equal(
+    plan.arithmetic,
+    false,
+    'a speed ramp is non-linear by construction and must not be fast-pathed',
+  );
+});
+
+test('framePlan(): genuinely non-contiguous plans still take the slow path -- an fps conversion that does not divide evenly (24fps source on a 30fps canvas)', () => {
+  const source = { fps: 24, kind: 'video', frames: 1_000_000 };
+  const plan = framePlan({ at: 0, in: 0, out: 20 }, source, 30, 0, Infinity);
+  assert.equal(
+    plan.arithmetic,
+    false,
+    '24fps on 30fps must duplicate frames unevenly, never a single constant stride',
+  );
+  // Frame-exact against the oracle formula used throughout the rest of the
+  // suite (the same math compose.mjs's own callers and tests rely on) --
+  // the fix must not change what a genuinely non-arithmetic plan produces.
+  const expected = plan.indices.map((_, i) =>
+    Math.min(
+      source.frames - 1,
+      Math.round((i / 30 - 0) * 1 * 24 + 0 * 24),
+    ),
+  );
+  assert.deepEqual(plan.indices, expected);
+});
+
+test('framePlan(): genuinely non-contiguous plans still take the slow path -- slow motion (0.5x) duplicates frames', () => {
+  const source = { fps: 30, kind: 'video', frames: 1_000_000 };
+  const plan = framePlan(
+    { at: 0, in: 0, out: 10, speed: 0.5 },
+    source,
+    30,
+    0,
+    Infinity,
+  );
+  assert.equal(plan.arithmetic, false);
+  assert.ok(
+    plan.indices.some((n, i) => i > 0 && n === plan.indices[i - 1]),
+    'slow motion must repeat at least one source frame',
+  );
+});
+
+test('framePlan(): a clean 2x speed-up (even frame drop) is frame-exact to the independent per-frame oracle and may take the fast path', () => {
+  const source = { fps: 30, kind: 'video', frames: 1_000_000 };
+  const plan = framePlan(
+    { at: 0, in: 0, out: 40, speed: 2 },
+    source,
+    30,
+    0,
+    Infinity,
+  );
+  assert.equal(plan.stride, 2);
+  const expected = plan.indices.map((_, i) =>
+    Math.round((i / 30 - 0) * 2 * 30 + 0 * 30),
+  );
+  assert.deepEqual(
+    plan.indices,
+    expected,
+    'whatever the fast path produces must be frame-exact to the slow-path formula',
+  );
+});
