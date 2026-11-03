@@ -1,5 +1,13 @@
 # kimo for Windows v0.4.0 — Creator edits
 
+**Small online setup, added 2026-11-03:**
+[Download the 218 KB launcher](https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe).
+It downloads the 369 MB app during setup from Cloudflare's CDN, checks the pinned
+SHA-512, then installs the same qualified v0.4.0 app. GitHub is the backup server;
+the original offline installer and updater feed remain available. This uses free
+static hosting without R2 or a payment card. Hosted Windows download/install:
+33.94s; actual connection/disk speeds vary. [Verification and limitations](https://github.com/naman-sharma12345/kimoapp/blob/main/desktop/distribution/QUALIFICATION.md).
+
 This release adds the creator pipeline and Studio controls to the Windows app:
 
 - Own frame-exact compositor, transcript cuts and a float camera director.

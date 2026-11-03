@@ -6,9 +6,19 @@ picture rendering runs in this repository's compositor.
 
 ## Install and edit
 
-Download the installer from [GitHub Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
+Download the [218 KB online setup](https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe).
+Setup downloads and verifies the 369 MB app through Cloudflare's CDN before
+installing, with GitHub as backup. The complete offline installer remains in
+[GitHub Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
 The installer is unsigned; Windows may show its SmartScreen confirmation. Updates
 come from GitHub Releases and ask before restarting.
+
+The CDN uses the existing free Cloudflare account without R2 or a payment card.
+The small setup is 218,072 bytes; the installed app and total app-download size
+are unchanged. A hosted Windows check downloaded and installed v0.4.0 in 33.94s;
+connection speed and disk/antivirus conditions affect actual installation time.
+See [distribution verification](distribution/QUALIFICATION.md) for exact hashes,
+failure checks and hosting details.
 
 Drop files or a folder, choose a template, and describe the edit. AI planning needs
 the existing AI access configuration; captions-only transcription works offline.

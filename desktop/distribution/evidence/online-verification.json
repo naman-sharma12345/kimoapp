@@ -1,0 +1,16 @@
+{
+  "version": "0.4.0",
+  "file": "kimo-Online-Setup-0.4.0.exe",
+  "bytes": 218072,
+  "sha256": "21b62e4034af02e7406119e03e7b051f3585f6eec26de44c3f35f446d5929da1",
+  "payload": {
+    "version": "0.4.0",
+    "file": "kimo-Setup-0.4.0.exe",
+    "bytes": 369147721,
+    "sha512": "rw/WGIYZeLmLjoOdzn7Dj7f2GFgmvkC9hYdpjNH5Vhe0Ifeg06SWbjlFJSlkuIB5TTUGGcbMqJ6v0iUIUDmvYw==",
+    "primary": "https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Setup-0.4.0.exe",
+    "fallback": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.0/kimo-Setup-0.4.0.exe"
+  },
+  "fixture": false,
+  "builtAt": "2026-11-03T10:45:45.412Z"
+}

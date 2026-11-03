@@ -2,7 +2,7 @@
 
 The native NSIS launcher downloads the frozen, published v0.4.0 offline installer
 during setup instead of embedding Electron, FFmpeg, Whisper and models. The initial
-EXE must be at most 2,000,000 bytes; the later app download is still 369,147,721
+EXE is **218,072 bytes** (0.218 MB), under the 2,000,000-byte build gate; the later app download is still 369,147,721
 bytes (about 369 MB / 352 MiB). This does not reduce the installed app size.
 
 `payload.json` pins the exact published EXE's length and SHA-512. HTTPS/TLS and the
@@ -28,7 +28,8 @@ dependency. The output includes an exact-size/SHA-256 verification manifest.
 
 `.github/workflows/desktop-online.yml` runs native localhost fixtures (backup
 server success, equal-length tampering, both servers unavailable, child install
-failure), verifies that failure preserves an existing app sentinel, then performs
+failure and retaining the registered 64-bit upgrade directory), verifies that
+failure preserves an existing app sentinel, then performs
 a real internet installation of the pinned release and checks installed files
 and the executable's 0.4.0 version. It never launches Electron or renders media.
 Only after passing may its publish option add the new launcher and manifest to
@@ -51,6 +52,13 @@ on this hostname. `.github/workflows/desktop-cdn.yml` deploys only this service 
 tests full-length/SHA-512, cross-piece ranges, end ranges, HEAD and 416 handling.
 The free Worker daily request/CPU limits apply; GitHub remains the fallback.
 No regional speed guarantee is made. No Cloudflare credential enters setup.
+
+The same verified launcher is also served directly as a small static file:
+https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe .
+Reproduce with the online workflow's publish option, then the CDN workflow's
+`include_online=true` option. Both refuse unverified files. Existing release
+assets are never clobbered; publish a newly versioned launcher for future changes.
+Exact measured proof and test limitations: [QUALIFICATION.md](QUALIFICATION.md).
 
 Distribution uses NSIS/zlib, InetC (NSIS licence), and StdUtils (LGPL 2.1+), the
 same setup plug-ins already used by electron-builder. Upstream licence and source:

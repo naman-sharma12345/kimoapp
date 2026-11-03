@@ -13,7 +13,7 @@
 A Windows video editor with local Whisper, FFmpeg, fonts and the kimo v6 engine
 in one installer.
 
-[Download for Windows](https://github.com/naman-sharma12345/kimoapp/releases/latest)
+[Download for Windows · 218 KB setup](https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe)
 · [All releases](https://github.com/naman-sharma12345/kimoapp/releases)
 · [Desktop guide](desktop/README.md)
 
@@ -62,7 +62,10 @@ prove provider adherence or interactive updater behaviour.
 
 ## Install and privacy
 
-Download the current installer from [Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
+Download the [218 KB online setup](https://downloads.getkimo.tech/desktop/v0.4.0/kimo-Online-Setup-0.4.0.exe).
+It downloads the 369 MB app during installation from Cloudflare's CDN, with GitHub
+as backup. No card or R2 account is needed. The full offline installer remains in
+[Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
 The package is unsigned, so Windows may display SmartScreen. The app checks GitHub
 for updates and asks before restarting. Inputs over three hours are refused;
 large/4K footage is subject to available disk and memory.

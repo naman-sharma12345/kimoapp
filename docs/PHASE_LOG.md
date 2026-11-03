@@ -608,3 +608,27 @@ Caption registration measurement v7 fixes a centisecond mask gap at frame 79/24,
 without changing the saved video, score weights, 95% coverage or fit thresholds.
 The full natural-footage table retains its honest unverified values. The accepted
 performance exception is the only deliberately failed Phase 12 acceptance item.
+
+## Desktop online setup — 2026-11-03
+
+User requested a 1–2 MB initial download and a fast internet download during setup.
+
+- [x] Initial setup is 218,072 bytes (0.218 MB), enforced below 2 MB at build time.
+- [x] Same qualified v0.4.0 app downloads during setup; exact size/SHA-512 checked
+      before invoking the app-changing installer. Total app download remains 369 MB.
+- [x] Dedicated Cloudflare CDN at downloads.getkimo.tech, free Static Assets with
+      a streaming adapter and GitHub fallback; no R2/payment card required.
+- [x] Hosted Windows real network install and version 0.4.0.0 verified, including
+      folder spaces. Corrupt/missing payloads fail and preserve an existing app.
+      Registered per-user upgrade directory retained. Run 41621814250 passes and
+      publishes only the new launcher/manifest, then verifies published bytes.
+- [x] Full CDN SHA-512, cross-piece/end ranges, HEAD and 416 pass in 41621359588;
+      small-launcher CDN deployment and verification are in 41622182934.
+- [x] Root lint/typecheck/311 tests/build pass in hosted 41621812437. The existing
+      later web bundle-budget failure remains documented, not weakened.
+- [x] No app/media/GPU test or build on the user's PC; no benchmarks or paid calls.
+      Original release assets, app code, engine and spending ledger unchanged.
+
+Proof: `desktop/distribution/QUALIFICATION.md` and its `evidence/` directory.
+Interactive wizard cancellation/network dialogs and a real old-profile upgrade
+remain unautomated manual checks; no screenshot or UI-interaction pass is claimed.
