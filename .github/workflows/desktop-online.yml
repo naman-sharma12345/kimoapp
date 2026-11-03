@@ -1,0 +1,52 @@
+name: desktop online installer
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Add the qualified small launcher to v0.4.0 (preserve offline assets)
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: desktop-online-installer
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci --prefix desktop
+      - name: Native setup checks and real internet installation (no renders)
+        run: node desktop/test/online-installer.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kimo-online-installer
+          path: |
+            desktop/dist-online/*.exe
+            desktop/dist-online/online-verification.json
+            distribution-evidence/online-install-tests.json
+            distribution-evidence/*/online-verification.json
+      - name: Publish only the new launcher and its verification manifest
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v0.4.0 --repo $env:GITHUB_REPOSITORY desktop/dist-online/kimo-Online-Setup-0.4.0.exe desktop/dist-online/online-verification.json
+          if ($LASTEXITCODE -ne 0) { throw 'Online launcher publication failed (existing assets are never overwritten)' }
+          $published=Join-Path $env:RUNNER_TEMP 'published-online'
+          gh release download v0.4.0 --repo $env:GITHUB_REPOSITORY --dir $published --pattern 'kimo-Online-Setup-0.4.0.exe'
+          if ($LASTEXITCODE -ne 0) { throw 'Published online installer could not be downloaded' }
+          $local=Get-FileHash desktop/dist-online/kimo-Online-Setup-0.4.0.exe -Algorithm SHA256
+          $remote=Get-FileHash (Join-Path $published 'kimo-Online-Setup-0.4.0.exe') -Algorithm SHA256
+          if ($local.Hash -ne $remote.Hash) { throw 'Published launcher differs from the tested bytes' }

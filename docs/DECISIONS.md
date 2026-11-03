@@ -338,3 +338,14 @@ through delivery against 90s. The old composition counter omitted the final
 creator_delivery operation; correct it and retain its regression assertion.
 Do not turn that performance workflow green or represent skipped AI latency as
 a measured critic loop. Dataset scores and editorial weaknesses remain honest.
+
+## Small desktop online installer (2026-11-03)
+
+The user requested an initial 1–2 MB download and download-during-setup delivery.
+Use the existing NSIS toolchain and native Windows setup controls without custom
+fonts, colors or animations. A small launcher downloads and hashes the already
+qualified v0.4.0 offline installer before invoking it; this preserves the frozen
+release and avoids a new Electron/media build. No app/backend/UI behavior changes.
+R2 is not enabled in the existing Cloudflare account (API error 10042); fast CDN
+hosting requires that account step. Keep GitHub as a working source until then
+and do not claim a regional speed improvement without measurements.

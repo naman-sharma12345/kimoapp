@@ -26,6 +26,8 @@ test-results-matrix/
 **/.next-*/**
 desktop/vendor/
 desktop/dist/
+desktop/dist-online/
+distribution-evidence/
 desktop/node_modules/
 desktop/test/bench/out/
 desktop/test/bench/transcripts/
