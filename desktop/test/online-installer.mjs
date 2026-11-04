@@ -358,6 +358,39 @@ const installedPackage = JSON.parse(inspected.stdout.trim());
 assert.equal(installedPackage.version, real.proof.version);
 assert.equal(installedPackage.incremental, true);
 assert.equal(installedPackage.reconstruct, true);
+// Re-running the launcher on the current version must not need a cached base
+// or repeat installation. These paths belong only to this hosted test machine.
+const currentAsar = createHash('sha256')
+  .update(await readFile(join(target, 'resources/app.asar')))
+  .digest('hex');
+const currentCache = join(
+  process.env.LOCALAPPDATA,
+  'kimo-desktop-updater/installer.exe',
+);
+const currentHeld = currentCache + '.qualification-held';
+await rename(currentCache, currentHeld);
+let alreadyCurrent;
+try {
+  alreadyCurrent = await install(real.exe, target);
+  assert.equal(
+    alreadyCurrent.code,
+    0,
+    'Current version needs no further download',
+  );
+  assert.equal(
+    createHash('sha256')
+      .update(await readFile(join(target, 'resources/app.asar')))
+      .digest('hex'),
+    currentAsar,
+  );
+} finally {
+  await rename(currentHeld, currentCache);
+}
+results.push({
+  name: 'already-current-without-cache',
+  ...alreadyCurrent,
+  oldAppUnchanged: true,
+});
 results.push({
   name: 'real-online-install',
   ...outcome,
