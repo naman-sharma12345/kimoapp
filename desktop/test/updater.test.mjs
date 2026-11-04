@@ -42,15 +42,42 @@ async function fixture(mode = 'normal') {
     output = join(root, 'next.exe');
   await writeFile(baseFile, old);
   let rangeCalls = 0;
+  const rangeUrls = [];
   const request = async (url, options = {}) => {
     if (url.endsWith('.blockmap'))
       return new Response(maps[url.includes('/v0.4.2/') ? '0.4.2' : '0.4.3']);
     rangeCalls++;
+    rangeUrls.push(url);
     if (mode === 'ignored') return new Response(next, { status: 200 });
     const [, start, end] = /^bytes=(\d+)-(\d+)$/
       .exec(options.headers.Range)
       .map(Number);
     const data = Buffer.from(next.subarray(start, end + 1));
+    if (
+      (mode === 'disconnect' && rangeCalls === 1) ||
+      mode === 'disconnect-always'
+    ) {
+      let sent = false;
+      return new Response(
+        new ReadableStream({
+          pull(controller) {
+            if (!sent) {
+              sent = true;
+              controller.enqueue(data.subarray(0, 8192));
+            } else
+              controller.error(
+                new TypeError('terminated', {
+                  cause: { code: 'UND_ERR_SOCKET' },
+                }),
+              );
+          },
+        }),
+        {
+          status: 206,
+          headers: { 'Content-Range': `bytes ${start}-${end}/${next.length}` },
+        },
+      );
+    }
     if (mode === 'corrupt') data[0] ^= 1;
     return new Response(data, {
       status: 206,
@@ -64,6 +91,7 @@ async function fixture(mode = 'normal') {
     baseFile,
     output,
     maps,
+    rangeUrls,
     get rangeCalls() {
       return rangeCalls;
     },
@@ -101,6 +129,48 @@ test('incremental installer downloads changed bytes and reuses the unchanged bas
       65536 + f.maps['0.4.2'].length + f.maps['0.4.3'].length,
     );
     assert.deepEqual(await readFile(f.output), f.next);
+    assert.deepEqual(await readFile(f.baseFile), f.old);
+  } finally {
+    await f.clean();
+  }
+});
+test('interrupted range retries only that range through the pinned backup', async () => {
+  const f = await fixture('disconnect');
+  try {
+    const fallback =
+      'https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Setup-0.4.3.exe';
+    const proof = await reconstruct({
+      ...f.args,
+      manifest: { ...f.args.manifest, fallback },
+    });
+    assert.equal(f.rangeCalls, 2);
+    assert.deepEqual(f.rangeUrls, [f.args.manifest.primary, fallback]);
+    assert.equal(proof.retryRequests, 1);
+    assert.equal(
+      proof.networkBytes,
+      65536 + 8192 + f.maps['0.4.2'].length + f.maps['0.4.3'].length,
+    );
+    assert.deepEqual(await readFile(f.output), f.next);
+    assert.deepEqual(await readFile(f.baseFile), f.old);
+    assert.throws(
+      () =>
+        checkedManifest({
+          ...f.args.manifest,
+          fallback: 'https://attacker.test/full.exe',
+        }),
+      /backup update server/,
+    );
+  } finally {
+    await f.clean();
+  }
+});
+test('persistent range disconnects stop after three attempts and preserve the old base', async () => {
+  const f = await fixture('disconnect-always');
+  try {
+    await assert.rejects(reconstruct(f.args), /terminated/);
+    assert.equal(f.rangeCalls, 3);
+    await assert.rejects(stat(f.output), { code: 'ENOENT' });
+    await assert.rejects(stat(f.output + '.partial'), { code: 'ENOENT' });
     assert.deepEqual(await readFile(f.baseFile), f.old);
   } finally {
     await f.clean();

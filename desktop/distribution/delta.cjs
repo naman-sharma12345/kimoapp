@@ -27,6 +27,12 @@ function checkedManifest(p) {
     throw Error('Invalid incremental byte limit');
   if (p.primary !== `${CDN}/v${p.version}/${p.file}`)
     throw Error('Invalid update server');
+  if (
+    p.fallback !== undefined &&
+    p.fallback !==
+      `https://github.com/naman-sharma12345/kimoapp/releases/download/v${p.version}/${p.file}`
+  )
+    throw Error('Invalid backup update server');
   return p;
 }
 async function responseBytes(response, limit, onBytes = () => {}) {
@@ -89,21 +95,46 @@ async function reconstruct(options) {
   if (!baseStat.isFile()) throw Error('Cached installer is unavailable');
   const request = options.request ?? fetch;
   const signal = options.signal ?? AbortSignal.timeout(240000);
-  let networkBytes = 0;
+  let networkBytes = 0,
+    retryRequests = 0;
+  const retryable = (error) =>
+    !signal.aborted &&
+    (error.retryable ||
+      error.message === 'terminated' ||
+      error.message === 'fetch failed' ||
+      error.message === 'Truncated update range' ||
+      ['UND_ERR_SOCKET', 'ECONNRESET', 'ETIMEDOUT'].includes(
+        error.cause?.code,
+      ));
   async function map(version) {
     const url = `${CDN}/v${version}/kimo-Setup-${version}.exe.blockmap`;
-    const response = await request(url, { signal });
-    if (response.status !== 200) {
-      await response.body?.cancel();
-      throw Error(
-        `Update block map ${version} is unavailable (HTTP ${response.status})`,
-      );
+    let data;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const mapUrl =
+          attempt && p.fallback
+            ? `https://github.com/naman-sharma12345/kimoapp/releases/download/v${version}/kimo-Setup-${version}.exe.blockmap`
+            : url;
+        const response = await request(mapUrl, { signal });
+        if (response.status !== 200) {
+          await response.body?.cancel();
+          const error = Error(
+            `Update block map ${version} is unavailable (HTTP ${response.status})`,
+          );
+          error.retryable = [429, 502, 503, 504].includes(response.status);
+          throw error;
+        }
+        data = await responseBytes(response, 2 * 1024 * 1024, (n) => {
+          networkBytes += n;
+          if (networkBytes > 4 * 1024 * 1024)
+            throw Error('Update map retry byte limit exceeded');
+        });
+        break;
+      } catch (error) {
+        if (attempt === 2 || !retryable(error)) throw error;
+        retryRequests++;
+      }
     }
-    const data = await responseBytes(
-      response,
-      2 * 1024 * 1024,
-      (n) => (networkBytes += n),
-    );
     if (
       version === p.version &&
       p.blockmapSha256 &&
@@ -152,6 +183,52 @@ async function reconstruct(options) {
     downloadBytes > Math.min(p.maxDeltaBytes ?? 64 * 1024 * 1024, p.bytes * 0.8)
   )
     throw Error('A small incremental update is unavailable');
+  const networkLimit = Math.min(
+    networkBytes + downloadBytes + 8 * 1024 * 1024,
+    (p.maxDeltaBytes ?? 64 * 1024 * 1024) + 4 * 1024 * 1024,
+  );
+  let rangeUrl = p.primary;
+  async function downloadRange(start, end) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await request(rangeUrl, {
+          signal,
+          headers: {
+            Range: `bytes=${start}-${end}`,
+            'Accept-Encoding': 'identity',
+          },
+        });
+        if (
+          response.status !== 206 ||
+          response.headers.get('Content-Range') !==
+            `bytes ${start}-${end}/${p.bytes}`
+        ) {
+          await response.body?.cancel();
+          const error = Error(
+            `Update server did not honor the bounded range: ${response.status}, ${response.headers.get('Content-Range')}`,
+          );
+          error.retryable = [429, 502, 503, 504].includes(response.status);
+          throw error;
+        }
+        const data = await responseBytes(response, end - start + 1, (n) => {
+          networkBytes += n;
+          if (networkBytes > networkLimit)
+            throw Error('Incremental retry byte limit exceeded');
+        });
+        if (data.length !== end - start + 1)
+          throw Error('Truncated update range');
+        return data;
+      } catch (error) {
+        if (attempt === 2 || !retryable(error)) {
+          error.range = `${start}-${end}`;
+          error.networkBytes = networkBytes;
+          throw error;
+        }
+        rangeUrl = p.fallback ?? p.primary;
+        retryRequests++;
+      }
+    }
+  }
   options.onProgress?.({
     downloaded: 0,
     total: downloadBytes,
@@ -203,27 +280,7 @@ async function reconstruct(options) {
         // at its headers, before a full installer body can be consumed.
         for (let start = op.start; start < op.end; start += 1024 * 1024) {
           const end = Math.min(op.end, start + 1024 * 1024) - 1;
-          const response = await request(p.primary, {
-            signal,
-            headers: { Range: `bytes=${start}-${end}` },
-          });
-          if (
-            response.status !== 206 ||
-            response.headers.get('Content-Range') !==
-              `bytes ${start}-${end}/${p.bytes}`
-          ) {
-            await response.body?.cancel();
-            throw Error(
-              `Update server did not honor the bounded range: ${response.status}, ${response.headers.get('Content-Range')}`,
-            );
-          }
-          const data = await responseBytes(
-            response,
-            end - start + 1,
-            (n) => (networkBytes += n),
-          );
-          if (data.length !== end - start + 1)
-            throw Error('Truncated update range');
+          const data = await downloadRange(start, end);
           await write(data);
           downloaded += data.length;
           options.onProgress?.({
@@ -245,6 +302,8 @@ async function reconstruct(options) {
       toVersion: p.version,
       networkBytes,
       downloadBytes,
+      retryRequests,
+      rangeServer: rangeUrl,
       reusedBytes,
       outputBytes: position,
       sha512: p.sha512,
@@ -303,6 +362,8 @@ if (require.main === module) {
                 message: error.message,
                 cause: error.cause?.message,
                 code: error.cause?.code,
+                range: error.range,
+                networkBytes: error.networkBytes,
               },
               null,
               2,
