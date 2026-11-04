@@ -12,6 +12,12 @@ import { probe } from '../engine.mjs';
 // r_frame_rate is far above avg_frame_rate -- the exact phone-VFR shape
 // (desktop/compose.mjs used to read r_frame_rate with no such guard; see
 // ~L1163 before the V8.12.x-era VFR fix).
+// The stand-in ffprobe is a POSIX shell script, which Windows cannot execute
+// via execFile. These two probe() tests therefore run on POSIX only; the
+// parsing logic they cover is platform-independent and effectiveRate() is
+// still tested everywhere above.
+const SKIP_WIN = process.platform === 'win32' && 'fake ffprobe is a POSIX shell script';
+
 async function fakeFfprobe(json) {
   const dir = await mkdtemp(join(tmpdir(), 'kimo-fake-ffprobe-'));
   const path = join(dir, 'ffprobe');
@@ -83,7 +89,7 @@ test('parseRate: "0/0", empty and garbage all parse to 0, not NaN or Infinity', 
   assert.equal(parseRate('30'), 30);
 });
 
-test('engine.mjs probe(): a real synthetic ffprobe JSON with r_frame_rate=600/1, avg_frame_rate=30/1 resolves fps to 30, not 600 (regression: engine.mjs already guarded this; the shared helper must preserve it)', async () => {
+test('engine.mjs probe(): a real synthetic ffprobe JSON with r_frame_rate=600/1, avg_frame_rate=30/1 resolves fps to 30, not 600 (regression: engine.mjs already guarded this; the shared helper must preserve it)', { skip: SKIP_WIN }, async () => {
   const { ffprobe, dummyMedia } = await fakeFfprobe(VFR_FIXTURE);
   const info = await probe(ffprobe, dummyMedia);
   assert.ok(info, 'probe() must parse the fixture and return a result');
@@ -92,7 +98,7 @@ test('engine.mjs probe(): a real synthetic ffprobe JSON with r_frame_rate=600/1,
   assert.equal(info.vfr, true);
 });
 
-test('engine.mjs probe(): an ordinary CFR fixture is unaffected by the guard', async () => {
+test('engine.mjs probe(): an ordinary CFR fixture is unaffected by the guard', { skip: SKIP_WIN }, async () => {
   const cfr = JSON.parse(JSON.stringify(VFR_FIXTURE));
   cfr.streams[0].r_frame_rate = '30/1';
   const { ffprobe, dummyMedia } = await fakeFfprobe(cfr);
