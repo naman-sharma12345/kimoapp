@@ -13,7 +13,7 @@
 A Windows AI video editor powered by Meta Muse Spark 1.3 and SAM 3.1, with local
 Whisper transcription and FFmpeg rendering.
 
-**Three-minute demo:** not recorded yet. [Recording guide](docs/DEMO_SCRIPT.md).
+**[▶ Watch the three-minute demo](https://drive.google.com/file/d/1EhnILN-B9R2-70W1ZdotUbUS065aiO01/view?usp=drivesdk)**
 
 [Download for Windows · latest release](https://github.com/naman-sharma12345/kimoapp/releases/latest)
 · [All releases](https://github.com/naman-sharma12345/kimoapp/releases)
@@ -43,6 +43,16 @@ for this hackathon: the Studio, planner/critic loop, compositor, subject-effects
 integration and installer. The earlier open-source [kimo v6 engine](https://github.com/naman-sharma12345/kimo)
 was reused as a dependency and is not claimed as new hackathon work. The v0.5.0
 release updates that bundled dependency to v8.12.1.
+
+## Faster exports in v0.5.0
+
+- One decode pass for footage analysis instead of two.
+- Independent clip segments, and long exports' 30 s render stages, render in parallel.
+- A `framePlan()` rounding fix keeps ordinary clips on the fast direct path (and removes a repeated-frame stutter).
+- Lossless intermediates switched from ffv1 to ffvhuff, frame-for-frame identical.
+- Hardware decode on by default with software fallback; all CPU cores used for export.
+- Measured on a 4-core machine with no GPU: about **2.7x faster** on a 127 s timeline, and a further **~22%** on a real 700 s 720p export. Long exports now delete each stage's scratch files once verified.
+  [Release notes](desktop/RELEASE_NOTES.md) · [Performance](desktop/PERFORMANCE.md)
 
 ## Creator edits
 
