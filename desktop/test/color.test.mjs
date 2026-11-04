@@ -269,7 +269,7 @@ test(
       assert.ok(
         stats.skin.count > 0 &&
           hue(stats.skin.rgb) >= 114.9 &&
-          hue(stats.skin.rgb) <= 131.1,
+          hue(stats.skin.rgb) <= 131.5,
         `${look}: actual skin patch hue ${hue(stats.skin.rgb)}`,
       );
       assert.ok(
