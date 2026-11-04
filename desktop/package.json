@@ -1,7 +1,7 @@
 {
   "name": "kimo-desktop",
   "productName": "kimo",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "kimo video editor for Windows: the real kimo v6 engine, FFmpeg and whisper on your PC",
   "author": "kimo <hello@getkimo.tech>",
   "homepage": "https://getkimo.tech",
@@ -9,7 +9,7 @@
   "private": true,
   "main": "main.cjs",
   "scripts": {
-    "test": "node --test --test-concurrency=1 test/transcript.test.mjs test/captions.test.mjs test/cutplan.test.mjs test/edl.test.mjs test/compose.test.mjs test/compose-fx.test.mjs test/camera.test.mjs test/camera-render.test.mjs test/graphics.test.mjs test/explain.test.mjs test/auth.test.mjs test/pipeline.test.mjs test/bench/cache.test.mjs test/bench/metrics.test.mjs test/bench/resources.test.mjs test/bench/encoding.test.mjs test/audio.test.mjs test/color.test.mjs test/planner.test.mjs test/studio.test.mjs test/release-quality.test.mjs test/updater.test.mjs",
+    "test": "node --test --test-concurrency=1 test/transcript.test.mjs test/vfr-rate.test.mjs test/captions.test.mjs test/cutplan.test.mjs test/edl.test.mjs test/compose.test.mjs test/compose-fx.test.mjs test/camera.test.mjs test/camera-render.test.mjs test/graphics.test.mjs test/explain.test.mjs test/auth.test.mjs test/pipeline.test.mjs test/bench/cache.test.mjs test/bench/metrics.test.mjs test/bench/resources.test.mjs test/bench/encoding.test.mjs test/audio.test.mjs test/color.test.mjs test/planner.test.mjs test/studio.test.mjs test/release-quality.test.mjs test/updater.test.mjs",
     "test:audio": "node --test --test-concurrency=1 test/audio.test.mjs",
     "bench:fetch": "node test/bench/fetch-clips.mjs",
     "bench": "node test/bench/run.mjs",
@@ -106,6 +106,7 @@
       "input-media.mjs",
       "project-state.mjs",
       "worker-pool.mjs",
+      "vfr-rate.mjs",
       "creator-smoke.mjs"
     ],
     "extraResources": [

@@ -46,7 +46,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: desktop/vendor
-          key: vendor-win-kimo6.0.0-whisperb5454-ffmpeg-v1
+          key: vendor-win-kimo8.12.1-whisperb5454-ffmpeg-v1
       - run: ./desktop/test/bench/bootstrap.ps1
       - name: Add bundled FFmpeg to the test PATH
         run: '"$PWD/desktop/vendor/ffmpeg" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
@@ -175,7 +175,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.v }}
-          name: kimo for Windows ${{ steps.version.outputs.v }} — Creator edits
+          name: kimo for Windows ${{ steps.version.outputs.v }} — Kimo v8.12.1 engine, faster exports
           body_path: desktop/RELEASE_NOTES.md
           files: |
             desktop/dist/kimo-Setup-*.exe

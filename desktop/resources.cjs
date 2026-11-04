@@ -1,4 +1,10 @@
-// Keep media workers cooperative with the foreground desktop. No encode-quality
+// Scale media workers to the machine by default (KIMO_PERFORMANCE_PROFILE is
+// unset, or "fast"): an export is foreground work the user is waiting on, not
+// a background task competing with something else they are doing. Setting
+// KIMO_PERFORMANCE_PROFILE=background opts back into the old low-CPU-while-
+// editing behaviour (one core, below-normal priority) for someone who wants
+// to keep using the machine for something else during a render; "ci" keeps
+// using every core, as before, for hosted test runners. No encode-quality
 // options, timeline decisions or engine binaries are changed here.
 const childProcess = require('node:child_process');
 const os = require('node:os');
@@ -6,18 +12,37 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 
+// The one user-visible knob for this choice: KIMO_PERFORMANCE_PROFILE.
+//   - "background" (or "low-cpu"/"low_cpu"): the pre-v8.13 default. Caps at
+//     1-2 threads and leaves most of the machine free for other work.
+//   - "ci": every core, for hosted test/bench runners.
+//   - anything else, including unset ("fast" is the implied default): scale
+//     to the machine, leaving one core free for the UI.
+function performanceProfile(env = process.env) {
+  const raw = String(env.KIMO_PERFORMANCE_PROFILE || '').toLowerCase();
+  if (raw === 'background' || raw === 'low-cpu' || raw === 'low_cpu')
+    return 'background';
+  if (raw === 'ci') return 'ci';
+  return 'fast';
+}
 function workerThreads(
   env = process.env,
   parallelism = os.availableParallelism(),
 ) {
+  const profile = performanceProfile(env);
   const requested = Number(env.KIMO_WORKER_THREADS);
+  if (profile === 'background') {
+    // Deliberately conservative: the machine is doing something else too.
+    const ceiling = Math.max(1, Math.min(2, parallelism - 2));
+    return Number.isInteger(requested) && requested > 0
+      ? Math.min(requested, ceiling)
+      : 1;
+  }
   const ceiling =
-    env.KIMO_PERFORMANCE_PROFILE === 'ci'
-      ? Math.max(1, parallelism)
-      : Math.max(1, Math.min(2, parallelism - 2));
+    profile === 'ci' ? Math.max(1, parallelism) : Math.max(1, parallelism - 1);
   return Number.isInteger(requested) && requested > 0
     ? Math.min(requested, ceiling)
-    : 1;
+    : ceiling;
 }
 function backgroundEnv(env = process.env) {
   const next = { ...process.env, ...env };
@@ -39,7 +64,8 @@ function ffmpegArgs(bin, args, env = process.env) {
   if (!/(^|[\\/])ffmpeg(?:\.exe)?$/i.test(bin) || !args.includes('-i'))
     return [...args];
   const threads = String(workerThreads(env));
-  const filterThreads = env.KIMO_PERFORMANCE_PROFILE === 'ci' ? threads : '1';
+  const filterThreads =
+    performanceProfile(env) === 'background' ? '1' : threads;
   const cleaned = [];
   for (let i = 0; i < args.length; i++) {
     if (
@@ -207,6 +233,7 @@ function acquireExclusive(name, directory = os.tmpdir()) {
   throw busy();
 }
 module.exports = {
+  performanceProfile,
   workerThreads,
   backgroundEnv,
   ffmpegArgs,

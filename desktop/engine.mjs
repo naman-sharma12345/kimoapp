@@ -6,9 +6,10 @@ import { spawnBackground as spawn, execFileBackground as execFile, acquireExclus
 import { existsSync, mkdirSync, statSync, readFileSync, renameSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { samEffect, SAM_EFFECTS, motionJitter, cachedPersonTracks, segmentImage } from './sam.mjs';
+import { samEffect, SAM_EFFECTS, jitterAccumulator, JITTER_SCALE_WIDTH, cachedPersonTracks, segmentImage } from './sam.mjs';
 import { colorConfig } from './color/plan.mjs';
 import { prepareInputs } from './input-media.mjs';
+import { effectiveRate } from './vfr-rate.mjs';
 import { criticalGates } from './quality-gates.mjs';
 import { CAMERA_TOOLS, CAMERA_TOOL_TEXT, cameraToolCall, cameraInputsFromCut, energyFor, maxStaticFor } from './camera.mjs';
 import { headTrack, screenRegions } from './camera-probe.mjs';
@@ -254,15 +255,62 @@ export async function creatorAsk(kind,text,images,signal){
   return (await response.json()).record??{};
 }
 
-/** Detects a working hardware H.264 encoder (NVENC, QSV, AMF), else null. */
-export async function detectGpu(ffmpeg) {
-  for (const enc of ['h264_nvenc', 'h264_qsv', 'h264_amf']) {
-    const ok = await new Promise((done) =>
-      execFile(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=black:s=256x256:d=0.2', '-c:v', enc, '-f', 'null', '-'],
-        { windowsHide: true, timeout: 20_000 }, (err) => done(!err)));
-    if (ok) return enc;
-  }
+// Every hardware encoder FFmpeg can name, in the order we try them. We do not
+// assume which one a given machine has -- ffmpeg -encoders says which are even
+// built into this FFmpeg, then a real 1-frame trial encode says which of those
+// actually work on this machine's hardware/drivers right now. NVENC and QSV
+// are proven on real hardware (see PERFORMANCE.md); AMF, VideoToolbox and
+// VAAPI are implemented and unit-tested against a mocked FFmpeg but have no
+// real-GPU run behind them yet -- stated plainly, not claimed.
+const HARDWARE_ENCODERS = ['h264_nvenc', 'h264_qsv', 'h264_amf', 'h264_videotoolbox', 'h264_vaapi'];
+
+/** Which of FFmpeg's built-in encoders this FFmpeg binary actually lists. */
+export async function listEncoders(ffmpeg) {
+  return new Promise((done) =>
+    execFile(ffmpeg, ['-hide_banner', '-encoders'], { windowsHide: true, timeout: 10_000 }, (err, stdout) =>
+      done(new Set(err ? [] : [...String(stdout ?? '').matchAll(/\s(h264_\w+)\s/g)].map((m) => m[1]))),
+    ));
+}
+
+/** The first VAAPI render node that exists on this machine, else null. */
+export async function vaapiDevicePath(
+  candidates = ['/dev/dri/renderD128', '/dev/dri/renderD129'],
+) {
+  for (const path of candidates) if (existsSync(path)) return path;
   return null;
+}
+
+/** A real 1-frame trial encode: the only way to know an encoder actually works. */
+async function trialEncode(ffmpeg, enc, device) {
+  const args =
+    enc === 'h264_vaapi'
+      ? ['-hide_banner', '-loglevel', 'error', '-vaapi_device', device, '-f', 'lavfi', '-i', 'color=black:s=256x256:d=0.2', '-vf', 'format=nv12,hwupload', '-c:v', enc, '-f', 'null', '-']
+      : ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=black:s=256x256:d=0.2', '-c:v', enc, '-f', 'null', '-'];
+  return new Promise((done) =>
+    execFile(ffmpeg, args, { windowsHide: true, timeout: 20_000 }, (err) => done(!err)));
+}
+
+// Detection is one real trial encode per candidate (hundreds of ms to a
+// couple of seconds each); cache the winner per FFmpeg binary for the life of
+// the process instead of repeating it for every master (PERFORMANCE.md).
+const gpuCache = new Map();
+/** Detects a working hardware H.264 encoder (NVENC, QSV, AMF, VideoToolbox, VAAPI), else null. */
+export async function detectGpu(ffmpeg, { refresh = false, vaapiCandidates } = {}) {
+  if (!refresh && gpuCache.has(ffmpeg)) return gpuCache.get(ffmpeg);
+  const built = await listEncoders(ffmpeg);
+  let found = null;
+  for (const enc of HARDWARE_ENCODERS) {
+    if (!built.has(enc)) continue;
+    const device =
+      enc === 'h264_vaapi' ? await vaapiDevicePath(vaapiCandidates) : null;
+    if (enc === 'h264_vaapi' && !device) continue;
+    if (await trialEncode(ffmpeg, enc, device)) {
+      found = enc;
+      break;
+    }
+  }
+  gpuCache.set(ffmpeg, found);
+  return found;
 }
 
 /** GPU (or CPU) delivery encode of the kimo master at the preset bitrate. */
@@ -401,10 +449,34 @@ export async function measure(ffmpeg, ffprobe, path) {
     akbps: a ? Math.round((Number(a.bit_rate) || 0) / 1000) : 0,
     black: [], silences: [],
   };
-  const filter = a
-    ? '[0:v]blackdetect=d=0.2:pix_th=0.10[v];[0:a]silencedetect=n=-45dB:d=0.7,loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json[a]'
-    : '[0:v]blackdetect=d=0.2:pix_th=0.10[v]';
-  const r = await runTool(ffmpeg, ['-hide_banner', '-nostats', '-i', path, '-filter_complex', filter, '-map', '[v]', ...(a ? ['-map', '[a]'] : []), '-f', 'null', '-']);
+  // One ffmpeg process, one decode: blackdetect/silencedetect/loudnorm (which need
+  // the whole file) and the motion-jitter frame stream (capped at 90s) used to
+  // both read off a single [0:v] via split, instead of this file being decoded
+  // twice (a second full ffmpeg process -- motionJitter() -- previously redecoded
+  // up to 90s of the same video a measure() had just decoded in full for
+  // blackdetect/silencedetect). Source width/height is already known from the
+  // ffprobe above, so no extra ffprobe spawn for the jitter side either.
+  const acc = v.width ? jitterAccumulator(v.width, v.height) : null;
+  const JITTER_SECONDS = 90;
+  const filterParts = acc
+    ? [`[0:v]split=2[vb][vj]`, `[vb]blackdetect=d=0.2:pix_th=0.10[v]`, `[vj]trim=duration=${JITTER_SECONDS},scale=${JITTER_SCALE_WIDTH}:-2:flags=area,format=gray[j]`]
+    : [`[0:v]blackdetect=d=0.2:pix_th=0.10[v]`];
+  if (a) filterParts.push('[0:a]silencedetect=n=-45dB:d=0.7,loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json[a]');
+  const filter = filterParts.join(';');
+  const maps = ['-map', '[v]', ...(a ? ['-map', '[a]'] : [])];
+  const args = [
+    '-hide_banner', '-nostats', '-i', path, '-filter_complex', filter,
+    ...maps, '-f', 'null', '-',
+    ...(acc ? ['-map', '[j]', '-f', 'rawvideo', 'pipe:1'] : []),
+  ];
+  const r = await new Promise((done) => {
+    const child = spawn(ffmpeg, ['-nostdin', ...args], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let err = '';
+    child.stdout.on('data', (d) => acc?.feed(d));
+    child.stderr.on('data', (d) => (err = (err + d).slice(-200_000)));
+    child.on('error', (e) => done({ code: -1, err: String(e.message) }));
+    child.on('exit', (code) => done({ code, err }));
+  });
   for (const x of r.err.matchAll(/black_start:([\d.]+) black_end:([\d.]+)/g)) m.black.push([+x[1], +x[2]]);
   let open = null;
   for (const x of r.err.matchAll(/silence_(start|end): (-?[\d.]+)/g)) {
@@ -413,8 +485,8 @@ export async function measure(ffmpeg, ffprobe, path) {
   }
   if (open != null) m.silences.push([open, m.duration]);
   // camera smoothness: residual frame-to-frame shake and judder (repeated frames)
-  if (v.width) {
-    const mo = await motionJitter(ffmpeg, path).catch(() => null);
+  if (acc) {
+    const mo = acc.finish();
     if (mo) Object.assign(m, { jitter: mo.jitter, jitterP95: mo.p95, dupFrames: mo.dup, frames: mo.frames });
   }
   const ln = /\{\s*"input_i"[\s\S]*?\}/.exec(r.err);
@@ -515,30 +587,52 @@ export async function youtubeMaster({
         `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${L.input_i}:measured_TP=${L.input_tp}:measured_LRA=${L.input_lra}:measured_thresh=${L.input_thresh}:offset=${L.target_offset}:linear=true,aresample=48000`,
       ]
     : [];
-  const attempt = ({ encoder: selected, hardwareDecode }) => {
+  // CPU (libx264) only: "medium" at the YouTube-recommended bitrate measured
+  // against "veryfast" at a 12%-higher bitrate on real 720p footage --
+  // veryfast+12% matched or slightly beat medium's SSIM (0.9992 vs 0.9989
+  // All-plane SSIM against the source) at under half the encode time (6.3s
+  // vs 16.5s for a 20s clip on this box, single-threaded for a fair
+  // comparison -- see the commit message for the full preset/bitrate table).
+  // GPU encoders are untouched: their own per-vendor quality settings
+  // (NVENC p6/hq, QSV slow, AMF quality) are not a preset/bitrate tradeoff
+  // the way x264 is, and were not re-measured here.
+  const CPU_PRESET_SPEEDUP_BITRATE_FACTOR = 1.12;
+  const attempt = async ({ encoder: selected, hardwareDecode }) => {
+    // VAAPI needs its render node named up front and the frame handed to the
+    // encoder through a hwupload filter -- it cannot take raw/yuv420p frames
+    // directly the way NVENC/QSV/AMF/VideoToolbox can. Untested on real VAAPI
+    // hardware (see detectGpu in this file); argument construction only.
+    const vaapiDevice = selected === 'h264_vaapi' ? await vaapiDevicePath() : null;
+    if (selected === 'h264_vaapi' && !vaapiDevice)
+      throw new Error('no VAAPI render node (/dev/dri/renderD12x) on this machine');
+    const cpuSpeedup = selected === 'libx264' && !preview;
+    const effectiveRec = cpuSpeedup ? rec * CPU_PRESET_SPEEDUP_BITRATE_FACTOR : rec;
     const args = [
       '-hide_banner',
       '-y',
       ...(hardwareDecode
         ? ['-hwaccel', 'cuda', '-hwaccel_output_format', 'cuda']
         : []),
+      ...(vaapiDevice ? ['-vaapi_device', vaapiDevice] : []),
       '-i',
       input,
       ...af,
-      ...videoEncoderArgs(selected, m.duration).map((v,i,a)=>a[i-1]==='-preset'&&selected==='libx264'?(preview?'ultrafast':'medium'):v),
+      ...videoEncoderArgs(selected, m.duration).map((v,i,a)=>a[i-1]==='-preset'&&selected==='libx264'?(preview?'ultrafast':'veryfast'):v),
       '-b:v',
-      `${rec}M`,
+      `${effectiveRec}M`,
       '-maxrate',
-      `${Math.round(rec * 1.5)}M`,
+      `${Math.round(effectiveRec * 1.5)}M`,
       '-bufsize',
-      `${rec * 2}M`,
+      `${Math.round(effectiveRec * 2)}M`,
       '-profile:v',
       'high',
       '-level:v',
       Math.max(P.width, P.height) >= 3840 ? (fps > 30 ? '5.2' : '5.1') : '4.2',
       ...(hardwareDecode
         ? ['-vf', 'scale_cuda=format=nv12', '-pix_fmt', 'cuda']
-        : ['-pix_fmt', 'yuv420p']),
+        : vaapiDevice
+          ? ['-vf', 'format=nv12,hwupload']
+          : ['-pix_fmt', 'yuv420p']),
       '-g',
       String(gop),
       '-keyint_min',
@@ -595,7 +689,7 @@ export async function youtubeMaster({
       child.on('exit', (code) => {
         cleanup();
         code === 0
-          ? done({ output, loudnessFixed: Boolean(fix), mbps: rec })
+          ? done({ output, loudnessFixed: Boolean(fix), mbps: effectiveRec })
           : fail(
               new Error(
                 `master encode failed: ${
@@ -671,7 +765,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
   if(!legacy_kimo_render&&mode==='followup'&&!creatorEdl?.creator_plan)throw new Error('re-run this older edit once to enable plan-based follow-ups');
   if(!legacy_kimo_render&&(mode==='ai'||(['followup','manual'].includes(mode)&&creatorEdl?.creator_plan))){
     const releaseCreator=acquireExclusive('render');
-    try{await normalize();return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo,creatorOptions,studioHistory,studioAppend,preview},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps});}
+    try{await normalize();return await runCreatorEdit({bin,env,dir,files,note,preset,style,mode,signal,emit,ffmpeg,ffprobe,projectFile,edlFile,edl:creatorEdl,ops,transcribe,captionStyle,explain:explainOpts,creatorUndo,creatorOptions,studioHistory,studioAppend,preview},{ask:creatorAsk,P,probe,youtubeMaster,canvasFps,detectGpu});}
     finally{releaseCreator();}
   }
   const release = acquireExclusive('render');
@@ -1146,7 +1240,7 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       emit({ t: 'think', text: 'the render lost the source sound; restoring it and rendering again' });
       const mediaClips = (timeline?.tracks_bottom_to_top ?? []).flatMap((t) => t.clips).filter((c) => c.in != null && !/^text:/.test(c.src ?? ''));
       for (const c of mediaClips.slice(0, 60)) await silent('set_audio', { clip_id: c.id, mute: false });
-      await call('finish_audio', { target_lufs: -14, keep_ambience: true }, 'keep the original sound');
+      await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 }, 'keep the original sound');
       await call('export', { path: out, crf: 16 });
       m = await measure(ffmpeg, ffprobe, out);
     }
@@ -1260,12 +1354,12 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
       }
       await refreshTimeline();
       if (mode === 'sam') {
-        await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+        await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 });
         await check(1);
       } else {
       emit({ t: 'status', text: 'captions from the transcript, on this PC' });
       if (!(await startCaptions())) await call('auto_captions', { ...(clipIds.length ? { clip_ids: clipIds } : {}), style: S.captions.style, max_words_per_line: S.captions.max_words_per_line, keywords: true });
-      await call('finish_audio', { target_lufs: -14, keep_ambience: true });
+      await call('finish_audio', { target_lufs: -14, keep_ambience: true, compress_strength: 1 });
       await check(1);
       }
     } else if (mode === 'manual') {
@@ -1383,13 +1477,17 @@ export async function runEdit({ bin, env, dir, files, note, preset, style, mode,
     // ---------- YouTube upload master ----------
     const m0 = checks.at(-1)?.m ?? (await measure(ffmpeg, ffprobe, out));
     const soundTarget=pictures.lastEdl?.sound?.target_lufs??-14;
-    emit({ t: 'status', text: `encoding the YouTube upload master (H.264 High, closed GOP, AAC 384k, ${soundTarget} LUFS)` });
+    // GPU detection was implemented (detectGpu, above) but never actually
+    // called here -- every export silently took the CPU-only libx264 path
+    // regardless of what hardware encoder the machine had. This is the fix.
+    const gpuEncoder = await detectGpu(ffmpeg).catch(() => null);
+    emit({ t: 'status', text: `encoding the YouTube upload master (${gpuEncoder ? gpuEncoder + ' hardware encode' : 'H.264 High'}, closed GOP, AAC 384k, ${soundTarget} LUFS)` });
     const id = randomUUID().slice(0, 8);
     emit({ t: 'op', id, phase: 'start', tool: 'youtube_master', title: `youtube_master ${recommendedMbps(P.width, P.height, m0.fps)} Mbps · ${P.width}x${P.height}`, at: Date.now() });
     const t0 = Date.now();
     let master;
     try {
-      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, audioMastered:Boolean(pictures.lastEdl?.sound?.enabled), onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
+      master = await youtubeMaster({ ffmpeg, input: out, output: finalOut, P, m: m0, signal, encoder: gpuEncoder, audioMastered:Boolean(pictures.lastEdl?.sound?.enabled), onProgress: (f, eta) => emit({ t: 'progress', phase: 'master', label: 'encoding upload master', f, eta }), onFallback: ({ to }) => emit({ t: 'status', text: to.encoder === 'libx264' ? 'GPU encode unavailable; using the limited CPU encoder' : 'retrying GPU encode with software decoding' }) });
       emit({ t: 'op', id, phase: 'end', ok: true, ms: Date.now() - t0, result: `${master.encoder} · ${master.loudnessFixed ? 'loudness corrected to -14 LUFS' : 'loudness already on target'}` });
     } catch (err) {
       if (signal?.aborted) throw err;
@@ -1464,15 +1562,9 @@ export function probe(ffprobe, path) {
           const j = JSON.parse(stdout);
           const v = j.streams?.find((s) => s.codec_type === 'video'),a=j.streams?.find(s=>s.codec_type==='audio');
           const isImage = /\.(png|jpe?g|webp)$/i.test(path);
-          const rate = (x) => {
-            const [a, b] = String(x ?? '').split('/').map(Number);
-            return a && b ? a / b : 0;
-          };
-          const fr = rate(v?.r_frame_rate);
-          const avg = rate(v?.avg_frame_rate);
-          const chosenRate = fr && avg && fr > avg * 1.5 ? v?.avg_frame_rate : fr ? v?.r_frame_rate : v?.avg_frame_rate;
+          const eff = effectiveRate(v?.r_frame_rate, v?.avg_frame_rate);
           const matrixRotation = v?.side_data_list?.find(s => Number.isFinite(s.rotation))?.rotation;
-          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&fr>0&&avg>0&&Math.abs(fr-avg)>.01,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: chosenRate && chosenRate !== '0/0' ? chosenRate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: +(fr && avg && fr > avg * 1.5 ? avg : fr || avg).toFixed(3), audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
+          done({ path,mtimeMs:statSync(path).mtimeMs,vfr:!!v&&eff.vfr,vcodec:v?.codec_name,profile:v?.profile,pix_fmt:v?.pix_fmt,mbps:v?.bit_rate?+v.bit_rate/1e6:null,acodec:a?.codec_name,arate:+a?.sample_rate||null,achannels:a?.channels,akbps:a?.bit_rate?+a.bit_rate/1000:null, rate: v ? eff.rate : undefined, rotation: matrixRotation != null ? -matrixRotation : Number(v?.tags?.rotate) || 0, color: {primaries:v?.color_primaries,trc:v?.color_transfer,space:v?.color_space,range:v?.color_range}, frames:Number(v?.nb_frames)||undefined, fps: v ? eff.fps : 0, audio: Boolean(j.streams?.some((s) => s.codec_type === 'audio')), duration: Number(j.format?.duration) || 0, kind: isImage ? 'image' : v ? 'video' : 'audio', width: v?.width, height: v?.height, bytes: statSync(path).size });
         } catch {
           done(null);
         }

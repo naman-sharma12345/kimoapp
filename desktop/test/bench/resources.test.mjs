@@ -9,10 +9,11 @@ import {
   rm,
 } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
-import { tmpdir, getPriority, constants } from 'node:os';
+import { tmpdir, getPriority, constants, availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
 import {
+  performanceProfile,
   workerThreads,
   backgroundEnv,
   ffmpegArgs,
@@ -105,12 +106,31 @@ test('desktop queue claims its slot before asynchronous engine loading', async (
   assert.equal(library.filter((p) => p.status === 'done').length, 2);
 });
 
-test('worker pools reserve CPU headroom and respect smaller limits', () => {
+test('default profile ("fast") scales worker threads to the machine, leaving one core for the UI', () => {
+  assert.equal(performanceProfile({}), 'fast');
   assert.equal(workerThreads({}, 1), 1);
   assert.equal(workerThreads({}, 2), 1);
-  assert.equal(workerThreads({}, 4), 1);
-  assert.equal(workerThreads({ KIMO_WORKER_THREADS: '32' }, 16), 2);
+  assert.equal(workerThreads({}, 4), 3);
+  assert.equal(workerThreads({}, 8), 7);
+  // An explicit request is honoured up to the machine, not capped at 2 anymore.
+  assert.equal(workerThreads({ KIMO_WORKER_THREADS: '32' }, 16), 15);
   assert.equal(workerThreads({ KIMO_WORKER_THREADS: '1' }, 16), 1);
+});
+test('KIMO_PERFORMANCE_PROFILE=ci uses every core', () => {
+  assert.equal(performanceProfile({ KIMO_PERFORMANCE_PROFILE: 'ci' }), 'ci');
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'ci' }, 4), 4);
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'ci' }, 8), 8);
+});
+test('KIMO_PERFORMANCE_PROFILE=background opts back into the old low-CPU-while-editing default', () => {
+  for (const spelling of ['background', 'BACKGROUND', 'low-cpu', 'low_cpu'])
+    assert.equal(performanceProfile({ KIMO_PERFORMANCE_PROFILE: spelling }), 'background');
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'background' }, 1), 1);
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'background' }, 2), 1);
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'background' }, 4), 1);
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'background', KIMO_WORKER_THREADS: '32' }, 16), 2);
+  assert.equal(workerThreads({ KIMO_PERFORMANCE_PROFILE: 'background', KIMO_WORKER_THREADS: '1' }, 16), 1);
+});
+test('backgroundEnv scales Rayon/OpenMP/BLAS pools to the same worker-thread count', () => {
   const env = backgroundEnv({
     KIMO_WORKER_THREADS: '1',
     RAYON_NUM_THREADS: '64',
@@ -121,7 +141,7 @@ test('worker pools reserve CPU headroom and respect smaller limits', () => {
   assert.equal(env.OPENBLAS_NUM_THREADS, '1');
   assert.equal(env.PATH, 'preserved');
 });
-test('all FFmpeg inputs, output and filters are bounded without altering quality flags', () => {
+test('all FFmpeg inputs, output and filters are bounded without altering quality flags (explicit low thread count)', () => {
   const args = ffmpegArgs(
     'C:/bundled/ffmpeg.exe',
     [
@@ -161,6 +181,38 @@ test('all FFmpeg inputs, output and filters are bounded without altering quality
   assert.deepEqual(ffmpegArgs('ffprobe', ['-show_streams', 'in.mp4']), [
     '-show_streams',
     'in.mp4',
+  ]);
+});
+test('the default ("fast") profile scales filter threads with the main thread count, not a hardcoded 1', () => {
+  // Request more than this machine's own ceiling (parallelism - 1) so the
+  // expected thread count is this machine's, not a fixed literal: the whole
+  // point of the fix is "scale to os.availableParallelism(), not fixed numbers".
+  const requested = availableParallelism() + 4;
+  const expected = String(Math.max(1, availableParallelism() - 1));
+  const args = ffmpegArgs(
+    'ffmpeg',
+    ['-y', '-i', 'a.mp4', '-c:v', 'libx264', 'out.mp4'],
+    { KIMO_WORKER_THREADS: String(requested) },
+  );
+  assert.deepEqual(args.slice(0, 4), [
+    '-filter_threads',
+    expected,
+    '-filter_complex_threads',
+    expected,
+  ]);
+  assert.deepEqual(args.slice(-3), ['-threads', expected, 'out.mp4']);
+});
+test('KIMO_PERFORMANCE_PROFILE=background still pins filter threads to 1 regardless of the thread count', () => {
+  const args = ffmpegArgs(
+    'ffmpeg',
+    ['-y', '-i', 'a.mp4', '-c:v', 'libx264', 'out.mp4'],
+    { KIMO_PERFORMANCE_PROFILE: 'background', KIMO_WORKER_THREADS: '6' },
+  );
+  assert.deepEqual(args.slice(0, 4), [
+    '-filter_threads',
+    '1',
+    '-filter_complex_threads',
+    '1',
   ]);
 });
 test('actual worker process has background scheduling priority', async () => {

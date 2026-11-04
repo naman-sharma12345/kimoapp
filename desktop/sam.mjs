@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { decodeMaskToRaster, parseImageStream, parseVideoStream } from '@meta-sam/parser';
 import { aiHeaders, proxyError } from './kimo-auth.mjs';
+import { effectiveRate } from './vfr-rate.mjs';
 
 export const SAM_URL =
   process.env.KIMO_SAM_URL || (process.env.KIMO_AI_URL || 'https://api.getkimo.tech/v1/desktop/ai').replace(/\/ai$/, '/sam');
@@ -41,11 +42,8 @@ const probeJson = (ffprobe, path) =>
           const j = JSON.parse(out);
           const s = j.streams?.[0] ?? {};
           // phones write variable frame rate: when r_frame_rate is far above the average rate, use the average
-          const fr = (x) => String(x ?? '').split('/').map(Number);
-          let [a, b] = fr(s.r_frame_rate || '30/1');
-          const [aa, ab] = fr(s.avg_frame_rate);
-          if (aa && ab && b && a / b > (aa / ab) * 1.5) [a, b] = [aa, ab];
-          done({ width: s.width, height: s.height, rate: b ? `${a}/${b}` : String(a), fps: b ? a / b : a, frames: Number(s.nb_read_packets) || 0, duration: Number(j.format?.duration) || 0 });
+          const eff = effectiveRate(s.r_frame_rate, s.avg_frame_rate);
+          done({ width: s.width, height: s.height, rate: eff.rate, fps: eff.fps, frames: Number(s.nb_read_packets) || 0, duration: Number(j.format?.duration) || 0 });
         } catch {
           done(null);
         }
@@ -689,81 +687,120 @@ function profileShift(a, b, max) {
  * and frames that repeat the previous one while the picture is moving (judder
  * from frame-rate conversion). Robust to cuts: frames around a cut are skipped.
  */
+/**
+ * Scale width for the downsampled grayscale jitter-analysis stream (`scale=${JITTER_SCALE_WIDTH}:-2:...`).
+ * Exported so a caller building its own ffmpeg filtergraph (engine.mjs's measure(),
+ * folding this analysis into one decode instead of a second ffmpeg process) can
+ * match it exactly.
+ */
+export const JITTER_SCALE_WIDTH = 240;
+
+/**
+ * Pure frame accumulator for the motion-jitter measurement: given the source's
+ * own width/height (already known to most callers -- no ffprobe needed), feed it
+ * raw gray `JITTER_SCALE_WIDTH`-wide frames (as produced by
+ * `scale=${JITTER_SCALE_WIDTH}:-2:flags=area,format=gray`) in order and call
+ * finish() once the stream ends. Factored out of motionJitter() so a caller that
+ * already has its own ffmpeg process decoding the file (measure(), to avoid a
+ * second full decode) can reuse the exact same math.
+ */
+export function jitterAccumulator(w, h) {
+  const AW = JITTER_SCALE_WIDTH;
+  const AH = w && h ? Math.round((AW * h) / w / 2) * 2 : 0;
+  const size = AW * AH;
+  let buf = Buffer.alloc(0);
+  let prev = null;
+  const dx = [];
+  const dy = [];
+  const diff = [];
+  const profiles = (f) => {
+    const cols = new Float64Array(AW);
+    const rows = new Float64Array(AH);
+    for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
+      const v = f[y * AW + x];
+      cols[x] += v / AH;
+      rows[y] += v / AW;
+    }
+    return { cols, rows, f };
+  };
+  const take = (p) => {
+    if (prev) {
+      let d = 0;
+      for (let i = 0; i < p.f.length; i += 3) d += Math.abs(p.f[i] - prev.f[i]);
+      diff.push((d * 3) / p.f.length);
+      dx.push(profileShift(prev.cols, p.cols, 12));
+      dy.push(profileShift(prev.rows, p.rows, 12));
+    }
+    prev = p;
+  };
+  return {
+    AW, AH, valid: Boolean(AH),
+    feed(d) {
+      if (!AH) return;
+      buf = Buffer.concat([buf, d]);
+      while (buf.length >= size) {
+        take(profiles(buf.subarray(0, size)));
+        buf = buf.subarray(size);
+      }
+    },
+    finish() {
+      if (!AH) return null;
+      const n = dx.length;
+      if (n < 8) return { jitter: 0, dup: 0, frames: n + 1 };
+      const scale = w / AW;
+      const med = [...diff].sort((a, b) => a - b)[n >> 1];
+      // cuts: a frame difference far above the clip's usual
+      const cut = diff.map((d) => d > Math.max(12, med * 6));
+      const px = [];
+      const py = [];
+      let sx = 0;
+      let sy = 0;
+      for (let i = 0; i < n; i++) (px.push((sx += cut[i] ? 0 : dx[i])), py.push((sy += cut[i] ? 0 : dy[i])));
+      const fx = savgol7(px);
+      const fy = savgol7(py);
+      const res = [];
+      for (let i = 3; i < n - 3; i++) {
+        let near = false;
+        for (let j = i - 3; j <= i + 3; j++) near ||= cut[j];
+        if (!near) res.push(Math.hypot(px[i] - fx[i], py[i] - fy[i]) * scale);
+      }
+      let dup = 0;
+      for (let i = 1; i < n - 1; i++) if (diff[i] < 0.08 && diff[i - 1] > 0.6 && diff[i + 1] > 0.6) dup++;
+      const rms = res.length ? Math.sqrt(res.reduce((s, v) => s + v * v, 0) / res.length) : 0;
+      const p95 = res.length ? [...res].sort((a, b) => a - b)[Math.floor(res.length * 0.95)] : 0;
+      // reported against a 1080 px short side so every canvas is judged the same
+      const norm = 1080 / Math.min(w, h);
+      return { jitter: +(rms * norm).toFixed(2), p95: +(p95 * norm).toFixed(2), dup, frames: n + 1, cuts: cut.filter(Boolean).length };
+    },
+  };
+}
+
+/**
+ * Measured camera smoothness of a rendered file: per-frame global shift from
+ * row/column intensity profiles (sub-pixel), the residual frame-to-frame shake
+ * left after a 7-frame quadratic fit (px per frame, at the file's own size),
+ * and frames that repeat the previous one while the picture is moving (judder
+ * from frame-rate conversion). Robust to cuts: frames around a cut are skipped.
+ *
+ * Standalone entry point (its own ffmpeg process + its own ffprobe for w/h);
+ * engine.mjs's measure() folds this same math into its own single decode via
+ * jitterAccumulator() above instead of calling this.
+ */
 export function motionJitter(ffmpeg, path, { signal, seconds = 90 } = {}) {
-  const AW = 240;
+  const AW = JITTER_SCALE_WIDTH;
   return new Promise((done) => {
     const child = spawn(ffmpeg, ['-nostdin', '-hide_banner', '-loglevel', 'error', '-t', String(seconds), '-i', path, '-an', '-vf', `scale=${AW}:-2:flags=area,format=gray`, '-f', 'rawvideo', 'pipe:1'], { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
     signal?.addEventListener('abort', () => child.kill('SIGKILL'));
-    let AH = 0;
-    let buf = Buffer.alloc(0);
-    let prev = null;
-    const dx = [];
-    const dy = [];
-    const diff = [];
-    const profiles = (f) => {
-      const cols = new Float64Array(AW);
-      const rows = new Float64Array(AH);
-      for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
-        const v = f[y * AW + x];
-        cols[x] += v / AH;
-        rows[y] += v / AW;
-      }
-      return { cols, rows, f };
-    };
-    const take = (p) => {
-      if (prev) {
-        let d = 0;
-        for (let i = 0; i < p.f.length; i += 3) d += Math.abs(p.f[i] - prev.f[i]);
-        diff.push((d * 3) / p.f.length);
-        dx.push(profileShift(prev.cols, p.cols, 12));
-        dy.push(profileShift(prev.rows, p.rows, 12));
-      }
-      prev = p;
-    };
     // the output height comes from ffprobe-free maths: read the first frame size from the stream length later
     execFile(ffmpeg.replace(/ffmpeg(\.exe)?$/i, (m) => m.replace('ffmpeg', 'ffprobe')), ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', path], { windowsHide: true }, (err, out) => {
       const [w, h] = String(out || '').trim().split(',').map(Number);
-      AH = w && h ? Math.round((AW * h) / w / 2) * 2 : 0;
-      if (!AH) {
+      const acc = jitterAccumulator(w, h);
+      if (!acc.valid) {
         child.kill('SIGKILL');
         return done(null);
       }
-      const size = AW * AH;
-      child.stdout.on('data', (d) => {
-        buf = Buffer.concat([buf, d]);
-        while (buf.length >= size) {
-          take(profiles(buf.subarray(0, size)));
-          buf = buf.subarray(size);
-        }
-      });
-      child.on('exit', () => {
-        const n = dx.length;
-        if (n < 8) return done({ jitter: 0, dup: 0, frames: n + 1 });
-        const scale = w / AW;
-        const med = [...diff].sort((a, b) => a - b)[n >> 1];
-        // cuts: a frame difference far above the clip's usual
-        const cut = diff.map((d) => d > Math.max(12, med * 6));
-        const px = [];
-        const py = [];
-        let sx = 0;
-        let sy = 0;
-        for (let i = 0; i < n; i++) (px.push((sx += cut[i] ? 0 : dx[i])), py.push((sy += cut[i] ? 0 : dy[i])));
-        const fx = savgol7(px);
-        const fy = savgol7(py);
-        const res = [];
-        for (let i = 3; i < n - 3; i++) {
-          let near = false;
-          for (let j = i - 3; j <= i + 3; j++) near ||= cut[j];
-          if (!near) res.push(Math.hypot(px[i] - fx[i], py[i] - fy[i]) * scale);
-        }
-        let dup = 0;
-        for (let i = 1; i < n - 1; i++) if (diff[i] < 0.08 && diff[i - 1] > 0.6 && diff[i + 1] > 0.6) dup++;
-        const rms = res.length ? Math.sqrt(res.reduce((s, v) => s + v * v, 0) / res.length) : 0;
-        const p95 = res.length ? [...res].sort((a, b) => a - b)[Math.floor(res.length * 0.95)] : 0;
-        // reported against a 1080 px short side so every canvas is judged the same
-        const norm = 1080 / Math.min(w, h);
-        done({ jitter: +(rms * norm).toFixed(2), p95: +(p95 * norm).toFixed(2), dup, frames: n + 1, cuts: cut.filter(Boolean).length });
-      });
+      child.stdout.on('data', (d) => acc.feed(d));
+      child.on('exit', () => done(acc.finish()));
     });
   });
 }

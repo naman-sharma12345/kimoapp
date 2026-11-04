@@ -55,6 +55,13 @@ export function videoEncoderArgs(encoder = 'libx264', duration = 0) {
       '-vbaq',
       '1',
     ];
+  // Untested on real Apple Silicon/Intel Macs; argument construction only.
+  if (encoder === 'h264_videotoolbox')
+    return ['-c:v', encoder, '-profile:v', 'high', '-allow_sw', '0'];
+  // Untested on real VAAPI hardware; the caller is responsible for
+  // '-vaapi_device' and the 'format=nv12,hwupload' filter VAAPI needs on its
+  // input (see engine.mjs youtubeMaster, which adds both when this is picked).
+  if (encoder === 'h264_vaapi') return ['-c:v', encoder];
   if (encoder === 'libx264')
     return ['-c:v', encoder, '-preset', duration > 600 ? 'medium' : 'slow'];
   throw new Error(`Unsupported master encoder: ${encoder}`);

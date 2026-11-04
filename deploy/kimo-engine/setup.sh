@@ -13,7 +13,7 @@ set -euo pipefail
 [ "${#KIMO_ENGINE_TOKEN}" -ge 32 ] || { echo "KIMO_ENGINE_TOKEN looks wrong" >&2; exit 1; }
 case "$(uname -s)" in Linux) ;; *) echo "this script is for Linux; on Windows use setup.ps1" >&2; exit 1 ;; esac
 RAW=https://raw.githubusercontent.com/naman-sharma12345/kimoapp/main/deploy/kimo-engine
-KIMO=6.0.0; WHISPER=b5454
+KIMO=8.12.1; WHISPER=b5454
 DIR="${KIMO_ENGINE_DIR:-$HOME/.local/share/kimo-engine}"
 mkdir -p "$DIR" && cd "$DIR"
 ARCH=$(uname -m); case "$ARCH" in x86_64|amd64) CF=amd64 ;; aarch64|arm64) CF=arm64 ;; *) echo "unsupported CPU $ARCH" >&2; exit 1 ;; esac

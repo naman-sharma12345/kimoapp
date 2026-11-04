@@ -120,6 +120,37 @@ export function rampOffset(ramp, t) {
   const bell = d * (u / 2 - Math.sin(2 * Math.PI * u) / (4 * Math.PI));
   return t - (1 - ramp.min) * bell;
 }
+// Per-frame source-index rounding was computed independently for every
+// output frame (division then multiplication, then Math.round(), freshly
+// for each i) instead of incrementally. When the clip's canvas-to-source
+// rate (speed * sourceFps / canvasFps) is a whole number -- same fps on
+// both sides at speed 1, or a clean N:1 ratio like 60fps on a 30fps canvas
+// -- the *true* source index is mathematically an exact arithmetic
+// progression: index(i) = index(0) + i*stride, with no rounding ambiguity
+// at all once index(0) is fixed. But computing index(i) independently via
+// ((start+i)/f - at)*speed*s + in*s means every i takes its own trip
+// through floating-point division and multiplication, and when the clip's
+// cut point (in/at) happens to land its ideal fractional offset within
+// ~1e-13 of exactly .5 -- a half-source-frame boundary relative to the
+// canvas grid, which ordinary whole-second or whole-frame cut points on a
+// differently-phased timeline hit often -- that per-frame noise crosses the
+// rounding boundary on some frames and not others, breaking what should be
+// a perfectly constant stride. That silently disqualifies the clip from
+// compose()'s single-ffmpeg direct-read path (plan.arithmetic) and routes
+// it through the much slower per-frame JS decode/re-encode compositor.
+//
+// The fix is exact integer math, not a rounding fudge: when the rate is
+// (to within float noise) an integer, round only index(0) -- with the
+// original, unbiased formula, so it still matches every existing caller
+// that reasons about a single sampled frame the same way (e.g. test
+// oracles) -- and derive every later index by exact integer addition of
+// the stride. That can never produce an inconsistent stride, and it
+// changes nothing for any clip whose rate isn't a clean integer ratio
+// (speed changes, VFR sources, fps conversions that drop or duplicate
+// frames): those still take the original per-frame path untouched, because
+// they are genuinely not arithmetic and must not be detected as if they
+// were.
+const INTEGER_RATE_EPS = 1e-6;
 export function framePlan(clip, source, fps, from = 0, to = Infinity) {
   const f = rate(fps),
     s = rate(source.fps || fps),
@@ -129,25 +160,42 @@ export function framePlan(clip, source, fps, from = 0, to = Infinity) {
     to,
     Math.ceil((clip.at + (clip.out - clip.in) / speed) * f - 1e-7),
   );
-  const indices = Array.from({ length: Math.max(0, end - start) }, (_, i) =>
-    source.kind === 'image'
-      ? 0
-      : Math.min(
-          source.frames > 0
-            ? source.frames - 1
-            : source.duration > 0
-              ? Math.ceil(source.duration * s - 1e-7) - 1
-              : Infinity,
-          Math.round(
-            (clip.ramp
-              ? rampOffset(clip.ramp, (start + i) / f - clip.at)
-              : (start + i) / f - clip.at) *
-              speed *
-              s +
-              clip.in * s,
-          ),
-        ),
-  );
+  const length = Math.max(0, end - start);
+  const bound =
+    source.frames > 0
+      ? source.frames - 1
+      : source.duration > 0
+        ? Math.ceil(source.duration * s - 1e-7) - 1
+        : Infinity;
+  const sampleAt = (i) =>
+    (clip.ramp
+      ? rampOffset(clip.ramp, (start + i) / f - clip.at)
+      : (start + i) / f - clip.at) *
+      speed *
+      s +
+      clip.in * s;
+  const rawStride = (speed * s) / f;
+  const roundedStride = Math.round(rawStride);
+  // Only images (index is always 0), ramps (non-linear by definition) and a
+  // genuinely non-integer rate fall back to the original independent
+  // per-frame rounding; everything else is built as an exact progression.
+  const exact =
+    source.kind !== 'image' &&
+    !clip.ramp &&
+    length > 0 &&
+    roundedStride > 0 &&
+    Math.abs(rawStride - roundedStride) < INTEGER_RATE_EPS;
+  let indices;
+  if (exact) {
+    const first = Math.min(bound, Math.round(sampleAt(0)));
+    indices = Array.from({ length }, (_, i) =>
+      Math.min(bound, first + i * roundedStride),
+    );
+  } else {
+    indices = Array.from({ length }, (_, i) =>
+      source.kind === 'image' ? 0 : Math.min(bound, Math.round(sampleAt(i))),
+    );
+  }
   const stride = indices.length > 1 ? indices[1] - indices[0] : 1;
   return {
     start,
