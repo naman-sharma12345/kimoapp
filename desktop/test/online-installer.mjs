@@ -271,6 +271,12 @@ if (real.proof.version !== '0.4.0') {
 const outcome = await install(real.exe, target);
 if (outcome.code !== 0) {
   console.log('Real setup failed:', outcome);
+  const diagnostic = await readFile(
+    join(process.env.LOCALAPPDATA, 'kimo/installers/last-update-error.json'),
+    'utf8',
+  ).catch(() => 'No helper diagnostic');
+  console.log(diagnostic);
+  await writeFile(join(root, 'delta-error.txt'), diagnostic);
   console.log(
     await readFile(
       join(process.env.TEMP, 'kimo-online-setup-status.txt'),

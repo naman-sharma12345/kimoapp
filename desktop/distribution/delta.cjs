@@ -95,7 +95,9 @@ async function reconstruct(options) {
     const response = await request(url, { signal });
     if (response.status !== 200) {
       await response.body?.cancel();
-      throw Error('Update block map is unavailable');
+      throw Error(
+        `Update block map ${version} is unavailable (HTTP ${response.status})`,
+      );
     }
     const data = await responseBytes(
       response,
@@ -211,7 +213,9 @@ async function reconstruct(options) {
               `bytes ${start}-${end}/${p.bytes}`
           ) {
             await response.body?.cancel();
-            throw Error('Update server did not honor the bounded range');
+            throw Error(
+              `Update server did not honor the bounded range: ${response.status}, ${response.headers.get('Content-Range')}`,
+            );
           }
           const data = await responseBytes(
             response,
@@ -282,8 +286,30 @@ if (require.main === module) {
       console.log(JSON.stringify(proof));
       process.exitCode = proof.alreadyCurrent ? 10 : 0;
     })
-    .catch((error) => {
+    .catch(async (error) => {
       console.error(`Small update unavailable: ${error.message}`);
+      const diagnostic = path.join(
+        process.env.LOCALAPPDATA,
+        'kimo/installers/last-update-error.json',
+      );
+      await fsp
+        .mkdir(path.dirname(diagnostic), { recursive: true })
+        .then(() =>
+          fsp.writeFile(
+            diagnostic,
+            JSON.stringify(
+              {
+                at: new Date().toISOString(),
+                message: error.message,
+                cause: error.cause?.message,
+                code: error.cause?.code,
+              },
+              null,
+              2,
+            ),
+          ),
+        )
+        .catch(() => {});
       process.exitCode = 2;
     });
 }

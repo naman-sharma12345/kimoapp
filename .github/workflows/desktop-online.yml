@@ -39,6 +39,7 @@ jobs:
             desktop/dist-online/*.exe
             desktop/dist-online/online-verification.json
             distribution-evidence/online-install-tests.json
+            distribution-evidence/delta-error.txt
             distribution-evidence/*/online-verification.json
       - name: Publish only the new launcher and its verification manifest
         if: inputs.publish
