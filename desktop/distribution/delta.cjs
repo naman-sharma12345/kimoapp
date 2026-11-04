@@ -18,6 +18,13 @@ function checkedManifest(p) {
     !/^[A-Za-z0-9+/]{86}==$/.test(p.sha512)
   )
     throw Error('Invalid update manifest');
+  if (
+    p.maxDeltaBytes !== undefined &&
+    (!Number.isSafeInteger(p.maxDeltaBytes) ||
+      p.maxDeltaBytes <= 0 ||
+      p.maxDeltaBytes > 128 * 1024 * 1024)
+  )
+    throw Error('Invalid incremental byte limit');
   if (p.primary !== `${CDN}/v${p.version}/${p.file}`)
     throw Error('Invalid update server');
   return p;
@@ -139,7 +146,9 @@ async function reconstruct(options) {
   }
   if (downloadBytes + reusedBytes !== p.bytes)
     throw Error('Update plan size mismatch');
-  if (downloadBytes > Math.min(64 * 1024 * 1024, p.bytes * 0.8))
+  if (
+    downloadBytes > Math.min(p.maxDeltaBytes ?? 64 * 1024 * 1024, p.bytes * 0.8)
+  )
     throw Error('A small incremental update is unavailable');
   options.onProgress?.({
     downloaded: 0,

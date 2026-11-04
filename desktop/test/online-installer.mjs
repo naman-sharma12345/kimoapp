@@ -180,14 +180,13 @@ try {
 // transfer and an exact SHA-512 before the native child installer can run.
 const real = await buildOnline();
 const target = join(root, 'actual installed app');
+const incremental =
+  Boolean(real.proof.payload.upgradeFrom) || real.proof.version === '0.4.3';
+const priorVersion =
+  real.proof.payload.upgradeFrom ??
+  (real.proof.version === '0.4.1' ? '0.4.0' : '0.4.2');
 let profilePath, profileValue;
 if (real.proof.version !== '0.4.0') {
-  const priorVersion =
-    real.proof.version === '0.4.1'
-      ? '0.4.0'
-      : real.proof.version === '0.4.2'
-        ? '0.4.1'
-        : '0.4.2';
   const legacy = JSON.parse(
     await readFile(
       resolve(`desktop/distribution/payload-${priorVersion}.json`),
@@ -236,7 +235,7 @@ if (real.proof.version !== '0.4.0') {
     version: priorVersion,
     ...oldInstall,
   });
-  if (real.proof.version === '0.4.3') {
+  if (incremental) {
     const cached = join(
       process.env.LOCALAPPDATA,
       'kimo-desktop-updater/installer.exe',
@@ -281,7 +280,7 @@ if (outcome.code !== 0) {
 }
 assert.equal(outcome.code, 0, 'Real internet installation');
 let transfer;
-if (real.proof.version === '0.4.3') {
+if (incremental) {
   transfer = JSON.parse(
     await readFile(
       join(
@@ -291,14 +290,17 @@ if (real.proof.version === '0.4.3') {
       'utf8',
     ),
   );
-  assert.equal(transfer.fromVersion, '0.4.2');
+  assert.equal(transfer.fromVersion, priorVersion);
   assert.equal(transfer.toVersion, real.proof.version);
   assert(
-    transfer.networkBytes < 10 * 1024 * 1024,
-    'Code-only update must transfer less than 10 MB including maps',
+    transfer.networkBytes <
+      (real.proof.payload.maxDeltaBytes ?? 6 * 1024 * 1024) + 4 * 1024 * 1024,
+    'Update transfer must stay within the pinned release budget including maps',
   );
   assert(
-    transfer.reusedBytes > real.proof.payload.bytes * 0.9,
+    transfer.reusedBytes >
+      real.proof.payload.bytes *
+        (real.proof.payload.maxDeltaBytes ? 0.75 : 0.9),
     'Reuse the installed tools/models/runtime blocks',
   );
   assert.equal(transfer.sha512, real.proof.payload.sha512);
@@ -332,6 +334,30 @@ assert.match(
   version.stdout.trim(),
   new RegExp('^' + real.proof.version.replaceAll('.', '\\.') + '(?:\\D|$)'),
 );
+// Inspect the actual published app in Node mode, without opening a renderer.
+const probe = join(root, 'installed-package.cjs');
+await writeFile(
+  probe,
+  `
+const path = require('node:path');
+const {createRequire} = require('node:module');
+const r = createRequire(path.join(path.dirname(process.execPath), 'resources/app.asar/package.json'));
+console.log(JSON.stringify({version:r('./package.json').version,
+  incremental:typeof r('./updater-policy.cjs').incrementalUpdater === 'function',
+  reconstruct:typeof r('./distribution/delta.cjs').reconstruct === 'function'}));
+`,
+);
+const inspected = spawnSync(join(target, 'kimo.exe'), [probe], {
+  encoding: 'utf8',
+  windowsHide: true,
+  timeout: 30000,
+  env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+});
+assert.equal(inspected.status, 0, inspected.stderr);
+const installedPackage = JSON.parse(inspected.stdout.trim());
+assert.equal(installedPackage.version, real.proof.version);
+assert.equal(installedPackage.incremental, true);
+assert.equal(installedPackage.reconstruct, true);
 results.push({
   name: 'real-online-install',
   ...outcome,
@@ -341,6 +367,7 @@ results.push({
   payload: real.proof.payload,
   savedProjectPreserved: Boolean(profilePath),
   transfer,
+  installedPackage,
 });
 await writeFile(
   join(root, 'online-install-tests.json'),

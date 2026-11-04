@@ -26,9 +26,9 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci --prefix desktop
-      - name: Read desktop version
+      - name: Read pinned distribution version
         id: version
-        run: '"v=$((Get-Content desktop/package.json | ConvertFrom-Json).version)" >> $env:GITHUB_OUTPUT'
+        run: '"v=$((Get-Content desktop/distribution/payload.json | ConvertFrom-Json).version)" >> $env:GITHUB_OUTPUT'
       - name: Native setup checks and real internet installation (no renders)
         run: node desktop/test/online-installer.mjs
       - uses: actions/upload-artifact@v4

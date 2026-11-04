@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { reconstruct } = require('../distribution/delta.cjs');
+const { reconstruct, checkedManifest } = require('../distribution/delta.cjs');
 const { incrementalUpdater } = require('../updater-policy.cjs');
 const {
   computeOperations,
@@ -132,6 +132,45 @@ test('missing cached base never downloads the installer', async () => {
     await assert.rejects(
       reconstruct({ ...f.args, baseFile: join(f.root, 'missing.exe') }),
       { code: 'ENOENT' },
+    );
+    assert.equal(f.rangeCalls, 0);
+  } finally {
+    await f.clean();
+  }
+});
+test('release-specific incremental limit is bounded and checked before payload requests', async () => {
+  const f = await fixture();
+  try {
+    for (const maxDeltaBytes of [0, -1, 1.5, 128 * 1024 * 1024 + 1])
+      assert.throws(
+        () => checkedManifest({ ...f.args.manifest, maxDeltaBytes }),
+        /byte limit/,
+      );
+    const manifest = { ...f.args.manifest, maxDeltaBytes: 65535 };
+    await assert.rejects(
+      reconstruct({ ...f.args, manifest }),
+      /small incremental/,
+    );
+    assert.equal(f.rangeCalls, 0);
+    const proof = await reconstruct({
+      ...f.args,
+      manifest: { ...manifest, maxDeltaBytes: 65536 },
+    });
+    assert.equal(proof.downloadBytes, 65536);
+    assert.deepEqual(await readFile(f.output), f.next);
+  } finally {
+    await f.clean();
+  }
+});
+test('release limit cannot bypass the minimum reuse requirement', async () => {
+  const f = await fixture('large');
+  try {
+    await assert.rejects(
+      reconstruct({
+        ...f.args,
+        manifest: { ...f.args.manifest, maxDeltaBytes: 128 * 1024 * 1024 },
+      }),
+      /small incremental/,
     );
     assert.equal(f.rangeCalls, 0);
   } finally {

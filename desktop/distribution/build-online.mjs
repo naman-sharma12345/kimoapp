@@ -38,7 +38,8 @@ export async function buildOnline({ out, fixtureConfig } = {}) {
     fixture,
   );
   const pkg = require('../package.json');
-  if (!fixture && p.version !== pkg.version) throw Error('Version mismatch');
+  // The frozen published payload can be newer than this launcher-only checkout.
+  // Hosted qualification must verify its installed EXE and package versions.
   if (require('app-builder-lib/package.json').version !== '25.1.8')
     throw Error('Requalify the NSIS toolchain before changing builder version');
   const {
@@ -104,6 +105,7 @@ export async function buildOnline({ out, fixtureConfig } = {}) {
   if (bytes > 2_000_000) throw Error(`Online setup exceeds 2 MB: ${bytes}`);
   const proof = {
     version: p.version,
+    builderSourceVersion: pkg.version,
     file: exe.split(/[\\/]/).at(-1),
     bytes,
     sha256: createHash('sha256')
