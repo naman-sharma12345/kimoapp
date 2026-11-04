@@ -771,3 +771,35 @@ AI call was run. The historical USD5.49 reservation ledger is unchanged.
       GitHub/CDN launcher downloads match SHA-256, and original v0.5 EXE,
       blockmap and latest.yml digests remain unchanged. A verified 225 KB setup
       is saved to Downloads without executing it.
+
+## Hackathon submission documentation — 2026-11-04
+
+- [x] Add a prominent "Built with Meta" section naming Muse Spark 1.3 and SAM 3.1,
+      explaining planning/critique and subject tracking/effects with direct code links.
+      The default Meta model ID is explicit; local transcription/rendering and
+      cloud model data-sharing remain distinguished.
+- [x] Replace both stale root README v0.4.2 downloads with releases/latest, and
+      update the desktop guide's entry link. The current small setup and measured
+      incremental update behavior are described with qualification/provenance links.
+- [x] State the October 26–November 4, 2026 hackathon development window and
+      separate the new app/pipeline from the earlier open-source kimo v6 engine.
+      The current release's engine dependency update is attributed separately.
+- [x] Add an MIT LICENSE for original source; synchronize root/desktop package
+      metadata and lock metadata. Future desktop builds include LICENSE-kimo.txt.
+      Third-party software, model access, fonts and media retain their own terms.
+- [x] Set and verify the GitHub description, https://getkimo.tech homepage and
+      topics: meta-llama, meta-ai, video-editing, ai-agents, sam, electron, ffmpeg,
+      hackathon. GitHub recognizes the repository license as MIT.
+- [x] Replace the obsolete mock web demo script with a real three-minute desktop
+      shot list covering the actual planner, SAM effect, critic and exported MP4.
+      Add a short docs index for reviewers while preserving historical evidence.
+- [ ] Public three-minute demo video: not recorded. The user confirmed it has not
+      been recorded and waived adding a link for now. The README explicitly marks
+      the recording pending; no mock clip or invented URL is presented as a demo.
+
+Validation: 56 relative Markdown links pass, README has no v0.4.2 download, package
+license metadata matches, the future packaged-license source exists, formatting
+and git diff checks pass. Hosted `pnpm lint && pnpm typecheck && pnpm test && pnpm build`
+passes in 41793224106. Its later web bundle-budget step retains the existing
+landing-page limit failure; the broader workflow is not claimed fully green.
+No app render, GPU test, paid model call or installer rebuild was needed.
