@@ -1,13 +1,12 @@
 # kimo for Windows
 
 Creator editing with local Whisper, a frame-exact compositor, FFmpeg and fonts in
-one Windows installer. The bundled kimo v6 engine remains a read-only tool; creator
-picture rendering runs in this repository's compositor.
+one Windows installer. Creator picture rendering uses the frame-exact compositor.
 
 ## Install and edit
 
-Download the [small v0.4.3 online setup](https://downloads.getkimo.tech/desktop/v0.4.3/kimo-Online-Setup-0.4.3.exe).
-This patch downloads changed installer blocks and reuses the cached previous
+Download the [small v0.5.0 online setup](https://downloads.getkimo.tech/desktop/v0.5.0/kimo-Online-Setup-0.5.0.exe).
+Setup downloads changed installer blocks and reuses the cached previous
 installer for updates. It includes the earlier bounded-render and Windows path fixes.
 Update the app and resume the saved edit; no reimport or project deletion is needed.
 First installation downloads and verifies the 369 MB app through Cloudflare's CDN,
@@ -25,7 +24,9 @@ download/upgrade checks preserve saved project data; connection speed and
 disk/antivirus conditions affect actual installation time.
 See [distribution verification](distribution/QUALIFICATION.md) for exact hashes,
 failure checks and hosting details.
-The [v0.4.3 patch record](distribution/PATCH-0.4.3.md) explains incremental updates.
+The [v0.5.0 setup record](distribution/ONLINE-0.5.0.md) explains the published
+payload, incremental transfer sizes and installer qualification.
+The [v0.4.3 patch record](distribution/PATCH-0.4.3.md) records the original incremental update checks.
 The [v0.4.2 patch record](distribution/PATCH-0.4.2.md) includes the bounded-render,
 frame-ID, local CPU and installed-app regression checks.
 

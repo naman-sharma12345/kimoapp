@@ -1,0 +1,22 @@
+{
+  "at": "2026-11-04T06:52:20.157Z",
+  "version": "0.5.0",
+  "mirrors": [
+    {
+      "url": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.5.0/kimo-Online-Setup-0.5.0.exe",
+      "bytes": 225068,
+      "sha256": "b49d1adbef8ffcb1d1d5dd2dc3c3895ab4a474b4bd8719781388c2d3ba2b2e18"
+    },
+    {
+      "url": "https://downloads.getkimo.tech/desktop/v0.5.0/kimo-Online-Setup-0.5.0.exe",
+      "bytes": 225068,
+      "sha256": "b49d1adbef8ffcb1d1d5dd2dc3c3895ab4a474b4bd8719781388c2d3ba2b2e18"
+    }
+  ],
+  "originalAssetsUnchanged": {
+    "kimo-Setup-0.5.0.exe": "42d3472b6eb18624007758acba17f7c84deb23bed852e15360c086eeb7e3bc57",
+    "kimo-Setup-0.5.0.exe.blockmap": "5f8258ee35b4173f0f5a786e4fef0cdfb94db0dadb9f21edcf61a62f27433147",
+    "latest.yml": "7d28cfbf7c8686a5a772ab3fab90a3b0b7c19f7a8974aa647f17f18f08f758dd"
+  },
+  "executed": false
+}

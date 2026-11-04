@@ -1,0 +1,11 @@
+{
+  "version": "0.5.0",
+  "file": "kimo-Setup-0.5.0.exe",
+  "bytes": 368924142,
+  "sha256": "42d3472b6eb18624007758acba17f7c84deb23bed852e15360c086eeb7e3bc57",
+  "sha512": "wmGfWFuNgtIRlkVMIqWufGjfr1BFL0xDptawyDRsXrL3zex58kizEtRH7GiRDAsP3peP3Lq3eyvnRPEvJTjZvQ==",
+  "source": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.5.0/kimo-Setup-0.5.0.exe",
+  "assetId": 708434336,
+  "scope": "Delivery-only wrapper for the existing published binary; application not rebuilt. Existing EXE, blockmap and update feed remain unchanged.",
+  "sourceLimitation": "At qualification start, origin/main and tag v0.5.0 both point to f379ef57363ae4819e24a16f914f7f6de45aba7d with desktop/package.json version 0.4.3. The v0.5 application source was not present on that branch/tag."
+}

@@ -1,0 +1,103 @@
+{
+  "at": "2026-11-04T06:49:48.296Z",
+  "requests": [
+    "/missing",
+    "/payload",
+    "/missing",
+    "/payload",
+    "/tampered",
+    "/missing",
+    "/payload"
+  ],
+  "results": [
+    {
+      "name": "backup-server",
+      "code": 0,
+      "seconds": 1.1122349000000002,
+      "stubBytes": 218188,
+      "oldInstallPreserved": false
+    },
+    {
+      "name": "registered-upgrade-path",
+      "code": 0,
+      "seconds": 0.18184069999999974,
+      "stubBytes": 218188,
+      "oldInstallPreserved": false
+    },
+    {
+      "name": "tampered",
+      "code": 2,
+      "seconds": 0.11847230000000036,
+      "stubBytes": 218060,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "missing",
+      "code": 2,
+      "seconds": 0.1180571,
+      "stubBytes": 218051,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "child-failure",
+      "code": 3,
+      "seconds": 0.16947609999999985,
+      "stubBytes": 217986,
+      "oldInstallPreserved": true
+    },
+    {
+      "name": "prior-version-installed",
+      "version": "0.4.3",
+      "code": 0,
+      "seconds": 18.059554699999996
+    },
+    {
+      "name": "missing-base-no-full-fallback",
+      "code": 2,
+      "seconds": 0.29691679999999904,
+      "oldAppUnchanged": true
+    },
+    {
+      "name": "already-current-without-cache",
+      "code": 0,
+      "seconds": 0.28944520000000196,
+      "oldAppUnchanged": true
+    },
+    {
+      "name": "real-online-install",
+      "code": 0,
+      "seconds": 32.0793502,
+      "version": "0.5.0.0",
+      "stubBytes": 225068,
+      "stubSha256": "b49d1adbef8ffcb1d1d5dd2dc3c3895ab4a474b4bd8719781388c2d3ba2b2e18",
+      "payload": {
+        "version": "0.5.0",
+        "file": "kimo-Setup-0.5.0.exe",
+        "bytes": 368924142,
+        "sha512": "wmGfWFuNgtIRlkVMIqWufGjfr1BFL0xDptawyDRsXrL3zex58kizEtRH7GiRDAsP3peP3Lq3eyvnRPEvJTjZvQ==",
+        "blockmapSha256": "5f8258ee35b4173f0f5a786e4fef0cdfb94db0dadb9f21edcf61a62f27433147",
+        "upgradeFrom": "0.4.3",
+        "maxDeltaBytes": 83886080,
+        "primary": "https://downloads.getkimo.tech/desktop/v0.5.0/kimo-Setup-0.5.0.exe",
+        "fallback": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.5.0/kimo-Setup-0.5.0.exe"
+      },
+      "savedProjectPreserved": true,
+      "transfer": {
+        "fromVersion": "0.4.3",
+        "toVersion": "0.5.0",
+        "networkBytes": 74093666,
+        "downloadBytes": 73323001,
+        "retryRequests": 1,
+        "rangeServer": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.5.0/kimo-Setup-0.5.0.exe",
+        "reusedBytes": 295601141,
+        "outputBytes": 368924142,
+        "sha512": "wmGfWFuNgtIRlkVMIqWufGjfr1BFL0xDptawyDRsXrL3zex58kizEtRH7GiRDAsP3peP3Lq3eyvnRPEvJTjZvQ=="
+      },
+      "installedPackage": {
+        "version": "0.5.0",
+        "incremental": true,
+        "reconstruct": true
+      }
+    }
+  ]
+}

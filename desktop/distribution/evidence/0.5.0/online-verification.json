@@ -1,0 +1,20 @@
+{
+  "version": "0.5.0",
+  "builderSourceVersion": "0.4.3",
+  "file": "kimo-Online-Setup-0.5.0.exe",
+  "bytes": 225068,
+  "sha256": "b49d1adbef8ffcb1d1d5dd2dc3c3895ab4a474b4bd8719781388c2d3ba2b2e18",
+  "payload": {
+    "version": "0.5.0",
+    "file": "kimo-Setup-0.5.0.exe",
+    "bytes": 368924142,
+    "sha512": "wmGfWFuNgtIRlkVMIqWufGjfr1BFL0xDptawyDRsXrL3zex58kizEtRH7GiRDAsP3peP3Lq3eyvnRPEvJTjZvQ==",
+    "blockmapSha256": "5f8258ee35b4173f0f5a786e4fef0cdfb94db0dadb9f21edcf61a62f27433147",
+    "upgradeFrom": "0.4.3",
+    "maxDeltaBytes": 83886080,
+    "primary": "https://downloads.getkimo.tech/desktop/v0.5.0/kimo-Setup-0.5.0.exe",
+    "fallback": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.5.0/kimo-Setup-0.5.0.exe"
+  },
+  "fixture": false,
+  "builtAt": "2026-11-04T06:48:45.561Z"
+}

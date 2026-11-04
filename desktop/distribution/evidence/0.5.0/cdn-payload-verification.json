@@ -1,0 +1,29 @@
+{
+  "at": "2026-11-04T06:37:28.419Z",
+  "url": "https://downloads.getkimo.tech/desktop/v0.5.0/kimo-Setup-0.5.0.exe",
+  "bytes": 368924142,
+  "sha512": "wmGfWFuNgtIRlkVMIqWufGjfr1BFL0xDptawyDRsXrL3zex58kizEtRH7GiRDAsP3peP3Lq3eyvnRPEvJTjZvQ==",
+  "seconds": 11.855215601,
+  "megabytesPerSecond": 31.119142360336397,
+  "cfRay": "a5519c0cabca37fa-DFW",
+  "note": "Hosted runner route; not a regional or user-connection speed guarantee",
+  "ranges": [
+    {
+      "start": 0,
+      "end": 999999,
+      "status": 206
+    },
+    {
+      "start": 19999950,
+      "end": 20000049,
+      "status": 206
+    },
+    {
+      "start": 368920046,
+      "end": 368924141,
+      "status": 206
+    }
+  ],
+  "head": 200,
+  "invalidRange": 416
+}

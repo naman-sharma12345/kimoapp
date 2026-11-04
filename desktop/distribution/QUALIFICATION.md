@@ -1,8 +1,8 @@
 # Online installer qualification — 2026-11-03
 
-This section records the original v0.4.0 first-install bootstrap. For current
-incremental updates, see [v0.4.3](PATCH-0.4.3.md) and its
-[qualification evidence](evidence/0.4.3/). v0.4.3 changes both setup and background
+This section records the original v0.4.0 first-install bootstrap. For the current
+small installer, see [v0.5.0](ONLINE-0.5.0.md) and its
+[qualification evidence](evidence/0.5.0/). v0.4.3 changed both setup and background
 updater behavior; the historical measurements below remain unchanged.
 
 The initial download is **218,072 bytes** (218 KB / 0.218 MB), below the requested

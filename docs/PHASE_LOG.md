@@ -731,3 +731,43 @@ when run again. v0.4.3 replaces that update behavior in both setup and the app.
 No GPU tests, full user-project renders, benchmarks or paid
 AI requests are part of this update. First install still downloads the full app;
 small updates depend on the cached base and still reconstruct a full file on disk.
+
+## Small setup for the published v0.5.0 app — 2026-11-04
+
+- [x] Wrap the existing v0.5.0 payload without rebuilding the app. Original EXE
+      (368,924,142 bytes), blockmap, latest.yml and source tag remain unchanged.
+      At task start main/tag still contained v0.4.3 source; provenance records this
+      limitation instead of claiming the published app was built from this checkout.
+- [x] Pin the published payload SHA-512, size and target blockmap SHA-256. Preserve
+      all v0.4.0–v0.4.3 CDN URLs, launchers and blockmaps. Full-byte/range/CDN
+      qualification 41786505787 passes for all five versions.
+- [x] Build a 225,068-byte setup using the existing pinned NSIS toolchain. No new
+      runtime dependency. Add a release-specific bounded delta limit for the engine
+      update; default background policy remains unchanged in the frozen app.
+- [x] Sixteen updater/CDN tests pass, including bounded retry of disconnected ranges,
+      pinned GitHub range backup, corruption, ignored ranges, cache/reuse and explicit
+      full-download consent. Root lint/typecheck/tests/build passes in 41787683774;
+      the later existing web landing bundle-budget failure remains separate.
+- [x] Actual Windows upgrade 41787901835: v0.4.3 → v0.5.0.0 transfers 74,093,666
+      bytes including both maps, reuses 295,601,141 bytes, verifies final SHA-512
+      and preserves the saved project sentinel. Installed app.asar version is 0.5.0
+      and both incremental updater modules load. Upgrade takes 32.079 seconds.
+- [x] Missing-cache silent upgrade stops in 0.297 seconds with the old app checksum
+      unchanged. Re-running on v0.5.0 with the cache withheld succeeds in 0.289 seconds
+      with the same app checksum, skipping download and reinstall.
+- [x] Earlier transfer failures stop before installation (41786847860, 41787210437);
+      socket diagnostics prompted bounded per-range recovery. An old-installer seed
+      crash in 41787686912 (3221225477) passes on a fresh runner. No assertion was
+      relaxed and no silent full-download fallback was permitted.
+
+Evidence: desktop/distribution/evidence/0.5.0/ and ONLINE-0.5.0.md. The small
+installer is published alongside the original full installer. A first installation
+still needs the full app once; updates need the cached prior installer and disk
+space for reconstruction. No local GPU/media/app/build test, benchmark or paid
+AI call was run. The historical USD5.49 reservation ledger is unchanged.
+
+- [x] Final CDN publication 41788187185 verifies the current payload, exact
+      published launcher and all four prior immutable releases. Independent
+      GitHub/CDN launcher downloads match SHA-256, and original v0.5 EXE,
+      blockmap and latest.yml digests remain unchanged. A verified 225 KB setup
+      is saved to Downloads without executing it.
