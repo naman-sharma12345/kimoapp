@@ -1,0 +1,9 @@
+{
+  "version": "0.4.3",
+  "file": "kimo-Setup-0.4.3.exe",
+  "bytes": 369152135,
+  "sha512": "YK44UCedfOODMdCKI22KMJNMU5XoPDSCurKD6X3vGVmXzPAcUm66G+RUElfmwFCUH9SqQg9mA/zzBIUv+2EkfQ==",
+  "blockmapSha256": "4611565d02b48eea631ac1be201d190f72e4e363917732a8e77f5a2757d852e7",
+  "primary": "https://downloads.getkimo.tech/desktop/v0.4.3/kimo-Setup-0.4.3.exe",
+  "fallback": "https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Setup-0.4.3.exe"
+}

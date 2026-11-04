@@ -175,7 +175,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.v }}
-          name: kimo for Windows ${{ steps.version.outputs.v }} — Creator edits
+          name: kimo for Windows ${{ steps.version.outputs.v }} — Kimo v8.12.1 engine, faster exports
           body_path: desktop/RELEASE_NOTES.md
           files: |
             desktop/dist/kimo-Setup-*.exe

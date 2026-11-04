@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Preserve previous immutable CDN URLs and launchers
         run: |
-          for prior in 0.4.0 0.4.1 0.4.2; do
+          for prior in 0.4.0 0.4.1 0.4.2 0.4.3; do
             gh release download "v$prior" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/legacy-$prior" --pattern "kimo-Setup-$prior.exe" --pattern "kimo-Setup-$prior.exe.blockmap" --pattern "kimo-Online-Setup-$prior.exe" --pattern 'online-verification.json'
             node desktop/distribution/prepare-cdn.mjs "$RUNNER_TEMP/legacy-$prior/kimo-Setup-$prior.exe" "$RUNNER_TEMP/legacy-$prior" "desktop/distribution/payload-$prior.json"
           done
@@ -72,7 +72,7 @@ jobs:
         run: node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/payload/kimo-Setup-${{ steps.version.outputs.v }}.exe" "$RUNNER_TEMP/online"
       - name: Verify preserved previous CDN payloads and launchers
         run: |
-          for prior in 0.4.0 0.4.1 0.4.2; do
+          for prior in 0.4.0 0.4.1 0.4.2 0.4.3; do
             node desktop/test/verify-cdn.mjs "$RUNNER_TEMP/legacy-$prior/kimo-Setup-$prior.exe" "$RUNNER_TEMP/legacy-$prior" "desktop/distribution/payload-$prior.json"
           done
       - uses: actions/upload-artifact@v4

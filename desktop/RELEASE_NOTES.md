@@ -1,38 +1,45 @@
-# kimo v0.4.3 — Incremental updates
+# kimo v0.5.0 — Kimo v8.12.1 engine, faster exports
 
-[Download the small online installer (224 KB)](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Online-Setup-0.4.3.exe)
+This release updates the bundled Kimo engine and speeds up export rendering.
+It carries forward v0.4.3's incremental-update mechanism unchanged (cached-base
+block reconstruction with explicit consent before any full-download fallback).
 
-[Fast Cloudflare mirror](https://downloads.getkimo.tech/desktop/v0.4.3/kimo-Online-Setup-0.4.3.exe) · [Full offline installer](https://github.com/naman-sharma12345/kimoapp/releases/download/v0.4.3/kimo-Setup-0.4.3.exe)
+## Engine
 
-The previous small setup always downloaded the complete app when run again.
-This version reuses the cached previous installer and downloads changed blocks.
-Both the online setup and background app updater now require approval before
-falling back to a full download; silent setup stops instead.
+- Bundled engine updated to **Kimo v8.12.1** (from the v6 line).
+- Fixes a variable-frame-rate (VFR) clip handling bug in the engine update.
+- Fixes an audio `finish_audio` compression-strength regression from the same update.
 
-First installation still needs the complete 369 MB application once. Keep the
-updater cache: without a matching previous installer, a small update cannot be
-prepared. Reconstruction and installation need local disk space and disk I/O.
-The final installer must match its exact expected size and SHA-512 before use.
-Ignored HTTP ranges, corrupt blocks and oversized deltas cannot silently trigger
-a full download.
+## Export speed
 
-The [actual Windows upgrade test](https://github.com/naman-sharma12345/kimoapp/actions/runs/41673388999)
-installs v0.4.2, upgrades the same folder to v0.4.3.0, and preserves saved project
-data. It downloads **3.73 MB total**, including both blockmaps, and reuses
-**366.20 MB locally**. With the cached base removed, silent setup stops and leaves
-the existing app unchanged. The tested launcher is **224,178 bytes**.
+- Footage is analyzed with one decode pass instead of two.
+- Independent clip segments and, on long exports, independent 30s render
+  stages now render in parallel instead of strictly one after another.
+- Fixed a `framePlan()` rounding bug that could silently route ordinary clips
+  onto the slow per-frame compositor instead of the fast direct path; the same
+  bug could also repeat a source frame (a visible stutter) in the slow path's
+  own output. Both are fixed.
+- Swapped the lossless intermediate codec used while composing a clip's picture
+  segment (ffv1 → ffvhuff); verified frame-for-frame identical output.
+- **Measured on a 127s/6-clip timeline on a 4-core machine with no GPU:
+  roughly 2.7x faster than the pre-update baseline.**
+- **Measured on a real 700s/21,184-frame/720p/30fps export on the same
+  machine: roughly 22% faster again (on top of the above) from the lossless
+  codec swap alone**, after the other fixes above were already in place.
+- Exports over 600s no longer need an unbounded amount of scratch disk: each
+  render stage's temporary files are now deleted as soon as that stage's
+  output is written and frame-count verified (previously a ~700s export could
+  need 20GB+ of free disk).
+- GPU encode/decode auto-detection (NVENC/Quick Sync/AMF) is unchanged by this
+  release. **It has not been tested on real GPU hardware** — all the timings
+  above were measured on a GPU-less machine.
 
-Verified application checks: **215 desktop tests pass, zero skips**. The actual
-installed Windows app completes both a normal preview and the forced-fallback
-rounded-cut reproduction, producing exactly 30 frames with zero model requests.
-[Hosted build and installed-app checks](https://github.com/naman-sharma12345/kimoapp/actions/runs/41670978027).
-All v0.4.2 render-boundary safeguards and Windows source-path fixes are retained.
-The previously documented export-performance gap is unchanged.
+## Verification
 
-A local reconstruction of v0.4.1 → v0.4.2 transferred **3,756,949 bytes** including
-both blockmaps, reused **366,162,961 bytes**, and matched the published installer
-SHA-512. It took 12.217 seconds and did not execute the installer or touch a project.
-The published-version upgrade qualification and transfer measurements are recorded
-in [the patch record](https://github.com/naman-sharma12345/kimoapp/blob/main/desktop/distribution/PATCH-0.4.3.md).
+136 desktop unit/bench tests pass, including two new tests proving the
+ffv1→ffvhuff swap produces byte-identical decoded output on real footage and
+on synthetic alpha content. Timings above are from development-machine
+benchmarks, not the hosted Windows qualification run; that run (and its
+machine-readable evidence) happens when this release is built and published.
 
-[Machine-readable evidence](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.3).
+[Machine-readable evidence from the previous release](https://github.com/naman-sharma12345/kimoapp/tree/main/desktop/distribution/evidence/0.4.3).
