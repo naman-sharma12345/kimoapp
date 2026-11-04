@@ -10,14 +10,39 @@
 
 **Tell it the video you want. Watch every edit happen.**
 
-A Windows video editor with local Whisper, FFmpeg, fonts and the kimo v6 engine
-in one installer.
+A Windows AI video editor powered by Meta Muse Spark 1.3 and SAM 3.1, with local
+Whisper transcription and FFmpeg rendering.
 
-[Download for Windows · small online setup](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe)
+**Three-minute demo:** not recorded yet. [Recording guide](docs/DEMO_SCRIPT.md).
+
+[Download for Windows · latest release](https://github.com/naman-sharma12345/kimoapp/releases/latest)
 · [All releases](https://github.com/naman-sharma12345/kimoapp/releases)
 · [Desktop guide](desktop/README.md)
+· [Docs index](docs/README.md)
 
 </div>
+
+## Built with Meta
+
+- **Muse Spark 1.3** plans the edit from the prompt, transcript and footage context,
+  then critiques rendered frames and measurements to propose structured corrections.
+  The default Meta route uses `muse-spark-1.3-contributor`.
+  [Planner](desktop/planner.mjs) · [Critic](desktop/critic.mjs) · [Meta API route](apps/api/src/ai.ts).
+- **SAM 3.1** segments and tracks subjects for effects such as follow-subject
+  reframing, text behind a subject, background blur, cutouts and object blur.
+  It runs when a subject effect is requested.
+  [Desktop tracking/effects](desktop/sam.mjs) · [SAM API route](apps/api/src/sam.ts).
+
+Both models are accessed through Meta Model API via kimo's proxy. Transcription
+and video rendering run locally; see the data-sharing details below.
+
+## Built during the hackathon
+
+The kimo app and creator pipeline were built from **October 26 to November 4, 2026**
+for this hackathon: the Studio, planner/critic loop, compositor, subject-effects
+integration and installer. The earlier open-source [kimo v6 engine](https://github.com/naman-sharma12345/kimo)
+was reused as a dependency and is not claimed as new hackathon work. The v0.5.0
+release updates that bundled dependency to v8.12.1.
 
 ## Creator edits
 
@@ -62,13 +87,15 @@ prove provider adherence or interactive updater behaviour.
 
 ## Install and privacy
 
-Download the [small v0.4.2 online setup](https://downloads.getkimo.tech/desktop/v0.4.2/kimo-Online-Setup-0.4.2.exe).
-v0.4.2 fixes unlimited rendering on rounded cut boundaries and includes the prior
-Windows fix for `EDL timeline: at least one frame required`.
-After updating, resume the existing edit; its sources and saved plan are retained.
-It downloads the 369 MB app during installation from Cloudflare's CDN, with GitHub
-as backup. No card or R2 account is needed. The full offline installer remains in
-[Releases](https://github.com/naman-sharma12345/kimoapp/releases/latest).
+Download the [latest Windows release](https://github.com/naman-sharma12345/kimoapp/releases/latest)
+and choose the **small online setup**. v0.5.0's launcher is **225 KB**; a fresh
+installation pulls the full app once from Cloudflare's CDN, with GitHub as backup.
+Updates reuse the cached prior installer: the verified v0.4.3 → v0.5.0 upgrade
+downloads **74.09 MB** and reuses **295.60 MB**, preserving the saved project.
+Re-running setup on v0.5.0 skips download and reinstall. If an incremental update
+cannot be prepared, setup asks before a full download; silent setup stops.
+The complete offline installer is also available in the release.
+[Installer qualification and provenance](desktop/distribution/ONLINE-0.5.0.md).
 The package is unsigned, so Windows may display SmartScreen. The app checks GitHub
 for updates and asks before restarting. Inputs over three hours are refused;
 large/4K footage is subject to available disk and memory.
@@ -111,3 +138,9 @@ the mock API on 8787. Required checks: `pnpm lint`, `pnpm typecheck`, `pnpm test
 tools. Benchmark outputs carry their own source-specific credits. macOS, code
 signing, multicam synchronization and interactive old-install upgrade validation
 remain separate work.
+
+## License
+
+Original kimo app source is available under the [MIT License](LICENSE).
+Bundled dependencies, model access, fonts, media and separately licensed assets
+retain their own licenses and terms; see the [third-party notices](desktop/THIRD_PARTY_NOTICES.md).

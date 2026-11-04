@@ -5,7 +5,7 @@ one Windows installer. Creator picture rendering uses the frame-exact compositor
 
 ## Install and edit
 
-Download the [small v0.5.0 online setup](https://downloads.getkimo.tech/desktop/v0.5.0/kimo-Online-Setup-0.5.0.exe).
+Download the [small online setup from the latest release](https://github.com/naman-sharma12345/kimoapp/releases/latest).
 Setup downloads changed installer blocks and reuses the cached previous
 installer for updates. It includes the earlier bounded-render and Windows path fixes.
 Update the app and resume the saved edit; no reimport or project deletion is needed.
